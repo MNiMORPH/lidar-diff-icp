@@ -96,7 +96,7 @@ def main():
     Xc = X0 + (gx_i + 0.5) * a.res; Yc = Y0 + (gy_i + 0.5) * a.res
     valid = np.isfinite(Z08g)
     core = np.column_stack([Xc[valid], Yc[valid], Z08g[valid]]).astype(np.float64)
-    print(f"2008 ground: {len(p08):,}  2021 ground: {len(p21):,}  core cells: {len(core):,}")
+    print(f"2008 bare-earth pts: {len(p08):,}  2021: {len(p21):,}  core cells: {len(core):,}")
 
     m3c2 = py4dgeo.M3C2(epochs=(py4dgeo.Epoch(p08), py4dgeo.Epoch(p21)),
                         corepoints=core, normal_radii=(a.normal_radius,),
