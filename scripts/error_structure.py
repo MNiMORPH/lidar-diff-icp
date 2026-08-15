@@ -79,25 +79,33 @@ def main() -> None:
         # stash the widest-overlap pair for the LoD table
         strata[(a, b)] = (xs, ys, r, elev)
 
-    # LoD from the pair with the most cells
-    key = max(strata, key=lambda k: strata[k][2].size)
-    xs, ys, r, elev = strata[key]
-    up = elev >= np.percentile(elev, 67)
-    fp = elev <= np.percentile(elev, 33)
-    mU = vg.fit_spherical(*vg.empirical_variogram(xs[up], ys[up], r[up], args.max_lag))
-    mF = vg.fit_spherical(*vg.empirical_variogram(xs[fp], ys[fp], r[fp], args.max_lag))
-    print(f"\n  detection limit (pair {key[0]}-{key[1]}; elevation-stratified proxy):")
-    print(f"  {'feature':>16} {'upland LoD95':>13} {'floodplain LoD95':>17}")
-    for name, A in [("10x10 m", 100), ("30x30 m", 900), ("1 ha", 10000),
-                    ("meander ~2 ha", 20000)]:
-        _, lu = vg.detection_limit(mU, A, RES * RES)
-        _, lf = vg.detection_limit(mF, A, RES * RES)
-        print(f"  {name:>16} {lu:>12.3f}m {lf:>16.3f}m")
-    print("  note: floodplain (reed canary grass) ~2.5x the upland limit; the long")
-    print("  correlation length means averaging barely lowers either (N_eff ~ 1).")
+    # Detection limit per pair, stratified by elevation tercile with NEUTRAL
+    # labels. Caveat: low-z is the grassy floodplain ONLY where the overlap
+    # reaches the valley bottom (the western pairs); for an overlap up on the
+    # valley side the tercile split is not a landcover boundary. A proper
+    # floodplain mask (from the channel network) is the right tool; this
+    # elevation split is a documented proxy, not a classifier.
+    print(f"\n  LoD95 at meander scale (~2 ha), by elevation tercile:")
+    print(f"  {'pair':>9} {'low-z third':>12} {'high-z third':>13}")
+    A = 20000.0
+    for (a, b), (xs, ys, r, elev) in strata.items():
+        lo = elev <= np.percentile(elev, 33)
+        hi = elev >= np.percentile(elev, 67)
+        mLo = vg.fit_spherical(*vg.empirical_variogram(xs[lo], ys[lo], r[lo], args.max_lag))
+        mHi = vg.fit_spherical(*vg.empirical_variogram(xs[hi], ys[hi], r[hi], args.max_lag))
+        _, lLo = vg.detection_limit(mLo, A, RES * RES)
+        _, lHi = vg.detection_limit(mHi, A, RES * RES)
+        print(f"  {a}->{b:<5} {lLo:>11.3f}m {lHi:>12.3f}m")
+    print("  Long correlation length (>~370 m) => averaging barely lowers the limit")
+    print("  at feature scale (N_eff ~ 1). Where the overlap straddles the reed-canary")
+    print("  floodplain (e.g. 136-137 low-z) the limit ~doubles vs. clean upland.")
 
     if args.figdir:
-        _plot(xs, ys, r, up, fp, args.max_lag, args.figdir, Path(args.tile).stem, key)
+        key = max(strata, key=lambda k: strata[k][2].size)
+        xs, ys, r, elev = strata[key]
+        _plot(xs, ys, r, elev >= np.percentile(elev, 67),
+              elev <= np.percentile(elev, 33), args.max_lag, args.figdir,
+              Path(args.tile).stem, key)
 
 
 def _plot(xs, ys, r, up, fp, max_lag, figdir, stem, key):
@@ -106,7 +114,7 @@ def _plot(xs, ys, r, up, fp, max_lag, figdir, stem, key):
     import matplotlib.pyplot as plt
     Path(figdir).mkdir(parents=True, exist_ok=True)
     fig, ax = plt.subplots(figsize=(6, 4))
-    for lab, mask in [("all", slice(None)), ("upland", up), ("floodplain", fp)]:
+    for lab, mask in [("all", slice(None)), ("high-z third", up), ("low-z third", fp)]:
         cen, g, cnt = vg.empirical_variogram(xs[mask], ys[mask], r[mask], max_lag)
         ax.plot(cen[cnt > 0], g[cnt > 0], "o-", ms=3, label=lab)
     ax.set_xlabel("lag (m)"); ax.set_ylabel(r"robust $\gamma$ (m$^2$)")
