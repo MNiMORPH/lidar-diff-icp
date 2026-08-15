@@ -137,15 +137,19 @@ def nuth_kaab(z_ref: np.ndarray, z_src: np.ndarray, res: float,
                  nmad_before, nmad_after, it, converged)
 
 
-def align_swaths(pc, res: float = 2.0, exclude=(5, 6, 9)):
+def align_swaths(pc, res: float = 2.0, exclude=(5, 6, 9), ref=None):
     """Free-network least-squares alignment of every swath into one frame.
 
     Runs Nuth & Kaeaeb on each overlapping swath pair, then solves for a
     per-swath 3-D shift (Dx, Dy, Dz) that makes all overlaps mutually
     consistent. The observation for edge (a, b) is ``c_b - c_a = s_ab`` where
-    ``s_ab`` aligns b onto a; the system is solved per component with a
-    **zero-mean gauge**, so the whole group's absolute offset (e.g. from the
-    2021 3DEP) is left free and must be tied separately.
+    ``s_ab`` aligns b onto a.
+
+    Gauge (choice of datum; does not change the *relative* solution):
+    ``ref=None`` -> zero-mean (group offset spread evenly, absolute frame free);
+    ``ref=<swath id>`` -> that swath is pinned to zero and becomes the local
+    reference (all others measured relative to it). Either way the group's
+    absolute offset from another epoch must be tied separately.
 
     Returns ``(corrections, edges, misclosure)`` where ``corrections`` maps
     swath id -> (Dx, Dy, Dz) m, ``edges`` lists the pairwise observations, and
@@ -173,7 +177,7 @@ def align_swaths(pc, res: float = 2.0, exclude=(5, 6, 9)):
     corr = np.zeros((n, 3)); mis = np.zeros((E, 3))
     for k in range(3):
         c, *_ = np.linalg.lstsq(A * sw[:, None], O[:, k] * sw, rcond=None)
-        c -= c.mean()                      # zero-mean gauge (group offset free)
+        c -= c[idx[ref]] if ref is not None else c.mean()   # gauge choice
         corr[:, k] = c
         mis[:, k] = A @ c - O[:, k]
     corrections = {swaths[i]: tuple(float(v) for v in corr[i]) for i in range(n)}
