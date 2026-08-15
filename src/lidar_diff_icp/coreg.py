@@ -137,6 +137,58 @@ def nuth_kaab(z_ref: np.ndarray, z_src: np.ndarray, res: float,
                  nmad_before, nmad_after, it, converged)
 
 
+def align_swaths(pc, res: float = 2.0, exclude=(5, 6, 9)):
+    """Free-network least-squares alignment of every swath into one frame.
+
+    Runs Nuth & Kaeaeb on each overlapping swath pair, then solves for a
+    per-swath 3-D shift (Dx, Dy, Dz) that makes all overlaps mutually
+    consistent. The observation for edge (a, b) is ``c_b - c_a = s_ab`` where
+    ``s_ab`` aligns b onto a; the system is solved per component with a
+    **zero-mean gauge**, so the whole group's absolute offset (e.g. from the
+    2021 3DEP) is left free and must be tied separately.
+
+    Returns ``(corrections, edges, misclosure)`` where ``corrections`` maps
+    swath id -> (Dx, Dy, Dz) m, ``edges`` lists the pairwise observations, and
+    ``misclosure`` is the per-edge residual (~0 for a tree/chain; nonzero only
+    where redundant overlaps -- loops -- exist to check consistency).
+    """
+    from itertools import combinations
+    swaths = pc.swaths.tolist()
+    idx = {s: k for k, s in enumerate(swaths)}
+    edges = []
+    for a, b in combinations(swaths, 2):
+        try:
+            c = coregister_swaths(pc, a, b, res, exclude)
+        except ValueError:
+            continue
+        edges.append((a, b, c.dx, c.dy, c.dz, float(c.n)))
+    if not edges:
+        raise ValueError("no overlapping swath pairs")
+    n, E = len(swaths), len(edges)
+    A = np.zeros((E, n)); w = np.zeros(E); O = np.zeros((E, 3))
+    for e, (a, b, dx, dy, dz, ww) in enumerate(edges):
+        A[e, idx[a]] = -1.0; A[e, idx[b]] = 1.0
+        w[e] = ww; O[e] = (dx, dy, dz)
+    sw = np.sqrt(w)
+    corr = np.zeros((n, 3)); mis = np.zeros((E, 3))
+    for k in range(3):
+        c, *_ = np.linalg.lstsq(A * sw[:, None], O[:, k] * sw, rcond=None)
+        c -= c.mean()                      # zero-mean gauge (group offset free)
+        corr[:, k] = c
+        mis[:, k] = A @ c - O[:, k]
+    corrections = {swaths[i]: tuple(float(v) for v in corr[i]) for i in range(n)}
+    return corrections, edges, mis
+
+
+def apply_alignment(pc, corrections):
+    """Return copies of (x, y, z) with each swath shifted by its correction."""
+    x = pc.x.copy(); y = pc.y.copy(); z = pc.z.copy()
+    for s, (dx, dy, dz) in corrections.items():
+        m = pc.point_source_id == s
+        x[m] += dx; y[m] += dy; z[m] += dz
+    return x, y, z
+
+
 def coregister_swaths(pc, swath_ref: int, swath_src: int, res: float = 2.0,
                       exclude=(5, 6, 9)) -> Coreg:
     """Nuth & Kaeaeb co-registration of ``swath_src`` onto ``swath_ref`` over
