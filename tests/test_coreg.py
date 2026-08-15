@@ -45,6 +45,25 @@ def test_translation_tilt_recovers_known():
     assert abs(r["c1"] + a1) < 2e-4 and abs(r["c2"] + a2) < 2e-4
 
 
+def test_polynomial_tie_recovers_quadratic_warp():
+    res = 1.0
+    z_ref = _synthetic_surface(res)
+    n = z_ref.shape[0]
+    gy, gx = np.mgrid[0:n, 0:n]
+    X = (gx + 0.5) * res; Y = (gy + 0.5) * res
+    xm = 0.5 * (X.max() + X.min()); xhr = 0.5 * (X.max() - X.min())
+    ym = 0.5 * (Y.max() + Y.min()); yhr = 0.5 * (Y.max() - Y.min())
+    Xn = (X - xm) / xhr; Yn = (Y - ym) / yhr
+    sxf = 0.8 + 0.4 * Xn - 0.2 * Yn + 0.15 * Xn * Xn
+    syf = -0.5 + 0.3 * Yn
+    szf = 0.05 + 0.02 * Xn
+    z_src = coreg._warp_grid(z_ref, sxf, syf, res) + szf
+    r = coreg.tie_polynomial(z_ref, z_src, res, 0, 0, order=2)
+    assert r["converged"]
+    assert r["nmad_after"] < 0.02
+    assert np.sqrt(np.nanmean((r["dx_field"] + sxf) ** 2)) < 0.03
+
+
 def test_zero_shift_is_zero():
     res = 1.0
     z = _synthetic_surface(res)
