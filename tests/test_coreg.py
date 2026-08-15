@@ -30,6 +30,21 @@ def test_recovers_known_shift():
         assert abs(c.dz + sz) < 0.02, f"dz: {c.dz} vs {-sz}"
 
 
+def test_translation_tilt_recovers_known():
+    res = 1.0
+    z_ref = _synthetic_surface(res)
+    n = z_ref.shape[0]
+    gy, gx = np.mgrid[0:n, 0:n]
+    Xc = (gx + 0.5) * res; Xc = Xc - Xc.mean()
+    Yc = (gy + 0.5) * res; Yc = Yc - Yc.mean()
+    sx, sy, a0, a1, a2 = 1.5, -0.8, 0.05, 0.001, -0.0005   # tilt 1.0 / -0.5 mm/m
+    z_src = coreg._shift_grid(z_ref, sx, sy, res) + (a0 + a1 * Xc + a2 * Yc)
+    r = coreg.tie_translation_tilt(z_ref, z_src, res, 0, 0)
+    assert r["converged"]
+    assert abs(r["dx"] + sx) < 0.05 and abs(r["dy"] + sy) < 0.05
+    assert abs(r["c1"] + a1) < 2e-4 and abs(r["c2"] + a2) < 2e-4
+
+
 def test_zero_shift_is_zero():
     res = 1.0
     z = _synthetic_surface(res)
