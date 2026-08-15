@@ -197,6 +197,89 @@ def tie_translation_tilt(z_ref, z_src, res, x_origin, y_origin,
                 converged=converged, n=int(m.sum()))
 
 
+def _poly_basis(xn, yn, order):
+    b = [np.ones_like(xn), xn, yn]
+    if order >= 2:
+        b += [xn * xn, xn * yn, yn * yn]
+    return b
+
+
+def _warp_grid(z, dxf, dyf, res):
+    """Resample z with a spatially varying shift (dxf, dyf per cell)."""
+    ny, nx = z.shape
+    yy, xx = np.mgrid[0:ny, 0:nx].astype(float)
+    cx = xx - dxf / res
+    cy = yy - dyf / res
+    valid = np.isfinite(z).astype(float)
+    filled = np.where(np.isfinite(z), z, 0.0)
+    num = map_coordinates(filled, [cy, cx], order=1, mode="constant", cval=0.0)
+    wgt = map_coordinates(valid, [cy, cx], order=1, mode="constant", cval=0.0)
+    return np.where(wgt > 0.999, num / np.where(wgt == 0, 1.0, wgt), np.nan)
+
+
+def eval_poly_field(coef, x, y, norm, order):
+    """Evaluate a fitted polynomial correction field at arbitrary (x, y)."""
+    xm, xhr, ym, yhr = norm
+    xn = (x - xm) / xhr; yn = (y - ym) / yhr
+    basis = _poly_basis(xn, yn, order)
+    return sum(coef[k] * basis[k] for k in range(len(basis)))
+
+
+def tie_polynomial(z_ref, z_src, res, x_origin, y_origin, order=2,
+                   slope_min_deg=3.0, max_iter=30, tol=0.003):
+    """Spatially varying co-registration: dx, dy, dz each an order-`order`
+    polynomial in (x, y), fit jointly by robust IRLS with change rejection.
+
+    Removes a smooth (kilometre-scale) warp between the two surfaces while being
+    too low-order to absorb finer geomorphic change. Returns the coefficient
+    vectors (a=dx, b=dy, c=dz), the correction fields on the grid, the
+    normalization for re-evaluating the fields at points, and residuals.
+    """
+    ny, nx = z_ref.shape
+    gy_i, gx_i = np.mgrid[0:ny, 0:nx]
+    X = x_origin + (gx_i + 0.5) * res
+    Y = y_origin + (gy_i + 0.5) * res
+    fin = np.isfinite(z_ref)
+    xm = 0.5 * (X[fin].max() + X[fin].min()); xhr = 0.5 * (X[fin].max() - X[fin].min())
+    ym = 0.5 * (Y[fin].max() + Y[fin].min()); yhr = 0.5 * (Y[fin].max() - Y[fin].min())
+    Xn = (X - xm) / xhr; Yn = (Y - ym) / yhr
+    basis = _poly_basis(Xn, Yn, order); K = len(basis)
+    gx = np.gradient(z_ref, res, axis=1)
+    gy = np.gradient(z_ref, res, axis=0)
+    tanS = np.hypot(gx, gy); tan_min = np.tan(np.radians(slope_min_deg))
+    nmad_before = _nmad((z_ref - z_src)[np.isfinite(z_ref - z_src)])
+
+    a = np.zeros(K); b = np.zeros(K); c = np.zeros(K)
+    fld = lambda coef: sum(coef[k] * basis[k] for k in range(K))
+    converged = False
+    for _ in range(max_iter):
+        dh = z_ref - (_warp_grid(z_src, fld(a), fld(b), res) + fld(c))
+        m = np.isfinite(dh) & (tanS > tan_min)
+        med, nm = np.median(dh[m]), _nmad(dh[m])
+        m &= np.abs(dh - med) < 3 * max(nm, 1e-3)
+        cols = ([gx[m] * basis[k][m] for k in range(K)]
+                + [gy[m] * basis[k][m] for k in range(K)]
+                + [basis[k][m] for k in range(K)])
+        A = np.column_stack(cols); y = dh[m]
+        w = np.ones(y.size); coef = np.zeros(3 * K)
+        for _ in range(5):
+            coef, *_ = np.linalg.lstsq(A * w[:, None], y * w, rcond=None)
+            r = y - A @ coef
+            s = 1.4826 * np.median(np.abs(r - np.median(r))) + 1e-9
+            k = 1.345 * s; aa = np.abs(r); w = np.where(aa <= k, 1.0, k / aa)
+        a -= coef[:K]; b -= coef[K:2 * K]; c += coef[2 * K:]
+        if np.hypot(coef[0], coef[K]) < tol and abs(coef[2 * K]) < tol:
+            converged = True
+            break
+    dxf, dyf, dzf = fld(a), fld(b), fld(c)
+    dh_final = z_ref - (_warp_grid(z_src, dxf, dyf, res) + dzf)
+    mf = np.isfinite(dh_final)
+    return dict(a=a, b=b, c=c, order=order, norm=(xm, xhr, ym, yhr),
+                dx_field=dxf, dy_field=dyf, dz_field=dzf,
+                nmad_before=nmad_before, nmad_after=_nmad(dh_final[mf]),
+                converged=converged, n=int(mf.sum()))
+
+
 def align_swaths(pc, res: float = 2.0, exclude=(5, 6, 9), ref=None):
     """Free-network least-squares alignment of every swath into one frame.
 
