@@ -42,6 +42,8 @@ def main():
     ap.add_argument("--cyl-radius", type=float, default=2.0)
     ap.add_argument("--registration-error", type=float, default=0.02,
                     help="co-registration uncertainty added to the LoD (m)")
+    ap.add_argument("--tie-order", type=int, default=2,
+                    help="polynomial order of the spatially varying tie (2 = quadratic)")
     ap.add_argument("--outdir", default="data/derived")
     ap.add_argument("--figdir")
     a = ap.parse_args()
@@ -67,9 +69,16 @@ def main():
     terr08 = (nr8 == 1) & ~np.isin(cl8, [5, 6, 9]) & (xc >= X0) & (xc < X1) & (yc >= Y0) & (yc < Y1)
     Z21 = _median_grid(x2[g21], y2[g21], z2[g21], a.res, X0, Y0, nx, ny)
     Z08 = _median_grid(xc[terr08], yc[terr08], zc[terr08], a.res, X0, Y0, nx, ny)
-    tie = coreg.nuth_kaab(Z21, Z08, a.res)
-    xc += tie.dx; yc += tie.dy; zc += tie.dz
-    print(f"rigid tie 2008->2021: dx={tie.dx:+.3f} dy={tie.dy:+.3f} dz={tie.dz:+.3f} m")
+    # spatially varying tie: dx,dy,dz each an order-`tie_order` polynomial in
+    # (x,y), removing the smooth regional warp (a rigid tie leaves it as coherent
+    # false change). Applied per-point via the fitted fields.
+    tie = coreg.tie_polynomial(Z21, Z08, a.res, X0, Y0, order=a.tie_order)
+    dxp = coreg.eval_poly_field(tie["a"], xc, yc, tie["norm"], a.tie_order)
+    dyp = coreg.eval_poly_field(tie["b"], xc, yc, tie["norm"], a.tie_order)
+    dzp = coreg.eval_poly_field(tie["c"], xc, yc, tie["norm"], a.tie_order)
+    xc += dxp; yc += dyp; zc += dzp
+    print(f"order-{a.tie_order} tie: dx range {np.ptp(tie['dx_field']):.2f} m, "
+          f"dz range {np.ptp(tie['dz_field']):.2f} m, NMAD_after {tie['nmad_after']:.3f} m")
 
     # --- point clouds: ground class both epochs ---
     grd08 = (cl8 == 2) & (xc >= X0) & (xc < X1) & (yc >= Y0) & (yc < Y1)
