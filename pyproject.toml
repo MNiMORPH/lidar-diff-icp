@@ -18,6 +18,7 @@ dependencies = [
     "pyproj",
     "rasterio",
     "matplotlib",
+    "py4dgeo",   # M3C2 point-cloud change detection (analysis/m3c2_lesson.py)
 ]
 
 [project.urls]
