@@ -6,14 +6,16 @@ the gridding-to-vertical artifact that inflates slope noise. Steps:
 
   1. internally align the 2008 swaths (align_swaths, lowest swath pinned) and
      rigid-tie the mosaic to the 2021 3DEP on stable ground (Nuth & Kaeaeb);
-  2. M3C2 between 2008 ground and 2021 ground on a regular core-point grid,
-     giving a change distance AND a per-point LoD (from local roughness +
-     a registration term) at every cell;
+  2. M3C2 between the two epochs' bare-earth clouds (last return in >=1 m^2
+     cells -- the standard mapmaker definition, no vegetation-class filter) on a
+     regular core-point grid, giving a change distance AND a per-point LoD (from
+     local roughness + a registration term) at every cell;
   3. flag change as significant only where |distance| > LoD.
 
 Positive distance = 2021 surface higher than 2008 (deposition); negative =
-erosion. Forest cells have sparse ground returns -> high LoD -> not flagged,
-so the LoD itself down-weights unreliable (vegetated/steep) ground.
+erosion. Where dense canopy keeps last returns off the ground the local surface
+is rough -> large LoD -> not flagged, so the LoD down-weights vegetated/steep
+ground rather than a hard filter discarding under-canopy ground.
 
 Example:
     env PROJ_DATA=/usr/share/proj GDAL_DATA=/usr/share/gdal \
@@ -64,11 +66,15 @@ def main():
 
     g = laspy.read(a.after_laz)
     x2 = np.asarray(g.x); y2 = np.asarray(g.y); z2 = np.asarray(g.z)
-    c2 = np.asarray(g.classification)
-    g21 = (c2 == 2) & (x2 >= X0) & (x2 < X1) & (y2 >= Y0) & (y2 < Y1)
-    terr08 = (nr8 == 1) & ~np.isin(cl8, [5, 6, 9]) & (xc >= X0) & (xc < X1) & (yc >= Y0) & (yc < Y1)
-    Z21 = _median_grid(x2[g21], y2[g21], z2[g21], a.res, X0, Y0, nx, ny)
-    Z08 = _median_grid(xc[terr08], yc[terr08], zc[terr08], a.res, X0, Y0, nx, ny)
+    rn2 = np.asarray(g.return_number); nr2 = np.asarray(g.number_of_returns)
+    # bare earth = LAST return in >=1 m^2 cells (the standard mapmaker
+    # definition); NO vegetation-class filter -- last returns capture ground
+    # under canopy that a single-return filter discards, and the per-point M3C2
+    # LoD down-weights rough canopy where the last return does not reach ground.
+    be21 = (rn2 == nr2) & (x2 >= X0) & (x2 < X1) & (y2 >= Y0) & (y2 < Y1)
+    be08 = (rn8 == nr8) & (xc >= X0) & (xc < X1) & (yc >= Y0) & (yc < Y1)
+    Z21 = _median_grid(x2[be21], y2[be21], z2[be21], a.res, X0, Y0, nx, ny)
+    Z08 = _median_grid(xc[be08], yc[be08], zc[be08], a.res, X0, Y0, nx, ny)
     # spatially varying tie: dx,dy,dz each an order-`tie_order` polynomial in
     # (x,y), removing the smooth regional warp (a rigid tie leaves it as coherent
     # false change). Applied per-point via the fitted fields.
@@ -80,13 +86,12 @@ def main():
     print(f"order-{a.tie_order} tie: dx range {np.ptp(tie['dx_field']):.2f} m, "
           f"dz range {np.ptp(tie['dz_field']):.2f} m, NMAD_after {tie['nmad_after']:.3f} m")
 
-    # --- point clouds: ground class both epochs ---
-    grd08 = (cl8 == 2) & (xc >= X0) & (xc < X1) & (yc >= Y0) & (yc < Y1)
-    p08 = np.column_stack([xc[grd08], yc[grd08], zc[grd08]]).astype(np.float64)
-    p21 = np.column_stack([x2[g21], y2[g21], z2[g21]]).astype(np.float64)
+    # --- point clouds: last-return bare earth, both epochs (same definition) ---
+    p08 = np.column_stack([xc[be08], yc[be08], zc[be08]]).astype(np.float64)
+    p21 = np.column_stack([x2[be21], y2[be21], z2[be21]]).astype(np.float64)
 
-    # --- core points: regular grid, z from the 2008 ground surface ---
-    Z08g = _median_grid(xc[grd08], yc[grd08], zc[grd08], a.res, X0, Y0, nx, ny)
+    # --- core points: regular grid, z from the 2008 bare-earth surface ---
+    Z08g = _median_grid(xc[be08], yc[be08], zc[be08], a.res, X0, Y0, nx, ny)
     gy_i, gx_i = np.mgrid[0:ny, 0:nx]
     Xc = X0 + (gx_i + 0.5) * a.res; Yc = Y0 + (gy_i + 0.5) * a.res
     valid = np.isfinite(Z08g)
