@@ -40,13 +40,16 @@ def main():
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("laz")
     ap.add_argument("--res", type=float, default=RES)
+    ap.add_argument("--ref", type=int, default=None,
+                    help="swath id to pin as local reference (default: lowest id)")
     ap.add_argument("--out", help="output GeoTIFF for the merged DEM")
     args = ap.parse_args()
 
     pc = io.read_tile(args.laz)
-    corrections, edges, mis = coreg.align_swaths(pc, res=args.res)
+    ref = args.ref if args.ref is not None else int(pc.swaths.min())
+    corrections, edges, mis = coreg.align_swaths(pc, res=args.res, ref=ref)
     print(f"{Path(args.laz).name}: swaths {pc.swaths.tolist()}")
-    print("per-swath correction into the common frame (zero-mean gauge):")
+    print(f"per-swath correction into the common frame (reference swath {ref} pinned to 0):")
     print(f"  {'swath':>6} {'Dx_m':>8} {'Dy_m':>8} {'Dz_m':>8}")
     for s, (dx, dy, dz) in corrections.items():
         print(f"  {s:>6} {dx:>8.3f} {dy:>8.3f} {dz:>8.3f}")
