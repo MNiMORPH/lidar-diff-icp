@@ -119,7 +119,7 @@ def main():
     _write(L, a.res, X0, Y0, ny, f"{a.outdir}/m3c2_lod.tif")
     _write(change, a.res, X0, Y0, ny, f"{a.outdir}/change_significant.tif")
     if a.figdir:
-        _fig(Z21, change, (X0, X1, Y0, Y1), a.figdir)
+        _fig(Z21, D, sig, (X0, X1, Y0, Y1), a.figdir)
 
 
 def _write(arr, res, x0, y0, ny, out):
@@ -133,21 +133,29 @@ def _write(arr, res, x0, y0, ny, out):
     print(f"  wrote {out}")
 
 
-def _fig(Z21, change, ext, figdir):
+def _fig(Z21, D, sig, ext, figdir):
+    """Show the FULL continuous change field (all computed cells), with the
+    cells that clear their LoD emphasized -- not the sub-LoD surface deleted."""
     import matplotlib; matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     from matplotlib.colors import LightSource
     Path(figdir).mkdir(parents=True, exist_ok=True)
-    fig, ax = plt.subplots(figsize=(7, 8))
     ls = LightSource(azdeg=315, altdeg=45)
     hs = ls.hillshade(np.nan_to_num(Z21, nan=np.nanmin(Z21)), vert_exag=2)
-    ax.imshow(hs, extent=ext, cmap="gray", origin="lower", alpha=0.8)
-    im = ax.imshow(change, extent=ext, origin="lower", cmap="RdBu_r",
-                   vmin=-0.5, vmax=0.5)
-    ax.set_title("Significant change 2008->2021 (M3C2 > LoD)\n"
-                 "blue = gain/deposition, red = loss/erosion")
-    ax.set_xlabel("Easting (m)"); ax.set_ylabel("Northing (m)")
-    fig.colorbar(im, ax=ax, shrink=0.6, label="change along surface normal (m)")
+    fig, ax = plt.subplots(1, 2, figsize=(15, 8))
+    for a in ax:
+        a.imshow(hs, extent=ext, cmap="gray", origin="lower", alpha=0.6)
+        a.set_xlabel("Easting (m)"); a.set_ylabel("Northing (m)")
+    im = ax[0].imshow(D, extent=ext, origin="lower", cmap="RdBu_r", vmin=-0.5, vmax=0.5)
+    ax[0].set_title("M3C2 change, ALL computed cells (~97% of tile)\n"
+                    "blue = gain, red = loss")
+    # full field faded, significant at full opacity (confidence, not a mask)
+    ax[1].imshow(D, extent=ext, origin="lower", cmap="RdBu_r", vmin=-0.5, vmax=0.5, alpha=0.35)
+    ax[1].imshow(np.where(sig, D, np.nan), extent=ext, origin="lower",
+                 cmap="RdBu_r", vmin=-0.5, vmax=0.5)
+    ax[1].set_title("Same field; cells above their LoD emphasized,\n"
+                    "sub-LoD faded (shown, not deleted)")
+    fig.colorbar(im, ax=ax, shrink=0.5, label="change along surface normal (m)")
     out = Path(figdir) / "change_map_m3c2.png"
     fig.savefig(out, dpi=120, bbox_inches="tight"); print(f"  wrote {out}")
 
