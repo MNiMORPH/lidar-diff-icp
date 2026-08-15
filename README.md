@@ -62,9 +62,25 @@ python scripts/fetch_tile.py --lon -92.004137 --lat 44.101944 --out data/before
 python scripts/swath_consistency.py data/before/4342-29-64.laz
 ```
 
+## Repository layout
+
+- `src/lidar_diff_icp/` — the reusable package: `tiles` (tile discovery/download),
+  `io` (tile reader), `swathdiff` (density-robust inter-swath difference),
+  `coreg` (Nuth & Kaeaeb co-registration + free-network swath alignment),
+  `variogram` (robust Dowd variogram + correlated-error detection limit).
+- `scripts/` — entry-point pipeline tools: `fetch_tile`, `fetch_naip`,
+  `fetch_3dep` / `fetch_3dep_curl`, `swath_consistency`, `swath_coregister`,
+  `error_structure`, `naip_cover_error`, `lod`, `stitch_swaths`.
+- `analysis/` — documented one-off studies and data-QA (see `analysis/README.md`).
+- `tests/` — regression tests (e.g. the coreg sign-convention recovery test).
+- `environment/` — apt package list and venv/PROJ setup notes.
+- `data/`, `figures/` — inputs and outputs (git-ignored; data is re-fetchable).
+
 ## Status
 
-Early. The before-data suitability is confirmed (per-swath attribution + GPS time
-present; swaths overlap in a connected chain). First inter-swath differences over
-the Elba tile show small (~1-2 cm) *robust* vertical offsets; horizontal error
-and its slope-aliased signature are the next thing to characterize.
+Early. 2008 inter-swath error is resolved and stitched into a common frame
+(lowest swath pinned as local reference); the independent-cover error model shows
+error is driven by forest/steep terrain, with a long (>=370 m) correlation
+length. The 2021 3DEP reference is pulled for the patch and its one tested
+flight-line pair shows no detectable internal offset. Next: cross-epoch Nuth &
+Kaeaeb tie on stable ground (robust to real change), then the difference map.
