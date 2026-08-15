@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lidar-diff-icp"
+version = "0.0.1"
+description = "Change detection between lidar epochs with per-flight-line navigation-error correction"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "GPL-3.0-or-later" }
+authors = [{ name = "Andrew D. Wickert", email = "awickert@umn.edu" }]
+dependencies = [
+    "numpy",
+    "scipy",
+    "pandas",
+    "laspy>=2.0",
+    "pyproj",
+    "rasterio",
+    "matplotlib",
+]
+
+[project.urls]
+Repository = "https://github.com/MNiMORPH/lidar-diff-icp"
+
+[tool.setuptools.packages.find]
+where = ["src"]
