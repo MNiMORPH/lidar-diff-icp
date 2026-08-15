@@ -13,7 +13,9 @@ Requires PDAL -> run in the conda `lidar-icp` env:
       --bounds 577492.8 4882737.6 580035.0 4886238.3 --resolution 1.0 \
       --out data/after/3dep2021_4342-29-64.laz
 """
-import argparse, json
+import argparse, json, os
+os.environ.update(GDAL_HTTP_MAX_RETRY="10", GDAL_HTTP_RETRY_DELAY="2",
+                  GDAL_HTTP_TIMEOUT="60", GDAL_HTTP_CONNECTTIMEOUT="15")
 import pdal
 from pyproj import Transformer
 
@@ -47,7 +49,15 @@ def main():
          "dataformat_id": 6, "compression": True},
     ]
     print("bounds (3857):", bounds, flush=True)
-    n = pdal.Pipeline(json.dumps(pipe)).execute()
+    n = None
+    for attempt in range(1, 4):                     # retry flaky S3 node reads
+        try:
+            n = pdal.Pipeline(json.dumps(pipe)).execute()
+            break
+        except RuntimeError as exc:
+            print(f"attempt {attempt} failed: {exc}", flush=True)
+    if n is None:
+        raise SystemExit("EPT read failed after retries")
     print(f"wrote {a.out}: {n:,} points", flush=True)
 
 
