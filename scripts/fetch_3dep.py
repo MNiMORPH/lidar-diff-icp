@@ -28,6 +28,8 @@ def main():
                     metavar=("MINX", "MINY", "MAXX", "MAXY"), help="EPSG:26915")
     ap.add_argument("--resolution", type=float, default=1.0,
                     help="min point spacing to read (m); larger = fewer points")
+    ap.add_argument("--threads", type=int, default=4,
+                    help="EPT fetch concurrency (low = slower but more reliable)")
     ap.add_argument("--out", required=True)
     a = ap.parse_args()
     minx, miny, maxx, maxy = a.bounds
@@ -42,7 +44,7 @@ def main():
 
     pipe = [
         {"type": "readers.ept", "filename": a.url, "bounds": bounds,
-         "resolution": a.resolution},
+         "resolution": a.resolution, "threads": a.threads},
         {"type": "filters.reprojection", "in_srs": "EPSG:3857",
          "out_srs": "EPSG:26915"},
         {"type": "writers.las", "filename": a.out, "minor_version": 4,
