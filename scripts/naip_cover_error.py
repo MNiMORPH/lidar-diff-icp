@@ -19,8 +19,9 @@ Caveats: in dissected terrain NAIP carries terrain *shadow* on steep slopes, so
 the "forest" cluster conflates canopy with slope-aliased error and NAIP's own
 shadow artifact. And note precision vs. accuracy: low inter-swath residual over
 grass means the (elevated) grass surface is *repeatable* between passes, not
-that it is accurate bare earth - dense grass still biases the ground and remains
-a 2008->2021 change-detection confound.
+that it is accurate bare earth. Whether that biases the 2008->2021 *difference*
+depends on whether the cover changed between epochs, which is NOT established
+here; a cover that is unchanged cancels in the difference.
 
 Example:
     python scripts/fetch_naip.py --bounds 577492.8 4882737.6 580035.0 4886238.3 \

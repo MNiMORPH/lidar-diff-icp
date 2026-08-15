@@ -3,9 +3,11 @@
 
 For each overlapping swath pair: co-register (Nuth & Kaeaeb), take the residual
 difference (same-epoch overlap => pure acquisition error), and characterise its
-spatial structure with a *robust* (Dowd) variogram. Stratifies by elevation as a
-crude floodplain (reed canary grass) vs. upland proxy, and reports the
-correlated-error detection limit (LoD95) by feature size.
+spatial structure with a *robust* (Dowd) variogram. Stratifies by elevation
+(low valley-floor vs. high ground) as a crude proxy, and reports the
+correlated-error detection limit (LoD95) by feature size. Note: this elevation
+split does not identify a cause; the independent-cover analysis
+(naip_cover_error.py) attributes high error to forest/steep terrain.
 
 Key point this quantifies: because the error correlation length (>~370 m) far
 exceeds any feature we would map, spatial averaging gives ~no benefit
@@ -97,8 +99,9 @@ def main() -> None:
         _, lHi = vg.detection_limit(mHi, A, RES * RES)
         print(f"  {a}->{b:<5} {lLo:>11.3f}m {lHi:>12.3f}m")
     print("  Long correlation length (>~370 m) => averaging barely lowers the limit")
-    print("  at feature scale (N_eff ~ 1). Where the overlap straddles the reed-canary")
-    print("  floodplain (e.g. 136-137 low-z) the limit ~doubles vs. clean upland.")
+    print("  at feature scale (N_eff ~ 1). The low-elevation valley-floor stratum")
+    print("  (e.g. 136-137 low-z) shows ~2x the limit; cause not identified here")
+    print("  (see naip_cover_error.py: independent cover -> forest/steep terrain).")
 
     if args.figdir:
         key = max(strata, key=lambda k: strata[k][2].size)
