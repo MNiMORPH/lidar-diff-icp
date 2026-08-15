@@ -5,7 +5,8 @@ Difference engine = M3C2 (point-based, along local surface normal), which avoids
 the gridding-to-vertical artifact that inflates slope noise. Steps:
 
   1. internally align the 2008 swaths (align_swaths, lowest swath pinned) and
-     rigid-tie the mosaic to the 2021 3DEP on stable ground (Nuth & Kaeaeb);
+     tie the mosaic to the 2021 3DEP with a spatially varying (quadratic) fit on
+     stable ground (coreg.tie_polynomial), stripping the smooth regional warp;
   2. M3C2 between the two epochs' bare-earth clouds (last return in >=1 m^2
      cells -- the standard mapmaker definition, no vegetation-class filter) on a
      regular core-point grid, giving a change distance AND a per-point LoD (from
