@@ -1,0 +1,21 @@
+# Python environments (rebuild from environment/; see README)
+/lidar-icp/
+/.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+
+# Data: large and publicly re-fetchable via scripts/fetch_tile.py
+/data/
+*.laz
+*.las
+*.tif
+*.tiff
+
+# Generated outputs
+/figures/
+/scratch/
+
+# OS / editor
+.DS_Store
+*.swp
