@@ -137,6 +137,66 @@ def nuth_kaab(z_ref: np.ndarray, z_src: np.ndarray, res: float,
                  nmad_before, nmad_after, it, converged)
 
 
+def tie_translation_tilt(z_ref, z_src, res, x_origin, y_origin,
+                         slope_min_deg=3.0, max_iter=25, tol=0.003):
+    """Best overall co-registration of ``z_src`` onto ``z_ref``: horizontal
+    translation PLUS a planar vertical tilt, one robust joint fit over the DEM.
+
+    First-order model, fit each iteration by Huber-IRLS with 3-sigma rejection
+    of change outliers:
+
+        dh = dx * dz/dE + dy * dz/dN + c0 + c1 * X + c2 * Y
+
+    (dx,dy) is the horizontal shift; (c1,c2) the vertical tilt gradient; c0 the
+    vertical offset. Returns a dict of the parameters plus tilt (mm/m), the total
+    vertical ramp across the DEM (m), and the robust residual before/after.
+    """
+    ny, nx = z_ref.shape
+    gy_i, gx_i = np.mgrid[0:ny, 0:nx]
+    X = x_origin + (gx_i + 0.5) * res
+    Y = y_origin + (gy_i + 0.5) * res
+    fin0 = np.isfinite(z_ref)
+    Xc = X - X[fin0].mean()
+    Yc = Y - Y[fin0].mean()
+    gx = np.gradient(z_ref, res, axis=1)      # dz/dE
+    gy = np.gradient(z_ref, res, axis=0)      # dz/dN
+    tanS = np.hypot(gx, gy)
+    tan_min = np.tan(np.radians(slope_min_deg))
+    nmad_before = _nmad((z_ref - z_src)[np.isfinite(z_ref - z_src)])
+
+    dx = dy = c0 = c1 = c2 = 0.0
+    converged = False
+    for _ in range(max_iter):
+        vert = c0 + c1 * Xc + c2 * Yc
+        dh = z_ref - (_shift_grid(z_src, dx, dy, res) + vert)
+        m = np.isfinite(dh) & (tanS > tan_min)
+        med, nm = np.median(dh[m]), _nmad(dh[m])
+        m &= np.abs(dh - med) < 3 * max(nm, 1e-3)
+        A = np.c_[gx[m], gy[m], np.ones(m.sum()), Xc[m], Yc[m]]
+        y = dh[m]
+        w = np.ones(y.size); coef = np.zeros(5)
+        for _ in range(5):                    # Huber IRLS
+            Aw = A * w[:, None]
+            coef, *_ = np.linalg.lstsq(Aw, y * w, rcond=None)
+            r = y - A @ coef
+            s = 1.4826 * np.median(np.abs(r - np.median(r))) + 1e-9
+            k = 1.345 * s; a = np.abs(r)
+            w = np.where(a <= k, 1.0, k / a)
+        dx -= coef[0]; dy -= coef[1]           # horizontal offset -> correction
+        c0 += coef[2]; c1 += coef[3]; c2 += coef[4]
+        if np.hypot(coef[0], coef[1]) < tol and abs(coef[2]) < tol:
+            converged = True
+            break
+    dh_final = z_ref - (_shift_grid(z_src, dx, dy, res) + c0 + c1 * Xc + c2 * Yc)
+    m = np.isfinite(dh_final)
+    return dict(dx=float(dx), dy=float(dy), c0=float(c0), c1=float(c1), c2=float(c2),
+                tilt_mm_per_m=float(np.hypot(c1, c2) * 1000),
+                ramp_m=float(abs(c1) * (X[fin0].max() - X[fin0].min())
+                             + abs(c2) * (Y[fin0].max() - Y[fin0].min())),
+                nmad_before=float(nmad_before), nmad_after=float(_nmad(dh_final[m])),
+                converged=converged, n=int(m.sum()))
+
+
 def align_swaths(pc, res: float = 2.0, exclude=(5, 6, 9), ref=None):
     """Free-network least-squares alignment of every swath into one frame.
 
