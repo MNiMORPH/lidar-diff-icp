@@ -32,6 +32,7 @@ def main():
                     metavar=("MINX", "MINY", "MAXX", "MAXY"), help="EPSG:26915")
     ap.add_argument("--max-depth", type=int, default=9)
     ap.add_argument("--max-tiles", type=int, default=160)
+    ap.add_argument("--workers", type=int, default=16, help="parallel download workers")
     ap.add_argument("--out", required=True)
     a = ap.parse_args()
 
@@ -83,6 +84,14 @@ def main():
                 return
             dst.unlink(missing_ok=True)
         raise RuntimeError(f"failed to download {key}")
+
+    from concurrent.futures import ThreadPoolExecutor
+    need = [k for k in keep if not (tmp / f"{k}.laz").exists()]
+    if need:
+        print(f"downloading {len(need)} tiles ({a.workers} workers)...", flush=True)
+        with ThreadPoolExecutor(max_workers=a.workers) as ex:
+            list(ex.map(lambda k: dl(k, tmp / f"{k}.laz"), need))
+        print("  downloads complete", flush=True)
 
     xs_, ys_, zs_, psid, cls, rn, nr = ([] for _ in range(7))
     for i, key in enumerate(keep):
