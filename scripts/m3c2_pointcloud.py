@@ -28,6 +28,11 @@ def main():
                     help="after the quadratic tie, add a DeLong 400 m vertical "
                          "correction surface fit on upland stable ground (TPI "
                          "floodplain buffer), applied to the 2008 points")
+    ap.add_argument("--robust", action="store_true",
+                    help="M3C2 median (robust_aggr) instead of mean -- robust to "
+                         "above-ground last returns on steep/rough slopes")
+    ap.add_argument("--normal-radius", type=float, default=3.0)
+    ap.add_argument("--cyl-radius", type=float, default=1.5)
     ap.add_argument("--out", default="data/derived/change_pointcloud.laz")
     a = ap.parse_args()
     X0, Y0, X1, Y1 = a.bounds
@@ -103,8 +108,13 @@ def main():
     _, idx = np.unique(k, return_index=True); core = src[idx]
     print(f"core points ({a.core_res} m) from {a.core_from}: {len(core):,}", flush=True)
 
+    # robust_aggr=True -> median (not mean) of the cylinder's points along the
+    # normal. On steep/rough slopes the mean is pulled up by above-ground last
+    # returns (scatter in the upper tail); the median ignores that tail up to
+    # ~50% contamination, so it tracks the ground surface better.
     m3 = py4dgeo.M3C2(epochs=(py4dgeo.Epoch(p08), py4dgeo.Epoch(p21)), corepoints=core,
-                      normal_radii=(3.0,), cyl_radius=1.5, max_distance=15.0, registration_error=0.0)
+                      normal_radii=(a.normal_radius,), cyl_radius=a.cyl_radius,
+                      max_distance=15.0, registration_error=0.0, robust_aggr=a.robust)
     dist, unc = m3.run(); lod = unc["lodetection"]
     ok = np.isfinite(dist)
     print(f"M3C2 done: {ok.sum():,} core points with a value; median LoD {np.nanmedian(lod):.3f} m", flush=True)
