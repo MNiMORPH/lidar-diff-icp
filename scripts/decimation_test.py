@@ -113,12 +113,41 @@ def main():
                      for (l, n, a1, a2, a3, a4, a5) in rows]
     table = "\n".join(lines)
     print(table, flush=True)
+
+    # why: density effect by percentile on the floodplain. A denser cloud finds
+    # lower ground through vegetation at the MIN / low percentiles, but not at
+    # the median -- which is why the median-aggregated M3C2 is density-immune.
+    xin, yin, zin = x2[m2], y2[m2], z2[m2]
+    ip = ((xin - X0) / res).astype(int); jp = ((yin - Y0) / res).astype(int)
+    okp = (ip >= 0) & (ip < nx) & (jp >= 0) & (jp < ny)
+    dfp = pd.DataFrame({"cell": jp[okp] * nx + ip[okp], "z": zin[okp]})
+    rng2 = np.random.default_rng(a.seed)
+    dfp["k"] = rng2.random(len(dfp)) < (len(p08) / len(p21))
+    fp_flat = np.flatnonzero(floodplain.ravel())
+    plines = ["| percentile | dense - decimated (m) |", "|---|--:|"]
+    for p, lab in [(0, "min"), (5, "5th"), (10, "10th"), (25, "25th"), (50, "median")]:
+        d = dfp.groupby("cell")["z"].quantile(p / 100.0)
+        c = dfp[dfp.k].groupby("cell")["z"].quantile(p / 100.0)
+        common = d.index.intersection(c.index)
+        common = common[np.isin(common, fp_flat)]
+        diff = (d.loc[common] - c.loc[common]).values
+        diff = diff[np.isfinite(diff)]
+        plines.append(f"| {lab} | {np.median(diff):+.3f} |")
+    ptable = "\n".join(plines)
+    print(ptable, flush=True)
+
     Path("analysis").mkdir(exist_ok=True)
     with open("analysis/decimation_result.md", "w") as fh:
         fh.write("# Density-decimation test (M3C2 median)\n\n")
         fh.write("2021 decimated to 2008 point count (same area => 2008 density). "
                  "Positive = 2021 higher (deposition). Units metres.\n\n")
         fh.write(table + "\n\n")
+        fh.write("## Why: density effect is real for a LOW ground pick, not the median\n\n")
+        fh.write("Per floodplain cell, 2021 elevation at a percentile, dense minus "
+                 "decimated:\n\n")
+        fh.write(ptable + "\n\n")
+        fh.write("The denser cloud finds lower ground through the grass at the min / "
+                 "low percentiles, decaying to zero at the median.\n\n")
         fh.write("Interpretation is the reader's; the numbers are what changed "
                  "when the densities were matched.\n")
     print("wrote analysis/decimation_result.md", flush=True)
