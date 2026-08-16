@@ -14,11 +14,16 @@ Lessons baked in
   two epochs differ greatly in density, that offset becomes COHERENT false change
   (~16-32% of convex hillslopes falsely depositional). A low percentile tracks
   the ground and removes it (~4%). This is the single most important choice.
-* **Correct in the acquisition-honest order, per point, BEFORE gridding:**
-  per-swath internal alignment (translation) -> spatially varying quadratic tie
-  -> DeLong 400 m correction surface on flats (TPI floodplain buffer) -> per-swath
-  along-track GNSS-drift spline ``f(gps_time)``. The drift is the deterministic,
-  reusable core: the same early-lidar failure statewide, only coefficients differ.
+* **Correct in the ACQUISITION frame, per point, BEFORE gridding:** per-swath
+  internal alignment (translation) -> spatially varying quadratic tie -> per-swath
+  along-track GNSS-drift spline ``f(gps_time)``. The residual warp and real
+  localized change share the same ~100-400 m scale, so no data-driven interpolator
+  on the elevation residual can separate them; only the acquisition geometry can.
+  The drift uses it (per-swath, time-ordered), is deterministic and reusable, and
+  cannot absorb a localized deposit. A DeLong 400 m correction surface is available
+  (``correction_surface=True``) for legacy data lacking ``gps_time``, but it is a
+  data-driven IDW that absorbs localized flat change up to its dz threshold, adds
+  only ~4 mm here, and is OFF by default.
 * **TPI, not flow accumulation, buffers the floodplain** out of the stable set
   (flow routing is unreliable on flats).
 * Convention: DoD is always ``after - before`` (positive = deposition); plot red =
@@ -94,7 +99,7 @@ def heteroscedastic_lod(dod, slope_deg, abs_curv, stable, *, z=1.96):
 
 
 def difference_dem(before_laz, after_last_laz, bounds, *, res=5.0, ground_q=0.10,
-                   correction_surface=True, along_track_drift=True,
+                   correction_surface=False, along_track_drift=True,
                    before_crs=io.MN_2008_CRS):
     """Corrected bare-earth DEM of Difference (after - before).
 

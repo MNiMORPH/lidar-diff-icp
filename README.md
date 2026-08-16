@@ -44,17 +44,22 @@ point.
    convex hillslopes read as falsely depositional. A low percentile tracks the
    ground and drops that to ~4%. Coherent bias, not incoherent noise, is what
    fools change detection, so this matters more than point-cloud vs raster.
-3. **Correct the 2008 points in acquisition-honest order, per point, *before*
+3. **Correct the 2008 points in the acquisition frame, per point, *before*
    gridding** (not post-hoc on the difference):
    1. per-swath internal alignment (translation, lowest swath pinned);
    2. spatially varying **quadratic tie** to 3DEP on stable ground — removes the
-      smooth cross-epoch warp a rigid tie would leave;
-   3. **DeLong 400 m correction surface** on flats only, with a **topographic
-      position index** floodplain buffer (flow accumulation can't place a channel
-      in a flat floodplain);
-   4. **per-swath along-track GNSS-drift spline `f(gps_time)`** — the deterministic,
+      smooth cross-epoch warp a rigid tie would leave (with a divergence guard: on
+      gentle/well-aligned terrain it falls back to a rigid vertical offset);
+   3. **per-swath along-track GNSS-drift spline `f(gps_time)`** — the deterministic,
       physical form of the residual error, and the reusable core: the same failure
       mode statewide, only the coefficients differ per tile.
+
+   The residual warp and real localized change share the same ~100–400 m scale, so
+   no data-driven interpolator on the elevation residual can separate them — only
+   the acquisition geometry can, which is what the drift uses. A DeLong 400 m
+   correction surface (data-driven IDW, TPI floodplain buffer) is available for
+   legacy data lacking `gps_time`, but it absorbs localized flat change up to its
+   threshold and adds only ~4 mm here, so it is **off by default**.
 4. **Difference:** gridded low-percentile ground, DoD = 3DEP − 2008 (positive =
    deposition). Cell size (default 5 m) is set by the sparse 2008 density
    (~0.8 pts/m² → ~20 points per 5 m cell for a stable percentile).

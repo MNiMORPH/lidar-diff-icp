@@ -24,7 +24,11 @@ def main():
     ap.add_argument("--bounds", nargs=4, type=float, required=True)
     ap.add_argument("--res", type=float, default=5.0)
     ap.add_argument("--ground-q", type=float, default=0.10)
-    ap.add_argument("--no-correction-surface", action="store_true")
+    ap.add_argument("--correction-surface", action="store_true",
+                    help="enable the data-driven DeLong correction surface (OFF by "
+                         "default; the physical along-track drift is preferred and "
+                         "does not absorb localized change -- use only for legacy "
+                         "data lacking gps_time)")
     ap.add_argument("--no-drift", action="store_true")
     ap.add_argument("--outdir", default="data/derived/final")
     ap.add_argument("--figdir", default="figures")
@@ -32,7 +36,7 @@ def main():
 
     r = difference_dem(a.before_laz, a.after_last_laz, a.bounds, res=a.res,
                        ground_q=a.ground_q,
-                       correction_surface=not a.no_correction_surface,
+                       correction_surface=a.correction_surface,
                        along_track_drift=not a.no_drift)
     dod, lod = r["dod"], r["lod"]
     ex = np.isfinite(dod)
