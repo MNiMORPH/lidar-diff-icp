@@ -66,9 +66,13 @@ deposition; standard NW (315°/45°) hillshade.**
 
 - **Stable-ground 1σ** (empirical NMAD on low-slope, non-floodplain ground) is the
   trustworthy number — ~0.09 m on the pilot.
-- A **per-cell LoD** (`lod.tif`) from within-cell spread guides where change is
-  detectable, but it is *conservative on slopes* (intra-cell relief inflates it
-  yet cancels in the difference), so quote the empirical σ, not the per-cell LoD.
+- The **per-cell LoD** (`lod.tif`) is a calibrated heteroscedastic error model
+  inherited from **xdem** (Hugonnet et al., 2022): the stable-ground DoD
+  dispersion is modeled as a function of slope and curvature and predicted
+  everywhere, so σ honestly rises with slope (~0.04 m flat → ~0.20 m steep on the
+  pilot) rather than being relief-inflated. Needs `xdem` (`pip install .[uncertainty]`;
+  its import requires `PROJ_DATA` unset); falls back to a within-cell-spread proxy
+  otherwise. The slope-dependence is real uncertainty — modeled, not detrended.
 
 ## Quick start
 
