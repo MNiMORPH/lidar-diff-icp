@@ -108,9 +108,43 @@ def test_correction_surface_exclude_drops_sources():
     assert b["stable"][10, 60]                       # kept region retained
 
 
+def test_along_track_drift_recovers_known():
+    """Inject a smooth per-swath drift as a function of gps_time and recover it.
+    The residual on stable ground is drift + noise; the spline fit must track the
+    drift, not the noise."""
+    rng = np.random.default_rng(0); n = 20000
+    gps = np.sort(rng.uniform(0.0, 100.0, n))
+    swath = np.ones(n, int)
+    true = 0.04 * np.sin(np.pi * gps / 100.0)          # smooth half-sine
+    change = true + rng.normal(0, 0.02, n)             # stable residual = drift + noise
+    stable = np.ones(n, bool)
+    drift, curves = coreg.fit_along_track_drift(gps, change, stable, swath)
+    assert 1 in curves
+    assert np.corrcoef(drift, true)[0, 1] > 0.9
+    assert np.sqrt(np.mean((drift - true) ** 2)) < 0.02
+
+
+def test_tie_falls_back_on_gentle_terrain():
+    """On gentle terrain with no real warp the Nuth & Kaeaeb horizontal shift is
+    unconstrained; the tie must fall back to a rigid vertical offset, never a
+    runaway (dx ~ 1000 m) that makes the fit worse than the input."""
+    rng = np.random.default_rng(0); res = 5.0; n = 60
+    yy, xx = np.mgrid[0:n, 0:n] * res; cx = cy = n * res / 2
+    dome = 105.0 - 1.5e-4 * ((xx - cx) ** 2 + (yy - cy) ** 2)   # < 3 deg everywhere
+    z_ref = dome + rng.normal(0, 0.02, (n, n))
+    z_src = dome + rng.normal(0, 0.02, (n, n))                  # no warp, just noise
+    t = coreg.tie_polynomial(z_ref, z_src, res, 0.0, 0.0, order=2)
+    # safe by property, however reached (rigid fallback or early break to
+    # identity): no runaway horizontal shift, and never worse than the input.
+    assert np.ptp(t["dx_field"]) < 5.0
+    assert t["nmad_after"] <= t["nmad_before"] + 1e-9
+
+
 if __name__ == "__main__":
     test_recovers_known_shift()
     test_zero_shift_is_zero()
     test_correction_surface_recovers_warp_and_ignores_real_change()
     test_correction_surface_exclude_drops_sources()
+    test_along_track_drift_recovers_known()
+    test_tie_falls_back_on_gentle_terrain()
     print("coreg regression tests PASS")
