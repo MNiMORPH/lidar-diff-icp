@@ -280,6 +280,53 @@ def tie_polynomial(z_ref, z_src, res, x_origin, y_origin, order=2,
                 converged=converged, n=int(mf.sum()))
 
 
+def correction_surface(z_ref, z_src, res, x_origin, y_origin, *,
+                       slope_thresh_deg=3.0, dz_thresh=0.7, radius=400.0,
+                       power=2.0, source_step=4, k=32):
+    """Vertical error-correction surface after DeLong et al. (2022, ESS).
+
+    From two gridded ground surfaces, form the raw vertical difference
+    ``dz = z_ref - z_src``, mask cells likely to hold REAL change -- local slope
+    > ``slope_thresh_deg`` or ``|dz| > dz_thresh`` -- and inverse-distance
+    interpolate (power ``power``, search ``radius`` m) the remaining STABLE
+    residual across every cell. The result is a smooth field of spurious
+    vertical offset: add it to ``z_src`` (or subtract from ``dz``) to remove the
+    error while leaving change that exceeds the masks. Unlike a low-order
+    polynomial tie this is nonparametric, so it can follow a multi-lobe warp.
+
+    Precondition (from the paper): valid only where stable ground is
+    widespread. A stream / valley-floor buffer -- which the paper also uses --
+    is NOT applied here, so real broad low-slope deposition can be absorbed;
+    ``dz_thresh`` is the only guard against that. Report ``frac_stable``.
+
+    ``source_step`` thins the stable cells used as IDW sources (every Nth cell
+    each axis) for speed; the surface is smooth at ``radius`` so this is benign.
+    Returns dict(C, stable, dz, n_stable, frac_stable).
+    """
+    from scipy.spatial import cKDTree
+    ny, nx = z_ref.shape
+    dz = z_ref - z_src
+    slope, _ = slope_aspect(z_ref, res)
+    stable = (np.isfinite(dz) & (np.degrees(slope) < slope_thresh_deg)
+              & (np.abs(dz) < dz_thresh))
+    jj, ii = np.mgrid[0:ny, 0:nx]
+    X = x_origin + (ii + 0.5) * res
+    Y = y_origin + (jj + 0.5) * res
+    sel = stable & (ii % source_step == 0) & (jj % source_step == 0)
+    if sel.sum() < k:
+        raise ValueError(f"too few stable source cells ({sel.sum()}) for k={k}")
+    tree = cKDTree(np.c_[X[sel], Y[sel]])
+    sdz = dz[sel]
+    dist, idx = tree.query(np.c_[X.ravel(), Y.ravel()], k=k)
+    w = 1.0 / np.maximum(dist, 1e-6) ** power
+    w[dist > radius] = 0.0
+    allzero = w.sum(1) == 0                       # no stable source within radius
+    w[allzero, 0] = 1.0                           # fall back to nearest
+    C = (w * sdz[idx]).sum(1) / w.sum(1)
+    return dict(C=C.reshape(ny, nx), stable=stable, dz=dz,
+                n_stable=int(stable.sum()), frac_stable=float(stable.mean()))
+
+
 def align_swaths(pc, res: float = 2.0, exclude=(5, 6, 9), ref=None):
     """Free-network least-squares alignment of every swath into one frame.
 

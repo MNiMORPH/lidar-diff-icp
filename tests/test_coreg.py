@@ -73,7 +73,29 @@ def test_zero_shift_is_zero():
     assert c.nmad_after <= c.nmad_before + 1e-9
 
 
+def test_correction_surface_recovers_warp_and_ignores_real_change():
+    """DeLong-style correction surface: it must recover a smooth vertical warp
+    from STABLE (flat, small-dz) ground, and must NOT absorb a large localized
+    change that the masks exclude -- the surface should interpolate smoothly
+    through it, leaving the change in the corrected difference."""
+    res = 5.0; n = 80
+    yy, xx = np.mgrid[0:n, 0:n] * res
+    z_src = np.zeros((n, n))                       # flat ground -> all "stable"
+    warp = 0.15 * np.sin(2 * np.pi * xx / 300.0)   # smooth spurious warp, <0.7 m
+    z_ref = z_src + warp
+    z_ref[40:45, 40:45] += 2.0                     # localized real change
+    cs = coreg.correction_surface(z_ref, z_src, res, 0.0, 0.0,
+                                  slope_thresh_deg=3.0, dz_thresh=0.7, radius=400.0)
+    C = cs["C"]
+    assert not cs["stable"][42, 42]                # change patch excluded from stable
+    far = np.ones((n, n), bool); far[35:50, 35:50] = False
+    assert np.sqrt(np.nanmean((C[far] - warp[far]) ** 2)) < 0.03  # recovers warp
+    corrected = cs["dz"] - C
+    assert corrected[42, 42] > 1.5                 # does not absorb the +2 m change
+
+
 if __name__ == "__main__":
     test_recovers_known_shift()
     test_zero_shift_is_zero()
+    test_correction_surface_recovers_warp_and_ignores_real_change()
     print("coreg regression tests PASS")
