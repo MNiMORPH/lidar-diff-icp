@@ -56,6 +56,26 @@ def read_last_return(path, bounds=None):
     return dict(x=x, y=y, z=z, point_source_id=ps, gps_time=gt)
 
 
+def heteroscedastic_lod(dod, slope_deg, abs_curv, stable, *, z=1.96):
+    """Per-cell level of detection from a calibrated error model (xdem / Hugonnet
+    et al., 2022). Models the stable-ground DoD dispersion (NMAD) as a function of
+    slope and curvature, then predicts ``z * sigma`` everywhere -- so the error is
+    calibrated to the *actual* stable-ground scatter, honestly rising with slope
+    rather than inflated by intra-cell relief. Returns None if xdem is
+    unavailable (import needs PROJ_DATA unset, as pip rasterio bundles PROJ)."""
+    try:
+        import xdem.spatialstats as ss
+    except Exception:
+        return None
+    m = stable & np.isfinite(dod) & np.isfinite(slope_deg) & np.isfinite(abs_curv)
+    if m.sum() < 500:
+        return None
+    _, errfun = ss._estimate_model_heteroscedasticity(
+        dod[m], [slope_deg[m], abs_curv[m]], list_var_names=["slope", "curv"])
+    sig = errfun((slope_deg.ravel(), abs_curv.ravel())).reshape(dod.shape)
+    return z * sig
+
+
 def difference_dem(before_laz, after_last_laz, bounds, *, res=5.0, ground_q=0.10,
                    correction_surface=True, along_track_drift=True,
                    before_crs=io.MN_2008_CRS):
@@ -147,15 +167,24 @@ def difference_dem(before_laz, after_last_laz, bounds, *, res=5.0, ground_q=0.10
     s08 = cellstat(xc[be], yc[be], zc[be], "spread")
     n08 = cellstat(xc[be], yc[be], zc[be], "count")
     dod = Z21 - Z08c
-    lod = 1.96 * np.sqrt(np.nan_to_num(s08**2 / np.maximum(n08, 1))
-                         + np.nan_to_num(s21**2 / np.maximum(n21, 1)))
     r = dod[stable & np.isfinite(dod)]
     sigma = float(1.4826 * np.median(np.abs(r - np.median(r))))
+    # LoD: calibrated heteroscedastic model (xdem/Hugonnet 2022) if available,
+    # else a within-cell spread proxy (relief-inflated on slopes -- fallback only).
+    abs_curv = np.abs(np.gradient(np.gradient(gaussian_filter(Zf, 1.0), res, axis=0), res, axis=0)
+                      + np.gradient(np.gradient(gaussian_filter(Zf, 1.0), res, axis=1), res, axis=1))
+    lod = heteroscedastic_lod(dod, sdeg, abs_curv, stable)
+    lod_method = "xdem heteroscedastic (slope,curv), calibrated on stable ground"
+    if lod is None:
+        lod = 1.96 * np.sqrt(np.nan_to_num(s08**2 / np.maximum(n08, 1))
+                             + np.nan_to_num(s21**2 / np.maximum(n21, 1)))
+        lod_method = "within-cell spread proxy (fallback; relief-inflated on slopes)"
 
     corrections = {
         "epochs": "after - before (positive = deposition)",
         "crs": "EPSG:26915", "res_m": res, "ground_percentile": ground_q,
         "bounds": [float(b) for b in bounds], "stable_1sigma_m": round(sigma, 4),
+        "lod_method": lod_method,
         "per_swath_internal_alignment_dxdydz_m":
             {str(k): [round(float(v), 4) for v in val] for k, val in corr.items()},
         "cross_epoch_tie_order2_coef": {

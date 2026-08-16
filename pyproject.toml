@@ -21,6 +21,9 @@ dependencies = [
     "py4dgeo",   # M3C2 point-based cross-check (scripts/m3c2_pointcloud.py)
 ]
 
+[project.optional-dependencies]
+uncertainty = ["xdem"]  # calibrated heteroscedastic LoD (Hugonnet 2022); import needs PROJ_DATA unset
+
 [project.urls]
 Repository = "https://github.com/MNiMORPH/lidar-diff-icp"
 
