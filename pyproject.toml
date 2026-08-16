@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "lidar-diff-icp"
 version = "0.0.1"
-description = "Change detection between lidar epochs with per-flight-line navigation-error correction"
+description = "Bare-earth DEMs of difference between 2008-era Minnesota lidar and USGS 3DEP, correcting early-survey navigation error"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "GPL-3.0-or-later" }
@@ -14,11 +14,11 @@ dependencies = [
     "numpy",
     "scipy",
     "pandas",
-    "laspy>=2.0",
+    "laspy[lazrs]>=2.0",   # lazrs = LAZ read/write backend
     "pyproj",
     "rasterio",
     "matplotlib",
-    "py4dgeo",   # M3C2 point-cloud change detection (analysis/m3c2_lesson.py)
+    "py4dgeo",   # M3C2 point-based cross-check (scripts/m3c2_pointcloud.py)
 ]
 
 [project.urls]
