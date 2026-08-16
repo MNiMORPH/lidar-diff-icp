@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# SUPERSEDED (kept for git history; do not use for products): variogram exploration -> lidar_diff_icp.variogram
 """Error structure of the co-registered inter-swath residuals.
 
 For each overlapping swath pair: co-register (Nuth & Kaeaeb), take the residual
