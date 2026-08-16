@@ -21,6 +21,9 @@ def main():
     ap.add_argument("before_laz"); ap.add_argument("after_last_laz")
     ap.add_argument("--bounds", nargs=4, type=float, required=True)
     ap.add_argument("--core-res", type=float, default=2.0, help="core-point spacing (m)")
+    ap.add_argument("--core-from", choices=("2021", "2008"), default="2021",
+                    help="which cloud to hang the core points (and thus the "
+                         "cylinders) on; the OTHER cloud is searched inside them")
     ap.add_argument("--out", default="data/derived/change_pointcloud.laz")
     a = ap.parse_args()
     X0, Y0, X1, Y1 = a.bounds
@@ -62,10 +65,14 @@ def main():
     p08 = np.column_stack([xc[be8], yc[be8], zc[be8]]).astype(np.float64)
     p21 = np.column_stack([x2[m2], y2[m2], z2[m2]]).astype(np.float64)
 
-    # core points: subsample the 2021 cloud onto a grid
-    k = (np.floor(p21[:, 0] / a.core_res) * 1e6 + np.floor(p21[:, 1] / a.core_res)).astype(np.int64)
-    _, idx = np.unique(k, return_index=True); core = p21[idx]
-    print(f"core points ({a.core_res} m): {len(core):,}", flush=True)
+    # core points: subsample the chosen cloud onto a grid. The core cloud is
+    # where the cylinders (and normals) are hung; the OTHER cloud is searched
+    # inside them. Sign is unchanged -- epochs stay (2008, 2021), so positive =
+    # 2021 higher regardless of which cloud carries the core points.
+    src = p21 if a.core_from == "2021" else p08
+    k = (np.floor(src[:, 0] / a.core_res) * 1e6 + np.floor(src[:, 1] / a.core_res)).astype(np.int64)
+    _, idx = np.unique(k, return_index=True); core = src[idx]
+    print(f"core points ({a.core_res} m) from {a.core_from}: {len(core):,}", flush=True)
 
     m3 = py4dgeo.M3C2(epochs=(py4dgeo.Epoch(p08), py4dgeo.Epoch(p21)), corepoints=core,
                       normal_radii=(3.0,), cyl_radius=1.5, max_distance=15.0, registration_error=0.0)
