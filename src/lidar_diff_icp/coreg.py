@@ -125,6 +125,16 @@ def nuth_kaab(z_ref: np.ndarray, z_src: np.ndarray, res: float,
     dh_final = z_ref - z_final
     nmad_after = _nmad(dh_final[np.isfinite(dh_final)])
 
+    # Divergence guard (as in tie_polynomial): on gentle terrain the horizontal
+    # shift (~1/tan slope) can run away and worsen the fit. Fall back to a rigid
+    # vertical offset if the horizontal solution is implausible (> 10 m; real
+    # airborne shifts are sub-metre) or fails to beat it.
+    dz0 = float(np.nanmedian(dh0))
+    nmad_rigid = _nmad((dh0 - dz0)[np.isfinite(dh0)])
+    if (not np.isfinite(nmad_after)) or nmad_after > nmad_rigid or np.hypot(dx, dy) > 10.0:
+        dx = dy = 0.0; dz = dz0; nmad_after = nmad_rigid; converged = True
+        coef_cov = np.full((3, 3), np.nan)      # horizontal not estimated
+
     # Shift-component uncertainty from the cosine-fit covariance. The eastward
     # increment is a*sin(b) = p2 and the northward is a*cos(b) = p1, so their
     # variances are exactly coef_cov[1,1] (p2) and coef_cov[0,0] (p1).
