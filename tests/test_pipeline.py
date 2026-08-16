@@ -9,7 +9,8 @@ import numpy as np
 import laspy
 import pytest
 
-from lidar_diff_icp.pipeline import difference_dem, rasterize, heteroscedastic_lod
+from lidar_diff_icp.pipeline import (difference_dem, rasterize, heteroscedastic_lod,
+                                     read_last_return)
 
 
 X0, Y0, W = 1000.0, 2000.0, 200.0
@@ -81,6 +82,23 @@ def test_difference_dem_recovers_bump_and_zero_on_stable(tmp_path):
     m = far & np.isfinite(dod)
     assert abs(np.median(dod[m])) < 0.05
     assert r["stable_sigma"] < 0.08
+
+
+def test_read_last_return_keeps_singles(tmp_path):
+    """Bare earth = last return (rn == nr) INCLUDING single returns. Dropping
+    singles (rn==nr & nr>1) empties flat open ground -- the bug this guards."""
+    rn = np.array([1, 2, 1], np.uint8)         # single, last-of-2, first-of-2
+    nr = np.array([1, 2, 2], np.uint8)
+    x = np.array([1., 2., 3.]); y = np.array([1., 1., 1.]); z = np.array([10., 11., 12.])
+    hdr = laspy.LasHeader(point_format=1, version="1.2")
+    hdr.offsets = [0, 0, 0]; hdr.scales = [.01, .01, .01]
+    las = laspy.LasData(hdr); las.x, las.y, las.z = x, y, z
+    las.return_number = rn; las.number_of_returns = nr
+    las.point_source_id = np.ones(3, np.uint16); las.gps_time = np.zeros(3)
+    p = tmp_path / "multi.laz"; las.write(str(p))
+    r = read_last_return(p)
+    assert len(r["z"]) == 2                     # single + last-of-2 kept
+    assert 10.0 in r["z"] and 11.0 in r["z"] and 12.0 not in r["z"]
 
 
 def test_rasterize_roundtrip():

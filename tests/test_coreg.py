@@ -140,6 +140,38 @@ def test_tie_falls_back_on_gentle_terrain():
     assert t["nmad_after"] <= t["nmad_before"] + 1e-9
 
 
+def test_slope_aspect_planar():
+    """A plane rising toward the east has slope arctan(gradient) and aspect 90
+    deg (steepest ascent toward east, clockwise from north)."""
+    res = 1.0; n = 20
+    _, xx = np.mgrid[0:n, 0:n] * res
+    z = 0.1 * xx                                   # rises toward +x (east)
+    slope, aspect = coreg.slope_aspect(z, res)
+    inner = (slice(2, -2), slice(2, -2))           # avoid edge gradients
+    assert abs(np.median(slope[inner]) - np.arctan(0.1)) < 1e-6
+    assert abs(np.degrees(np.median(aspect[inner])) - 90.0) < 1.0
+
+
+def test_align_swaths_recovers_vertical_offset():
+    """Two overlapping swaths, swath 2 biased +0.3 m in z; the free-network
+    alignment must pin swath 1 and recover ~ -0.3 m for swath 2."""
+    from lidar_diff_icp import io
+    rng = np.random.default_rng(0); n = 15000
+    def ground(x, y):
+        return 100.0 + 0.05 * x + 0.03 * y         # ~3.4 deg slope
+    xa = rng.uniform(0, 120, n); ya = rng.uniform(0, 150, n)     # swath 1
+    xb = rng.uniform(80, 200, n); yb = rng.uniform(0, 150, n)    # swath 2 (overlap 80-120)
+    za = ground(xa, ya) + rng.normal(0, 0.02, n)
+    zb = ground(xb, yb) + 0.3 + rng.normal(0, 0.02, n)           # +0.3 m bias
+    x = np.concatenate([xa, xb]); y = np.concatenate([ya, yb]); z = np.concatenate([za, zb])
+    ps = np.concatenate([np.ones(n), np.full(n, 2)]).astype(int)
+    pc = io.PointCloud(x, y, z, ps, np.zeros_like(z), np.zeros_like(z),
+                       np.zeros_like(ps), io.MN_2008_CRS)
+    corr, edges, mis = coreg.align_swaths(pc, ref=1)
+    assert abs(corr[1][2]) < 0.05                  # reference pinned
+    assert abs(corr[2][2] + 0.3) < 0.08            # +0.3 m bias recovered as -0.3
+
+
 if __name__ == "__main__":
     test_recovers_known_shift()
     test_zero_shift_is_zero()
