@@ -84,9 +84,12 @@ def heteroscedastic_lod(dod, slope_deg, abs_curv, stable, *, z=1.96):
     m = stable & np.isfinite(dod) & np.isfinite(slope_deg) & np.isfinite(abs_curv)
     if m.sum() < 500:
         return None
-    _, errfun = ss._estimate_model_heteroscedasticity(
-        dod[m], [slope_deg[m], abs_curv[m]], list_var_names=["slope", "curv"])
-    sig = errfun((slope_deg.ravel(), abs_curv.ravel())).reshape(dod.shape)
+    try:  # the model fit can fail on degenerate inputs (e.g. constant curvature)
+        _, errfun = ss._estimate_model_heteroscedasticity(
+            dod[m], [slope_deg[m], abs_curv[m]], list_var_names=["slope", "curv"])
+        sig = errfun((slope_deg.ravel(), abs_curv.ravel())).reshape(dod.shape)
+    except Exception:
+        return None
     return z * sig
 
 
