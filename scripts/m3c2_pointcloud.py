@@ -24,6 +24,10 @@ def main():
     ap.add_argument("--core-from", choices=("2021", "2008"), default="2021",
                     help="which cloud to hang the core points (and thus the "
                          "cylinders) on; the OTHER cloud is searched inside them")
+    ap.add_argument("--correction-surface", action="store_true",
+                    help="after the quadratic tie, add a DeLong 400 m vertical "
+                         "correction surface fit on upland stable ground (TPI "
+                         "floodplain buffer), applied to the 2008 points")
     ap.add_argument("--out", default="data/derived/change_pointcloud.laz")
     a = ap.parse_args()
     X0, Y0, X1, Y1 = a.bounds
@@ -61,6 +65,31 @@ def main():
     yc += coreg.eval_poly_field(tie["b"], xc, yc, tie["norm"], 2)
     zc += coreg.eval_poly_field(tie["c"], xc, yc, tie["norm"], 2)
     print(f"tie dx range {np.ptp(tie['dx_field']):.2f} m, residual NMAD {tie['nmad_after']:.3f} m", flush=True)
+
+    # optional DeLong 400 m vertical correction surface (the tie's residual at
+    # finer scale). Fit on UPLAND stable ground only -- a topographic position
+    # index buffers out the valley floor, since flow accumulation cannot
+    # reliably place the channel in a flat floodplain. Applied to 2008 points.
+    if a.correction_surface:
+        from scipy.ndimage import uniform_filter, distance_transform_edt as edt
+        mi8b = be8 & (xc >= X0) & (xc < X1) & (yc >= Y0) & (yc < Y1)
+        Z21g = pg(x2[m2], y2[m2], z2[m2], 0.10)
+        Z08g = pg(xc[mi8b], yc[mi8b], zc[mi8b], 0.10)
+        Zfill = Z21g.copy(); nanm = np.isnan(Zfill)
+        if nanm.any():
+            Zfill = Zfill[tuple(edt(nanm, return_distances=False, return_indices=True))]
+        tpi = Z21g - uniform_filter(Zfill, size=int(2 * 300 / res), mode="nearest")
+        floodplain = np.isfinite(Z21g) & (tpi < -2.0)
+        cs = coreg.correction_surface(Z21g, Z08g, res, X0, Y0, radius=400.0,
+                                      exclude=floodplain)
+        C = cs["C"]
+        ixp = np.clip(((xc - X0) / res).astype(int), 0, nx - 1)
+        iyp = np.clip(((yc - Y0) / res).astype(int), 0, ny - 1)
+        Cpt = C[iyp, ixp]; ap_ = np.isfinite(Cpt)
+        zc[ap_] += Cpt[ap_]
+        print(f"correction surface: floodplain (TPI) {100*floodplain.mean():.0f}% "
+              f"excluded from fit; |C| median {np.nanmedian(np.abs(C)):.3f} m; "
+              f"applied to {100*ap_.mean():.0f}% of 2008 pts", flush=True)
 
     p08 = np.column_stack([xc[be8], yc[be8], zc[be8]]).astype(np.float64)
     p21 = np.column_stack([x2[m2], y2[m2], z2[m2]]).astype(np.float64)
