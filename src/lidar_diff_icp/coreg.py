@@ -255,6 +255,8 @@ def tie_polynomial(z_ref, z_src, res, x_origin, y_origin, order=2,
     for _ in range(max_iter):
         dh = z_ref - (_warp_grid(z_src, fld(a), fld(b), res) + fld(c))
         m = np.isfinite(dh) & (tanS > tan_min)
+        if m.sum() < 3 * K:           # too few sloped cells to constrain the fit
+            break
         med, nm = np.median(dh[m]), _nmad(dh[m])
         m &= np.abs(dh - med) < 3 * max(nm, 1e-3)
         cols = ([gx[m] * basis[k][m] for k in range(K)]
@@ -272,12 +274,31 @@ def tie_polynomial(z_ref, z_src, res, x_origin, y_origin, order=2,
             converged = True
             break
     dxf, dyf, dzf = fld(a), fld(b), fld(c)
-    dh_final = z_ref - (_warp_grid(z_src, dxf, dyf, res) + dzf)
-    mf = np.isfinite(dh_final)
+    dh_poly = z_ref - (_warp_grid(z_src, dxf, dyf, res) + dzf)
+    mf = np.isfinite(dh_poly)
+    nmad_poly = _nmad(dh_poly[mf]) if mf.any() else np.inf
+    # Divergence guard. On gentle terrain few cells exceed slope_min, so the
+    # Nuth & Kaeaeb horizontal shift (~1/tan(slope)) is unconstrained and can run
+    # away (dx ~ 1000 m). Accept the polynomial tie ONLY if it beats a plain
+    # rigid vertical offset; otherwise fall back to that offset -- so the tie is
+    # never worse than doing nothing but removing a bias.
+    diff = z_ref - z_src; md = np.isfinite(diff)
+    dz0 = float(np.median(diff[md]))
+    nmad_rigid = _nmad((diff - dz0)[md])
+    # accept the polynomial tie only if it beats the rigid offset AND its
+    # horizontal shift is physically plausible (< 10 m; real airborne shifts are
+    # sub-metre) -- an over-fit tie can improve noise with an absurd shift.
+    max_shift = max(np.ptp(dxf), np.ptp(dyf)) if mf.any() else np.inf
+    if np.isfinite(nmad_poly) and nmad_poly <= nmad_rigid and max_shift < 10.0:
+        fallback = False; nmad_after = nmad_poly
+    else:
+        fallback = True; converged = True
+        a = np.zeros(K); b = np.zeros(K); c = np.zeros(K); c[0] = dz0
+        dxf = fld(a); dyf = fld(b); dzf = fld(c); nmad_after = nmad_rigid
     return dict(a=a, b=b, c=c, order=order, norm=(xm, xhr, ym, yhr),
                 dx_field=dxf, dy_field=dyf, dz_field=dzf,
-                nmad_before=nmad_before, nmad_after=_nmad(dh_final[mf]),
-                converged=converged, n=int(mf.sum()))
+                nmad_before=nmad_before, nmad_after=nmad_after,
+                converged=converged, fallback=fallback, n=int(mf.sum()))
 
 
 def correction_surface(z_ref, z_src, res, x_origin, y_origin, *,
