@@ -33,6 +33,10 @@ def main():
                          "above-ground last returns on steep/rough slopes")
     ap.add_argument("--normal-radius", type=float, default=3.0)
     ap.add_argument("--cyl-radius", type=float, default=1.5)
+    ap.add_argument("--along-track-drift", action="store_true",
+                    help="correct each 2008 point for per-swath along-track GNSS "
+                         "drift (coreg.fit_along_track_drift) BEFORE the difference")
+    ap.add_argument("--corrections-json", help="write the fitted corrections here")
     ap.add_argument("--out", default="data/derived/change_pointcloud.laz")
     a = ap.parse_args()
     X0, Y0, X1, Y1 = a.bounds
@@ -43,6 +47,7 @@ def main():
     x8 = np.asarray(f.x); y8 = np.asarray(f.y); z8 = np.asarray(f.z)
     ps8 = np.asarray(f.point_source_id); cl8 = np.asarray(f.classification)
     rn8 = np.asarray(f.return_number); nr8 = np.asarray(f.number_of_returns)
+    gt8 = np.asarray(f.gps_time)
     be8 = rn8 == nr8
     pc = io.PointCloud(x8, y8, z8, ps8, cl8, np.zeros_like(z8), np.zeros_like(ps8), io.MN_2008_CRS)
     corr, _, _ = coreg.align_swaths(pc, ref=int(ps8.min()))
@@ -96,6 +101,37 @@ def main():
               f"excluded from fit; |C| median {np.nanmedian(np.abs(C)):.3f} m; "
               f"applied to {100*ap_.mean():.0f}% of 2008 pts", flush=True)
 
+    # per-swath along-track GNSS-drift correction, applied to EACH 2008 point
+    # (via its own gps_time) BEFORE it enters the difference -- the physical,
+    # deterministic form of the 2008 registration error, not a post-hoc subtract.
+    drift_curves = {}
+    if a.along_track_drift:
+        from scipy.ndimage import (gaussian_filter, uniform_filter,
+                                   distance_transform_edt as edt)
+        Z21g = pg(x2[m2], y2[m2], z2[m2], 0.10)
+        mi8c = be8 & (xc >= X0) & (xc < X1) & (yc >= Y0) & (yc < Y1)
+        resid = Z21g - pg(xc[mi8c], yc[mi8c], zc[mi8c], 0.10)   # ground change (~0 stable)
+        Zfill = Z21g.copy(); nanm = np.isnan(Zfill)
+        if nanm.any():
+            Zfill = Zfill[tuple(edt(nanm, return_distances=False, return_indices=True))]
+        tpi = Z21g - uniform_filter(Zfill, size=int(2 * 300 / res), mode="nearest")
+        sdeg = np.degrees(coreg.slope_aspect(gaussian_filter(Zfill, 2.0), res)[0])
+        Zsm = gaussian_filter(Zfill, 10.0)
+        lap = (np.gradient(np.gradient(Zsm, res, axis=0), res, axis=0)
+               + np.gradient(np.gradient(Zsm, res, axis=1), res, axis=1))
+        stable = ((sdeg < 3) & (tpi > -2)) | ((sdeg > 5) & (sdeg < 35) & (tpi > -2) & (lap < 0))
+        ixp = np.clip(((xc - X0) / res).astype(int), 0, nx - 1)
+        iyp = np.clip(((yc - Y0) / res).astype(int), 0, ny - 1)
+        chg_pt = resid[iyp, ixp]
+        stab_pt = be8 & stable[iyp, ixp] & np.isfinite(chg_pt) & (np.abs(chg_pt) < 0.15)
+        drift, curves = coreg.fit_along_track_drift(gt8, chg_pt, stab_pt, ps8)
+        zc += drift                                            # per-point, pre-difference
+        drift_curves = {p: (c[0].tolist(), c[1].tolist()) for p, c in curves.items()}
+        print(f"along-track drift: {len(curves)} swaths, drift NMAD "
+              f"{1.4826*np.median(np.abs(drift-np.median(drift))):.3f} m; per-swath "
+              f"amplitude " + ", ".join(f"{p}:{(c[1].max()-c[1].min()):.3f}" for p, c in curves.items()),
+              flush=True)
+
     p08 = np.column_stack([xc[be8], yc[be8], zc[be8]]).astype(np.float64)
     p21 = np.column_stack([x2[m2], y2[m2], z2[m2]]).astype(np.float64)
 
@@ -130,6 +166,27 @@ def main():
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
     las.write(a.out)
     print(f"wrote {a.out} ({len(core):,} points, dims: x y z m3c2 lod)", flush=True)
+
+    if a.corrections_json:
+        import json
+        out = {
+            "epochs": "2021 - 2008 (positive = 2021 higher)",
+            "crs": "EPSG:26915", "bounds": list(a.bounds),
+            "per_swath_internal_alignment_dxdydz_m":
+                {str(k): [round(float(v), 4) for v in val] for k, val in corr.items()},
+            "cross_epoch_tie": {"order": 2,
+                "dx_coef": [round(float(v), 6) for v in tie["a"]],
+                "dy_coef": [round(float(v), 6) for v in tie["b"]],
+                "dz_coef": [round(float(v), 6) for v in tie["c"]],
+                "normalization_xm_xhr_ym_yhr": [round(float(v), 3) for v in tie["norm"]]},
+            "along_track_drift_curves_gpsTime_to_metres":
+                {str(p): {"gps_time": [round(t, 3) for t in c[0]],
+                          "drift_m": [round(d, 4) for d in c[1]]}
+                 for p, c in drift_curves.items()},
+        }
+        with open(a.corrections_json, "w") as fh:
+            json.dump(out, fh, indent=2)
+        print(f"wrote corrections to {a.corrections_json}", flush=True)
 
 
 if __name__ == "__main__":
