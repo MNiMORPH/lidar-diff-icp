@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SUPERSEDED (kept for git history; do not use for products): difference engine -> scripts/gridded_ground_dod.py (final) + m3c2_pointcloud.py (cross-check); logic in lidar_diff_icp.pipeline
 """Cross-epoch change map via M3C2, thresholded by per-point level of detection.
 
 Difference engine = M3C2 (point-based, along local surface normal), which avoids
@@ -43,8 +44,10 @@ def main():
     ap.add_argument("--res", type=float, default=3.0, help="core-point grid (m)")
     ap.add_argument("--normal-radius", type=float, default=4.0)
     ap.add_argument("--cyl-radius", type=float, default=2.0)
-    ap.add_argument("--registration-error", type=float, default=0.02,
-                    help="co-registration uncertainty added to the LoD (m)")
+    ap.add_argument("--registration-error", type=float, default=0.0,
+                    help="registration uncertainty added to the LoD (m); default 0 "
+                         "-- the LoD is then the measured roughness term only, not "
+                         "padded by an assumed number")
     ap.add_argument("--tie-order", type=int, default=2,
                     help="polynomial order of the spatially varying tie (2 = quadratic)")
     ap.add_argument("--outdir", default="data/derived")
@@ -108,18 +111,36 @@ def main():
 
     D = np.full((ny, nx), np.nan); L = np.full((ny, nx), np.nan)
     D[valid] = dist; L[valid] = lod
-    sig = np.isfinite(D) & (np.abs(D) > L)
-    change = np.where(sig, D, np.nan)
-    n_ok = np.isfinite(D).sum()
-    print(f"M3C2 computed at {n_ok:,} cells; significant change (|d|>LoD): "
-          f"{100*sig.sum()/max(n_ok,1):.1f}%  (median LoD {np.nanmedian(L):.3f} m)")
+    print(f"M3C2 computed at {np.isfinite(D).sum():,} cells; median LoD {np.nanmedian(L):.3f} m")
 
     Path(a.outdir).mkdir(parents=True, exist_ok=True)
-    _write(D, a.res, X0, Y0, ny, f"{a.outdir}/m3c2_distance.tif")
-    _write(L, a.res, X0, Y0, ny, f"{a.outdir}/m3c2_lod.tif")
-    _write(change, a.res, X0, Y0, ny, f"{a.outdir}/change_significant.tif")
+    # (1) DEM of difference: 2021 minus 2008 along the local surface normal (m)
+    _write(D, a.res, X0, Y0, ny, f"{a.outdir}/dod.tif")
+    # (2) overlay: per-point level of detection (m)
+    _write(L, a.res, X0, Y0, ny, f"{a.outdir}/lod.tif")
+    # (3) corrections: the per-swath internal alignment and the spatially
+    #     varying tie fields that bring 2008 into the 2021 frame
+    _write(tie["dx_field"], a.res, X0, Y0, ny, f"{a.outdir}/correction_dx.tif")
+    _write(tie["dy_field"], a.res, X0, Y0, ny, f"{a.outdir}/correction_dy.tif")
+    _write(tie["dz_field"], a.res, X0, Y0, ny, f"{a.outdir}/correction_dz.tif")
+    import json
+    with open(f"{a.outdir}/corrections.json", "w") as fh:
+        json.dump({
+            "per_swath_internal_alignment_dxdydz_m":
+                {str(k): [round(float(v), 4) for v in val] for k, val in corr.items()},
+            "spatially_varying_tie": {
+                "order": a.tie_order,
+                "dx_coef": [round(float(v), 6) for v in tie["a"]],
+                "dy_coef": [round(float(v), 6) for v in tie["b"]],
+                "dz_coef": [round(float(v), 6) for v in tie["c"]],
+                "normalization_xm_xhr_ym_yhr": [round(float(v), 3) for v in tie["norm"]],
+                "dx_field_range_m": round(float(np.ptp(tie["dx_field"])), 3),
+                "dz_field_range_m": round(float(np.ptp(tie["dz_field"])), 3),
+                "residual_nmad_m": round(float(tie["nmad_after"]), 4)},
+        }, fh, indent=2)
+    print(f"  wrote dod.tif, lod.tif, correction_d[xyz].tif, corrections.json to {a.outdir}")
     if a.figdir:
-        _fig(Z21, D, sig, (X0, X1, Y0, Y1), a.figdir)
+        _fig(Z21, D, L, (X0, X1, Y0, Y1), a.figdir)
 
 
 def _write(arr, res, x0, y0, ny, out):
@@ -133,30 +154,29 @@ def _write(arr, res, x0, y0, ny, out):
     print(f"  wrote {out}")
 
 
-def _fig(Z21, D, sig, ext, figdir):
-    """Show the FULL continuous change field (all computed cells), with the
-    cells that clear their LoD emphasized -- not the sub-LoD surface deleted."""
+def _fig(Z21, D, L, ext, figdir):
+    """(left) DEM of difference, 2021-2008; (right) its per-point LoD overlay.
+    No thresholding, no interpretation -- the full continuous field is shown.
+    Convention: 2021 minus 2008; RdBu with red = negative (erosion/loss),
+    blue = positive (deposition/gain)."""
     import matplotlib; matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     from matplotlib.colors import LightSource
     Path(figdir).mkdir(parents=True, exist_ok=True)
     ls = LightSource(azdeg=315, altdeg=45)
     hs = ls.hillshade(np.nan_to_num(Z21, nan=np.nanmin(Z21)), vert_exag=2)
+    v = float(np.nanpercentile(np.abs(D), 98))          # symmetric scale from data
     fig, ax = plt.subplots(1, 2, figsize=(15, 8))
     for a in ax:
         a.imshow(hs, extent=ext, cmap="gray", origin="lower", alpha=0.6)
         a.set_xlabel("Easting (m)"); a.set_ylabel("Northing (m)")
-    im = ax[0].imshow(D, extent=ext, origin="lower", cmap="RdBu_r", vmin=-0.5, vmax=0.5)
-    ax[0].set_title("M3C2 change, ALL computed cells (~97% of tile)\n"
-                    "blue = gain, red = loss")
-    # full field faded, significant at full opacity (confidence, not a mask)
-    ax[1].imshow(D, extent=ext, origin="lower", cmap="RdBu_r", vmin=-0.5, vmax=0.5, alpha=0.35)
-    ax[1].imshow(np.where(sig, D, np.nan), extent=ext, origin="lower",
-                 cmap="RdBu_r", vmin=-0.5, vmax=0.5)
-    ax[1].set_title("Same field; cells above their LoD emphasized,\n"
-                    "sub-LoD faded (shown, not deleted)")
-    fig.colorbar(im, ax=ax, shrink=0.5, label="change along surface normal (m)")
-    out = Path(figdir) / "change_map_m3c2.png"
+    im0 = ax[0].imshow(D, extent=ext, origin="lower", cmap="RdBu", vmin=-v, vmax=v)
+    ax[0].set_title("DEM of difference, 2021 - 2008 (m)\nred = erosion, blue = deposition")
+    fig.colorbar(im0, ax=ax[0], shrink=0.6, label="elevation difference (m)")
+    im1 = ax[1].imshow(L, extent=ext, origin="lower", cmap="viridis")
+    ax[1].set_title("Level of detection (m)")
+    fig.colorbar(im1, ax=ax[1], shrink=0.6, label="LoD (m)")
+    out = Path(figdir) / "dod.png"
     fig.savefig(out, dpi=120, bbox_inches="tight"); print(f"  wrote {out}")
 
 

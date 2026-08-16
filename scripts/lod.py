@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SUPERSEDED (kept for git history; do not use for products): -> calibrated heteroscedastic LoD in lidar_diff_icp.pipeline (xdem/Hugonnet 2022)
 """Compute the level of detection (LoD) by land-cover zone.
 
 Uses the independent NAIP cover classification and the co-registered inter-swath

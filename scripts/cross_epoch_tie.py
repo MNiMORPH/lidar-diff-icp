@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SUPERSEDED (kept for git history; do not use for products): -> coreg.tie_polynomial
 """Cross-epoch tie and difference: align the internally-consistent 2008 mosaic
 to the 2021 3DEP by robust Nuth & Kaeaeb, then difference into a change map.
 

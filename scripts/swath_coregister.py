@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SUPERSEDED (kept for git history; do not use for products): -> coreg.align_swaths / coreg.nuth_kaab
 """Nuth & Kaeaeb co-registration of every overlapping swath pair in a tile.
 
 Reports the horizontal (dx, dy) and vertical (dz) shift that aligns each source

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SUPERSEDED (kept for git history; do not use for products): -> coreg.align_swaths + coreg.apply_alignment
 """Stitch a tile's flight-line passes into one internally consistent frame.
 
 Solves the free-network Nuth & Kaeaeb adjustment (coreg.align_swaths), applies

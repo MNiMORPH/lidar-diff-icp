@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SUPERSEDED (kept for git history; do not use for products): diagnostic -> coreg.correction_surface (+ tests/test_coreg.py)
 """Test a DeLong et al. (2022) vertical correction surface against the SE
 undulation.
 

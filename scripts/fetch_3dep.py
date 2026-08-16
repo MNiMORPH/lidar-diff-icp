@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SUPERSEDED (kept for git history; do not use for products): PDAL readers.ept unreliable here -> use scripts/fetch_3dep_curl.py
 """Fetch a patch of USGS 3DEP lidar from the public EPT archive (AWS), by bbox.
 
 Reads only the octree nodes overlapping the bounds (bandwidth-efficient),
