@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 """Convex-prior warp correction.
 
+SUPERSEDED / DO NOT USE FOR PRODUCTS. This IDW-on-hillslopes warp was found to be
+OVERFIT (it hugs the hillslope control and fits ~100 m terrain-correlated noise;
+low out-of-sample skill). The real, physical form of the residual is the smooth
+per-swath along-track GNSS drift -- see coreg.fit_along_track_drift and
+scripts/along_track_drift.py. Kept only as a record of the diagnostic.
+
 The co-registration leaves an undulating, position-dependent vertical warp of
 ~0.04 m at ~100 m scale (the correlated part of the residual). It is invisible on
 flats but the geomorphic prior makes it legible on convex hillslopes, which must
