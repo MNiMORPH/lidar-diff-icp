@@ -341,7 +341,7 @@ def correction_surface(z_ref, z_src, res, x_origin, y_origin, *,
 
 
 def fit_along_track_drift(gps_time, change_on_stable, is_stable, swath, *,
-                          n_bins=60, smooth_bins=3, min_pts=2000):
+                          n_bins=120, s_frac=1.0, min_pts=2000):
     """Per-swath along-track (GNSS trajectory-drift) vertical correction.
 
     The dominant residual in early (2008) Minnesota lidar after per-swath
@@ -356,10 +356,15 @@ def fit_along_track_drift(gps_time, change_on_stable, is_stable, swath, *,
     evaluated at every point of the swath. Add the returned drift to the 2008
     elevations to correct them (new change = old change - drift).
 
+    ``s_frac`` sets the smoothing spline stiffness (cross-validation on this data
+    favours heavy smoothing, ~1; the drift is long-wavelength). Robust binned
+    medians feed a cubic ``UnivariateSpline`` in ``gps_time`` -- a continuous
+    trajectory-bias model, the standard strip-adjustment form.
+
     Returns (drift_per_point, curves) with curves[swath] = (gps_bin_centers,
     drift_curve). Universal form; only the per-tile coefficients differ.
     """
-    from scipy.ndimage import gaussian_filter1d
+    from scipy.interpolate import UnivariateSpline
     gps_time = np.asarray(gps_time); change_on_stable = np.asarray(change_on_stable)
     drift = np.zeros(len(gps_time)); curves = {}
     for p in np.unique(swath):
@@ -376,9 +381,10 @@ def fit_along_track_drift(gps_time, change_on_stable, is_stable, swath, *,
         ok = np.isfinite(prof)
         if ok.sum() < 10:
             continue
-        prof = gaussian_filter1d(np.interp(cen, cen[ok], prof[ok]), sigma=smooth_bins)
-        drift[sw] = np.interp(gps_time[sw], cen, prof)
-        curves[int(p)] = (cen, prof)
+        spl = UnivariateSpline(cen[ok], prof[ok], k=3,
+                               s=s_frac * ok.sum() * np.var(prof[ok]))
+        drift[sw] = spl(gps_time[sw])
+        curves[int(p)] = (cen, spl(cen))
     return drift, curves
 
 

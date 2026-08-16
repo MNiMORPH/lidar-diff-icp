@@ -75,7 +75,7 @@ def main():
     chg = D[iy, ix]
     is_stable = stable[iy, ix] & np.isfinite(chg) & (np.abs(chg) < a.change_thresh)
 
-    drift, curves = fit_swath_drift(gt, chg, is_stable, ps8)
+    drift, curves = coreg.fit_along_track_drift(gt, chg, is_stable, ps8)
     print(f"fitted along-track drift for {len(curves)} swaths; "
           f"drift NMAD {1.4826 * np.median(np.abs(drift - np.median(drift))):.3f} m; "
           f"per-swath amplitude (max-min): "
