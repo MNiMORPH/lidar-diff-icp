@@ -301,7 +301,15 @@ def correction_surface(z_ref, z_src, res, x_origin, y_origin, *,
 
     ``source_step`` thins the stable cells used as IDW sources (every Nth cell
     each axis) for speed; the surface is smooth at ``radius`` so this is benign.
-    Returns dict(C, stable, dz, n_stable, frac_stable).
+
+    Cells with NO stable source within ``radius`` are left ``NaN`` (uncorrected)
+    rather than extrapolated: block cross-validation shows the interpolation has
+    skill only across gaps up to ~the correlation length (here it removes
+    23-41% of stable residual variance for gaps <=300 m, ~0 by 600 m, and
+    INJECTS error beyond ~1 km). ``radius`` is therefore the honest reach of the
+    correction, not just a search cutoff. The returned ``gap`` (distance to the
+    nearest stable source) lets a caller see where the correction is trustworthy.
+    Returns dict(C, gap, stable, dz, n_stable, frac_stable).
     """
     from scipy.spatial import cKDTree
     ny, nx = z_ref.shape
@@ -320,11 +328,12 @@ def correction_surface(z_ref, z_src, res, x_origin, y_origin, *,
     dist, idx = tree.query(np.c_[X.ravel(), Y.ravel()], k=k)
     w = 1.0 / np.maximum(dist, 1e-6) ** power
     w[dist > radius] = 0.0
-    allzero = w.sum(1) == 0                       # no stable source within radius
-    w[allzero, 0] = 1.0                           # fall back to nearest
-    C = (w * sdz[idx]).sum(1) / w.sum(1)
-    return dict(C=C.reshape(ny, nx), stable=stable, dz=dz,
-                n_stable=int(stable.sum()), frac_stable=float(stable.mean()))
+    wsum = w.sum(1)
+    C = np.where(wsum > 0, (w * sdz[idx]).sum(1) / np.where(wsum == 0, 1.0, wsum),
+                 np.nan)                          # no stable within radius -> NaN
+    gap = dist[:, 0]                              # distance to nearest stable source
+    return dict(C=C.reshape(ny, nx), gap=gap.reshape(ny, nx), stable=stable,
+                dz=dz, n_stable=int(stable.sum()), frac_stable=float(stable.mean()))
 
 
 def align_swaths(pc, res: float = 2.0, exclude=(5, 6, 9), ref=None):
