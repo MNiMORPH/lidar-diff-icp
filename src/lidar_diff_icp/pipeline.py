@@ -56,6 +56,20 @@ def read_last_return(path, bounds=None):
     return dict(x=x, y=y, z=z, point_source_id=ps, gps_time=gt)
 
 
+def rasterize(x, y, value, bounds, res=5.0, agg="median"):
+    """Grid a per-point attribute (e.g. change or error) to a raster by per-cell
+    ``agg`` ("median" or "mean"). Returns an ny x nx array (NaN where empty).
+    Use to turn a point-based change product (m3c2 + lod dims) into GeoTIFFs."""
+    X0, Y0, X1, Y1 = bounds
+    nx = int(round((X1 - X0) / res)); ny = int(round((Y1 - Y0) / res))
+    ix = ((x - X0) / res).astype(int); iy = ((y - Y0) / res).astype(int)
+    ok = (ix >= 0) & (ix < nx) & (iy >= 0) & (iy < ny) & np.isfinite(value)
+    gb = pd.Series(value[ok]).groupby(iy[ok] * nx + ix[ok])
+    s = gb.mean() if agg == "mean" else gb.median()
+    out = np.full(nx * ny, np.nan); out[s.index.values] = s.values
+    return out.reshape(ny, nx)
+
+
 def heteroscedastic_lod(dod, slope_deg, abs_curv, stable, *, z=1.96):
     """Per-cell level of detection from a calibrated error model (xdem / Hugonnet
     et al., 2022). Models the stable-ground DoD dispersion (NMAD) as a function of
