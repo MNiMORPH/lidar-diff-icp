@@ -30,34 +30,6 @@ from scipy.ndimage import (gaussian_filter, uniform_filter,
 from lidar_diff_icp import coreg
 
 
-def fit_swath_drift(gps_time, change_on_stable, is_stable, swath, *, n_bins=60,
-                    smooth_bins=3, min_pts=2000):
-    """Return per-point along-track drift and the per-swath curves.
-
-    ``change_on_stable`` is the reference-minus-2008 difference sampled at each
-    2008 point; only ``is_stable`` points are used to fit. drift = smooth curve of
-    the change vs gps_time, per swath, evaluated at every point of the swath.
-    """
-    drift = np.zeros(len(gps_time)); curves = {}
-    for p in np.unique(swath):
-        sw = swath == p; s = sw & is_stable & np.isfinite(change_on_stable)
-        if s.sum() < min_pts:
-            continue
-        t = gps_time[s]; c = change_on_stable[s]
-        edges = np.linspace(t.min(), t.max(), n_bins + 1)
-        cen = 0.5 * (edges[:-1] + edges[1:])
-        bi = np.clip(np.digitize(t, edges) - 1, 0, n_bins - 1)
-        prof = np.array([np.median(c[bi == k]) if (bi == k).sum() >= 5 else np.nan
-                         for k in range(n_bins)])
-        ok = np.isfinite(prof)
-        if ok.sum() < 10:
-            continue
-        prof = gaussian_filter1d(np.interp(cen, cen[ok], prof[ok]), sigma=smooth_bins)
-        drift[sw] = np.interp(gps_time[sw], cen, prof)
-        curves[int(p)] = (cen, prof)
-    return drift, curves
-
-
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("before_laz"); ap.add_argument("change_laz",

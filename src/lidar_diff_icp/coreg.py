@@ -340,6 +340,48 @@ def correction_surface(z_ref, z_src, res, x_origin, y_origin, *,
                 dz=dz, n_stable=int(stable.sum()), frac_stable=float(stable.mean()))
 
 
+def fit_along_track_drift(gps_time, change_on_stable, is_stable, swath, *,
+                          n_bins=60, smooth_bins=3, min_pts=2000):
+    """Per-swath along-track (GNSS trajectory-drift) vertical correction.
+
+    The dominant residual in early (2008) Minnesota lidar after per-swath
+    translation and a smooth cross-epoch tie is a DETERMINISTIC along-track
+    drift: a smooth vertical undulation as a function of ``gps_time`` within each
+    flight line (``point_source_id``), ~constant across-track, no roll/scan-angle
+    term. This models it directly, so it does not overfit terrain-correlated
+    noise the way a spatial interpolator on the difference does.
+
+    Per swath, the stable-ground ``change_on_stable`` (reference - 2008, ~0 where
+    stable) is binned by ``gps_time``, robust-median per bin, smoothed, and
+    evaluated at every point of the swath. Add the returned drift to the 2008
+    elevations to correct them (new change = old change - drift).
+
+    Returns (drift_per_point, curves) with curves[swath] = (gps_bin_centers,
+    drift_curve). Universal form; only the per-tile coefficients differ.
+    """
+    from scipy.ndimage import gaussian_filter1d
+    gps_time = np.asarray(gps_time); change_on_stable = np.asarray(change_on_stable)
+    drift = np.zeros(len(gps_time)); curves = {}
+    for p in np.unique(swath):
+        sw = swath == p
+        s = sw & is_stable & np.isfinite(change_on_stable)
+        if s.sum() < min_pts:
+            continue
+        t = gps_time[s]; c = change_on_stable[s]
+        edges = np.linspace(t.min(), t.max(), n_bins + 1)
+        cen = 0.5 * (edges[:-1] + edges[1:])
+        bi = np.clip(np.digitize(t, edges) - 1, 0, n_bins - 1)
+        prof = np.array([np.median(c[bi == k]) if (bi == k).sum() >= 5 else np.nan
+                         for k in range(n_bins)])
+        ok = np.isfinite(prof)
+        if ok.sum() < 10:
+            continue
+        prof = gaussian_filter1d(np.interp(cen, cen[ok], prof[ok]), sigma=smooth_bins)
+        drift[sw] = np.interp(gps_time[sw], cen, prof)
+        curves[int(p)] = (cen, prof)
+    return drift, curves
+
+
 def align_swaths(pc, res: float = 2.0, exclude=(5, 6, 9), ref=None):
     """Free-network least-squares alignment of every swath into one frame.
 
