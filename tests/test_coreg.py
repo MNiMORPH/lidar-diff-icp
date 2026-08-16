@@ -94,8 +94,23 @@ def test_correction_surface_recovers_warp_and_ignores_real_change():
     assert corrected[42, 42] > 1.5                 # does not absorb the +2 m change
 
 
+def test_correction_surface_exclude_drops_sources():
+    """A caller-supplied exclude mask (e.g. a TPI floodplain buffer) must remove
+    those cells from the stable IDW sources so the correction is not fit to
+    them -- otherwise real low-slope change there is absorbed."""
+    res = 5.0; n = 80
+    z_src = np.zeros((n, n)); z_ref = z_src + 0.10   # flat, all otherwise stable
+    ex = np.zeros((n, n), bool); ex[:, :40] = True
+    a = coreg.correction_surface(z_ref, z_src, res, 0.0, 0.0)
+    b = coreg.correction_surface(z_ref, z_src, res, 0.0, 0.0, exclude=ex)
+    assert b["n_stable"] < a["n_stable"]
+    assert not b["stable"][10, 10]                   # excluded region dropped
+    assert b["stable"][10, 60]                       # kept region retained
+
+
 if __name__ == "__main__":
     test_recovers_known_shift()
     test_zero_shift_is_zero()
     test_correction_surface_recovers_warp_and_ignores_real_change()
+    test_correction_surface_exclude_drops_sources()
     print("coreg regression tests PASS")

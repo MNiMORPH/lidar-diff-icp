@@ -282,7 +282,7 @@ def tie_polynomial(z_ref, z_src, res, x_origin, y_origin, order=2,
 
 def correction_surface(z_ref, z_src, res, x_origin, y_origin, *,
                        slope_thresh_deg=3.0, dz_thresh=0.7, radius=400.0,
-                       power=2.0, source_step=4, k=32):
+                       power=2.0, source_step=4, k=32, exclude=None):
     """Vertical error-correction surface after DeLong et al. (2022, ESS).
 
     From two gridded ground surfaces, form the raw vertical difference
@@ -295,9 +295,11 @@ def correction_surface(z_ref, z_src, res, x_origin, y_origin, *,
     polynomial tie this is nonparametric, so it can follow a multi-lobe warp.
 
     Precondition (from the paper): valid only where stable ground is
-    widespread. A stream / valley-floor buffer -- which the paper also uses --
-    is NOT applied here, so real broad low-slope deposition can be absorbed;
-    ``dz_thresh`` is the only guard against that. Report ``frac_stable``.
+    widespread. The paper also buffers streams / valley floors, since real
+    low-slope deposition there can be absorbed. Pass such a mask as ``exclude``
+    (a bool array, True = drop from the stable sources) -- e.g. a floodplain
+    mask from a topographic position index, which flow accumulation cannot
+    reliably give in a flat valley. Without it, ``dz_thresh`` is the only guard.
 
     ``source_step`` thins the stable cells used as IDW sources (every Nth cell
     each axis) for speed; the surface is smooth at ``radius`` so this is benign.
@@ -317,6 +319,8 @@ def correction_surface(z_ref, z_src, res, x_origin, y_origin, *,
     slope, _ = slope_aspect(z_ref, res)
     stable = (np.isfinite(dz) & (np.degrees(slope) < slope_thresh_deg)
               & (np.abs(dz) < dz_thresh))
+    if exclude is not None:
+        stable = stable & ~np.asarray(exclude, bool)   # e.g. floodplain buffer
     jj, ii = np.mgrid[0:ny, 0:nx]
     X = x_origin + (ii + 0.5) * res
     Y = y_origin + (jj + 0.5) * res
