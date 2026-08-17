@@ -98,9 +98,83 @@ def heteroscedastic_lod(dod, slope_deg, abs_curv, stable, *, z=1.96):
     return z * sig
 
 
+def _stream_ground(path, bounds, res, nx, ny, q, *, plane=None, chunk=8_000_000,
+                   coarse_bins=120, bw=0.02, down=3.0, up=2.0):
+    """Per-cell low-q ground, spread, and count by STREAMING the cloud in chunks,
+    so peak RAM is O(cells), not O(points) -- for statewide runs where the dense
+    3DEP cloud will not fit in memory.
+
+    Reads ``path`` in chunks (never holds the whole cloud). ``plane`` = flat
+    per-cell (Z_reg, dz_deast, dz_dnorth) turns this into the slope-normal residual
+    ground (``ground="slope_normal"``): low-q of ``z - regional plane``, plus the
+    plane back. Blunder-robust via a coarse-histogram anchor + a downward-widened
+    fine window, then read the q-th percentile off the per-cell CDF with in-bin
+    interpolation. Matches an exact ``groupby.quantile`` to ~mm on well-sampled
+    cells; SPARSE cells (few points) can differ (histogram vs the exact's linear
+    interpolation across large gaps) and should be dropped by a min-count mask.
+    Returns (ground, spread, count) as ny x nx arrays.
+    """
+    X0, Y0, X1, Y1 = bounds
+    N = nx * ny
+
+    def chunks():
+        with laspy.open(str(path)) as fh:
+            for pts in fh.chunk_iterator(chunk):
+                rn = np.asarray(pts.return_number); nr = np.asarray(pts.number_of_returns)
+                last = rn == nr
+                x = np.asarray(pts.x)[last]; y = np.asarray(pts.y)[last]; z = np.asarray(pts.z)[last]
+                ix = ((x - X0) / res).astype(np.int64); iy = ((y - Y0) / res).astype(np.int64)
+                ok = (ix >= 0) & (ix < nx) & (iy >= 0) & (iy < ny)
+                f = iy[ok] * nx + ix[ok]; v = z[ok]
+                if plane is not None:
+                    Zc, dzde, dzdn = plane
+                    dxe = x[ok] - (X0 + (ix[ok] + 0.5) * res)
+                    dyn = y[ok] - (Y0 + (iy[ok] + 0.5) * res)
+                    v = v - (Zc[f] + dxe * dzde[f] + dyn * dzdn[f])
+                yield f, v
+
+    lo = np.full(N, np.inf); hi = np.full(N, -np.inf)              # pass 1: min/max
+    for f, v in chunks():
+        gmn = pd.Series(v).groupby(f).min(); gmx = pd.Series(v).groupby(f).max()
+        np.minimum.at(lo, gmn.index.values, gmn.values)
+        np.maximum.at(hi, gmx.index.values, gmx.values)
+    span = np.where(np.isfinite(lo) & (hi > lo), hi - lo, 1.0)
+    CB = coarse_bins; chist = np.zeros(N * CB, np.int64)           # pass 2: coarse anchor
+    for f, v in chunks():
+        b = np.clip(((v - lo[f]) / span[f] * CB).astype(np.int64), 0, CB - 1)
+        chist += np.bincount(f * CB + b, minlength=N * CB)
+    chist = chist.reshape(N, CB); ccdf = np.cumsum(chist, axis=1)
+    ntot = ccdf[:, -1].astype(float)
+
+    with np.errstate(invalid="ignore"):
+        def coarse_pct(p):
+            b = np.argmax(ccdf >= (p * ntot)[:, None], axis=1)
+            return np.where(np.isfinite(lo), lo + (b + 0.5) * span / CB, np.nan)
+        anchor = coarse_pct(q)
+        spread = 1.4826 * (coarse_pct(0.75) - coarse_pct(0.25)) / 1.349
+    flo = anchor - down; SPAN = down + up; FB = int(round(SPAN / bw))  # pass 3: fine window
+    below = np.zeros(N, np.int64); fhist = np.zeros(N * FB, np.int64)
+    for f, v in chunks():
+        d = v - flo[f]; inw = (d >= 0) & (d < SPAN)
+        below += np.bincount(f[d < 0], minlength=N)
+        ff = f[inw]; b = np.clip((d[inw] / bw).astype(np.int64), 0, FB - 1)
+        fhist += np.bincount(ff * FB + b, minlength=N * FB)
+    fhist = fhist.reshape(N, FB); fcdf = below[:, None] + np.cumsum(fhist, axis=1)
+    tgt = q * ntot
+    bf = np.argmax(fcdf >= tgt[:, None], axis=1)
+    cprev = np.where(bf > 0, fcdf[np.arange(N), np.clip(bf - 1, 0, FB - 1)], below).astype(float)
+    hb = fhist[np.arange(N), bf].astype(float)
+    frac = np.divide(tgt - cprev, hb, out=np.zeros(N), where=hb > 0)
+    g = np.where(ntot > 0, flo + (bf + frac) * bw, np.nan)
+    if plane is not None:
+        g = np.where(np.isfinite(g), plane[0] + g, np.nan)
+    cnt = np.where(ntot > 0, ntot, np.nan)
+    return g.reshape(ny, nx), spread.reshape(ny, nx), cnt.reshape(ny, nx)
+
+
 def difference_dem(before_laz, after_last_laz, bounds, *, res=5.0, ground_q=0.10,
                    correction_surface=False, along_track_drift=True,
-                   ground="low_q", sn_smooth_cells=1.2,
+                   ground="low_q", sn_smooth_cells=1.2, stream=False,
                    before_crs=io.MN_2008_CRS):
     """Corrected bare-earth DEM of Difference (after - before).
 
@@ -138,10 +212,16 @@ def difference_dem(before_laz, after_last_laz, bounds, *, res=5.0, ground_q=0.10
         return out.reshape(ny, nx)
 
     # --- after (reference) ground + within-cell spread/count ---
-    A = read_last_return(after_last_laz, bounds)
-    Z21 = cellstat(A["x"], A["y"], A["z"], "ground")
-    s21 = cellstat(A["x"], A["y"], A["z"], "spread")
-    n21 = cellstat(A["x"], A["y"], A["z"], "count")
+    # stream=True grids the (dense) after cloud in chunks (O(cells) RAM) for
+    # statewide runs; else load it in memory. A stays None in streaming mode.
+    A = None
+    if stream:
+        Z21, s21, n21 = _stream_ground(after_last_laz, bounds, res, nx, ny, ground_q)
+    else:
+        A = read_last_return(after_last_laz, bounds)
+        Z21 = cellstat(A["x"], A["y"], A["z"], "ground")
+        s21 = cellstat(A["x"], A["y"], A["z"], "spread")
+        n21 = cellstat(A["x"], A["y"], A["z"], "count")
 
     # terrain masks from the reference ground
     Zf = Z21.copy(); nanm = np.isnan(Zf)
@@ -181,7 +261,12 @@ def difference_dem(before_laz, after_last_laz, bounds, *, res=5.0, ground_q=0.10
         return out.reshape(ny, nx)
 
     # after-epoch reference ground in the chosen estimator (== Z21 for low_q)
-    Zref = groundg(A["x"], A["y"], A["z"])
+    if ground == "slope_normal":
+        Zref = (_stream_ground(after_last_laz, bounds, res, nx, ny, ground_q,
+                               plane=(Zreg_f, dzde, dzdn))[0] if stream
+                else groundg(A["x"], A["y"], A["z"]))
+    else:
+        Zref = Z21
 
     # --- before: align -> tie -> correction surface -> along-track drift ---
     f = laspy.read(str(before_laz))

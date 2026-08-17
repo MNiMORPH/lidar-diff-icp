@@ -6,11 +6,12 @@ align -> tie -> correction surface -> along-track drift -> gridded low-percentil
 DoD -> LoD -- runs without any downloaded data.
 """
 import numpy as np
+import pandas as pd
 import laspy
 import pytest
 
 from lidar_diff_icp.pipeline import (difference_dem, rasterize, heteroscedastic_lod,
-                                     read_last_return)
+                                     read_last_return, _stream_ground)
 
 
 X0, Y0, W = 1000.0, 2000.0, 200.0
@@ -127,3 +128,25 @@ def test_heteroscedastic_lod_optional():
     assert lod is not None and lod.shape == (n, n)
     # LoD must increase from shallow to steep
     assert np.nanmedian(lod[:, n - 20:]) > 1.5 * np.nanmedian(lod[:, :20])
+
+
+def test_stream_ground_matches_exact(tmp_path):
+    """The streaming (O(cells) RAM) low-percentile ground must match the exact
+    per-cell groupby.quantile to ~cm on well-sampled cells -- it never holds the
+    whole cloud, so it enables statewide runs. Sparse cells are excluded (cnt>50)
+    since the histogram cannot reproduce the exact's linear interpolation there."""
+    rng = np.random.default_rng(0)
+    X0, Y0, res, nx, ny = 0.0, 0.0, 5.0, 10, 10
+    bounds = (X0, Y0, X0 + nx * res, Y0 + ny * res)
+    n = 200 * nx * ny
+    x = rng.uniform(X0, X0 + nx * res, n); y = rng.uniform(Y0, Y0 + ny * res, n)
+    z = 100.0 + 0.05 * x - 0.03 * y + rng.exponential(0.2, n)      # ground + one-sided veg
+    z[rng.integers(0, n, 20)] -= 15.0                              # low blunders (must not corrupt it)
+    _write_laz(tmp_path / "c.laz", x, y, z, np.ones(n), np.zeros(n))
+    g, spread, cnt = _stream_ground(str(tmp_path / "c.laz"), bounds, res, nx, ny, 0.10)
+    ix = ((x - X0) / res).astype(int); iy = ((y - Y0) / res).astype(int)
+    ex = pd.Series(z).groupby(iy * nx + ix).quantile(0.10)
+    Ge = np.full(nx * ny, np.nan); Ge[ex.index.values] = ex.values; Ge = Ge.reshape(ny, nx)
+    m = np.isfinite(g) & np.isfinite(Ge) & (cnt > 50)
+    assert m.sum() > 50
+    assert np.median(np.abs(g[m] - Ge[m])) < 0.02                 # cm agreement, blunder-robust
