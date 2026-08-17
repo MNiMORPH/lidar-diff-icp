@@ -112,10 +112,10 @@ Figure: `figures/slope_normal_dod.png`.
 - **Curvature ✓** ruled out as the lever: a curvature-aware (bilinear smoothed-
   surface) reference gives identical band rstd and the same convex metric as the
   linear plane, so the simple linear plane suffices.
-- **Memory — open.** The full-pipeline run peaked ~13 GB (it holds the whole
-  ~107 M-point after cloud and group-quantiles it). Fine per-tile with headroom, but
-  a statewide sweep wants a **streaming/chunked low-percentile** (two-pass per-cell
-  histogram) so peak RAM is O(cells), not O(points).
+- **Memory ✓** `stream=True` grids the after cloud in chunks via a per-cell
+  histogram (O(cells) RAM, not O(points)); validated to reproduce the exact product
+  to <4 mm on stable ground with identical stable σ. Sparse cells need a min-count
+  mask. In-memory default (`stream=False`) unchanged.
 - **Roll ripple** (~5%, `k(gps_time)·scan_angle`) is orthogonal and separately worth
   adding to the statewide stack.
 - **Default:** `low_q` remains the default pending broader validation; `slope_normal`
