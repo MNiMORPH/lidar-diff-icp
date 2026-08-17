@@ -100,6 +100,7 @@ def heteroscedastic_lod(dod, slope_deg, abs_curv, stable, *, z=1.96):
 
 def difference_dem(before_laz, after_last_laz, bounds, *, res=5.0, ground_q=0.10,
                    correction_surface=False, along_track_drift=True,
+                   ground="low_q", sn_smooth_cells=1.2,
                    before_crs=io.MN_2008_CRS):
     """Corrected bare-earth DEM of Difference (after - before).
 
@@ -108,6 +109,13 @@ def difference_dem(before_laz, after_last_laz, bounds, *, res=5.0, ground_q=0.10
     ``bounds``      : (minx, miny, maxx, maxy) in the working CRS (EPSG:26915).
     ``ground_q``    : ground percentile (0.10 default; lower = less slope bias,
                       slightly more noise).
+    ``ground``      : ground estimator. "low_q" (default) = low percentile of raw
+                      z per horizontal cell. "slope_normal" = low percentile of the
+                      residual to a common smoothed regional surface (both epochs),
+                      which removes the downhill bias a horizontal low-pick has on a
+                      slope (it necessarily selects the downhill-lowest points). The
+                      shared surface cancels in the difference; ``sn_smooth_cells``
+                      sets the regional-slope smoothing (in cells).
 
     Returns dict: dod, lod (ny x nx arrays), z_after (for hillshade), corrections
     (JSON-serialisable), stable_sigma (empirical 1-sigma on stable ground, m), and
@@ -148,6 +156,33 @@ def difference_dem(before_laz, after_last_laz, bounds, *, res=5.0, ground_q=0.10
     stable = ((sdeg < 3) & (tpi > -2)) | convex
     floodplain = np.isfinite(Z21) & (tpi < -2)
 
+    # ground estimator: "low_q" (horizontal low percentile) or "slope_normal"
+    # (low percentile of the residual to a common smoothed regional surface, which
+    # removes the downhill bias of a horizontal low-pick on a slope). The shared
+    # surface Zreg is the smoothed reference ground, so it cancels in after - before.
+    if ground == "slope_normal":
+        Zreg = gaussian_filter(Zf, sn_smooth_cells)
+        dzde = np.gradient(Zreg, res, axis=1).ravel()   # d/deast (columns)
+        dzdn = np.gradient(Zreg, res, axis=0).ravel()   # d/dnorth (rows; iy grows north)
+        Zreg_f = Zreg.ravel()
+
+    def groundg(x, y, z):
+        if ground != "slope_normal":
+            return cellstat(x, y, z, "ground")
+        ix = ((x - X0) / res).astype(int); iy = ((y - Y0) / res).astype(int)
+        ok = (ix >= 0) & (ix < nx) & (iy >= 0) & (iy < ny)
+        f = iy[ok] * nx + ix[ok]
+        dxe = x[ok] - (X0 + (ix[ok] + 0.5) * res)
+        dyn = y[ok] - (Y0 + (iy[ok] + 0.5) * res)
+        resid = z[ok] - (Zreg_f[f] + dxe * dzde[f] + dyn * dzdn[f])
+        s = pd.Series(resid).groupby(f).quantile(ground_q)
+        out = np.full(nx * ny, np.nan)
+        out[s.index.values] = Zreg_f[s.index.values] + s.values
+        return out.reshape(ny, nx)
+
+    # after-epoch reference ground in the chosen estimator (== Z21 for low_q)
+    Zref = groundg(A["x"], A["y"], A["z"])
+
     # --- before: align -> tie -> correction surface -> along-track drift ---
     f = laspy.read(str(before_laz))
     x8 = np.asarray(f.x); y8 = np.asarray(f.y); z8 = np.asarray(f.z)
@@ -161,14 +196,14 @@ def difference_dem(before_laz, after_last_laz, bounds, *, res=5.0, ground_q=0.10
     for s, (dx, dy, dz) in corr.items():
         m = ps8 == s; xc[m] += dx; yc[m] += dy; zc[m] += dz
 
-    tie = coreg.tie_polynomial(Z21, cellstat(xc[be], yc[be], zc[be], "ground"),
+    tie = coreg.tie_polynomial(Zref, groundg(xc[be], yc[be], zc[be]),
                                res, X0, Y0, order=2)
     xc += coreg.eval_poly_field(tie["a"], xc, yc, tie["norm"], 2)
     yc += coreg.eval_poly_field(tie["b"], xc, yc, tie["norm"], 2)
     zc += coreg.eval_poly_field(tie["c"], xc, yc, tie["norm"], 2)
 
     if correction_surface:
-        C = coreg.correction_surface(Z21, cellstat(xc[be], yc[be], zc[be], "ground"),
+        C = coreg.correction_surface(Zref, groundg(xc[be], yc[be], zc[be]),
                                      res, X0, Y0, radius=400.0, exclude=floodplain)["C"]
         ixp = np.clip(((xc - X0) / res).astype(int), 0, nx - 1)
         iyp = np.clip(((yc - Y0) / res).astype(int), 0, ny - 1)
@@ -178,17 +213,17 @@ def difference_dem(before_laz, after_last_laz, bounds, *, res=5.0, ground_q=0.10
     if along_track_drift:
         ixp = np.clip(((xc - X0) / res).astype(int), 0, nx - 1)
         iyp = np.clip(((yc - Y0) / res).astype(int), 0, ny - 1)
-        resid = Z21 - cellstat(xc[be], yc[be], zc[be], "ground")
+        resid = Zref - groundg(xc[be], yc[be], zc[be])
         chg = resid[iyp, ixp]
         stab_pt = be & stable[iyp, ixp] & np.isfinite(chg) & (np.abs(chg) < 0.15)
         drift, curves = coreg.fit_along_track_drift(gt8, chg, stab_pt, ps8)
         zc += drift
 
     # --- final gridded ground DoD + per-cell LoD ---
-    Z08c = cellstat(xc[be], yc[be], zc[be], "ground")
+    Z08c = groundg(xc[be], yc[be], zc[be])
     s08 = cellstat(xc[be], yc[be], zc[be], "spread")
     n08 = cellstat(xc[be], yc[be], zc[be], "count")
-    dod = Z21 - Z08c
+    dod = Zref - Z08c
     r = dod[stable & np.isfinite(dod)]
     sigma = float(1.4826 * np.median(np.abs(r - np.median(r))))
     # LoD: calibrated heteroscedastic model (xdem/Hugonnet 2022) if available,
@@ -205,6 +240,7 @@ def difference_dem(before_laz, after_last_laz, bounds, *, res=5.0, ground_q=0.10
     corrections = {
         "epochs": "after - before (positive = deposition)",
         "crs": "EPSG:26915", "res_m": res, "ground_percentile": ground_q,
+        "ground_estimator": ground,
         "bounds": [float(b) for b in bounds], "stable_1sigma_m": round(sigma, 4),
         "lod_method": lod_method,
         "per_swath_internal_alignment_dxdydz_m":
