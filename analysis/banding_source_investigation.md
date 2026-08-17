@@ -24,16 +24,27 @@ regional slope before the low-pick removes the downhill bias at its root, and
 doing it to *both* epochs against a *shared* plane means the tilt cancels and
 neither side carries a residual bias to mismatch. Measured:
 
-| | band-pass rstd | total DoD rstd |
-|---|--:|--:|
-| horizontal low-10% (current) | 0.037 m | 0.108 m |
-| **slope-normal low-10% (both epochs)** | **0.029 m (−22%)** | **0.075 m (−31%)** |
+Validated in the **full pipeline** (registration applied), Elba tile:
 
-Validated on a synthetic sloped surface with a known +0.80 m change: the change is
-recovered **identically** (0.726 m both methods) while sloped-ground scatter drops
-**38%** and the residual downhill bias halves — so it is a targeted debias, not
-smoothing-in-disguise. A small real **roll ripple** (~5%) remains and is separately
-correctable (`Δz ≈ k(gps_time)·scan_angle`).
+| ground | stable σ | band-pass | convex false-dep (>LoD) |
+|---|--:|--:|--:|
+| horizontal low-10% (current) | 0.091 m | 0.035 m | 3.4% |
+| **slope-normal (both epochs)** | **0.059 m (−35%)** | **0.028 m (−22%)** | **4.5%** |
+
+The stable scatter drops a third and the bands a fifth, while the convex-hillslope
+false-deposition metric that motivated low-10% (median gives 16-32%) is preserved
+(3.4 -> 4.5%). A synthetic sloped surface with a known +0.80 m change recovers it
+**identically** (0.726 m both methods) — so it is a targeted debias, not smoothing.
+The one residue is a +14 mm shift on convex hillslopes (well below the LoD), most
+likely slope-normal *removing* a density-driven false-erosion bias: the denser 2021
+finds the true low point more reliably, so its ground sits lower and `z21 - z08`
+skews erosional. A small real **roll ripple** (~5%) remains and is separately
+correctable (`Δz ~ k(gps_time)·scan_angle`).
+
+(An earlier scratchpad comparison reported a convex *regression* to 7.8% and a +8 cm
+bias; that was an artifact of differencing without the pipeline's alignment/tie/drift
+registration. Band-pass rstd is high-pass and immune to it; the convex metric is not,
+so it must be measured inside the full pipeline, as above.)
 
 ## Mechanism (the confirmed cause)
 
@@ -90,22 +101,25 @@ per cell, per epoch. The shared plane cancels in the difference, so
 the slope-driven bias. Reproducible driver: `analysis/slope_normal_ground.py`.
 Figure: `figures/slope_normal_dod.png`.
 
-## Caveats and next steps
+## Status and remaining work
 
-1. **Curvature.** The synthetic used a planar slope; real hillsides bend, so the
-   linear plane is imperfect where slope changes fast (the sharpened drainage
-   lines in the figure). A curvature-aware regional surface may recover more — but
-   from a *regional* (not per-cell) fit, to avoid the sparse-overfit that killed
-   the per-cell plane.
-2. **Regional-slope scale** (~6 m smoothing here) is a free parameter — sweep it.
-3. **Memory:** the full 2021 cloud is 107 M last-return points; the per-cell
-   percentile spiked to ~6 GB. A production version needs a chunked/streaming
-   quantile.
-4. **Integration:** fold slope-normal ground into `pipeline.difference_dem` behind
-   a flag, then re-run the full product and re-check the original coherence metric
-   (4% false convex deposition) to confirm it does not regress the low-10% lesson.
-5. The **roll ripple** (~5%, `k(gps_time)·scan_angle`) is orthogonal and separately
-   worth adding to the statewide stack.
+- **Integrated ✓** behind `pipeline.difference_dem(..., ground="slope_normal")`
+  (default `"low_q"` is byte-identical; the 4 pipeline tests pass). Validated in the
+  full pipeline (table above).
+- **Slope scale ✓** swept: tighter is slightly better (3 m −24%, 6 m −22%, 15 m
+  −19%); a smoothed *varying* slope (~6 m) is used — not a constant, and not a
+  per-cell fit (which is too textured: only −3%).
+- **Curvature ✓** ruled out as the lever: a curvature-aware (bilinear smoothed-
+  surface) reference gives identical band rstd and the same convex metric as the
+  linear plane, so the simple linear plane suffices.
+- **Memory — open.** The full-pipeline run peaked ~13 GB (it holds the whole
+  ~107 M-point after cloud and group-quantiles it). Fine per-tile with headroom, but
+  a statewide sweep wants a **streaming/chunked low-percentile** (two-pass per-cell
+  histogram) so peak RAM is O(cells), not O(points).
+- **Roll ripple** (~5%, `k(gps_time)·scan_angle`) is orthogonal and separately worth
+  adding to the statewide stack.
+- **Default:** `low_q` remains the default pending broader validation; `slope_normal`
+  is opt-in.
 
 ## One-line answer
 
