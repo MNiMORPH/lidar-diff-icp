@@ -87,7 +87,7 @@ def _fig(Z21, dod, lod, res, X0, Y0, nx, ny, figdir):
     fig, ax = plt.subplots(1, 2, figsize=(15, 9))
     ax[0].imshow(hs, extent=ext, origin="lower", cmap="gray", alpha=0.6)
     im0 = ax[0].imshow(dod, extent=ext, origin="lower", cmap="RdBu", vmin=-v, vmax=v)
-    ax[0].set_title("DEM of Difference (gridded ground), after - before (m)\nred = erosion, blue = deposition")
+    ax[0].set_title("DEM of Difference (gridded ground): gen2 − gen1 (m)\nred = erosion, blue = deposition")
     fig.colorbar(im0, ax=ax[0], shrink=0.6, extend="both")
     im1 = ax[1].imshow(lod, extent=ext, origin="lower", cmap="viridis", vmin=0, vmax=0.2)
     ax[1].set_title("level of detection (m)")
