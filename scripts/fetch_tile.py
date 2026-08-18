@@ -1,11 +1,17 @@
 #!/usr/bin/env python3
 """Fetch the MN 2008 lidar tile covering a coordinate (or a named tile).
 
+The county is picked from the coordinate automatically (FCC Census Area lookup,
+verified against the live MnGeo county listing); override with --county for a
+point on a county line, or when giving --easting/--northing (which can't be
+geocoded without a lon/lat).
+
 Examples
 --------
     python scripts/fetch_tile.py --lon -92.004137 --lat 44.101944 --out data/before
-    python scripts/fetch_tile.py --easting 579705.72 --northing 4883677.71
-    python scripts/fetch_tile.py --tile 4342-29-64
+    python scripts/fetch_tile.py --lon -90.17978 --lat 48.04963   # NE MN (Cook Co.)
+    python scripts/fetch_tile.py --easting 579705.72 --northing 4883677.71 --county winona
+    python scripts/fetch_tile.py --tile 4342-29-64 --county winona
 """
 import argparse
 from pathlib import Path
@@ -21,27 +27,37 @@ def main() -> None:
     p.add_argument("--easting", type=float)
     p.add_argument("--northing", type=float)
     p.add_argument("--tile", help="explicit AAAA-BB-CC tile name")
+    p.add_argument("--county", help="MnGeo county dir (default: resolved from "
+                   "--lon/--lat); required with --easting/--northing or --tile")
     p.add_argument("--out", default="data/before", help="output directory")
     p.add_argument("--cache", default="data/tile_index_cache.json",
-                   help="tile bbox index cache (JSON)")
+                   help="tile bbox index cache (JSON; keyed per county)")
     args = p.parse_args()
 
+    county = args.county
     if args.tile:
         name = args.tile
+        if county is None:
+            p.error("give --county with --tile")
     else:
         if args.easting is not None and args.northing is not None:
             e, n = args.easting, args.northing
+            if county is None:
+                p.error("give --county with --easting/--northing (no lon/lat to geocode)")
         elif args.lon is not None and args.lat is not None:
+            if county is None:
+                county = tiles.county_for_lonlat(args.lon, args.lat)
+                print(f"coordinate resolves to county '{county}'")
             from pyproj import Transformer
             e, n = Transformer.from_crs(
                 "EPSG:4326", MN_2008_CRS, always_xy=True
             ).transform(args.lon, args.lat)
         else:
             p.error("give --tile, or --easting/--northing, or --lon/--lat")
-        name = tiles.find_tile(e, n, cache=args.cache)
-        print(f"coordinate falls in tile {name}")
+        name = tiles.find_tile(e, n, county=county, cache=args.cache)
+        print(f"coordinate falls in tile {name} (county {county})")
 
-    dest = tiles.download_tile(name, args.out)
+    dest = tiles.download_tile(name, args.out, county=county)
     print(f"downloaded {dest} ({Path(dest).stat().st_size/1e6:.1f} MB)")
 
 
