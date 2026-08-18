@@ -76,24 +76,36 @@ def rasterize(x, y, value, bounds, res=5.0, agg="median"):
     return out.reshape(ny, nx)
 
 
-def heteroscedastic_lod(dod, slope_deg, abs_curv, stable, *, z=1.96):
+def heteroscedastic_lod(dod, slope_deg, abs_curv, stable, *, density=None, z=1.96):
     """Per-cell level of detection from a calibrated error model (xdem / Hugonnet
     et al., 2022). Models the stable-ground DoD dispersion (NMAD) as a function of
-    slope and curvature, then predicts ``z * sigma`` everywhere -- so the error is
-    calibrated to the *actual* stable-ground scatter, honestly rising with slope
-    rather than inflated by intra-cell relief. Returns None if xdem is
-    unavailable (import needs PROJ_DATA unset, as pip rasterio bundles PROJ)."""
+    slope, curvature, and -- if given -- **ground-return DENSITY**, then predicts
+    ``z * sigma`` everywhere, calibrated to the *actual* stable-ground scatter.
+
+    ``density`` is a raw physical covariate: the number of lidar pulses that
+    reached the ground per cell (the limiting epoch). It is NOT a land-cover class
+    -- nothing is classified. Where the sparser survey penetrates poorly (dense
+    canopy), the ground estimate rests on few returns and is noisier, so sigma
+    honestly rises there. That drops the forest 'speckle' (which is
+    penetration-noise, not ground change) as a modeled *error*, not a mask, and it
+    flows straight into detection via ``perror = lod/1.96``. Returns None if xdem
+    is unavailable (import needs PROJ_DATA unset, as pip rasterio bundles PROJ)."""
     try:
         import xdem.spatialstats as ss
     except Exception:
         return None
-    m = stable & np.isfinite(dod) & np.isfinite(slope_deg) & np.isfinite(abs_curv)
+    covs = [slope_deg, abs_curv]; names = ["slope", "curv"]
+    if density is not None:
+        covs = covs + [density]; names = names + ["density"]
+    m = stable & np.isfinite(dod)
+    for c in covs:
+        m = m & np.isfinite(c)
     if m.sum() < 500:
         return None
-    try:  # the model fit can fail on degenerate inputs (e.g. constant curvature)
+    try:  # the model fit can fail on degenerate inputs (e.g. a constant covariate)
         _, errfun = ss._estimate_model_heteroscedasticity(
-            dod[m], [slope_deg[m], abs_curv[m]], list_var_names=["slope", "curv"])
-        sig = errfun((slope_deg.ravel(), abs_curv.ravel())).reshape(dod.shape)
+            dod[m], [c[m] for c in covs], list_var_names=names)
+        sig = errfun(tuple(c.ravel() for c in covs)).reshape(dod.shape)
     except Exception:
         return None
     return z * sig
@@ -363,8 +375,16 @@ def difference_dem(before_laz, after_last_laz, bounds, *, res=5.0, ground_q=0.10
     # else a within-cell spread proxy (relief-inflated on slopes -- fallback only).
     abs_curv = np.abs(np.gradient(np.gradient(gaussian_filter(Zf, 1.0), res, axis=0), res, axis=0)
                       + np.gradient(np.gradient(gaussian_filter(Zf, 1.0), res, axis=1), res, axis=1))
-    lod = heteroscedastic_lod(dod, sdeg, abs_curv, stable_rep)
-    lod_method = "xdem heteroscedastic (slope,curv), calibrated on stable ground"
+    # ground-return DENSITY covariate: the LIMITING (sparser) epoch's ground-return
+    # count per cell -- a raw physical measurement (no classification). Low density
+    # (poor canopy penetration) => noisier ground estimate => honestly larger LoD,
+    # which drops forest 'speckle' as modeled error rather than a mask.
+    density = np.minimum(np.nan_to_num(n08, nan=0.0), np.nan_to_num(n21, nan=0.0))
+    lod = heteroscedastic_lod(dod, sdeg, abs_curv, stable_rep, density=density)
+    lod_method = "xdem heteroscedastic (slope,curv,ground-density), calibrated on stable ground"
+    if lod is None:                                   # density model degenerate -> slope,curv only
+        lod = heteroscedastic_lod(dod, sdeg, abs_curv, stable_rep)
+        lod_method = "xdem heteroscedastic (slope,curv), calibrated on stable ground"
     if lod is None:
         lod = 1.96 * np.sqrt(np.nan_to_num(s08**2 / np.maximum(n08, 1))
                              + np.nan_to_num(s21**2 / np.maximum(n21, 1)))
