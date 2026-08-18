@@ -172,6 +172,29 @@ def test_align_swaths_recovers_vertical_offset():
     assert abs(corr[2][2] + 0.3) < 0.08            # +0.3 m bias recovered as -0.3
 
 
+def test_align_swaths_ignores_nan_edge(monkeypatch):
+    """A non-adjacent swath pair sharing gridded extent but no actual cells
+    returns n=0 with NaN shifts (real multi-swath tiles do this). A single NaN
+    observation must NOT poison the least-squares network -- the connected chain
+    1-2-3 still determines every swath. Regression for the Carlton all-NaN DoD."""
+    from lidar_diff_icp import io
+    def mk(dz, n):                                  # a pairwise Coreg observation
+        return coreg.Coreg(0.0, 0.0, dz, 0.0, 0.0, 0.0, n, 0.1, 0.05, 3, True)
+    fake = {(1, 2): mk(-0.02, 1000), (2, 3): mk(-0.03, 1000),
+            (1, 3): mk(np.nan, 0)}                  # the poisoning empty-overlap edge
+    monkeypatch.setattr(coreg, "coregister_swaths",
+                        lambda pc, a, b, res, exclude: fake[(a, b)])
+    ps = np.array([1, 1, 2, 2, 3, 3])
+    pc = io.PointCloud(np.zeros(6), np.zeros(6), np.zeros(6), ps,
+                       np.zeros(6), np.zeros(6), np.zeros(6, int), io.MN_GEN1_CRS)
+    corr, edges, mis = coreg.align_swaths(pc, ref=1)
+    assert all(np.isfinite(v).all() for v in corr.values())   # not NaN-poisoned
+    assert (1, 3) not in {(e[0], e[1]) for e in edges}        # empty edge dropped
+    assert abs(corr[1][2]) < 1e-9                             # reference pinned
+    assert abs(corr[2][2] + 0.02) < 1e-6                      # chain determines 2
+    assert abs(corr[3][2] + 0.05) < 1e-6                      # ... and 3
+
+
 if __name__ == "__main__":
     test_recovers_known_shift()
     test_zero_shift_is_zero()

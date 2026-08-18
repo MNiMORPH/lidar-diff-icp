@@ -447,9 +447,26 @@ def align_swaths(pc, res: float = 2.0, exclude=(5, 6, 9), ref=None):
             c = coregister_swaths(pc, a, b, res, exclude)
         except ValueError:
             continue
+        # Drop NON-FINITE observations. A non-adjacent pair whose gridded extents
+        # overlap but that share NO actual cells returns NaN shifts (only
+        # fully-disjoint extents raise ValueError). A single NaN observation
+        # poisons the whole least-squares network solve -- EVERY swath comes out
+        # NaN -- so exclude it; the connected chain of real overlaps still
+        # determines all swaths. Test finiteness, NOT n: a gentle-terrain pair
+        # that aligns by the rigid vertical fallback has n=0 but a finite, valid
+        # dz and must be kept.
+        if not np.isfinite((c.dx, c.dy, c.dz)).all():
+            continue
         edges.append((a, b, c.dx, c.dy, c.dz, float(c.n)))
     if not edges:
         raise ValueError("no overlapping swath pairs")
+    # A swath with no finite edge to the network is unconstrained; warn and let it
+    # keep a zero correction (unaligned) rather than poisoning the solve.
+    connected = {s for e in edges for s in (e[0], e[1])}
+    missing = [s for s in swaths if s not in connected]
+    if missing:
+        import warnings
+        warnings.warn(f"align_swaths: swaths with no overlap edges, left unaligned: {missing}")
     n, E = len(swaths), len(edges)
     A = np.zeros((E, n)); w = np.zeros(E); O = np.zeros((E, 3))
     for e, (a, b, dx, dy, dz, ww) in enumerate(edges):
