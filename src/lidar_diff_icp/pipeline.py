@@ -37,6 +37,7 @@ import pandas as pd
 from scipy.ndimage import gaussian_filter, uniform_filter, distance_transform_edt as edt
 
 from . import io, coreg
+from .ground import classify_ground_csf
 
 
 def read_last_return(path, bounds=None):
@@ -174,7 +175,8 @@ def _stream_ground(path, bounds, res, nx, ny, q, *, plane=None, chunk=8_000_000,
 
 def difference_dem(before_laz, after_last_laz, bounds, *, res=5.0, ground_q=0.10,
                    correction_surface=False, along_track_drift=True,
-                   ground="low_q", sn_smooth_cells=1.2, stream=False,
+                   ground="slope_normal", sn_smooth_cells=1.2, stream=False,
+                   ground_source="csf", csf_pdal=None,
                    before_crs=io.MN_2008_CRS):
     """Corrected bare-earth DEM of Difference (after - before).
 
@@ -183,13 +185,20 @@ def difference_dem(before_laz, after_last_laz, bounds, *, res=5.0, ground_q=0.10
     ``bounds``      : (minx, miny, maxx, maxy) in the working CRS (EPSG:26915).
     ``ground_q``    : ground percentile (0.10 default; lower = less slope bias,
                       slightly more noise).
-    ``ground``      : ground estimator. "low_q" (default) = low percentile of raw
-                      z per horizontal cell. "slope_normal" = low percentile of the
-                      residual to a common smoothed regional surface (both epochs),
-                      which removes the downhill bias a horizontal low-pick has on a
-                      slope (it necessarily selects the downhill-lowest points). The
-                      shared surface cancels in the difference; ``sn_smooth_cells``
-                      sets the regional-slope smoothing (in cells).
+    ``ground``      : ground GRIDDING estimator. "slope_normal" (default) = low
+                      percentile of the residual to a common smoothed regional
+                      surface (both epochs), which removes the downhill bias a
+                      horizontal low-pick has on a slope (it necessarily selects the
+                      downhill-lowest points); the shared surface cancels in the
+                      difference. "low_q" = low percentile of raw z per horizontal
+                      cell (the older heuristic). ``sn_smooth_cells`` sets the
+                      regional-slope smoothing (in cells).
+    ``ground_source``: how the before-epoch bare-earth is obtained. "csf" (default)
+                      runs PDAL CSF (tuned for sparse steep/wooded terrain) for a
+                      cleaner, more general ground -- SLOW (min/tile) and needs PDAL.
+                      "last_return" uses the raw last-return heuristic (fast, no
+                      dependency; near-identical DoD, so choose it to skip CSF).
+                      ``csf_pdal`` optionally points to the PDAL binary.
 
     Returns dict: dod, lod (ny x nx arrays), z_after (for hillshade), corrections
     (JSON-serialisable), stable_sigma (empirical 1-sigma on stable ground, m), and
@@ -268,12 +277,22 @@ def difference_dem(before_laz, after_last_laz, bounds, *, res=5.0, ground_q=0.10
     else:
         Zref = Z21
 
-    # --- before: align -> tie -> correction surface -> along-track drift ---
+    # --- before: (CSF ground classification) -> align -> tie -> drift ---
+    # ground_source="csf" (default) runs PDAL CSF on the before cloud first for a
+    # cleaner, more general bare-earth (removes structures/understory); "last_return"
+    # skips it and uses the raw last-return heuristic. CSF is slow (min/tile).
+    _csf_tmp = None
+    if ground_source == "csf":
+        _csf_tmp = classify_ground_csf(before_laz, pdal=csf_pdal)
+        before_laz = _csf_tmp
     f = laspy.read(str(before_laz))
     x8 = np.asarray(f.x); y8 = np.asarray(f.y); z8 = np.asarray(f.z)
     ps8 = np.asarray(f.point_source_id); gt8 = np.asarray(f.gps_time)
     rn8 = np.asarray(f.return_number); nr8 = np.asarray(f.number_of_returns)
     be = rn8 == nr8
+    if _csf_tmp is not None:
+        import shutil, os
+        shutil.rmtree(os.path.dirname(_csf_tmp), ignore_errors=True)
     pc = io.PointCloud(x8, y8, z8, ps8, np.asarray(f.classification),
                        np.zeros_like(z8), np.zeros_like(ps8), before_crs)
     corr, _, _ = coreg.align_swaths(pc, ref=int(ps8.min()))
@@ -325,7 +344,7 @@ def difference_dem(before_laz, after_last_laz, bounds, *, res=5.0, ground_q=0.10
     corrections = {
         "epochs": "after - before (positive = deposition)",
         "crs": "EPSG:26915", "res_m": res, "ground_percentile": ground_q,
-        "ground_estimator": ground,
+        "ground_estimator": ground, "ground_source": ground_source,
         "bounds": [float(b) for b in bounds], "stable_1sigma_m": round(sigma, 4),
         "lod_method": lod_method,
         "per_swath_internal_alignment_dxdydz_m":

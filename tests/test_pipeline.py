@@ -12,6 +12,7 @@ import pytest
 
 from lidar_diff_icp.pipeline import (difference_dem, rasterize, heteroscedastic_lod,
                                      read_last_return, _stream_ground)
+from lidar_diff_icp.ground import classify_ground_csf, find_pdal
 
 
 X0, Y0, W = 1000.0, 2000.0, 200.0
@@ -70,7 +71,9 @@ def _make_tiles(tmp_path):
 
 def test_difference_dem_recovers_bump_and_zero_on_stable(tmp_path):
     before, after = _make_tiles(tmp_path)
-    r = difference_dem(before, after, BOUNDS, res=5.0, ground_q=0.10)
+    # test the deterministic core without the PDAL/CSF dependency
+    r = difference_dem(before, after, BOUNDS, res=5.0, ground_q=0.10,
+                       ground="low_q", ground_source="last_return")
     dod = r["dod"]; res = r["res"]
     ci = int((BUMP_XY[0] - X0) / res); ri = int((BUMP_XY[1] - Y0) / res)
     # the 1 m bump is recovered (above dz_thresh, so kept as real change)
@@ -150,3 +153,22 @@ def test_stream_ground_matches_exact(tmp_path):
     m = np.isfinite(g) & np.isfinite(Ge) & (cnt > 50)
     assert m.sum() > 50
     assert np.median(np.abs(g[m] - Ge[m])) < 0.02                 # cm agreement, blunder-robust
+
+
+def test_classify_ground_csf_optional(tmp_path):
+    """CSF ground classification via PDAL: removes a high (building/canopy) cluster
+    and keeps ground, preserving point attributes. Skipped if PDAL isn't installed."""
+    try:
+        find_pdal()
+    except Exception:
+        pytest.skip("PDAL (filters.csf) not available")
+    rng = np.random.default_rng(0); n = 40000
+    x = rng.uniform(0, 100, n); y = rng.uniform(0, 100, n)
+    z = 100.0 + 0.02 * x + rng.normal(0, 0.03, n)                 # gentle ground
+    hi = rng.integers(0, n, 800); z[hi] += 8.0                    # a cluster to remove
+    _write_laz(tmp_path / "c.laz", x, y, z, np.ones(n), np.zeros(n))
+    out = classify_ground_csf(str(tmp_path / "c.laz"), resolution=2.0, iterations=100)
+    g = laspy.read(out)
+    assert 0 < len(g.x) < n                                       # filtered, not pass-through
+    assert float(np.max(g.z)) < 105.0                             # the +8 m cluster is gone
+    assert "gps_time" in g.point_format.dimension_names           # attributes preserved
