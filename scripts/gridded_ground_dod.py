@@ -30,12 +30,26 @@ def main():
                          "does not absorb localized change -- use only for legacy "
                          "data lacking gps_time)")
     ap.add_argument("--no-drift", action="store_true")
+    ap.add_argument("--ground", default="slope_normal",
+                    choices=["slope_normal", "low_q"],
+                    help="gridding estimator (default slope_normal: removes the "
+                         "downhill low-pick bias on slopes; low_q = older heuristic)")
+    ap.add_argument("--no-csf", action="store_true",
+                    help="skip PDAL CSF ground classification of the before cloud "
+                         "and use the raw last-return heuristic (fast, no PDAL; the "
+                         "DoD is near-identical). CSF is the default.")
+    ap.add_argument("--pdal", default=None, help="path to the PDAL binary for CSF")
+    ap.add_argument("--stream", action="store_true",
+                    help="grid the dense after cloud in chunks (O(cells) RAM) for "
+                         "large tiles / statewide runs")
     ap.add_argument("--outdir", default="data/derived/final")
     ap.add_argument("--figdir", default="figures")
     a = ap.parse_args()
 
     r = difference_dem(a.before_laz, a.after_last_laz, a.bounds, res=a.res,
-                       ground_q=a.ground_q,
+                       ground_q=a.ground_q, ground=a.ground,
+                       ground_source="last_return" if a.no_csf else "csf",
+                       csf_pdal=a.pdal, stream=a.stream,
                        correction_surface=a.correction_surface,
                        along_track_drift=not a.no_drift)
     dod, lod = r["dod"], r["lod"]
