@@ -78,11 +78,9 @@ def _tif(arr, res, x0, y0, ny, out):
 
 def _fig(Z21, dod, lod, res, X0, Y0, nx, ny, figdir):
     import matplotlib; matplotlib.use("Agg"); import matplotlib.pyplot as plt
-    from matplotlib.colors import LightSource
+    from lidar_diff_icp.viz import hillshade
     Path(figdir).mkdir(exist_ok=True)
-    ls = LightSource(azdeg=315, altdeg=45)
-    q = np.nan_to_num(Z21, nan=np.nanmin(Z21))
-    hs = np.flipud(ls.hillshade(np.flipud(q), vert_exag=2, dx=res, dy=res))  # standard NW
+    hs = hillshade(Z21, res, X0, Y0)          # GDAL NW shaded relief, oriented by the geotransform
     ext = (X0, X0 + nx * res, Y0, Y0 + ny * res); v = 0.3
     fig, ax = plt.subplots(1, 2, figsize=(15, 9))
     ax[0].imshow(hs, extent=ext, origin="lower", cmap="gray", alpha=0.6)
