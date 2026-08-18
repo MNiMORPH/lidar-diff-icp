@@ -33,17 +33,30 @@ system-driven from the navigation logs.
 was earned by a measured comparison on the pilot; the non-obvious ones are the
 point.
 
-1. **Bare earth = last return, `return_number == number_of_returns`, *including
-   single returns*.** Singles dominate flat open ground; dropping them (a common
-   `filters.returns groups=last` mistake) empties the agricultural fields.
-2. **Ground = a LOW PERCENTILE (10th) of last-return elevation per cell — never
+1. **Bare earth: CSF ground classification by default; last-return the fast
+   alternative.** A physically based ground filter — PDAL's Cloth Simulation Filter,
+   tuned for sparse steep/wooded terrain (`rigidness=1, resolution=1.0,
+   threshold=1.5, hdiff=0.5`; ~96% cell / ~94% steep-cell coverage while removing
+   ~12% as non-ground) — gives the cleanest, most general bare-earth, removing
+   structures and forest understory the heuristic keeps. Opt out with
+   `ground_source="last_return"`: last return, `return_number == number_of_returns`,
+   *including single returns* (singles dominate flat open ground; dropping them, a
+   common `filters.returns groups=last` mistake, empties the agricultural fields).
+   On this pilot the two give a near-identical DoD, so `last_return` is the right
+   choice to skip CSF's per-tile cost; CSF earns its keep on forest/structure.
+2. **Ground = a LOW PERCENTILE (10th), taken NORMAL to the local slope — never
    mean or median.** This is the single most important choice. On rough,
    vegetated, or sloping cells the true ground sits at the *bottom* of the return
    distribution; any central-tendency estimate rides above it, and because 2021 is
    ~14× denser than 2008 that offset becomes **coherent false change** — 16–32% of
    convex hillslopes read as falsely depositional. A low percentile tracks the
-   ground and drops that to ~4%. Coherent bias, not incoherent noise, is what
-   fools change detection, so this matters more than point-cloud vs raster.
+   ground and drops that to ~4%. But a *horizontal* low-pick on a slope selects the
+   downhill-lowest points — a bias of ~(offset × slope) that reads as residual
+   hillslope banding. So by default (`ground="slope_normal"`) the percentile is
+   taken relative to a shared smoothed surface (both epochs), which the difference
+   cancels: this removes the downhill bias without touching real change (~35% lower
+   stable σ, validated to preserve a known change). `ground="low_q"` is the older
+   horizontal pick. Coherent bias, not incoherent noise, fools change detection.
 3. **Correct the 2008 points in the acquisition frame, per point, *before*
    gridding** (not post-hoc on the difference):
    1. per-swath internal alignment (translation, lowest swath pinned);
@@ -84,6 +97,9 @@ deposition; standard NW (315°/45°) hillshade.**
 ```bash
 python3 -m venv --system-site-packages lidar-icp   # over apt geospatial libs
 pip install -e .
+# CSF ground classification (the default ground_source) needs PDAL with filters.csf,
+# e.g. `conda create -n lidar-icp pdal` — found automatically on PATH or in conda
+# envs, or pass --pdal/csf_pdal. Skip it with --no-csf for a PDAL-free last-return run.
 
 # 1. fetch 3DEP over the tile's bbox (EPT via curl; readers.ept is unreliable here)
 env PROJ_DATA=/usr/share/proj GDAL_DATA=/usr/share/gdal \
