@@ -164,6 +164,12 @@ Reference point 44.101944, −92.004137 (E 579705.72, N 4883677.71, EPSG:26915).
   correction surface, along-track drift, Nuth & Kääb), `io`, `tiles`
   (county-parametrized gen1 tile discovery + coordinate→county), `threedep`
   (gen2 3DEP project lookup + coverage check), `swathdiff`, `variogram`.
+- **Change detection.** `detect.detect_change_standard` is the recommended
+  detector: **Wheaton et al. (2010) spatial-coherence Bayesian thresholding**
+  (`coherence.py`) + a systematic-error amplitude floor, with an optional
+  `wetland.wetland_flag` water mask. It supersedes the earlier two-axis
+  `detect.detect_change` (kept for reference). `viz.hillshade` renders shaded
+  relief via `gdaldem` (oriented by the geotransform, so it can't be mis-flipped).
 - `scripts/` — CLIs: `fetch_3dep_curl`, `filter_last_return`, `gridded_ground_dod`
   (final product), `m3c2_pointcloud` (point-based cross-check),
   `along_track_drift`, `decimation_test`, `fetch_tile`.
