@@ -4,8 +4,10 @@
 PDAL's readers.ept over S3 is unreliable in some environments (intermittent node
 read failures), while plain HTTPS GETs are solid. This walks the EPT hierarchy,
 downloads the node .laz tiles overlapping a bbox (depths up to --max-depth),
-decodes with laspy, reprojects EPSG:3857 -> EPSG:26915, and writes one LAZ.
-Preserves PointSourceId and GPS time.
+decodes with laspy, reprojects EPSG:3857 -> EPSG:26915, and writes one LAS,
+**streaming per tile** so peak RAM is ~one node tile rather than the whole cloud
+(the dense 3DEP can be hundreds of millions of points). Preserves PointSourceId,
+classification, and return numbers.
 
 Run with the PROJ fix if a conda base leaks it:
     env PROJ_DATA=/usr/share/proj GDAL_DATA=/usr/share/gdal python scripts/fetch_3dep_curl.py \
@@ -107,43 +109,45 @@ def main():
             list(ex.map(lambda k: dl(k, tmp / f"{k}.laz"), need))
         print("  downloads complete", flush=True)
 
-    xs_, ys_, zs_, psid, cls, rn, nr = ([] for _ in range(7))
-    for i, key in enumerate(keep):
-        dst = tmp / f"{key}.laz"
-        if not dst.exists():
-            dl(key, dst)
-        for _ in range(2):                           # heal truncated/partial tiles
-            try:
-                f = laspy.read(str(dst)); break
-            except Exception as e:
-                print(f"  re-downloading {key} (bad read: {e})", flush=True)
-                dst.unlink(missing_ok=True); dl(key, dst)
-        else:
-            raise RuntimeError(f"{key} unreadable after re-download")
-        xs_.append(np.asarray(f.x)); ys_.append(np.asarray(f.y)); zs_.append(np.asarray(f.z))
-        psid.append(np.asarray(f.point_source_id)); cls.append(np.asarray(f.classification))
-        rn.append(np.asarray(f.return_number)); nr.append(np.asarray(f.number_of_returns))
-        if (i + 1) % 20 == 0:
-            print(f"  read {i+1}/{len(keep)}", flush=True)
-    X = np.concatenate(xs_); Y = np.concatenate(ys_); Z = np.concatenate(zs_)
-    PS = np.concatenate(psid); CL = np.concatenate(cls)
-    RN = np.concatenate(rn); NR = np.concatenate(nr)
-
-    # reproject 3857 -> 26915 and clip to the exact bbox
+    # Stream: read each tile, reproject 3857 -> 26915, clip to the bbox, and write
+    # incrementally. Peak RAM is one tile, not the whole cloud -- the dense 3DEP
+    # can be hundreds of millions of points (461M on the MN River valley tile), so
+    # accumulating everything then concatenating OOMs. Fixed header offsets (the
+    # bbox min, which every clipped point is >=) avoid needing all data up front.
     tr = Transformer.from_crs("EPSG:3857", "EPSG:26915", always_xy=True)
-    E, N = tr.transform(X, Y)
-    m = (E >= a.bounds[0]) & (E <= a.bounds[2]) & (N >= a.bounds[1]) & (N <= a.bounds[3])
-    E, N, Z, PS, CL, RN, NR = E[m], N[m], Z[m], PS[m], CL[m], RN[m], NR[m]
-    print(f"{E.size:,} points in bbox; PointSourceId uniques: {np.unique(PS).size}", flush=True)
-
     hdr = laspy.LasHeader(point_format=1, version="1.2")
-    hdr.offsets = [E.min(), N.min(), Z.min()]; hdr.scales = [0.01, 0.01, 0.01]
-    las = laspy.LasData(hdr)
-    las.x, las.y, las.z = E, N, Z
-    las.point_source_id = PS.astype(np.uint16); las.classification = CL.astype(np.uint8)
-    las.return_number = RN.astype(np.uint8); las.number_of_returns = NR.astype(np.uint8)
+    hdr.offsets = [a.bounds[0], a.bounds[1], 0.0]; hdr.scales = [0.01, 0.01, 0.01]
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
-    las.write(a.out)
+    total = 0; psids = set()
+    with laspy.open(a.out, mode="w", header=hdr) as writer:
+        for i, key in enumerate(keep):
+            dst = tmp / f"{key}.laz"
+            if not dst.exists():
+                dl(key, dst)
+            for _ in range(2):                           # heal truncated/partial tiles
+                try:
+                    f = laspy.read(str(dst)); break
+                except Exception as e:
+                    print(f"  re-downloading {key} (bad read: {e})", flush=True)
+                    dst.unlink(missing_ok=True); dl(key, dst)
+            else:
+                raise RuntimeError(f"{key} unreadable after re-download")
+            E, N = tr.transform(np.asarray(f.x), np.asarray(f.y))
+            m = (E >= a.bounds[0]) & (E <= a.bounds[2]) & (N >= a.bounds[1]) & (N <= a.bounds[3])
+            if not m.any():
+                continue
+            ch = laspy.LasData(hdr)
+            ch.x = E[m]; ch.y = N[m]; ch.z = np.asarray(f.z)[m]
+            ps = np.asarray(f.point_source_id)[m]
+            ch.point_source_id = ps.astype(np.uint16)
+            ch.classification = np.asarray(f.classification)[m].astype(np.uint8)
+            ch.return_number = np.asarray(f.return_number)[m].astype(np.uint8)
+            ch.number_of_returns = np.asarray(f.number_of_returns)[m].astype(np.uint8)
+            writer.write_points(ch.points)
+            total += int(m.sum()); psids.update(np.unique(ps).tolist())
+            if (i + 1) % 20 == 0:
+                print(f"  streamed {i+1}/{len(keep)} tiles, {total:,} pts in bbox", flush=True)
+    print(f"{total:,} points in bbox; PointSourceId uniques: {len(psids)}", flush=True)
     print(f"wrote {a.out}", flush=True)
 
 
