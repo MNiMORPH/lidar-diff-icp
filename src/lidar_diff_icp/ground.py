@@ -50,13 +50,24 @@ def find_pdal(pdal=None):
 
 def classify_ground_csf(in_path, out_path=None, *, pdal=None, resolution=1.0,
                         rigidness=1, threshold=1.5, hdiff=0.5, smooth=True,
-                        iterations=500):
+                        iterations=500, elm=True, outlier=False):
     """Classify ground with PDAL CSF; return a path to a LAS of ground points.
 
     Rewrites ``in_path`` to uncompressed LAS via laspy first (old-LAZ
-    compatibility), runs CSF, and keeps ``Classification == 2``. All point
-    attributes (gps_time, point_source_id, return numbers) are preserved. If
-    ``out_path`` is None a temp file is created; the caller owns it (and the
+    compatibility), then runs, in order:
+
+    * ``filters.elm`` (default ``elm=True``) -- Extended Local Minimum, marks LOW
+      blunder points (multipath, sub-canopy noise, negative-noise below true
+      ground) as noise. CSF is vulnerable to exactly these: one low point drags
+      the cloth down and makes it miss ground or carve a pit. Standard, protective,
+      cheap; disable with ``elm=False``.
+    * ``filters.outlier`` (optional, ``outlier=True``) -- statistical isolated
+      high/low points.
+    * a drop of the noise class before the ground filter, then ``filters.csf``,
+      then keep ``Classification == 2``.
+
+    All point attributes (gps_time, point_source_id, return numbers) are preserved.
+    If ``out_path`` is None a temp file is created; the caller owns it (and the
     intermediate LAS is removed automatically). CSF at 1 m resolution is slow
     (minutes per tile) -- that is the cost of the default.
     """
@@ -66,14 +77,21 @@ def classify_ground_csf(in_path, out_path=None, *, pdal=None, resolution=1.0,
     laspy.read(str(in_path)).write(las_in)            # old-LAZ -> LAS PDAL can read
     if out_path is None:
         out_path = os.path.join(tmpdir, "ground.las")
-    pipe = {"pipeline": [
-        {"type": "readers.las", "filename": las_in},
+    stages = [{"type": "readers.las", "filename": las_in}]
+    if elm:                                           # low blunders -> noise (class 7)
+        stages.append({"type": "filters.elm"})
+    if outlier:                                       # isolated high/low -> class 7
+        stages.append({"type": "filters.outlier"})
+    if elm or outlier:                                # drop noise before ground filter
+        stages.append({"type": "filters.expression", "expression": "Classification != 7"})
+    stages += [
         {"type": "filters.csf", "resolution": resolution, "rigidness": rigidness,
          "threshold": threshold, "hdiff": hdiff, "smooth": smooth,
          "iterations": iterations},
         {"type": "filters.expression", "expression": "Classification == 2"},
         {"type": "writers.las", "filename": out_path},
-    ]}
+    ]
+    pipe = {"pipeline": stages}
     pj = os.path.join(tmpdir, "csf.json")
     with open(pj, "w") as fh:
         json.dump(pipe, fh)
