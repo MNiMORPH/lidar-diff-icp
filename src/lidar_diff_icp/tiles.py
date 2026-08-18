@@ -148,35 +148,94 @@ def build_index(county: str = DEFAULT_COUNTY,
     return index
 
 
-def find_tile(easting: float, northing: float, county: str = DEFAULT_COUNTY,
-              cache: str | Path | None = None) -> str:
-    """Return the county tile whose bbox contains a UTM 15N (E, N) point.
+LIDAR_ROOT = COUNTY_ROOT.split("county/")[0]            # .../elevation/lidar/
+STATE_TILE_INDEX = LIDAR_ROOT + "tile_index/indx_q006kpy4.gdb.zip"
+DEFAULT_TILE_INDEX_CACHE = "data/mn_tile_centroids.csv"
 
-    Raises ``LookupError`` if no tile in ``county`` contains the point (which can
-    happen for a point on a county boundary -- try the neighboring county). If
-    more than one bbox contains it (bboxes overlap slightly due to the grid skew),
-    the tightest containing tile is returned.
+
+def _find_ogr2ogr():
+    import glob, os, shutil
+    found = shutil.which("ogr2ogr")
+    if found:
+        return found
+    for pat in ("~/anaconda3/bin/ogr2ogr", "~/miniconda3/bin/ogr2ogr",
+                "/opt/conda/bin/ogr2ogr"):
+        for g in glob.glob(os.path.expanduser(pat)):
+            return g
+    raise FileNotFoundError("ogr2ogr (GDAL) not found -- needed to build the tile index")
+
+
+def centroid_index(cache: str | Path = DEFAULT_TILE_INDEX_CACHE):
+    """Statewide tile name -> UTM 15N centroid, from MnGeo's authoritative lidar
+    tile index (``indx_q006kpy4.gdb``, whose ``DNR_QQQ_ID`` equals our AAAA-BB-CC
+    tile name). Returns ``(names, xy)`` with ``xy`` an N x 2 float array. Built
+    once via GDAL from the remote geodatabase (one range-read, not a per-tile
+    header scan) and cached to a small CSV -- the state index is our friend, and
+    this is gentle on the server.
     """
-    index = build_index(county, cache)
-    hits = [
-        (name, bb) for name, bb in index.items()
-        if bb[0] <= easting <= bb[2] and bb[1] <= northing <= bb[3]
-    ]
-    if not hits:
-        raise LookupError(
-            f"no tile in county '{county}' contains ({easting}, {northing}); "
-            f"if this point is on a county line, pass the neighboring county")
-    # tightest = smallest area, in case of overlapping bboxes at an edge
-    name, _ = min(hits, key=lambda kv: (kv[1][2] - kv[1][0]) * (kv[1][3] - kv[1][1]))
-    return name
+    import numpy as np
+    cache = Path(cache)
+    if not cache.exists():
+        import subprocess
+        cache.parent.mkdir(parents=True, exist_ok=True)
+        url = f"/vsizip//vsicurl/{STATE_TILE_INDEX}/indx_q006kpy4.gdb"
+        subprocess.run([_find_ogr2ogr(), "-f", "CSV", str(cache), url,
+                        "indx_q006kpt4", "-select", "DNR_QQQ_ID,x,y"], check=True,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+    names, xs, ys = [], [], []
+    with open(cache) as fh:
+        next(fh)                                          # header line
+        for line in fh:
+            p = line.rstrip("\n").split(",")
+            if len(p) >= 3 and p[1] and p[2]:
+                names.append(p[0]); xs.append(float(p[1])); ys.append(float(p[2]))
+    return names, np.column_stack([xs, ys])
+
+
+def find_tile(easting: float, northing: float, county: str | None = None,
+              cache: str | Path = DEFAULT_TILE_INDEX_CACHE) -> str:
+    """Return the ``AAAA-BB-CC`` tile whose grid cell contains a UTM 15N (E, N)
+    point, via the statewide centroid index -- the nearest tile centroid IS the
+    containing cell of this regular grid. One cached index, correct across county
+    lines, and NO per-tile header hammering (which self-throttles on big metro
+    counties, so throttled 404s were misread as missing tiles). ``county`` is
+    accepted but ignored (kept for backward compatibility).
+
+    Returns the DNR_QQQ_ID tile name, which IS the LAZ filename in non-metro
+    counties. **Metro exception:** the Metro-2011 counties (Ramsey, Hennepin, ...)
+    store the same tile under a suffixed name (e.g. ``4342-03-32_b_a.laz``) in
+    their ``laz/`` directory, given by the ``las_tile_name`` field of the county's
+    own ``elevation_data.gdb`` ``tile_index`` layer (which also carries the
+    footprint polygons). For those, resolve the filename from the county gdb.
+    """
+    import numpy as np
+    names, xy = centroid_index(cache)
+    d2 = (xy[:, 0] - easting) ** 2 + (xy[:, 1] - northing) ** 2
+    return names[int(d2.argmin())]
 
 
 def download_tile(name: str, out_dir: str | Path,
-                  county: str = DEFAULT_COUNTY) -> Path:
-    """Download a full tile LAZ from a county to ``out_dir``; return the path."""
+                  county: str = DEFAULT_COUNTY, *, tries: int = 4) -> Path:
+    """Download a full tile LAZ from a county to ``out_dir``; return the path.
+    Retries transient failures (throttling/5xx) with backoff so a rate-limited
+    response is not mistaken for a missing tile."""
+    import time
+    import urllib.error
     _, laz_url, _ = _county_urls(county)
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     dest = out_dir / f"{name}.laz"
-    urllib.request.urlretrieve(f"{laz_url}{name}.laz", dest)
+    url = f"{laz_url}{name}.laz"
+    for k in range(tries):
+        try:
+            urllib.request.urlretrieve(url, dest)
+            return dest
+        except urllib.error.HTTPError as e:
+            if e.code in (429, 500, 502, 503, 504) and k < tries - 1:
+                time.sleep(3 * (k + 1)); continue
+            raise
+        except Exception:
+            if k < tries - 1:
+                time.sleep(3 * (k + 1)); continue
+            raise
     return dest

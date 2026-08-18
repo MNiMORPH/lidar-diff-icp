@@ -27,35 +27,34 @@ def main() -> None:
     p.add_argument("--easting", type=float)
     p.add_argument("--northing", type=float)
     p.add_argument("--tile", help="explicit AAAA-BB-CC tile name")
-    p.add_argument("--county", help="MnGeo county dir (default: resolved from "
-                   "--lon/--lat); required with --easting/--northing or --tile")
+    p.add_argument("--county", help="MnGeo county dir for the download path "
+                   "(default: resolved from the coordinate); needed only with --tile)")
     p.add_argument("--out", default="data/before", help="output directory")
-    p.add_argument("--cache", default="data/tile_index_cache.json",
-                   help="tile bbox index cache (JSON; keyed per county)")
+    p.add_argument("--cache", default=tiles.DEFAULT_TILE_INDEX_CACHE,
+                   help="statewide tile-centroid index cache (CSV)")
     args = p.parse_args()
 
+    from pyproj import Transformer
     county = args.county
     if args.tile:
         name = args.tile
         if county is None:
-            p.error("give --county with --tile")
+            p.error("give --county with an explicit --tile")
     else:
-        if args.easting is not None and args.northing is not None:
+        if args.lon is not None and args.lat is not None:
+            lon, lat = args.lon, args.lat
+            e, n = Transformer.from_crs("EPSG:4326", MN_GEN1_CRS,
+                                        always_xy=True).transform(lon, lat)
+        elif args.easting is not None and args.northing is not None:
             e, n = args.easting, args.northing
-            if county is None:
-                p.error("give --county with --easting/--northing (no lon/lat to geocode)")
-        elif args.lon is not None and args.lat is not None:
-            if county is None:
-                county = tiles.county_for_lonlat(args.lon, args.lat)
-                print(f"coordinate resolves to county '{county}'")
-            from pyproj import Transformer
-            e, n = Transformer.from_crs(
-                "EPSG:4326", MN_GEN1_CRS, always_xy=True
-            ).transform(args.lon, args.lat)
+            lon, lat = Transformer.from_crs(MN_GEN1_CRS, "EPSG:4326",
+                                            always_xy=True).transform(e, n)
         else:
-            p.error("give --tile, or --easting/--northing, or --lon/--lat")
-        name = tiles.find_tile(e, n, county=county, cache=args.cache)
-        print(f"coordinate falls in tile {name} (county {county})")
+            p.error("give --tile (+--county), or --easting/--northing, or --lon/--lat")
+        name = tiles.find_tile(e, n, cache=args.cache)     # statewide centroid index
+        if county is None:
+            county = tiles.county_for_lonlat(lon, lat)     # county only for the download path
+        print(f"coordinate -> tile {name} (county {county})")
 
     dest = tiles.download_tile(name, args.out, county=county)
     print(f"downloaded {dest} ({Path(dest).stat().st_size/1e6:.1f} MB)")
