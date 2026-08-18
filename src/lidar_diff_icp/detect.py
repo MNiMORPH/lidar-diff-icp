@@ -183,3 +183,51 @@ def _grf(shape, sig_cells, rng):
     w = gaussian_filter(rng.standard_normal(shape), max(sig_cells, 1e-3))
     s = w.std()
     return w / (s if s > 0 else 1.0)
+
+
+def detect_change_standard(dod, lod, stable, res, *, mask=None, conf=0.95,
+                           low=None, up=None, window=5, sys_block_m=150.0,
+                           amp_z=1.96):
+    """STANDARD change detector: Wheaton et al. (2010) spatial-coherence Bayesian
+    thresholding (see ``coherence.py``) with a systematic-error amplitude floor.
+
+    Wheaton detection promotes coherent sub-LoD change and demotes isolated cells
+    (no halos). The ``tau_sys`` floor then rejects any confirmed region whose
+    area-mean is within the irreducible systematic error -- the one thing coherence
+    alone cannot rule out, since a broad *weak* bias (residual warp, datum) is also
+    "coherent". Pass ``mask`` = ~open_water (from ``wetland.wetland_flag``) to keep
+    stage-dependent water surfaces out. Returns the same dict shape as
+    ``detect_change`` (labels, regions, change, sigma, corr_length_m, tau_sys_m).
+    """
+    from .coherence import coherence_change
+    ca = res * res
+    mm = np.isfinite(dod) & np.isfinite(lod) & (lod > 0)
+    if mask is not None:
+        mm = mm & mask
+    perror = np.maximum(lod / 1.96, 1e-6)
+    chg = coherence_change(dod, perror, conf=conf, low=low, up=up, window=window) & mm
+    st = stable & mm
+    tau = _systematic_floor(dod, stable, res, sys_block_m)
+    L = _corr_length(dod / perror, st, res)
+    sigma = float(1.4826 * np.median(np.abs(dod[st] - np.median(dod[st])))) if st.any() else np.nan
+    labels = np.zeros(dod.shape, int); regions = []; kid = 0
+    for sgn in (+1, -1):                                 # same-sign regions
+        lab, n = label(chg & (np.sign(dod) == sgn), structure=np.ones((3, 3)))
+        for i in range(1, n + 1):
+            cm = lab == i; a = int(cm.sum()); mean = float(dod[cm].mean())
+            if abs(mean) < amp_z * tau:                  # systematic-floor amplitude gate
+                continue
+            neff = max(a * ca / (np.pi * max(L, res) ** 2), 1.0)
+            kid += 1; labels[cm] = kid
+            core = cm & (np.abs(dod) > lod)
+            regions.append(dict(id=kid, n_cells=a, area_ha=a * ca / 1e4,
+                                mean_m=round(mean, 4),
+                                volume_m3=round(float(dod[cm].sum() * ca), 1),
+                                sign="deposition" if mean > 0 else "erosion",
+                                n_eff=round(neff, 1),
+                                core_frac=round(float(core.sum() / a), 3)))
+    regions.sort(key=lambda r: -r["area_ha"])
+    return dict(labels=labels, regions=regions, change=labels > 0,
+                sigma=round(sigma, 4), corr_length_m=round(L, 1),
+                tau_sys_m=round(float(tau), 4),
+                method="Wheaton (2010) spatial coherence + tau_sys floor")
