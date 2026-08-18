@@ -177,3 +177,9 @@ DeLong et al. (2022), *Regional-Scale Landscape Response to an Extreme
 Precipitation Event From Repeat Lidar*, Earth and Space Science,
 [10.1029/2022EA002420](https://doi.org/10.1029/2022EA002420) — the published
 analog on this same MN-DNR lidar program (correction surface, uncertainty).
+
+Wheaton, Brasington, Darby & Sear (2010), *Accounting for uncertainty in DEMs from
+repeat topographic surveys: improved sediment budgets*, Earth Surface Processes and
+Landforms 35(2):136–156, [10.1002/esp.1886](https://doi.org/10.1002/esp.1886) — the
+spatial-coherence Bayesian DoD thresholding implemented in `coherence.py`, from
+their Geomorphic Change Detection (GCD) software (https://gcd.riverscapes.net).
