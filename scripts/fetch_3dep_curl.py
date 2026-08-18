@@ -31,7 +31,12 @@ def main():
     ap.add_argument("--bounds", nargs=4, type=float, required=True,
                     metavar=("MINX", "MINY", "MAXX", "MAXY"), help="EPSG:26915")
     ap.add_argument("--max-depth", type=int, default=9)
-    ap.add_argument("--max-tiles", type=int, default=160)
+    ap.add_argument("--max-tiles", type=int, default=None,
+                    help="cap on node tiles fetched (default: NO cap -- fetch every "
+                         "overlapping tile for complete coverage). A cap that "
+                         "truncates keeps the lexically-first tiles and prints a "
+                         "loud incomplete-coverage warning (this silently caused a "
+                         "half-tile coverage gap before).")
     ap.add_argument("--workers", type=int, default=16, help="parallel download workers")
     ap.add_argument("--out", required=True)
     a = ap.parse_args()
@@ -69,7 +74,16 @@ def main():
                     frontier.append(_get_json(f"{a.base}/ept-hierarchy/{key}.json"))
                 except Exception as e:
                     print(f"  sub-hierarchy {key} failed: {e}")
-    keep = sorted(set(keep))[: a.max_tiles]
+    keep = sorted(set(keep))
+    n_overlap = len(keep)
+    if a.max_tiles is not None and n_overlap > a.max_tiles:
+        import sys
+        print(f"WARNING: {n_overlap} node tiles overlap the bbox but --max-tiles="
+              f"{a.max_tiles} keeps only the lexically-first {a.max_tiles} -> "
+              f"{n_overlap - a.max_tiles} DROPPED, INCOMPLETE COVERAGE. Remove "
+              f"--max-tiles (default) or raise it to cover the whole area.",
+              file=sys.stderr, flush=True)
+        keep = keep[: a.max_tiles]
     print(f"{len(keep)} overlapping node tiles (depth<= {a.max_depth})", flush=True)
 
     tmp = Path(a.out).parent / "_ept_tiles"; tmp.mkdir(parents=True, exist_ok=True)
