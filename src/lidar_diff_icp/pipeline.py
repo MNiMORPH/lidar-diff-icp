@@ -176,7 +176,7 @@ def _stream_ground(path, bounds, res, nx, ny, q, *, plane=None, chunk=8_000_000,
 def difference_dem(before_laz, after_last_laz, bounds, *, res=5.0, ground_q=0.10,
                    correction_surface=False, along_track_drift=True,
                    ground="slope_normal", sn_smooth_cells=1.2, stream=False,
-                   ground_source="csf", csf_pdal=None,
+                   ground_source="csf", csf_pdal=None, robust_stable=True,
                    before_crs=io.MN_2008_CRS):
     """Corrected bare-earth DEM of Difference (after - before).
 
@@ -199,10 +199,22 @@ def difference_dem(before_laz, after_last_laz, bounds, *, res=5.0, ground_q=0.10
                       "last_return" uses the raw last-return heuristic (fast, no
                       dependency; near-identical DoD, so choose it to skip CSF).
                       ``csf_pdal`` optionally points to the PDAL binary.
+    ``robust_stable``: if True (default), the stable-ground mask used to REPORT
+                      uncertainty (stable_sigma, the LoD calibration) is refined by
+                      an iterative 3-NMAD sigma-clip of the DoD, removing real
+                      change that the geometric mask admits. This matters where the
+                      geometric heuristic fails -- e.g. a valley wider than the
+                      600 m TPI window, whose flat floodplain interior reads as
+                      "stable" and pulls its own change into the calibration (~37%
+                      of stable cells on the MN River valley pilot; <5% at Elba).
+                      The CORRECTIONS (tie, drift) are already robust to this (the
+                      tie fits only sloped cells with its own NMAD rejection; the
+                      drift gates on |change|), so this only cleans the reporting
+                      layer and never alters the DoD surface.
 
-    Returns dict: dod, lod (ny x nx arrays), z_after (for hillshade), corrections
-    (JSON-serialisable), stable_sigma (empirical 1-sigma on stable ground, m), and
-    grid meta (bounds, res, nx, ny).
+    Returns dict: dod, lod (ny x nx arrays), z_after (for hillshade), stable (the
+    reporting stable mask), corrections (JSON-serialisable), stable_sigma (empirical
+    1-sigma on stable ground, m), and grid meta (bounds, res, nx, ny).
     """
     X0, Y0, X1, Y1 = bounds
     nx = int(round((X1 - X0) / res)); ny = int(round((Y1 - Y0) / res))
@@ -328,13 +340,30 @@ def difference_dem(before_laz, after_last_laz, bounds, *, res=5.0, ground_q=0.10
     s08 = cellstat(xc[be], yc[be], zc[be], "spread")
     n08 = cellstat(xc[be], yc[be], zc[be], "count")
     dod = Zref - Z08c
-    r = dod[stable & np.isfinite(dod)]
+    # Reporting stable mask. The geometric `stable` admits real change where its
+    # heuristics fail (a floodplain wider than the TPI window reads as flat-stable),
+    # which inflates sigma and the LoD calibration. Refine it by an iterative
+    # 3-NMAD sigma-clip of the DoD so the reported error is the true stable-ground
+    # error, not the change bleeding into it. Corrections are untouched (already
+    # robust), so the DoD surface is identical either way.
+    stable_rep = stable & np.isfinite(dod)
+    stable_geom_n = int(stable_rep.sum())
+    if robust_stable:
+        for _ in range(8):
+            v = dod[stable_rep]
+            med = np.median(v); nm = 1.4826 * np.median(np.abs(v - med))
+            keep = stable_rep & (np.abs(dod - med) < 3.0 * max(nm, 1e-3))
+            if keep.sum() == stable_rep.sum():
+                break
+            stable_rep = keep
+    stable_clip_frac = (1.0 - stable_rep.sum() / stable_geom_n) if stable_geom_n else 0.0
+    r = dod[stable_rep]
     sigma = float(1.4826 * np.median(np.abs(r - np.median(r))))
     # LoD: calibrated heteroscedastic model (xdem/Hugonnet 2022) if available,
     # else a within-cell spread proxy (relief-inflated on slopes -- fallback only).
     abs_curv = np.abs(np.gradient(np.gradient(gaussian_filter(Zf, 1.0), res, axis=0), res, axis=0)
                       + np.gradient(np.gradient(gaussian_filter(Zf, 1.0), res, axis=1), res, axis=1))
-    lod = heteroscedastic_lod(dod, sdeg, abs_curv, stable)
+    lod = heteroscedastic_lod(dod, sdeg, abs_curv, stable_rep)
     lod_method = "xdem heteroscedastic (slope,curv), calibrated on stable ground"
     if lod is None:
         lod = 1.96 * np.sqrt(np.nan_to_num(s08**2 / np.maximum(n08, 1))
@@ -346,6 +375,8 @@ def difference_dem(before_laz, after_last_laz, bounds, *, res=5.0, ground_q=0.10
         "crs": "EPSG:26915", "res_m": res, "ground_percentile": ground_q,
         "ground_estimator": ground, "ground_source": ground_source,
         "bounds": [float(b) for b in bounds], "stable_1sigma_m": round(sigma, 4),
+        "robust_stable": robust_stable,
+        "stable_clip_fraction": round(float(stable_clip_frac), 4),
         "lod_method": lod_method,
         "per_swath_internal_alignment_dxdydz_m":
             {str(k): [round(float(v), 4) for v in val] for k, val in corr.items()},
@@ -358,5 +389,6 @@ def difference_dem(before_laz, after_last_laz, bounds, *, res=5.0, ground_q=0.10
             {str(p): {"gps_time": [round(t, 3) for t in c[0]],
                       "drift_m": [round(d, 4) for d in c[1]]} for p, c in curves.items()},
     }
-    return dict(dod=dod, lod=lod, z_after=Z21, corrections=corrections,
-                stable_sigma=sigma, bounds=tuple(bounds), res=res, nx=nx, ny=ny)
+    return dict(dod=dod, lod=lod, z_after=Z21, stable=stable_rep,
+                corrections=corrections, stable_sigma=sigma,
+                bounds=tuple(bounds), res=res, nx=nx, ny=ny)
