@@ -14,7 +14,7 @@ from pathlib import Path
 import numpy as np
 import laspy
 
-from . import MN_2008_CRS
+from . import MN_GEN1_CRS
 
 
 @dataclass
@@ -39,7 +39,7 @@ class PointCloud:
         return np.unique(self.point_source_id)
 
 
-def read_tile(path: str | Path, crs: str = MN_2008_CRS) -> PointCloud:
+def read_tile(path: str | Path, crs: str = MN_GEN1_CRS) -> PointCloud:
     """Read a LAZ/LAS tile into a :class:`PointCloud`."""
     f = laspy.read(str(path))
     dims = set(f.point_format.dimension_names)

@@ -1,17 +1,19 @@
 # lidar-diff-icp
 
-A reusable workflow to build **bare-earth DEMs of Difference** between the
-2008-era Minnesota statewide lidar and modern USGS **3DEP**, correcting the early
-survey's navigation error so that what remains is real geomorphic change.
+A reusable workflow to build **bare-earth DEMs of Difference** between Minnesota's
+**First-Generation** statewide lidar (`gen1`, flown 2008-2012) and the modern
+**Second-Generation** USGS **3DEP** survey (`gen2`, 2020s), correcting the
+first-generation survey's navigation error so that what remains is real geomorphic
+change. ("First/Second Generation" is MnGeo's own terminology for the two eras.)
 
 The Elba pilot (below) is the test case; the method is written to generalize to
-any 2008 MN tile with 3DEP coverage.
+any first-generation MN tile with 3DEP coverage.
 
 ## The problem
 
-The 2008 lidar carries navigation (GNSS/IMU trajectory) error that differs from
-one flight line to the next — adjacent swaths over a single tile were flown up to
-~1.75 h apart, so each pass has its own, largely independent error state. A single
+The first-generation lidar carries navigation (GNSS/IMU trajectory) error that
+differs from one flight line to the next — adjacent swaths over a single tile were
+flown up to ~1.75 h apart, so each pass has its own, largely independent error state. A single
 rigid alignment of the whole cloud is therefore wrong: the error is piecewise per
 swath, and its dominant remaining component is a smooth **along-track drift** that
 follows the flight path. Two facts make this tractable:
@@ -126,20 +128,21 @@ r = difference_dem("before.laz", "3dep_last.laz", bounds, res=5.0, ground_q=0.10
 ## Reusing across Minnesota
 
 The correction is deterministic and lives in the acquisition frame, so the same
-`difference_dem` runs on any 2008 tile + its 3DEP overlap; only the fitted
-coefficients (`corrections.json`: per-swath alignment, tie, and per-flightline
-`f(gps_time)` drift) change. That reusability is the goal — the Elba tile is the
-pilot.
+`difference_dem` runs on any first-generation tile + its 3DEP overlap; only the
+fitted coefficients (`corrections.json`: per-swath alignment, tie, and
+per-flightline `f(gps_time)` drift) change. That reusability is the goal — the
+Elba tile is the pilot.
 
 ## Data
 
-- **Before** — MN statewide lidar, SE block, Fall 2008; LAZ via MnGeo. GPS time
-  present; **no CRS embedded** — assign EPSG:26915 (UTM 15N / NAD83). Old-laszip
-  encoding: read with **laspy**, not PDAL. `scripts/fetch_tile.py` retrieves a
-  tile by coordinate or name.
+- **Before (`gen1`)** — MnGeo First-Generation statewide lidar (2008-2012; the SE
+  block is Fall 2008); LAZ via MnGeo, organized per county. GPS time present; **no
+  CRS embedded** — assign EPSG:26915 (UTM 15N / NAD83). Old-laszip encoding: read
+  with **laspy**, not PDAL. `scripts/fetch_tile.py` retrieves a tile by coordinate
+  (county resolved automatically) or name.
   https://www.mngeo.state.mn.us/chouse/elevation/lidar_2008-2012.html
-- **After** — USGS 3DEP (pilot: `MN_SEDriftless_2_2021`, EPT on AWS
-  `usgs-lidar-public`, stored EPSG:3857; both 2008 and 2021 are leaf-off).
+- **After (`gen2`)** — USGS Second-Generation 3DEP (pilot: `MN_SEDriftless_2_2021`,
+  EPT on AWS `usgs-lidar-public`, stored EPSG:3857; both generations are leaf-off).
 
 ## Pilot study area
 

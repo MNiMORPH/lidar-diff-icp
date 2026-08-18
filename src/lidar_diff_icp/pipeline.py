@@ -1,4 +1,4 @@
-"""End-to-end differencing of 2008-era Minnesota lidar against USGS 3DEP.
+"""End-to-end differencing of First-Generation (2008-2012) Minnesota lidar against Second-Generation USGS 3DEP.
 
 One function, ``difference_dem``, runs the whole validated workflow and returns a
 DEM of Difference plus its corrections and uncertainty. It encodes the lessons
@@ -177,11 +177,11 @@ def difference_dem(before_laz, after_last_laz, bounds, *, res=5.0, ground_q=0.10
                    correction_surface=False, along_track_drift=True,
                    ground="slope_normal", sn_smooth_cells=1.2, stream=False,
                    ground_source="csf", csf_pdal=None, robust_stable=True,
-                   before_crs=io.MN_2008_CRS):
+                   before_crs=io.MN_GEN1_CRS):
     """Corrected bare-earth DEM of Difference (after - before).
 
-    ``before_laz``  : 2008-era MN lidar tile (retains point_source_id + gps_time).
-    ``after_last_laz``: 3DEP last-return cloud over the same bbox, same CRS.
+    ``before_laz``  : first-generation (gen1) MN lidar tile (retains point_source_id + gps_time).
+    ``after_last_laz``: gen2 3DEP last-return cloud over the same bbox, same CRS.
     ``bounds``      : (minx, miny, maxx, maxy) in the working CRS (EPSG:26915).
     ``ground_q``    : ground percentile (0.10 default; lower = less slope bias,
                       slightly more noise).

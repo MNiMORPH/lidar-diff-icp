@@ -49,7 +49,7 @@ def main():
     rn8 = np.asarray(f.return_number); nr8 = np.asarray(f.number_of_returns)
     gt8 = np.asarray(f.gps_time)
     be8 = rn8 == nr8
-    pc = io.PointCloud(x8, y8, z8, ps8, cl8, np.zeros_like(z8), np.zeros_like(ps8), io.MN_2008_CRS)
+    pc = io.PointCloud(x8, y8, z8, ps8, cl8, np.zeros_like(z8), np.zeros_like(ps8), io.MN_GEN1_CRS)
     corr, _, _ = coreg.align_swaths(pc, ref=int(ps8.min()))
     xc, yc, zc = x8.copy(), y8.copy(), z8.copy()
     for s, (dx, dy, dz) in corr.items():

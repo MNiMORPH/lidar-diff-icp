@@ -16,7 +16,7 @@ Examples
 import argparse
 from pathlib import Path
 
-from lidar_diff_icp import MN_2008_CRS, tiles
+from lidar_diff_icp import MN_GEN1_CRS, tiles
 
 
 def main() -> None:
@@ -50,7 +50,7 @@ def main() -> None:
                 print(f"coordinate resolves to county '{county}'")
             from pyproj import Transformer
             e, n = Transformer.from_crs(
-                "EPSG:4326", MN_2008_CRS, always_xy=True
+                "EPSG:4326", MN_GEN1_CRS, always_xy=True
             ).transform(args.lon, args.lat)
         else:
             p.error("give --tile, or --easting/--northing, or --lon/--lat")

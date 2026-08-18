@@ -166,7 +166,7 @@ def test_align_swaths_recovers_vertical_offset():
     x = np.concatenate([xa, xb]); y = np.concatenate([ya, yb]); z = np.concatenate([za, zb])
     ps = np.concatenate([np.ones(n), np.full(n, 2)]).astype(int)
     pc = io.PointCloud(x, y, z, ps, np.zeros_like(z), np.zeros_like(z),
-                       np.zeros_like(ps), io.MN_2008_CRS)
+                       np.zeros_like(ps), io.MN_GEN1_CRS)
     corr, edges, mis = coreg.align_swaths(pc, ref=1)
     assert abs(corr[1][2]) < 0.05                  # reference pinned
     assert abs(corr[2][2] + 0.3) < 0.08            # +0.3 m bias recovered as -0.3
