@@ -9,11 +9,14 @@ decodes with laspy, reprojects EPSG:3857 -> EPSG:26915, and writes one LAS,
 (the dense 3DEP can be hundreds of millions of points). Preserves PointSourceId,
 classification, and return numbers.
 
-Run with the PROJ fix if a conda base leaks it:
+Give --base explicitly, or --auto to resolve the covering gen2 project from the
+bbox (with a mandatory coverage check). Run with the PROJ fix if a conda base
+leaks it:
     env PROJ_DATA=/usr/share/proj GDAL_DATA=/usr/share/gdal python scripts/fetch_3dep_curl.py \
-      --base https://s3-us-west-2.amazonaws.com/usgs-lidar-public/MN_SEDriftless_2_2021 \
-      --bounds 578014 4883738 579514 4885238 --max-depth 9 \
+      --auto --bounds 578014 4883738 579514 4885238 --max-depth 9 \
       --out data/after/3dep2021_subpatch.laz
+    # or pin the project:
+    #   --base https://s3-us-west-2.amazonaws.com/usgs-lidar-public/MN_SEDriftless_2_2021
 """
 import argparse, json, subprocess, urllib.request
 from pathlib import Path
@@ -29,7 +32,14 @@ def _get_json(url):
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--base", required=True, help="EPT base URL (dir with ept.json)")
+    ap.add_argument("--base", help="EPT base URL (dir with ept.json). Omit with "
+                    "--auto to resolve the covering gen2 3DEP project from --bounds.")
+    ap.add_argument("--auto", action="store_true",
+                    help="auto-resolve the gen2 3DEP EPT project covering --bounds "
+                         "(most recent non-mosaic project) and REQUIRE it to fully "
+                         "cover the bbox before downloading")
+    ap.add_argument("--ept-cache", default=None,
+                    help="cache file for the EPT project-boundary index (--auto)")
     ap.add_argument("--bounds", nargs=4, type=float, required=True,
                     metavar=("MINX", "MINY", "MAXX", "MAXY"), help="EPSG:26915")
     ap.add_argument("--max-depth", type=int, default=9)
@@ -42,6 +52,22 @@ def main():
     ap.add_argument("--workers", type=int, default=16, help="parallel download workers")
     ap.add_argument("--out", required=True)
     a = ap.parse_args()
+
+    if not a.base and not a.auto:
+        ap.error("give --base <EPT url>, or --auto to resolve it from --bounds")
+    if a.auto:
+        from lidar_diff_icp import threedep
+        # bbox (26915) corners -> lon/lat; resolve the covering gen2 project and
+        # require full coverage before we download anything.
+        to_ll = Transformer.from_crs("EPSG:26915", "EPSG:4326", always_xy=True)
+        pts = [to_ll.transform(cx, cy) for cx in a.bounds[0::2] for cy in a.bounds[1::2]]
+        lons = [p[0] for p in pts]; lats = [p[1] for p in pts]
+        bbox_ll = (min(lons), min(lats), max(lons), max(lats))
+        clon, clat = (min(lons) + max(lons)) / 2, (min(lats) + max(lats)) / 2
+        ref = threedep.resolve_reference(clon, clat, bbox_ll, cache=a.ept_cache)
+        a.base = ref["url"].rsplit("/ept.json", 1)[0]
+        print(f"auto-resolved gen2 reference: {ref['name']} (year {ref['latest']}); "
+              f"boundary fully covers the tile bbox", flush=True)
 
     ept = _get_json(f"{a.base}/ept.json")
     b = ept["bounds"]                                   # [x0,y0,z0,x1,y1,z1] in 3857

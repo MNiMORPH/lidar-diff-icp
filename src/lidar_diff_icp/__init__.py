@@ -14,4 +14,4 @@ __version__ = "0.0.1"
 MN_GEN1_CRS = "EPSG:26915"
 MN_2008_CRS = MN_GEN1_CRS       # backward-compatible alias (deprecated: 'gen1' spans 2008-2012)
 
-from . import tiles, io, swathdiff  # noqa: E402,F401
+from . import tiles, io, swathdiff, threedep  # noqa: E402,F401

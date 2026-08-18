@@ -103,9 +103,11 @@ pip install -e .
 # e.g. `conda create -n lidar-icp pdal` — found automatically on PATH or in conda
 # envs, or pass --pdal/csf_pdal. Skip it with --no-csf for a PDAL-free last-return run.
 
-# 1. fetch 3DEP over the tile's bbox (EPT via curl; readers.ept is unreliable here)
+# 1. fetch 3DEP over the tile's bbox (EPT via curl; readers.ept is unreliable here).
+#    --auto resolves the covering gen2 project from the bbox and refuses to run
+#    unless its boundary fully covers the tile (--base <EPT_URL> pins it instead).
 env PROJ_DATA=/usr/share/proj GDAL_DATA=/usr/share/gdal \
-  python scripts/fetch_3dep_curl.py --base <EPT_URL> --bounds <minx miny maxx maxy> \
+  python scripts/fetch_3dep_curl.py --auto --bounds <minx miny maxx maxy> \
   --max-depth 12 --out data/after/3dep_fulldensity.laz
 
 # 2. last-return filter (rn==nr, singles kept)
@@ -133,6 +135,11 @@ fitted coefficients (`corrections.json`: per-swath alignment, tie, and
 per-flightline `f(gps_time)` drift) change. That reusability is the goal — the
 Elba tile is the pilot.
 
+Both data sources resolve from a coordinate: `tiles.county_for_lonlat` picks the
+MnGeo county directory (verified against the live listing), and
+`threedep.resolve_reference` picks the covering gen2 3DEP project (most recent,
+non-mosaic) and refuses to proceed unless its boundary fully covers the tile bbox.
+
 ## Data
 
 - **Before (`gen1`)** — MnGeo First-Generation statewide lidar (2008-2012; the SE
@@ -154,8 +161,9 @@ Reference point 44.101944, −92.004137 (E 579705.72, N 4883677.71, EPSG:26915).
 
 - `src/lidar_diff_icp/` — the package: `pipeline` (the end-to-end
   `difference_dem`), `coreg` (per-swath alignment, quadratic tie, DeLong
-  correction surface, along-track drift, Nuth & Kääb), `io`, `tiles`,
-  `swathdiff`, `variogram`.
+  correction surface, along-track drift, Nuth & Kääb), `io`, `tiles`
+  (county-parametrized gen1 tile discovery + coordinate→county), `threedep`
+  (gen2 3DEP project lookup + coverage check), `swathdiff`, `variogram`.
 - `scripts/` — CLIs: `fetch_3dep_curl`, `filter_last_return`, `gridded_ground_dod`
   (final product), `m3c2_pointcloud` (point-based cross-check),
   `along_track_drift`, `decimation_test`, `fetch_tile`.
