@@ -7,7 +7,7 @@ JSON, and a standard NW-hillshade figure. Run with PROJ_DATA UNSET so the pip
 rasterio uses its bundled PROJ:
 
     env -u PROJ_DATA -u GDAL_DATA python scripts/gridded_ground_dod.py \
-      data/before/4342-29-64.laz data/after/3dep2021_last.laz \
+      data/before/4342-29-64.laz data/after/3dep2021_fulltile.laz \
       --bounds 577492.8 4882737.6 580035.0 4886238.3
 """
 import argparse, json
@@ -20,7 +20,9 @@ from lidar_diff_icp.pipeline import difference_dem
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("before_laz"); ap.add_argument("after_last_laz")
+    ap.add_argument("before_laz")
+    ap.add_argument("after_laz", help="gen2 3DEP cloud WITH its ASPRS classification "
+                    "intact (the full delivery, not a pre-filtered last-return file)")
     ap.add_argument("--bounds", nargs=4, type=float, required=True)
     ap.add_argument("--res", type=float, default=5.0)
     ap.add_argument("--ground-q", type=float, default=0.10)
@@ -38,6 +40,12 @@ def main():
                     help="skip PDAL CSF ground classification of the before cloud "
                          "and use the raw last-return heuristic (fast, no PDAL; the "
                          "DoD is near-identical). CSF is the default.")
+    ap.add_argument("--after-ground", default="class2",
+                    choices=["class2", "last_return"],
+                    help="gen2 bare-earth source. class2 (default) uses 3DEP's own "
+                         "ASPRS ground classification (cleaner than last-return, which "
+                         "keeps canopy last hits), with a region-level CSF fallback if "
+                         "unclassified; last_return = the legacy rn==nr heuristic.")
     ap.add_argument("--pdal", default=None, help="path to the PDAL binary for CSF")
     ap.add_argument("--stream", action="store_true",
                     help="grid the dense after cloud in chunks (O(cells) RAM) for "
@@ -46,9 +54,10 @@ def main():
     ap.add_argument("--figdir", default="figures")
     a = ap.parse_args()
 
-    r = difference_dem(a.before_laz, a.after_last_laz, a.bounds, res=a.res,
+    r = difference_dem(a.before_laz, a.after_laz, a.bounds, res=a.res,
                        ground_q=a.ground_q, ground=a.ground,
                        ground_source="last_return" if a.no_csf else "csf",
+                       after_ground=a.after_ground,
                        csf_pdal=a.pdal, stream=a.stream,
                        correction_surface=a.correction_surface,
                        along_track_drift=not a.no_drift)
