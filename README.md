@@ -88,11 +88,17 @@ deposition; standard NW (315°/45°) hillshade.**
   trustworthy number — ~0.09 m on the pilot.
 - The **per-cell LoD** (`lod.tif`) is a calibrated heteroscedastic error model
   inherited from **xdem** (Hugonnet et al., 2022): the stable-ground DoD
-  dispersion is modeled as a function of slope and curvature and predicted
-  everywhere, so σ honestly rises with slope (~0.04 m flat → ~0.20 m steep on the
-  pilot) rather than being relief-inflated. Needs `xdem` (`pip install .[uncertainty]`;
-  its import requires `PROJ_DATA` unset); falls back to a within-cell-spread proxy
-  otherwise. The slope-dependence is real uncertainty — modeled, not detrended.
+  dispersion is modeled as a function of slope, curvature, and the **ground-estimate
+  standard error** — `sqrt(Σ_epoch roughness²/density)`, which combines the two
+  distinct within-cell signals: **detrended roughness** (the surface's real internal
+  variability, slope removed) as the numerator, and **ground-return density** (how
+  much data supports the estimate) as the denominator. These are separate, both
+  significant, factors (Aguilar et al. 2005; the Wheaton et al. 2010 covariate set).
+  σ is then predicted everywhere, so it honestly rises with slope, roughness, and
+  sparse data (~0.04 m flat → ~0.20 m steep on the pilot) rather than being
+  relief-inflated. Needs `xdem` (`pip install .[uncertainty]`; its import requires
+  `PROJ_DATA` unset); falls back to a within-cell-spread proxy otherwise. The
+  slope-dependence is real uncertainty — modeled, not detrended.
 
 ## Quick start
 
