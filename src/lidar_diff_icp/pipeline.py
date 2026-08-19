@@ -31,6 +31,8 @@ Lessons baked in
 """
 from __future__ import annotations
 
+import warnings
+
 import numpy as np
 import laspy
 import pandas as pd
@@ -60,6 +62,79 @@ def read_last_return(path, bounds=None):
         k = (x >= X0) & (x < X1) & (y >= Y0) & (y < Y1)
         x, y, z, ps, gt = x[k], y[k], z[k], ps[k], gt[k]
     return dict(x=x, y=y, z=z, point_source_id=ps, gps_time=gt)
+
+
+def _laz_arrays(f, bounds):
+    """(x, y, z, point_source_id, gps_time, classification) from a laspy object,
+    plus an in-bounds mask (all-True if bounds is None)."""
+    x = np.asarray(f.x); y = np.asarray(f.y); z = np.asarray(f.z)
+    ps = np.asarray(f.point_source_id)
+    try:
+        gt = np.asarray(f.gps_time)
+    except Exception:
+        gt = np.zeros_like(z)
+    cls = np.asarray(f.classification)
+    if bounds is not None:
+        X0, Y0, X1, Y1 = bounds
+        inb = (x >= X0) & (x < X1) & (y >= Y0) & (y < Y1)
+    else:
+        inb = np.ones(z.shape, bool)
+    return x, y, z, ps, gt, cls, inb
+
+
+def read_after_ground(path, bounds=None, *, mode="class2", csf_pdal=None,
+                      min_ground_frac=0.01):
+    """gen2 (3DEP) bare-earth points, using the survey's OWN ground classification.
+
+    ``mode="class2"`` (default) selects ASPRS ``Classification == 2`` -- a properly
+    QC'd ground-return set produced by USGS from the full-density cloud. It is
+    cleaner than the last-return heuristic, which keeps canopy/understory last hits
+    (in our forest tiles 24-72% of last returns are NOT ground), so the low-percentile
+    ground floats high and the within-cell spread is inflated by vegetation. Every
+    class-2 point in 3DEP is itself a last/only return, so this is a strict, cleaner
+    subset of last-return, not a different surface.
+
+    Region-level fallback: if the tile carries no usable ground class over the
+    requested region (an unclassified 3DEP delivery -- class-2 fraction below
+    ``min_ground_frac``), fall back to CSF over the region -- the same cloth filter
+    used for the gen1 cloud. gen1 data, which lacks a usable classification, should
+    always take that fallback (handled by ``ground_source="csf"`` on the before path).
+
+    ``mode="last_return"`` keeps the legacy ``rn == nr`` heuristic (singles included).
+
+    Returns dict of arrays (x, y, z, point_source_id, gps_time) plus
+    ``ground_mode`` = the method actually used ("class2", "csf_fallback", or
+    "last_return").
+    """
+    f = laspy.read(str(path))
+    x, y, z, ps, gt, cls, inb = _laz_arrays(f, bounds)
+    if mode == "last_return":
+        rn = np.asarray(f.return_number); nr = np.asarray(f.number_of_returns)
+        m = (rn == nr) & inb
+        used = "last_return"
+    else:
+        g = cls == 2
+        nin = int(inb.sum())
+        if int((g & inb).sum()) < min_ground_frac * max(nin, 1):
+            warnings.warn(
+                f"gen2 tile {path}: ASPRS ground (class 2) is "
+                f"{100 * (g & inb).sum() / max(nin, 1):.2f}% of the region "
+                f"(< {100 * min_ground_frac:.0f}%); treating as unclassified and "
+                f"falling back to CSF ground over the region.")
+            import os
+            import shutil
+            tmp = classify_ground_csf(path, pdal=csf_pdal)
+            try:
+                x, y, z, ps, gt, cls, inb = _laz_arrays(laspy.read(tmp), bounds)
+            finally:
+                shutil.rmtree(os.path.dirname(tmp), ignore_errors=True)
+            m = (cls == 2) & inb          # CSF writes class-2 ground only
+            used = "csf_fallback"
+        else:
+            m = g & inb
+            used = "class2"
+    return dict(x=x[m], y=y[m], z=z[m], point_source_id=ps[m], gps_time=gt[m],
+                ground_mode=used)
 
 
 def rasterize(x, y, value, bounds, res=5.0, agg="median"):
@@ -112,7 +187,7 @@ def heteroscedastic_lod(dod, slope_deg, abs_curv, stable, *, density=None, z=1.9
 
 
 def _stream_ground(path, bounds, res, nx, ny, q, *, plane=None, chunk=8_000_000,
-                   coarse_bins=120, bw=0.02, down=3.0, up=2.0):
+                   coarse_bins=120, bw=0.02, down=3.0, up=2.0, after_ground="class2"):
     """Per-cell low-q ground, spread, and count by STREAMING the cloud in chunks,
     so peak RAM is O(cells), not O(points) -- for statewide runs where the dense
     3DEP cloud will not fit in memory.
@@ -125,6 +200,12 @@ def _stream_ground(path, bounds, res, nx, ny, q, *, plane=None, chunk=8_000_000,
     interpolation. Matches an exact ``groupby.quantile`` to ~mm on well-sampled
     cells; SPARSE cells (few points) can differ (histogram vs the exact's linear
     interpolation across large gaps) and should be dropped by a min-count mask.
+    ``after_ground`` selects the gen2 ground returns per chunk: "class2" (default)
+    uses the survey's ASPRS ``Classification == 2`` (cleaner than last-return; see
+    :func:`read_after_ground`); "last_return" uses the ``rn == nr`` heuristic. The
+    CSF fallback for an unclassified tile lives in the in-memory path only -- a
+    streamed statewide run assumes the 3DEP delivery is classified.
+
     Returns (ground, spread, count) as ny x nx arrays.
     """
     X0, Y0, X1, Y1 = bounds
@@ -133,9 +214,12 @@ def _stream_ground(path, bounds, res, nx, ny, q, *, plane=None, chunk=8_000_000,
     def chunks():
         with laspy.open(str(path)) as fh:
             for pts in fh.chunk_iterator(chunk):
-                rn = np.asarray(pts.return_number); nr = np.asarray(pts.number_of_returns)
-                last = rn == nr
-                x = np.asarray(pts.x)[last]; y = np.asarray(pts.y)[last]; z = np.asarray(pts.z)[last]
+                if after_ground == "last_return":
+                    rn = np.asarray(pts.return_number); nr = np.asarray(pts.number_of_returns)
+                    sel = rn == nr
+                else:
+                    sel = np.asarray(pts.classification) == 2
+                x = np.asarray(pts.x)[sel]; y = np.asarray(pts.y)[sel]; z = np.asarray(pts.z)[sel]
                 ix = ((x - X0) / res).astype(np.int64); iy = ((y - Y0) / res).astype(np.int64)
                 ok = (ix >= 0) & (ix < nx) & (iy >= 0) & (iy < ny)
                 f = iy[ok] * nx + ix[ok]; v = z[ok]
@@ -185,15 +269,17 @@ def _stream_ground(path, bounds, res, nx, ny, q, *, plane=None, chunk=8_000_000,
     return g.reshape(ny, nx), spread.reshape(ny, nx), cnt.reshape(ny, nx)
 
 
-def difference_dem(before_laz, after_last_laz, bounds, *, res=5.0, ground_q=0.10,
+def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.10,
                    correction_surface=False, along_track_drift=True,
                    ground="slope_normal", sn_smooth_cells=1.2, stream=False,
-                   ground_source="csf", csf_pdal=None, robust_stable=True,
-                   before_crs=io.MN_GEN1_CRS):
+                   ground_source="csf", after_ground="class2", csf_pdal=None,
+                   robust_stable=True, before_crs=io.MN_GEN1_CRS):
     """Corrected bare-earth DEM of Difference (after - before).
 
     ``before_laz``  : first-generation (gen1) MN lidar tile (retains point_source_id + gps_time).
-    ``after_last_laz``: gen2 3DEP last-return cloud over the same bbox, same CRS.
+    ``after_laz``   : gen2 3DEP cloud over the same bbox, same CRS, WITH its ASPRS
+                      classification intact (pass the full delivery, not a
+                      pre-filtered last-return file -- see ``after_ground``).
     ``bounds``      : (minx, miny, maxx, maxy) in the working CRS (EPSG:26915).
     ``ground_q``    : ground percentile (0.10 default; lower = less slope bias,
                       slightly more noise).
@@ -211,6 +297,14 @@ def difference_dem(before_laz, after_last_laz, bounds, *, res=5.0, ground_q=0.10
                       "last_return" uses the raw last-return heuristic (fast, no
                       dependency; near-identical DoD, so choose it to skip CSF).
                       ``csf_pdal`` optionally points to the PDAL binary.
+    ``after_ground``: how the gen2 (3DEP) bare-earth is obtained. "class2" (default)
+                      uses the survey's OWN ASPRS ground classification, a QC'd
+                      ground-return set that is cleaner than last-return (which keeps
+                      canopy/understory last hits -- 24-72% of last returns are
+                      non-ground in our forest tiles, inflating the low-percentile
+                      ground and the within-cell spread). Region-level fallback to
+                      CSF if the tile is unclassified. "last_return" keeps the legacy
+                      ``rn == nr`` heuristic. See :func:`read_after_ground`.
     ``robust_stable``: if True (default), the stable-ground mask used to REPORT
                       uncertainty (stable_sigma, the LoD calibration) is refined by
                       an iterative 3-NMAD sigma-clip of the DoD, removing real
@@ -249,9 +343,11 @@ def difference_dem(before_laz, after_last_laz, bounds, *, res=5.0, ground_q=0.10
     # statewide runs; else load it in memory. A stays None in streaming mode.
     A = None
     if stream:
-        Z21, s21, n21 = _stream_ground(after_last_laz, bounds, res, nx, ny, ground_q)
+        Z21, s21, n21 = _stream_ground(after_laz, bounds, res, nx, ny, ground_q,
+                                       after_ground=after_ground)
     else:
-        A = read_last_return(after_last_laz, bounds)
+        A = read_after_ground(after_laz, bounds, mode=after_ground, csf_pdal=csf_pdal)
+        print(f"  gen2 ground: {A['ground_mode']} ({A['x'].size} points)", flush=True)
         Z21 = cellstat(A["x"], A["y"], A["z"], "ground")
         s21 = cellstat(A["x"], A["y"], A["z"], "spread")
         n21 = cellstat(A["x"], A["y"], A["z"], "count")
@@ -295,9 +391,9 @@ def difference_dem(before_laz, after_last_laz, bounds, *, res=5.0, ground_q=0.10
 
     # after-epoch reference ground in the chosen estimator (== Z21 for low_q)
     if ground == "slope_normal":
-        Zref = (_stream_ground(after_last_laz, bounds, res, nx, ny, ground_q,
-                               plane=(Zreg_f, dzde, dzdn))[0] if stream
-                else groundg(A["x"], A["y"], A["z"]))
+        Zref = (_stream_ground(after_laz, bounds, res, nx, ny, ground_q,
+                               plane=(Zreg_f, dzde, dzdn), after_ground=after_ground)[0]
+                if stream else groundg(A["x"], A["y"], A["z"]))
     else:
         Zref = Z21
 

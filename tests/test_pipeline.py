@@ -71,9 +71,12 @@ def _make_tiles(tmp_path):
 
 def test_difference_dem_recovers_bump_and_zero_on_stable(tmp_path):
     before, after = _make_tiles(tmp_path)
-    # test the deterministic core without the PDAL/CSF dependency
+    # test the deterministic core without the PDAL/CSF dependency (the synthetic
+    # clouds are last-return with no ASPRS classification, so opt into the
+    # last-return heuristic for both epochs rather than 3DEP's class 2)
     r = difference_dem(before, after, BOUNDS, res=5.0, ground_q=0.10,
-                       ground="low_q", ground_source="last_return")
+                       ground="low_q", ground_source="last_return",
+                       after_ground="last_return")
     dod = r["dod"]; res = r["res"]
     ci = int((BUMP_XY[0] - X0) / res); ri = int((BUMP_XY[1] - Y0) / res)
     # the 1 m bump is recovered (above dz_thresh, so kept as real change)
@@ -146,7 +149,8 @@ def test_stream_ground_matches_exact(tmp_path):
     z = 100.0 + 0.05 * x - 0.03 * y + rng.exponential(0.2, n)      # ground + one-sided veg
     z[rng.integers(0, n, 20)] -= 15.0                              # low blunders (must not corrupt it)
     _write_laz(tmp_path / "c.laz", x, y, z, np.ones(n), np.zeros(n))
-    g, spread, cnt = _stream_ground(str(tmp_path / "c.laz"), bounds, res, nx, ny, 0.10)
+    g, spread, cnt = _stream_ground(str(tmp_path / "c.laz"), bounds, res, nx, ny, 0.10,
+                                    after_ground="last_return")   # synthetic cloud has no class 2
     ix = ((x - X0) / res).astype(int); iy = ((y - Y0) / res).astype(int)
     ex = pd.Series(z).groupby(iy * nx + ix).quantile(0.10)
     Ge = np.full(nx * ny, np.nan); Ge[ex.index.values] = ex.values; Ge = Ge.reshape(ny, nx)
