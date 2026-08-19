@@ -151,27 +151,130 @@ def rasterize(x, y, value, bounds, res=5.0, agg="median"):
     return out.reshape(ny, nx)
 
 
-def heteroscedastic_lod(dod, slope_deg, abs_curv, stable, *, density=None, z=1.96):
+def _stream_roughness(path, bounds, res, nx, ny, *, after_ground="class2",
+                      chunk=8_000_000, min_n=6):
+    """Detrended within-cell roughness (see :func:`cell_plane_roughness`) computed
+    by STREAMING the gen2 cloud, accumulating the 9 per-cell plane-fit sufficient
+    statistics across chunks -- O(cells) RAM, for the large-tile / statewide path.
+    Ground selection matches :func:`_stream_ground` (``after_ground``)."""
+    X0, Y0, X1, Y1 = bounds; N = nx * ny
+    acc = {k: np.zeros(N) for k in
+           ("n", "Su", "Sv", "Sz", "Suu", "Suv", "Svv", "Suz", "Svz", "Szz")}
+    with laspy.open(str(path)) as fh:
+        for pts in fh.chunk_iterator(chunk):
+            if after_ground == "last_return":
+                rn = np.asarray(pts.return_number); nr = np.asarray(pts.number_of_returns)
+                sel = rn == nr
+            else:
+                sel = np.asarray(pts.classification) == 2
+            x = np.asarray(pts.x)[sel]; y = np.asarray(pts.y)[sel]; z = np.asarray(pts.z)[sel]
+            ix = np.floor((x - X0) / res).astype(np.int64)
+            iy = np.floor((y - Y0) / res).astype(np.int64)
+            ok = (ix >= 0) & (ix < nx) & (iy >= 0) & (iy < ny)
+            ix, iy, x, y, z = ix[ok], iy[ok], x[ok], y[ok], z[ok]
+            f = iy * nx + ix
+            u = x - (X0 + (ix + 0.5) * res); v = y - (Y0 + (iy + 0.5) * res)
+            def add(key, w): acc[key] += np.bincount(f, w, minlength=N)
+            add("n", np.ones_like(z)); add("Su", u); add("Sv", v); add("Sz", z)
+            add("Suu", u * u); add("Suv", u * v); add("Svv", v * v)
+            add("Suz", u * z); add("Svz", v * z); add("Szz", z * z)
+    n = acc["n"]
+    M = np.empty((N, 3, 3))
+    M[:, 0, 0] = acc["Suu"]; M[:, 0, 1] = acc["Suv"]; M[:, 0, 2] = acc["Su"]
+    M[:, 1, 0] = acc["Suv"]; M[:, 1, 1] = acc["Svv"]; M[:, 1, 2] = acc["Sv"]
+    M[:, 2, 0] = acc["Su"];  M[:, 2, 1] = acc["Sv"];  M[:, 2, 2] = n
+    r = np.stack([acc["Suz"], acc["Svz"], acc["Sz"]], axis=1)
+    valid = (n >= min_n) & (np.abs(np.linalg.det(M)) > 1e-6)
+    rms = np.full(N, np.nan)
+    if valid.any():
+        beta = np.linalg.solve(M[valid], r[valid])
+        rss = acc["Szz"][valid] - np.einsum("ij,ij->i", beta, r[valid])
+        rms[valid] = np.sqrt(np.maximum(rss, 0.0) / n[valid])
+    return rms.reshape(ny, nx)
+
+
+def cell_plane_roughness(x, y, z, X0, Y0, res, nx, ny, *, min_n=6):
+    """Detrended within-cell roughness: per-cell RMS of the residual to a plane
+    fitted to the ground points in that cell.
+
+    Raw within-cell spread of the ground returns is dominated by RELIEF -- a 5 m
+    cell on a 30 deg slope spans ~2.9 m vertically from tilt alone -- so it cannot
+    serve as an error covariate without removing the slope first (else slope
+    masquerades as roughness and is collinear with the slope covariate already in
+    the LoD model). We remove it exactly, at the analysis-cell scale, by fitting a
+    plane per cell and taking the RMS of the residuals -- the standard geomorphic
+    definition of surface roughness (Grohmann et al. 2011; Cavalli et al. 2008),
+    one scale below the slope-normal ground fix. What survives is the
+    slope-independent scatter: micro-topography plus the vegetation-penetration
+    ambiguity that makes a cell's ground return set fuzzy -- the physical signal
+    that a cell's ground elevation is poorly determined, hence the natural LoD
+    covariate (Wheaton et al. 2010 use slope, point density AND roughness).
+
+    Computed from streaming-friendly sufficient statistics (the 9 per-cell moments
+    of a plane fit), so it needs no per-point storage. Fit ``z ~ a*u + b*v + c`` on
+    the in-cell-centered (u, v); ``rms = sqrt(RSS / n)``. Returns an ny x nx array,
+    NaN where a cell has < ``min_n`` points or is ill-conditioned (collinear).
+    """
+    ix = np.floor((x - X0) / res).astype(np.int64)
+    iy = np.floor((y - Y0) / res).astype(np.int64)
+    ok = (ix >= 0) & (ix < nx) & (iy >= 0) & (iy < ny)
+    ix, iy = ix[ok], iy[ok]; x, y, z = x[ok], y[ok], z[ok]
+    f = iy * nx + ix; N = nx * ny
+    u = x - (X0 + (ix + 0.5) * res); v = y - (Y0 + (iy + 0.5) * res)
+    S = lambda w: np.bincount(f, w, minlength=N)
+    n = S(np.ones_like(z)); Su = S(u); Sv = S(v); Sz = S(z)
+    Suu = S(u * u); Suv = S(u * v); Svv = S(v * v)
+    Suz = S(u * z); Svz = S(v * z); Szz = S(z * z)
+    M = np.empty((N, 3, 3))
+    M[:, 0, 0] = Suu; M[:, 0, 1] = Suv; M[:, 0, 2] = Su
+    M[:, 1, 0] = Suv; M[:, 1, 1] = Svv; M[:, 1, 2] = Sv
+    M[:, 2, 0] = Su;  M[:, 2, 1] = Sv;  M[:, 2, 2] = n
+    r = np.stack([Suz, Svz, Sz], axis=1)
+    valid = (n >= min_n) & (np.abs(np.linalg.det(M)) > 1e-6)
+    rms = np.full(N, np.nan)
+    if valid.any():
+        beta = np.linalg.solve(M[valid], r[valid])
+        rss = Szz[valid] - np.einsum("ij,ij->i", beta, r[valid])
+        rms[valid] = np.sqrt(np.maximum(rss, 0.0) / n[valid])
+    return rms.reshape(ny, nx)
+
+
+def heteroscedastic_lod(dod, slope_deg, abs_curv, stable, *, stderr=None,
+                        density=None, roughness=None, z=1.96):
     """Per-cell level of detection from a calibrated error model (xdem / Hugonnet
     et al., 2022). Models the stable-ground DoD dispersion (NMAD) as a function of
-    slope, curvature, and -- if given -- **ground-return DENSITY**, then predicts
+    slope, curvature, and a within-cell ground-uncertainty covariate, then predicts
     ``z * sigma`` everywhere, calibrated to the *actual* stable-ground scatter.
 
-    ``density`` is a raw physical covariate: the number of lidar pulses that
-    reached the ground per cell (the limiting epoch). It is NOT a land-cover class
-    -- nothing is classified. Where the sparser survey penetrates poorly (dense
-    canopy), the ground estimate rests on few returns and is noisier, so sigma
-    honestly rises there. That drops the forest 'speckle' (which is
-    penetration-noise, not ground change) as a modeled *error*, not a mask, and it
-    flows straight into detection via ``perror = lod/1.96``. Returns None if xdem
-    is unavailable (import needs PROJ_DATA unset, as pip rasterio bundles PROJ)."""
+    ``stderr`` is the BASIS covariate the pipeline uses: the cell's ground-estimate
+    STANDARD ERROR, which combines the two distinct pieces of within-cell
+    information -- surface variability and sample size -- in the form the statistics
+    dictate, ``sqrt(sum_epoch roughness^2 / n)`` (per-epoch standard errors in
+    quadrature; see :func:`difference_dem`). Detrended ROUGHNESS (:func:`cell_plane_roughness`,
+    slope removed) is the numerator: the real internal variability of the surface
+    being sampled. DENSITY (ground returns per cell) is the denominator: how well
+    that variability is pinned down. They are genuinely different information
+    (Aguilar et al. 2005 rank morphology and sampling density as separate,
+    both-significant factors; Wheaton et al. 2010 keep density and roughness as
+    distinct FIS inputs), so one scales the error while the other damps only its
+    sampling part. Folding them into a single physical covariate uses both without
+    fragmenting xdem's N-D bin space (a 4th independent covariate makes the Delaunay
+    fit fail on small stable sets).
+
+    ``density`` and ``roughness`` are OPTIONAL standalone covariates, retained for
+    flexibility (e.g. reproducing the density-only model, or a roughness-only run);
+    the pipeline passes ``stderr`` instead. Any given covariate is added to the fit.
+
+    The result flows straight into detection via ``perror = lod/1.96``. Returns None
+    if xdem is unavailable (import needs PROJ_DATA unset, as pip rasterio bundles PROJ)."""
     try:
         import xdem.spatialstats as ss
     except Exception:
         return None
     covs = [slope_deg, abs_curv]; names = ["slope", "curv"]
-    if density is not None:
-        covs = covs + [density]; names = names + ["density"]
+    for val, nm in ((stderr, "stderr"), (density, "density"), (roughness, "roughness")):
+        if val is not None:
+            covs = covs + [val]; names = names + [nm]
     m = stable & np.isfinite(dod)
     for c in covs:
         m = m & np.isfinite(c)
@@ -345,12 +448,14 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.10,
     if stream:
         Z21, s21, n21 = _stream_ground(after_laz, bounds, res, nx, ny, ground_q,
                                        after_ground=after_ground)
+        r21 = _stream_roughness(after_laz, bounds, res, nx, ny, after_ground=after_ground)
     else:
         A = read_after_ground(after_laz, bounds, mode=after_ground, csf_pdal=csf_pdal)
         print(f"  gen2 ground: {A['ground_mode']} ({A['x'].size} points)", flush=True)
         Z21 = cellstat(A["x"], A["y"], A["z"], "ground")
         s21 = cellstat(A["x"], A["y"], A["z"], "spread")
         n21 = cellstat(A["x"], A["y"], A["z"], "count")
+        r21 = cell_plane_roughness(A["x"], A["y"], A["z"], X0, Y0, res, nx, ny)
 
     # terrain masks from the reference ground
     Zf = Z21.copy(); nanm = np.isnan(Zf)
@@ -447,6 +552,7 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.10,
     Z08c = groundg(xc[be], yc[be], zc[be])
     s08 = cellstat(xc[be], yc[be], zc[be], "spread")
     n08 = cellstat(xc[be], yc[be], zc[be], "count")
+    r08 = cell_plane_roughness(xc[be], yc[be], zc[be], X0, Y0, res, nx, ny)
     dod = Zref - Z08c
     # Reporting stable mask. The geometric `stable` admits real change where its
     # heuristics fail (a floodplain wider than the TPI window reads as flat-stable),
@@ -471,14 +577,24 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.10,
     # else a within-cell spread proxy (relief-inflated on slopes -- fallback only).
     abs_curv = np.abs(np.gradient(np.gradient(gaussian_filter(Zf, 1.0), res, axis=0), res, axis=0)
                       + np.gradient(np.gradient(gaussian_filter(Zf, 1.0), res, axis=1), res, axis=1))
-    # ground-return DENSITY covariate: the LIMITING (sparser) epoch's ground-return
-    # count per cell -- a raw physical measurement (no classification). Low density
-    # (poor canopy penetration) => noisier ground estimate => honestly larger LoD,
-    # which drops forest 'speckle' as modeled error rather than a mask.
-    density = np.minimum(np.nan_to_num(n08, nan=0.0), np.nan_to_num(n21, nan=0.0))
-    lod = heteroscedastic_lod(dod, sdeg, abs_curv, stable_rep, density=density)
-    lod_method = "xdem heteroscedastic (slope,curv,ground-density), calibrated on stable ground"
-    if lod is None:                                   # density model degenerate -> slope,curv only
+    # Standard-error LoD covariate: the cell ground-estimate's DoD standard error,
+    # combining the two DISTINCT pieces of within-cell information in the form the
+    # statistics dictate -- detrended ROUGHNESS (surface variability, the numerator)
+    # over ground-return DENSITY (sample size, the denominator): the per-epoch
+    # standard errors sqrt(roughness^2 / n) added in quadrature. Roughness and
+    # density are not redundant (Aguilar 2005; Wheaton 2010): one scales the error,
+    # the other damps only its sampling part. Using the combined SE keeps both while
+    # feeding xdem a single covariate (a 4th independent covariate fragments its N-D
+    # bin space and the Delaunay fit fails on small stable sets). Roughness is
+    # detrended (cell_plane_roughness), so this is the principled form of the old
+    # relief-inflated within-cell-spread proxy.
+    stderr = np.sqrt(np.nan_to_num(r08) ** 2 / np.maximum(n08, 1.0)
+                     + np.nan_to_num(r21) ** 2 / np.maximum(n21, 1.0))
+    stderr[~(np.isfinite(r08) | np.isfinite(r21))] = np.nan
+    lod = heteroscedastic_lod(dod, sdeg, abs_curv, stable_rep, stderr=stderr)
+    lod_method = ("xdem heteroscedastic (slope,curv,standard-error[roughness/sqrt(density)]), "
+                  "calibrated on stable ground")
+    if lod is None:                                   # stderr model degenerate -> slope,curv only
         lod = heteroscedastic_lod(dod, sdeg, abs_curv, stable_rep)
         lod_method = "xdem heteroscedastic (slope,curv), calibrated on stable ground"
     if lod is None:
