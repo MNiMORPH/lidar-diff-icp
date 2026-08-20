@@ -63,7 +63,7 @@ def _tif(arr, res, x0, y0, ny, out):
 
 
 def fig_dod_lod(name, Z21, dod, lod, res, X0, Y0, nx, ny, figdir):
-    hs = hillshade(Z21, res, X0, Y0)
+    hs = hillshade(Z21, res, X0, Y0, fill_gaps=True)  # gap-filled backdrop, no white holes
     ext = (X0, X0 + nx * res, Y0, Y0 + ny * res); v = 0.3
     fig, ax = plt.subplots(1, 2, figsize=(15, 9))
     ax[0].imshow(hs, extent=ext, origin="lower", cmap="gray", alpha=0.6)
@@ -82,7 +82,7 @@ def fig_dod_lod(name, Z21, dod, lod, res, X0, Y0, nx, ny, figdir):
 
 def fig_dem_change(name, Z21, dod, change, regions, res, X0, Y0, nx, ny, figdir):
     """DEM hillshade with the robustly-detected DoD cells at 70% opacity."""
-    hs = hillshade(Z21, res, X0, Y0)
+    hs = hillshade(Z21, res, X0, Y0, fill_gaps=True)  # gap-filled backdrop, no white holes
     ext = (X0, X0 + nx * res, Y0, Y0 + ny * res); v = 0.3
     over = np.where(change, dod, np.nan)
     net = sum(r["volume_m3"] for r in regions)
@@ -119,6 +119,10 @@ def run_site(name, figdir="figures/rerun_class2"):
     print(f"[{name}] done in {time.time()-t:.0f}s  stable_sigma={r['stable_sigma']:.3f} m  "
           f"median LoD={np.nanmedian(lod):.3f} m  "
           f"{100*np.mean(np.abs(dod[ex])>lod[ex]):.0f}% cells exceed LoD", flush=True)
+    n_null = int((~np.isfinite(Z21)).sum())
+    print(f"[{name}] gen2 null cells: {n_null} ({100*n_null/Z21.size:.2f}%) -- water/"
+          "dropouts, interpolated in the shaded-relief backdrop ONLY, never on the map "
+          "or in the DoD (recorded in regions.json)", flush=True)
 
     det = detect_change_standard(dod, lod, stable, res)
     change = det["change"]; regions = det["regions"]
@@ -134,8 +138,9 @@ def run_site(name, figdir="figures/rerun_class2"):
     with open(f"{outdir}/corrections.json", "w") as fh:
         json.dump(r["corrections"], fh, indent=2)
     with open(f"{outdir}/regions.json", "w") as fh:
-        json.dump({k: det[k] for k in ("regions", "sigma", "corr_length_m",
-                                       "tau_sys_m", "method")}, fh, indent=2)
+        json.dump({**{k: det[k] for k in ("regions", "sigma", "corr_length_m",
+                                          "tau_sys_m", "method")},
+                   "gen2_null_cells": int((~np.isfinite(Z21)).sum())}, fh, indent=2)
 
     fa = fig_dod_lod(name, Z21, dod, lod, res, X0, Y0, nx, ny, figdir)
     fb = fig_dem_change(name, Z21, dod, change, regions, res, X0, Y0, nx, ny, figdir)

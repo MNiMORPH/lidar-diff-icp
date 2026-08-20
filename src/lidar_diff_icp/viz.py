@@ -34,7 +34,7 @@ def _find_gdaldem(gdaldem=None):
 
 
 def hillshade(dem, res, x0, y0, *, az=315, alt=45, vert_exag=2.0, crs="EPSG:26915",
-              gdaldem=None):
+              gdaldem=None, fill_gaps=False):
     """NW (315/45) shaded relief in [0, 1] via ``gdaldem hillshade``.
 
     ``dem``: elevation grid, ``origin='lower'`` (row 0 = south) to match how our
@@ -42,6 +42,13 @@ def hillshade(dem, res, x0, y0, *, az=315, alt=45, vert_exag=2.0, crs="EPSG:2691
     origin). Returns an array in the SAME orientation as ``dem`` (so use it with
     ``imshow(..., origin='lower')``); NaNs where ``dem`` is NaN. Illumination is
     fixed by the written geotransform, so it is always geographically NW.
+
+    ``fill_gaps``: for a VISUALIZATION backdrop only. Gaps in ``dem`` (water,
+    dropouts) are always nearest-filled before the shading is computed (to avoid
+    edge artifacts); by default they are re-masked to NaN afterwards. Set
+    ``fill_gaps=True`` to KEEP the filled shading, so isolated no-data cells do not
+    show as distracting white squares behind a semi-transparent data overlay. This
+    only fills the relief backdrop -- never fabricate data in the overlay itself.
     """
     import rasterio
     from rasterio.transform import from_origin
