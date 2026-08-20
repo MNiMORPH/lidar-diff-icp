@@ -133,7 +133,8 @@ larger **footprint / beam divergence** (a bigger laser spot smears a rough surfa
 proportionally), not to ranging precision. Still "the instrument" — the footprint,
 not the noise floor.
 
-**Open (parked):** a decimation test (thin gen2 to gen1's count on a hard surface;
-if gen2 roughness does not rise to meet gen1's, density is formally excluded) would
-make the instrument-over-density conclusion airtight. The oak-forest equal-density
-result already implies it.
+**Decimation test — CONFIRMED (density formally excluded).** Thinning gen2 to gen1's
+exact per-cell count does not move gen2's roughness at all: infield 0.0117→0.0118,
+parking 0.0139→0.0139, prairie 0.0326→0.0325, oak forest 0.0426→0.0423. At *identical*
+density gen2 stays ~1.7× smoother than gen1, so the gap is purely the 2008 sensor
+(footprint), not sampling — airtight.
