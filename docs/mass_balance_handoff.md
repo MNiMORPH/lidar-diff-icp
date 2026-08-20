@@ -68,10 +68,15 @@ valley floor)** — exactly this signature.
 
 **Two hard-won constraints for the mask (from the crude placeholder):**
 
-1. **It must intervene in the ACCUMULATION, not the reporting.** Masking floodplain
-   cells from the *output* does nothing — `V_acc` has already summed the upstream
-   valley deposition. The mask must remove floodplain/off-map DoD from the routed sum
-   (or add a compensating off-map inflow term).
+1. **Handle it at the ROUTING stage, in the right ORDER OF OPERATIONS — not by
+   masking the reported output.** The floodplain is the *downstream sink*, not a
+   source: it does not feed the accumulation, it *receives* it, so `V_acc` there is a
+   real accumulated budget whose sediment came from an **off-map trunk** the local
+   routing never saw. Masking floodplain cells from the *output* therefore does
+   nothing — the budget already arrived. The fix is to **account for the off-map
+   inflow where the routing happens** (a boundary-inflow / off-map-source term at the
+   trunk's tile entry), so the sink's budget can close. Order of operations first,
+   then the mask.
 2. **It must discriminate by SCALE / sourcing, not flatness.** A flat-valley or single-
    HAND cutoff over-masks the headwater valleys we need to keep. The discriminator is
    **sediment sourcing** (locally-sourced vs off-map), i.e. channel-network topology:
