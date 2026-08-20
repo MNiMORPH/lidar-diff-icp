@@ -105,3 +105,35 @@ rest, once gen1 uses CSF). `oak_forest.py` adds the detail that only the forest 
 The forest roughness *breakdown* seen at Cook (roughness meaningless, DoD error
 un-localizable) is a **different regime** — conifer, leaf-on, poor penetration — not
 a universal property of "forest".
+
+## Epoch roughness structure: gen1 ≈ 1.7× gen2, multiplicatively
+
+Across the whole modern ladder, gen1 (CSF) roughness is ~1.5–1.9× gen2's, with
+comparable or higher gen1 ground-return density:
+
+| surface | ratio | gen1 n | gen2 n | slope |
+|---|---|---|---|---|
+| infield | 1.67 | 234 | 387 | 0.4° |
+| parking | 1.81 | 248 | 383 | 0.9° |
+| grass | 1.52 | 260 | 389 | 0.7° |
+| prairie | 1.94 | 234 | 222 | 1.9° |
+| oak forest | 1.58 | 167 | 148 | 7.3° |
+
+**It is the instrument, not density or sampling.** In the oak forest gen1 has *more*
+ground returns than gen2 (167 vs 148) yet *higher* roughness — at equal-or-higher
+density gen1 is still rougher, so undersampling is excluded. Prairie is not
+pulse-starved either (gen1 234/cell = the hard surfaces), so its marginally-top ratio
+is not a density effect.
+
+**But it is not a fixed additive noise floor.** A constant ranging-noise σ added in
+quadrature (`r² = S² + σ²`) would make the ratio fall toward 1.0 where real roughness
+is large — yet it *stays* ~1.6–1.9 at 3–7 cm prairie/forest roughness. So the gen1
+excess **scales with the roughness being measured** → points to the 2008 sensor's
+larger **footprint / beam divergence** (a bigger laser spot smears a rough surface
+proportionally), not to ranging precision. Still "the instrument" — the footprint,
+not the noise floor.
+
+**Open (parked):** a decimation test (thin gen2 to gen1's count on a hard surface;
+if gen2 roughness does not rise to meet gen1's, density is formally excluded) would
+make the instrument-over-density conclusion airtight. The oak-forest equal-density
+result already implies it.
