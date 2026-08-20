@@ -580,15 +580,31 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
     from . import references
     tie_method = "parabola" if (tie == "reference" and A is None) else tie
     if tie_method == "reference":
+        # HORIZONTAL: one constant Nuth & Kaeaeb shift from the full topography
+        # (order-0 tie). Drainage divides / ridgelines do not move to first order, so
+        # registering the whole DEM recovers the lateral shift; and the aspect-DIPOLE
+        # it fits (dh/tan(slope) = a*cos(aspect-b)+c) is EROSION-ROBUST -- diffuse
+        # erosion has no aspect dependence, so it falls in the mean c, not the cos(aspect)
+        # shift term. So slopes give the HORIZONTAL even though they cannot give a trusted
+        # vertical. Take ONLY the horizontal part (a,b); the vertical datum comes from the
+        # stable FLAT references below. (Backup for horizontal if terrain is too flat:
+        # roof edges -- not needed on dissected terrain.)
+        hs = coreg.tie_polynomial(Zref, groundg(xc[be], yc[be], zc[be]),
+                                  res, X0, Y0, order=0)
+        xc += coreg.eval_poly_field(hs["a"], xc, yc, hs["norm"], 0)
+        yc += coreg.eval_poly_field(hs["b"], xc, yc, hs["norm"], 0)
         refc = references.flat_hard_cells(xc[be], yc[be], zc[be],
                                           A["x"], A["y"], A["z"], bounds, res=2.0)
         if refc["x"].size >= 30:
             pl = references.datum_plane(refc)
             zc += references.eval_datum_correction(pl, xc, yc)
             print(f"  cross-epoch datum: {refc['x'].size} flat-hard refs, "
+                  f"horizontal shift ({100*hs['a'][0]:+.1f},{100*hs['b'][0]:+.1f}) cm, "
                   f"const {1000*pl['a']:+.1f} mm, tilt {1000*pl['tilt_mag_m_km']:.1f} mm/km",
                   flush=True)
             tie_info = {"method": "reference_plane", "n_ref": int(refc["x"].size),
+                        "horizontal_shift_m": [round(float(hs["a"][0]), 4),
+                                               round(float(hs["b"][0]), 4)],
                         "const_m": round(pl["a"], 5),
                         "tilt_m_per_km": [round(pl["b"], 5), round(pl["c"], 5)],
                         "tilt_mag_m_per_km": round(pl["tilt_mag_m_km"], 5),
