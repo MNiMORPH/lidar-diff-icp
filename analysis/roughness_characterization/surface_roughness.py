@@ -55,6 +55,9 @@ REGIONS = {
     "grass":    dict(box=(498980, 499230, 4976180, 4976400),
                      mat=lambda R, B, nd, s: (nd > 0.30) & (s < 2),
                      desc="mowed outfield turf between the diamonds"),
+    "prairie":  dict(box=(498780, 499180, 4975680, 4976030),
+                     mat=lambda R, B, nd, s: (nd > 0.25) & (nd < 0.55) & (s < 3),
+                     desc="restored prairie grass (taller/rougher than mowed turf)"),
 }
 
 

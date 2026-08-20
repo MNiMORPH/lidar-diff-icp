@@ -54,12 +54,23 @@ necessary; literature only bounds it.
 | infield (skinned) | (498980, 499230, 4976180, 4976400) | 0.017 / 0.019 | 0.011 / 0.012 | 1.65 |
 | parking lot       | (498870, 499160, 4976090, 4976145) | 0.023 / 0.025 | 0.012 / 0.014 | 1.80 |
 | mowed grass       | (498980, 499230, 4976180, 4976400) | 0.020 / 0.023 | 0.012 / 0.015 | 1.54 |
+| **prairie grass** | (498780, 499180, 4975680, 4976030) | 0.068 / **0.283** | 0.024 / 0.033 | **~8.7** |
 
-- **gen2 floor is material-independent** (0.011–0.012 across all three) → it is the
-  sensor. gen1 floor is 0.017–0.023 (a bit more surface-dependent; infield cleanest).
-- **All three are sensor-dominated:** the gen1/gen2 median ratio is ~1.5–1.8 on
-  every surface, ≈ the sensor ratio (0.017/0.011 ≈ 1.6). These surfaces are too
-  smooth for real surface roughness to rise above the ranging noise.
+- **gen2 floor is material-independent** (0.011–0.012 across the smooth three) → it is
+  the sensor. gen1 floor is 0.017–0.023 (a bit more surface-dependent; infield cleanest).
+- **The smooth three are sensor-dominated:** the gen1/gen2 median ratio is ~1.5–1.8,
+  ≈ the sensor ratio (0.017/0.011 ≈ 1.6). Too smooth for surface roughness to rise
+  above the ranging noise.
+- **Prairie is where it breaks:** the ratio jumps to ~8.7 — gen1 reads 0.28 m where
+  gen2 reads 0.03 m. In tall grass the sparse 2008 survey barely reaches true ground,
+  so its "ground" is largely grass; dense 2021 class-2 penetrates and sees the real
+  ~3 cm prairie microtopography.
+  - **Caveat (ground definition, not pure sensor):** gen1 here is *last-return*, gen2
+    is *class-2 ground*. In tall prairie, last-return is grass-contaminated by
+    construction, so part of the 8.7× is the ground-definition asymmetry. The pipeline
+    uses **CSF** for gen1 exactly to combat this — CSF-gen1 would pull 0.28 m down
+    substantially. So prairie is chiefly a demonstration of *why gen1 needs CSF*; the
+    pure-sensor divergence is smaller than 8.7×. Direction and scale are robust.
 
 ## What does NOT separate yet, and why the ladder must go rougher
 
