@@ -22,3 +22,4 @@ __pycache__/
 
 # py4dgeo writes this automatically
 py4dgeo.log
+data/las_local/
