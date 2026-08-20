@@ -63,7 +63,7 @@ def _tif(arr, res, x0, y0, ny, out):
 
 
 def fig_dod_lod(name, Z21, dod, lod, res, X0, Y0, nx, ny, figdir):
-    hs = hillshade(Z21, res, X0, Y0, fill_gaps=True)  # gap-filled backdrop, no white holes
+    hs = hillshade(Z21, res, X0, Y0, fill_gaps=False)  # nodata -> white, consistent with the LoD panel
     ext = (X0, X0 + nx * res, Y0, Y0 + ny * res); v = 0.3
     fig, ax = plt.subplots(1, 2, figsize=(15, 9))
     ax[0].imshow(hs, extent=ext, origin="lower", cmap="gray", alpha=0.6)
