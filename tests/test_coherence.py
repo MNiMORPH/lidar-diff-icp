@@ -42,3 +42,31 @@ def test_ridge_change_recovers_linear_gully_that_coherence_misses():
     assert coh[gully].mean() < 0.3                  # coherence misses the line
     assert ridge[gully].mean() > 0.8                # ridge filter recovers it
     assert ridge[noise].mean() < 0.01               # and stays quiet on noise
+
+
+def test_flow_coherence_recovers_flow_aligned_gully_rejects_isolated_spike():
+    """A narrow gully running down a flow line: the isotropic square window
+    suppresses it (too few same-sign neighbours), but the flow-corridor footprint
+    gathers coherence ALONG flow and recovers it -- while an isolated
+    amplitude-significant spike, coherent with nothing, is still rejected."""
+    from lidar_diff_icp.coherence import flow_coherence_change
+    H = Wd = 40
+    perr = np.full((H, Wd), 0.10)                   # per-cell LoD ~ 0.196 m
+    rng = np.random.default_rng(2)
+    dod = rng.normal(0, 0.03, (H, Wd))              # sub-seed background noise
+    dod[5:35, 20] = -0.25                           # 1-cell gully down column 20, ~2.5 sigma
+    dod[2, 2] = -0.25                               # isolated significant spike (no coherent line)
+
+    # synthetic routing: every cell flows straight down its column
+    r, c = np.mgrid[0:H, 0:Wd]
+    flowdown = np.where(r < H - 1, (r + 1) * Wd + c, -1).ravel()
+    flowup = np.where(r > 0, (r - 1) * Wd + c, -1).ravel()
+
+    gully = np.zeros((H, Wd), bool); gully[5:35, 20] = True
+    interior = np.zeros((H, Wd), bool); interior[15:25, 20] = True   # well inside the gully
+    coh = coherence_change(dod, perr, conf=0.95)
+    flow = flow_coherence_change(dod, perr, flowdown, flowup, k=12, conf=0.95)
+    assert coh[gully].mean() < 0.3                  # isotropic square misses the narrow gully
+    assert flow[gully].mean() > 0.7                 # flow corridor recovers the bulk...
+    assert flow[interior].mean() == 1.0             # ...and all of the interior (ends fade: finite-support)
+    assert not flow[2, 2]                           # isolated spike -> no flow coherence -> rejected
