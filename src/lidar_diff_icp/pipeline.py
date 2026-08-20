@@ -8,12 +8,17 @@ Lessons baked in
 ----------------
 * **Bare earth = last return, ``return_number == number_of_returns`` INCLUDING
   single returns.** Dropping singles empties flat/open ground (they dominate it).
-* **Ground = a LOW PERCENTILE (10th) per cell, never mean/median.** On rough,
-  vegetated, or sloping cells the true ground sits at the bottom of the return
-  distribution; any central-tendency estimate rides above it and, because the
-  two epochs differ greatly in density, that offset becomes COHERENT false change
-  (~16-32% of convex hillslopes falsely depositional). A low percentile tracks
-  the ground and removes it (~4%). This is the single most important choice.
+* **Ground = the MEDIAN per cell of the classified ground returns.** Once the CSF
+  cloth has removed vegetation, the ground returns scatter symmetrically about the
+  true surface, so the unbiased estimate is the central tendency (the median; robust
+  to any residual high outlier). This is the single most important choice.
+  (History: the earlier heuristic took a LOW PERCENTILE (10th) on RAW last-return
+  points -- where true ground sits at the bottom of the return distribution and a low
+  pick rejects canopy, the right call BEFORE classification. Kept on top of CSF it
+  DOUBLE-COUNTS the cloth and biases the ground low by ~1.28*sigma of the cell
+  roughness; because the two epochs differ in roughness/density that offset does not
+  cancel -- it reappears as COHERENT slope-correlated false change, ~+8-20 mm,
+  physically-impossible ridgetop "deposition". The median removes it.)
 * **Correct in the ACQUISITION frame, per point, BEFORE gridding:** per-swath
   internal alignment (translation) -> spatially varying quadratic tie -> per-swath
   along-track GNSS-drift spline ``f(gps_time)``. The residual warp and real
@@ -372,7 +377,7 @@ def _stream_ground(path, bounds, res, nx, ny, q, *, plane=None, chunk=8_000_000,
     return g.reshape(ny, nx), spread.reshape(ny, nx), cnt.reshape(ny, nx)
 
 
-def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.10,
+def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
                    correction_surface=False, along_track_drift=True,
                    ground="slope_normal", sn_smooth_cells=1.2, stream=False,
                    ground_source="csf", after_ground="class2", csf_pdal=None,
@@ -384,15 +389,21 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.10,
                       classification intact (pass the full delivery, not a
                       pre-filtered last-return file -- see ``after_ground``).
     ``bounds``      : (minx, miny, maxx, maxy) in the working CRS (EPSG:26915).
-    ``ground_q``    : ground percentile (0.10 default; lower = less slope bias,
-                      slightly more noise).
-    ``ground``      : ground GRIDDING estimator. "slope_normal" (default) = low
-                      percentile of the residual to a common smoothed regional
-                      surface (both epochs), which removes the downhill bias a
-                      horizontal low-pick has on a slope (it necessarily selects the
-                      downhill-lowest points); the shared surface cancels in the
-                      difference. "low_q" = low percentile of raw z per horizontal
-                      cell (the older heuristic). ``sn_smooth_cells`` sets the
+    ``ground_q``    : per-cell ground quantile for GRIDDING. **0.50 (median) by
+                      default** -- the CSF/class-2 ground returns are already
+                      vegetation-free, so they scatter symmetrically about the
+                      surface and the median is the unbiased estimate. A low
+                      percentile (e.g. the legacy 0.10) sits ~1.28*sigma below the
+                      surface, double-counts the cloth, and biases the ground low by
+                      an epoch-dependent, roughness-/slope-growing amount that does
+                      not cancel in the difference.
+    ``ground``      : ground GRIDDING estimator. "slope_normal" (default) = the
+                      ``ground_q`` quantile of the residual to a common smoothed
+                      regional surface (both epochs), which removes the downhill bias
+                      a horizontal pick has on a slope (a low pick necessarily selects
+                      the downhill-lowest points); the shared surface cancels in the
+                      difference. "low_q" = the quantile of raw z per horizontal cell
+                      (the older heuristic). ``sn_smooth_cells`` sets the
                       regional-slope smoothing (in cells).
     ``ground_source``: how the before-epoch bare-earth is obtained. "csf" (default)
                       runs PDAL CSF (tuned for sparse steep/wooded terrain) for a
@@ -470,9 +481,10 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.10,
     stable = ((sdeg < 3) & (tpi > -2)) | convex
     floodplain = np.isfinite(Z21) & (tpi < -2)
 
-    # ground estimator: "low_q" (horizontal low percentile) or "slope_normal"
-    # (low percentile of the residual to a common smoothed regional surface, which
-    # removes the downhill bias of a horizontal low-pick on a slope). The shared
+    # ground estimator: "low_q" (horizontal ground_q quantile) or "slope_normal"
+    # (ground_q quantile -- median by default -- of the residual to a common smoothed
+    # regional surface, which removes the downhill bias of a horizontal pick on a
+    # slope). The shared
     # surface Zreg is the smoothed reference ground, so it cancels in after - before.
     if ground == "slope_normal":
         Zreg = gaussian_filter(Zf, sn_smooth_cells)

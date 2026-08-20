@@ -46,19 +46,24 @@ point.
    common `filters.returns groups=last` mistake, empties the agricultural fields).
    On this pilot the two give a near-identical DoD, so `last_return` is the right
    choice to skip CSF's per-tile cost; CSF earns its keep on forest/structure.
-2. **Ground = a LOW PERCENTILE (10th), taken NORMAL to the local slope — never
-   mean or median.** This is the single most important choice. On rough,
-   vegetated, or sloping cells the true ground sits at the *bottom* of the return
-   distribution; any central-tendency estimate rides above it, and because 2021 is
-   ~14× denser than 2008 that offset becomes **coherent false change** — 16–32% of
-   convex hillslopes read as falsely depositional. A low percentile tracks the
-   ground and drops that to ~4%. But a *horizontal* low-pick on a slope selects the
-   downhill-lowest points — a bias of ~(offset × slope) that reads as residual
-   hillslope banding. So by default (`ground="slope_normal"`) the percentile is
-   taken relative to a shared smoothed surface (both epochs), which the difference
-   cancels: this removes the downhill bias without touching real change (~35% lower
-   stable σ, validated to preserve a known change). `ground="low_q"` is the older
-   horizontal pick. Coherent bias, not incoherent noise, fools change detection.
+2. **Ground = the MEDIAN per cell, taken NORMAL to the local slope.** This is the
+   single most important choice. Once the cloth (CSF) has classified ground, the
+   returns scatter symmetrically about the true surface, so the unbiased estimate is
+   the central tendency — the median (robust to any residual high outlier). A *low*
+   percentile instead sits ~1.28σ *below* the surface by an amount set by the cell's
+   roughness; because 2021 is ~14× denser and smoother than 2008 that offset differs
+   between the epochs and does **not** cancel — it becomes **coherent false change**,
+   physically-impossible ridgetop "deposition" that grows with slope. *(History: the
+   original heuristic took a low percentile (10th) on RAW last-return points, where
+   the true ground sits at the* bottom *of the return distribution and a low pick
+   rejects canopy — the right call before classification, dropping ~16–32% of convex
+   hillslopes reading as falsely depositional to ~4%. Kept on top of CSF it
+   double-counts the cloth — that is the slope-correlated bias above — and the median
+   removes it.)* Either way the pick is taken relative to a shared smoothed surface
+   (both epochs, `ground="slope_normal"`), which the difference cancels: this also
+   removes the downhill bias a *horizontal* pick has on a slope (~35% lower stable σ,
+   validated to preserve a known change). `ground="low_q"` is the older horizontal
+   pick. Coherent bias, not incoherent noise, fools change detection.
 3. **Correct the 2008 points in the acquisition frame, per point, *before*
    gridding** (not post-hoc on the difference):
    1. per-swath internal alignment (translation, lowest swath pinned);
