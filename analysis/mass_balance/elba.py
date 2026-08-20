@@ -2,7 +2,7 @@
 the down-network bias and the NW / hilltop-deposition concern."""
 import time, numpy as np
 import matplotlib; matplotlib.use("Agg"); import matplotlib.pyplot as plt
-from lidar_diff_icp.massbalance import dinf_proportions, mass_balance, weighted_accumulation
+from catchment_dod_balance import dinf_proportions, mass_balance, weighted_accumulation
 from lidar_diff_icp.viz import hillshade
 
 X0,Y0,X1,Y1=577492.8,4882737.6,580032.8,4886237.6; res=5.0; area=res*res

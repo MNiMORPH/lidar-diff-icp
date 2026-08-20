@@ -19,6 +19,7 @@ dependencies = [
     "rasterio",
     "matplotlib",
     "scikit-image",        # ridge/vesselness filter (Sato 1998) for linear-feature detection
+    "catchment-dod-balance @ git+https://github.com/MNiMORPH/catchment-dod-balance.git",  # routed sediment mass-balance (own repo; edit there, consumed here)
 ]
 
 [project.optional-dependencies]
