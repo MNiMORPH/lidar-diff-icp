@@ -73,4 +73,6 @@ def hillshade(dem, res, x0, y0, *, az=315, alt=45, vert_exag=2.0, crs="EPSG:2691
             hs = np.flipud(r.read(1).astype(float))  # back to origin='lower'
     finally:
         shutil.rmtree(d, ignore_errors=True)
+    if fill_gaps:                       # keep the nearest-filled shading everywhere
+        return hs / 255.0               # (visualization backdrop only; see docstring)
     return np.where(m, hs / 255.0, np.nan)
