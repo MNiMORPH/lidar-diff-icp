@@ -82,3 +82,39 @@ def coherence_change(dod, perror, *, conf=0.95, **kw):
     """Boolean change mask: ``|Wheaton posterior| > conf`` (default 95%)."""
     post = spatial_coherence_probability(dod, perror, **kw)
     return np.isfinite(post) & (np.abs(post) > conf)
+
+
+def ridge_change(dod, perror, *, sigmas=(1, 2, 3), ridge_thresh=0.35, amp_z=2.0):
+    """LINEAR change (gullies, rills, channel incision, levees) via a ridge /
+    vesselness filter -- the necessary complement to Wheaton spatial coherence,
+    which is isotropic and suppresses narrow linear features (a 1-cell-wide gully
+    has too few same-sign neighbours in a 5x5 window, so its posterior collapses
+    regardless of amplitude).
+
+    A ridge filter is purpose-built for elongated structures: it responds to a
+    line of same-sign change of *any* orientation while staying quiet on isolated
+    noise. We apply the **Sato et al. (1998)** multi-scale tubular-structure filter
+    (``skimage.filters.sato``) to the per-sign t-score ``DoD / perror``, separately
+    for erosion and deposition, then keep cells with a strong ridge response
+    (> ``ridge_thresh`` of the per-sign max) that also clear an amplitude gate
+    (``|t| > amp_z``) -- the gate is what stops a chance-aligned noise streak from
+    lighting up. Returns a boolean line-change mask; OR it with
+    :func:`coherence_change` for a detector that keeps both patches and lines.
+
+    Reference: Sato, Nakajima, Shiraga, Atsumi, Yoshida, Koller, Gerig & Kikinis
+    (1998), "Three-dimensional multi-scale line filter for segmentation and
+    visualization of curvilinear structures in medical images", Medical Image
+    Analysis 2(2): 143-168, doi:10.1016/S1361-8415(98)80009-1. The related Frangi
+    et al. (1998) vesselness filter (``skimage.filters.frangi``) is a drop-in
+    alternative. Ridge/valley detection by directional/Hessian filters is the
+    established way to extract linear terrain features (e.g. difference-of-rotating-
+    Gaussian ridge detection; Hessian structure-tensor methods).
+    """
+    from skimage.filters import sato
+    valid = np.isfinite(dod) & np.isfinite(perror) & (perror > 0)
+    sig = np.nan_to_num(np.where(valid, dod / np.maximum(perror, 1e-9), 0.0))
+    ero = sato(np.clip(-sig, 0, None), sigmas=sigmas, black_ridges=False)
+    dep = sato(np.clip(sig, 0, None), sigmas=sigmas, black_ridges=False)
+    ero = ero / (ero.max() + 1e-9); dep = dep / (dep.max() + 1e-9)
+    return valid & (((ero > ridge_thresh) & (sig < -amp_z)) |
+                    ((dep > ridge_thresh) & (sig > amp_z)))

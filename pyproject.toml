@@ -18,6 +18,7 @@ dependencies = [
     "pyproj",
     "rasterio",
     "matplotlib",
+    "scikit-image",        # ridge/vesselness filter (Sato 1998) for linear-feature detection
 ]
 
 [project.optional-dependencies]
