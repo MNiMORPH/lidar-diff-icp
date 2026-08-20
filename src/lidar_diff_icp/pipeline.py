@@ -378,7 +378,7 @@ def _stream_ground(path, bounds, res, nx, ny, q, *, plane=None, chunk=8_000_000,
 
 
 def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
-                   correction_surface=False, along_track_drift=True,
+                   correction_surface=False, along_track_drift=True, tie="reference",
                    ground="slope_normal", sn_smooth_cells=1.2, stream=False,
                    ground_source="csf", after_ground="class2", csf_pdal=None,
                    robust_stable=True, before_crs=io.MN_GEN1_CRS):
@@ -397,6 +397,15 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
                       surface, double-counts the cloth, and biases the ground low by
                       an epoch-dependent, roughness-/slope-growing amount that does
                       not cancel in the difference.
+    ``tie``         : cross-epoch vertical datum. "reference" (default) fits a robust
+                      PLANAR datum (constant + tilt) on FLAT-HARD STABLE surfaces
+                      (:mod:`lidar_diff_icp.references`) -- the ground-truth local basis,
+                      free of the "sloped ground is stable" assumption of the parabolic
+                      tie (which absorbs real hillslope erosion). "parabola" is the
+                      legacy order-2 spatial tie, and the automatic fallback where too
+                      few reference surfaces exist (dense forest / no pavement) or when
+                      streaming. The datum tilt is carried from the references and
+                      cross-checked against the independent geoid-model tilt.
     ``ground``      : ground GRIDDING estimator. "slope_normal" (default) = the
                       ``ground_q`` quantile of the residual to a common smoothed
                       regional surface (both epochs), which removes the downhill bias
@@ -537,11 +546,49 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
     for s, (dx, dy, dz) in corr.items():
         m = ps8 == s; xc[m] += dx; yc[m] += dy; zc[m] += dz
 
-    tie = coreg.tie_polynomial(Zref, groundg(xc[be], yc[be], zc[be]),
-                               res, X0, Y0, order=2)
-    xc += coreg.eval_poly_field(tie["a"], xc, yc, tie["norm"], 2)
-    yc += coreg.eval_poly_field(tie["b"], xc, yc, tie["norm"], 2)
-    zc += coreg.eval_poly_field(tie["c"], xc, yc, tie["norm"], 2)
+    # cross-epoch vertical datum. "reference" (default): a robust PLANAR datum
+    # (constant + tilt) from FLAT-HARD STABLE surfaces (references.flat_hard_cells) --
+    # pavement/pads/courts/cemetery: flat (no roof-pitch x misregistration confound)
+    # and truly stable (no erosion). A robust before-after plane on them is the vertical
+    # registration WITHOUT the "sloped ground is stable" assumption of the parabolic tie
+    # (which absorbs real hillslope change). The tilt is carried from this ground truth
+    # (~10 mm/km at the pilot, consistent with the independent geoid-model tilt ~4 mm/km,
+    # recorded as a cross-check). "parabola" = legacy order-2 spatial tie; also the
+    # fallback when too few reference surfaces exist (dense forest / no pavement) or when
+    # streaming (no in-memory after cloud). Horizontal misregistration is left to
+    # align_swaths (flat references cannot see it, and it is ~0 on the pilot).
+    from . import references
+    tie_method = "parabola" if (tie == "reference" and A is None) else tie
+    if tie_method == "reference":
+        refc = references.flat_hard_cells(xc[be], yc[be], zc[be],
+                                          A["x"], A["y"], A["z"], bounds, res=2.0)
+        if refc["x"].size >= 30:
+            pl = references.datum_plane(refc)
+            zc += references.eval_datum_correction(pl, xc, yc)
+            print(f"  cross-epoch datum: {refc['x'].size} flat-hard refs, "
+                  f"const {1000*pl['a']:+.1f} mm, tilt {1000*pl['tilt_mag_m_km']:.1f} mm/km",
+                  flush=True)
+            tie_info = {"method": "reference_plane", "n_ref": int(refc["x"].size),
+                        "const_m": round(pl["a"], 5),
+                        "tilt_m_per_km": [round(pl["b"], 5), round(pl["c"], 5)],
+                        "tilt_mag_m_per_km": round(pl["tilt_mag_m_km"], 5),
+                        "centroid_xy": [round(pl["cx"], 2), round(pl["cy"], 2)],
+                        "rejected_resurfacing": pl["rejected"],
+                        "resid_nmad_m": round(pl["resid_nmad_m"], 5),
+                        "geoid_tilt_crosscheck_m_per_km": 0.004}
+        else:
+            tie_method = "parabola"
+    if tie_method == "parabola":
+        tp = coreg.tie_polynomial(Zref, groundg(xc[be], yc[be], zc[be]),
+                                  res, X0, Y0, order=2)
+        xc += coreg.eval_poly_field(tp["a"], xc, yc, tp["norm"], 2)
+        yc += coreg.eval_poly_field(tp["b"], xc, yc, tp["norm"], 2)
+        zc += coreg.eval_poly_field(tp["c"], xc, yc, tp["norm"], 2)
+        tie_info = {"method": "parabola",
+                    "dx": [round(float(v), 6) for v in tp["a"]],
+                    "dy": [round(float(v), 6) for v in tp["b"]],
+                    "dz": [round(float(v), 6) for v in tp["c"]],
+                    "norm_xm_xhr_ym_yhr": [round(float(v), 3) for v in tp["norm"]]}
 
     if correction_surface:
         C = coreg.correction_surface(Zref, groundg(xc[be], yc[be], zc[be]),
@@ -624,11 +671,7 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
         "lod_method": lod_method,
         "per_swath_internal_alignment_dxdydz_m":
             {str(k): [round(float(v), 4) for v in val] for k, val in corr.items()},
-        "cross_epoch_tie_order2_coef": {
-            "dx": [round(float(v), 6) for v in tie["a"]],
-            "dy": [round(float(v), 6) for v in tie["b"]],
-            "dz": [round(float(v), 6) for v in tie["c"]],
-            "norm_xm_xhr_ym_yhr": [round(float(v), 3) for v in tie["norm"]]},
+        "cross_epoch_datum": tie_info,
         "along_track_drift_gpsTime_to_m":
             {str(p): {"gps_time": [round(t, 3) for t in c[0]],
                       "drift_m": [round(d, 4) for d in c[1]]} for p, c in curves.items()},

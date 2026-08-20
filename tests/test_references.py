@@ -2,7 +2,25 @@
 flat surfaces, and rejects rough ones."""
 import numpy as np
 
-from lidar_diff_icp.references import flat_hard_cells, datum_offset
+from lidar_diff_icp.references import (flat_hard_cells, datum_offset, datum_plane,
+                                       eval_datum_correction)
+
+
+def test_datum_plane_recovers_constant_and_tilt_rejects_outliers():
+    rng = np.random.default_rng(5)
+    n = 400; cx = cy = 1500.0
+    x = rng.uniform(0, 3000, n); y = rng.uniform(0, 3000, n)
+    a, b, c = -0.055, 0.010, -0.006                    # const (m), tilt (m/km)
+    E = (x - cx) / 1000; N = (y - cy) / 1000
+    off = a + b * E + c * N + rng.normal(0, 0.02, n)
+    off[:20] += 0.30                                   # resurfacing outliers
+    cells = dict(x=x, y=y, offset=off, roughness=np.full(n, 0.01))
+    pl = datum_plane(cells)
+    assert abs(pl["a"] - a) < 0.01                      # constant
+    assert abs(pl["b"] - b) < 0.004 and abs(pl["c"] - c) < 0.004   # tilt
+    assert pl["rejected"] >= 15                          # outliers dropped
+    corr = eval_datum_correction(pl, x[20:], y[20:])     # apply to before -> stable ~0
+    assert abs(np.median(off[20:] + corr)) < 0.005
 
 
 def _flat_surface(x0, x1, y0, y1, z, sigma, seed, per_cell=12, res=2.0):

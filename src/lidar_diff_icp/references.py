@@ -99,6 +99,49 @@ def datum_offset(cells, *, keep_frac=1.0):
                 n=len(o), by_hardness=by)
 
 
+def datum_plane(cells, *, reject_nmad=3.0):
+    """Robust PLANAR vertical datum -- constant + linear tilt -- from flat-hard
+    reference cells, the ground-truth local basis for co-registering the two epochs.
+
+    ``offset = before - after`` is fit as ``offset(E,N) = a + b*E + c*N`` (E,N in km
+    from the reference centroid) by robust IRLS, after a ``reject_nmad``-NMAD clip that
+    drops resurfacing outliers. The constant sets the vertical datum; the tilt captures
+    any residual planar warp -- included because on the pilot it is robust (10 mm/km,
+    95% CI [4,17]) and consistent with the independent geoid-model tilt (~4 mm/km), so
+    the ground truth carries it directly rather than deferring to the geoid.
+
+    Feed the result to :func:`eval_datum_correction`. Returns: ``a`` (const, m),
+    ``b,c`` (tilt, m/km), ``cx,cy`` (centroid, CRS units), ``tilt_mag_m_km``, ``n``,
+    ``rejected``, ``resid_nmad_m``.
+    """
+    x = np.asarray(cells["x"], float); y = np.asarray(cells["y"], float)
+    o = np.asarray(cells["offset"], float)
+    fin = np.isfinite(o); x, y, o = x[fin], y[fin], o[fin]
+    cx = float(np.median(x)); cy = float(np.median(y))
+    med = np.median(o); s = 1.4826 * np.median(np.abs(o - med))
+    keep = np.abs(o - med) < reject_nmad * max(s, 1e-6)
+    E = (x[keep] - cx) / 1000.0; N = (y[keep] - cy) / 1000.0; oo = o[keep]
+    A = np.c_[np.ones(len(oo)), E, N]; w = np.ones(len(oo)); c = np.zeros(3); r = oo
+    for _ in range(8):
+        c, *_ = np.linalg.lstsq(A * w[:, None], oo * w, rcond=None)
+        r = oo - A @ c
+        sd = 1.4826 * np.median(np.abs(r - np.median(r))) + 1e-9
+        w = np.minimum(1.0, 1.345 * sd / np.maximum(np.abs(r), 1e-9))
+    return dict(a=float(c[0]), b=float(c[1]), c=float(c[2]), cx=cx, cy=cy,
+                tilt_mag_m_km=float(np.hypot(c[1], c[2])), n=int(keep.sum()),
+                rejected=int(np.sum(~keep)),
+                resid_nmad_m=float(1.4826 * np.median(np.abs(r - np.median(r)))))
+
+
+def eval_datum_correction(plane, x, y):
+    """Vertical correction (m) to ADD to the before-epoch at points ``(x, y)``: the
+    negative of the fitted offset plane, so stable reference surfaces match the after-
+    epoch. ``before_corrected = before + eval_datum_correction(plane, x, y)``."""
+    E = (np.asarray(x, float) - plane["cx"]) / 1000.0
+    N = (np.asarray(y, float) - plane["cy"]) / 1000.0
+    return -(plane["a"] + plane["b"] * E + plane["c"] * N)
+
+
 def osm_flat_references(bbox_latlon, *, to_epsg=26915, timeout=100):
     """Optional: fetch OSM flat-reference footprints (parking, pitches, tracks,
     cemeteries) for ``bbox_latlon``=(lat0,lon0,lat1,lon1). Needs network + requests +
