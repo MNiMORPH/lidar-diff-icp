@@ -22,3 +22,23 @@ def test_promotes_coherent_subLoD_patch_demotes_isolated_spike():
     # posterior is signed (erosion negative, deposition positive)
     post = spatial_coherence_probability(dod, perror)
     assert post[30, 30] > 0                          # deposition patch positive
+
+
+def test_ridge_change_recovers_linear_gully_that_coherence_misses():
+    """Wheaton coherence is isotropic and suppresses a narrow linear gully; the
+    Sato (1998) ridge filter (ridge_change) recovers it, while both reject noise."""
+    from lidar_diff_icp.coherence import ridge_change
+    rng = np.random.default_rng(1)
+    H = W = 60
+    perr = np.full((H, W), 0.05)                    # LoD ~ 0.098 m
+    dod = rng.normal(0, 0.05, (H, W))               # sub-LoD noise
+    dod[5:45, 25] = -0.20                           # 1-cell-wide erosion gully, ~2x LoD
+
+    gully = np.zeros((H, W), bool); gully[5:45, 25] = True
+    noise = np.abs(dod) < 0.1
+
+    coh = coherence_change(dod, perr, conf=0.95)
+    ridge = ridge_change(dod, perr)
+    assert coh[gully].mean() < 0.3                  # coherence misses the line
+    assert ridge[gully].mean() > 0.8                # ridge filter recovers it
+    assert ridge[noise].mean() < 0.01               # and stays quiet on noise
