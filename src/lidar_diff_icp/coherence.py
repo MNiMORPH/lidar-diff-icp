@@ -49,7 +49,8 @@ def spatial_coherence_probability(dod, perror, *, counts=None, window=5, low=Non
 
     The spatial-coherence NEIGHBOURHOOD is pluggable. ``counts`` = ``(ndepos, neros,
     n)`` supplies the same-sign counts from ANY neighbourhood -- the isotropic square
-    (default, :func:`isotropic_counts`) or a flow-aligned one (:func:`flow_counts`).
+    (default, :func:`isotropic_counts`) or a flow corridor
+    (:func:`lidar_diff_icp.areas.flow_corridor_counts`).
     Everything else -- the amplitude prior, the count->weight mapping, and the
     Bayesian posterior -- is Wheaton's, unchanged; only the neighbourhood geometry
     varies. ``window``/``low``/``up`` set the isotropic default and the weight bounds.
@@ -97,50 +98,36 @@ def coherence_change(dod, perror, *, conf=0.95, **kw):
     return np.isfinite(post) & (np.abs(post) > conf)
 
 
-def flow_counts(dod, valid, flowdown, flowup, k=12):
-    """FLOW-ALIGNED neighbourhood evidence for Wheaton's coherence: the COUNT of
-    same-sign cells along the FLOW LINE through each cell -- ``k`` cells downstream
-    (via ``flowdown``) and ``k`` upstream (via ``flowup``), a symmetric 2k+1 window
-    following the thalweg instead of an isotropic square.
+def flow_coherence_change(dod, perror, flowdown, flowup, *, k=12, width=0,
+                          seed_z=1.96, conf=0.95, low=None, up=None, dof=1000):
+    """Boolean change mask from Wheaton coherence over a FLOW-CORRIDOR neighbourhood
+    -- the flow-aligned counterpart of the isotropic :func:`coherence_change`, for
+    gullies/rills/channels that the square window suppresses.
 
-    This is Wheaton's neighbourhood count with the neighbourhood re-shaped along
-    flow, so it detects gullies/rills/channels (change coherent *down-slope*) that
-    the isotropic square suppresses -- while staying in Wheaton's soft Bayesian
-    framework (see :func:`spatial_coherence_probability`). It follows a single flow
-    line each way (no branching), so the window is a fixed 2k+1 cells regardless of
-    drainage area -- no accumulation bias -- and a single sign-flipped cell only
-    lowers the count by one (robust), rather than severing a run.
+    Two decoupled stages (see :mod:`lidar_diff_icp.areas`): (1) build the corridor
+    footprint along flow with :func:`~lidar_diff_icp.areas.flow_corridor_counts`,
+    seeded at the amplitude-significant cells (``|DoD/perror| > seed_z``) so flow
+    connectivity -- not the isotropic count -- supplies the coherence; (2) score each
+    footprint with the unchanged Wheaton count statistic
+    (:func:`spatial_coherence_probability`) and threshold ``|posterior| > conf``.
+    Only seeds can be flagged: flow coherence promotes a genuinely-significant cell
+    embedded in a coherent flow line, it does not manufacture significance from noise.
 
-    ``flowdown``/``flowup``: per-cell flat indices of the downstream / dominant-
-    upstream neighbour (-1 where none), e.g. from a D8/D-infinity routing. Returns
-    ``(ndepos, neros, n)`` with ``n = 2k+1``.
+    For patches use isotropic :func:`coherence_change`; OR the two masks for
+    patches-plus-gullies. ``flowdown``/``flowup`` (per-cell downstream / dominant-
+    upstream flat indices, -1 = none) come from a DEM routing (RichDEM D8/
+    D-infinity), passed in so this stays routing-agnostic. ``k`` = corridor half-
+    length (2k+1 long); ``width`` = lateral cells each side (channels wider than 1).
     """
-    N = dod.size; dep = (valid & (dod > 0)).astype(float).ravel()
-    ero = (valid & (dod < 0)).astype(float).ravel()
-
-    def line_sum(ind):
-        tot = ind.copy()
-        for nb in (flowdown, flowup):
-            pos = np.arange(N); ok = np.ones(N, bool)
-            for _ in range(k):
-                nxt = nb[pos]; ok = ok & (nxt >= 0)
-                pos = np.where(ok, nxt, pos)
-                tot += np.where(ok, ind[pos], 0.0)
-        return tot.reshape(dod.shape)
-    return line_sum(dep), line_sum(ero), 2 * k + 1
-
-
-def flow_coherence_change(dod, perror, flowdown, flowup, *, k=12, conf=0.95,
-                          low=None, up=None, dof=1000):
-    """Boolean change mask from Wheaton coherence with a FLOW-ALIGNED neighbourhood
-    (:func:`flow_counts`). For patch detection use isotropic :func:`coherence_change`;
-    OR the two for patches-plus-gullies. Flow directions come from a DEM routing
-    (RichDEM D8/D-infinity), passed in so this module stays routing-agnostic."""
+    from . import areas
     dod = np.asarray(dod, float); perror = np.asarray(perror, float)
     valid = np.isfinite(dod) & np.isfinite(perror) & (perror > 0)
-    counts = flow_counts(dod, valid, flowdown, flowup, k)
+    tscore = np.where(valid, dod / np.where(perror > 0, perror, 1.0), 0.0)
+    seed = valid & (np.abs(tscore) > seed_z)
+    counts = areas.flow_corridor_counts(dod, valid, flowdown, flowup, k=k, width=width,
+                                        cells=seed)
     post = spatial_coherence_probability(dod, perror, counts=counts, low=low, up=up, dof=dof)
-    return np.isfinite(post) & (np.abs(post) > conf)
+    return seed & np.isfinite(post) & (np.abs(post) > conf)
 
 
 def ridge_change(dod, perror, *, sigmas=(1, 2, 3), ridge_thresh=0.35, amp_z=2.0):
