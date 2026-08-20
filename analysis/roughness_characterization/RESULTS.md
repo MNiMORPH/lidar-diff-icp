@@ -47,65 +47,61 @@ CVA) — a coarser quantity that includes georeferencing and systematic error at
 the 3DEP within-swath relative ceiling. The built-surface measurement was
 necessary; literature only bounds it.
 
-## Surface-roughness ladder (cell roughness, m)
+## Surface-roughness ladder (median cell roughness, m; MODERN processing only)
 
-| surface | region (UTM15N box) | gen1 floor / med | gen2 floor / med | gen1/gen2 (med) |
+**gen1 = CSF ground, gen2 = class-2 ground.** (Last-return is retired — it reads
+canopy, not ground, in tall vegetation; see the historical note below.)
+
+| surface | region (UTM15N box) | gen1 CSF | gen2 | gen1/gen2 |
 |---|---|---|---|---|
-| infield (skinned) | (498980, 499230, 4976180, 4976400) | 0.017 / 0.019 | 0.011 / 0.012 | 1.65 |
-| parking lot       | (498870, 499160, 4976090, 4976145) | 0.023 / 0.025 | 0.012 / 0.014 | 1.80 |
-| mowed grass       | (498980, 499230, 4976180, 4976400) | 0.020 / 0.023 | 0.012 / 0.015 | 1.54 |
-| **prairie grass** | (498780, 499180, 4975680, 4976030) | 0.068 / **0.283** | 0.024 / 0.033 | **~8.7** |
+| infield (skinned) | (498980, 499230, 4976180, 4976400) | 0.019 | 0.012 | 1.67 |
+| parking lot       | (498870, 499160, 4976090, 4976145) | 0.025 | 0.014 | 1.81 |
+| mowed grass       | (498980, 499230, 4976180, 4976400) | 0.022 | 0.015 | 1.52 |
+| prairie grass     | (498780, 499180, 4975680, 4976030) | 0.063 | 0.033 | 1.94 |
+| oak forest        | (498150, 498850, 4975200, 4976050) | 0.067 | 0.043 | 1.58 |
 
-- **gen2 floor is material-independent** (0.011–0.012 across the smooth three) → it is
-  the sensor. gen1 floor is 0.017–0.023 (a bit more surface-dependent; infield cleanest).
-- **The smooth three are sensor-dominated:** the gen1/gen2 median ratio is ~1.5–1.8,
-  ≈ the sensor ratio (0.017/0.011 ≈ 1.6). Too smooth for surface roughness to rise
-  above the ranging noise.
-- **Prairie is where it breaks:** the ratio jumps to ~8.7 — gen1 reads 0.28 m where
-  gen2 reads 0.03 m. In tall grass the sparse 2008 survey barely reaches true ground,
-  so its "ground" is largely grass; dense 2021 class-2 penetrates and sees the real
-  ~3 cm prairie microtopography.
-  - **Caveat (ground definition, not pure sensor):** gen1 here is *last-return*, gen2
-    is *class-2 ground*. In tall prairie, last-return is grass-contaminated by
-    construction, so part of the 8.7× is the ground-definition asymmetry. The pipeline
-    uses **CSF** for gen1 exactly to combat this — CSF-gen1 would pull 0.28 m down
-    substantially. So prairie is chiefly a demonstration of *why gen1 needs CSF*; the
-    pure-sensor divergence is smaller than 8.7×. Direction and scale are robust.
+- **The epoch ratio is ~1.6–1.9 across the WHOLE ladder** — pavement to oak forest —
+  ≈ the sensor ratio (σ₁/σ₂ = 0.017/0.011 ≈ 1.6). With modern (CSF) processing there
+  is **no vegetation divergence**: both surveys, once on true ground, are
+  sensor-limited everywhere.
+- **What changes up the ladder is the ABSOLUTE roughness**, both epochs tracking it:
+  gen2 rises 0.012 (hard) → 0.033 (prairie) → 0.043 (forest) — real surface roughness
+  (microtopography, low-vegetation-supported ground) climbing above the ~0.011 m
+  sensor floor, while the ratio stays pinned at ~1.7×.
+- **All-returns check** (infield/parking): roughness from ALL returns equals the
+  classified-ground value to ~1 mm (infield 0.019/0.012, parking 0.025/0.015),
+  despite ~3× the points — on hard surfaces every return *is* the surface, so the
+  floor is genuinely the sensor, not a classification artifact.
 
-## What does NOT separate yet, and why the ladder must go rougher
+**Historical note (why last-return is retired):** with obsolete gen1 last-return,
+prairie showed a spurious 8.7× ratio (gen1 "roughness" 0.283 m) — last-return grabs
+grass tops, not ground. CSF gen1 pulls that to 0.063 m (ratio 1.94), in line with the
+rest. The apparent "vegetation divergence" was entirely a ground-definition artifact
+of an obsolete method.
 
-Removing each epoch's floor in quadrature to recover surface roughness
-`S = √(r² − σ²)` is **not reliable at these smooth scales**: on the median cell it
-gives an infield ratio of 2.3 — *larger* than grass's 1.5 — even though the infield
-is hard ground. Near the floor, S is dominated by floor-subtraction sensitivity and
-the sparser gen1's per-cell estimation noise, not by real surface differences. So
-mowed grass shows **no** clean vegetation-specific divergence; it is just another
-smooth, sensor-dominated surface.
+## A caveat on floor-removed surface roughness
 
-The vegetation divergence is real — but see the oak-forest result below: much of
-it is a *ground-definition* artifact, not sensor physics. The ladder — smooth
-(sensor-limited) → prairie → forest — is characterized in `oak_forest.py`.
+Recovering surface roughness by removing the floor in quadrature, `S = √(r² − σ²)`,
+is **not reliable at the smooth end**: on the median cell it gives an infield ratio
+of ~2.3 — larger than grass — even though the infield is hard ground. Near the floor,
+S is dominated by floor-subtraction sensitivity and the sparser gen1's per-cell
+estimation noise. Use the raw ratio (~1.7 throughout), not floor-removed S, at these
+scales; S only becomes meaningful where roughness clears the floor (prairie, forest).
 
-## Oak forest ground error structure (`oak_forest.py`)
+## Oak forest — extra error-structure detail (`oak_forest.py`)
 
-Top of the ladder: a deciduous **leaf-off oak** block (box `498150 4975200 498850
-4976050`, NDVI>0.5). Here gen1 is **CSF-classified ground** (not last-return), so
-it is a fair *ground-vs-ground* comparison — and the story changes:
+The forest is the top rung of the ladder above (ratio 1.58, sensor-limited like the
+rest, once gen1 uses CSF). `oak_forest.py` adds the detail that only the forest needs:
 
 - **Penetration is comparable:** gen1 (CSF) median **167** ground returns/cell,
-  gen2 **148**. Leaf-off oak lets both surveys reach ground; gen1 is not starved.
-- **The divergence nearly vanishes with CSF:** gen1 ground roughness **0.067 m**
-  vs gen2 **0.043 m — ratio 1.58, ≈ the sensor ratio.** Versus prairie's 8.7×
-  (which used gen1 *last-return*). So the huge vegetation "divergence" is chiefly a
-  **ground-DEFINITION artifact** — last-return grabs canopy — and **CSF closes it**,
-  pulling gen1 forest roughness from 1.13 m (last-return canopy) to 0.067 m (ground).
+  gen2 **148**. Deciduous leaf-off oak lets both surveys reach ground; gen1 is not
+  starved of ground here.
 - **Error is near-white:** gen2 ground-roughness autocorrelation drops 0.48 (5 m) →
   0.26 (15 m), 1/e length ~7 m, with a weak ~0.25 canopy-scale plateau. Largely
   cell-independent, mild dependence on density (gen2 roughness↔count Spearman −0.24:
   rougher where sparser).
 
-**Implication:** in deciduous leaf-off oak, proper CSF ground makes *both* epochs
-sensor-limited — validating the pipeline's use of CSF for gen1, and showing the
-prairie/last-return divergence was mostly a classification artifact. The forest
-roughness *breakdown* seen at Cook is a **different regime** (conifer, leaf-on,
-poor penetration), not a universal property of "forest".
+**Regime caveat:** this is deciduous **leaf-off** oak, where both surveys penetrate.
+The forest roughness *breakdown* seen at Cook (roughness meaningless, DoD error
+un-localizable) is a **different regime** — conifer, leaf-on, poor penetration — not
+a universal property of "forest".

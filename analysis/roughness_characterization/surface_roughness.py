@@ -111,8 +111,14 @@ def load_or_build():
     if os.path.exists(CACHE):
         d = np.load(CACHE)
         return (x0, y0, nx, ny, d["r1"], d["r2"], d["R"], d["B"], d["ND"], d["slope"])
-    print("computing roughness rasters (gen1, gen2) ...", flush=True)
-    r1, _, _ = nmad_roughness(GEN1, False, x0, y0, nx, ny)
+    print("computing roughness rasters: CSF gen1 (~10 min) + class-2 gen2 ...", flush=True)
+    # MODERN processing only: gen1 bare earth = PDAL CSF ground (not last-return,
+    # which reads canopy in tall vegetation); gen2 = 3DEP class-2 ground.
+    from lidar_diff_icp.ground import classify_ground_csf
+    import shutil
+    csf = classify_ground_csf(GEN1)
+    r1, _, _ = nmad_roughness(csf, True, x0, y0, nx, ny)
+    shutil.rmtree(os.path.dirname(csf), ignore_errors=True)
     r2, _, dem = nmad_roughness(GEN2, True, x0, y0, nx, ny)
     R, B, ND = naip_grids(x0, y0, nx, ny)
     Zf = dem.copy(); nanm = ~np.isfinite(Zf)
