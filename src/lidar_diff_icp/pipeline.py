@@ -381,7 +381,7 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
                    correction_surface=False, along_track_drift=True, tie="reference",
                    ground="slope_normal", sn_smooth_cells=1.2, stream=False,
                    ground_source="csf", after_ground="class2", csf_pdal=None,
-                   robust_stable=True, before_crs=io.MN_GEN1_CRS):
+                   csf_cache=None, robust_stable=True, before_crs=io.MN_GEN1_CRS):
     """Corrected bare-earth DEM of Difference (after - before).
 
     ``before_laz``  : first-generation (gen1) MN lidar tile (retains point_source_id + gps_time).
@@ -420,6 +420,12 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
                       "last_return" uses the raw last-return heuristic (fast, no
                       dependency; near-identical DoD, so choose it to skip CSF).
                       ``csf_pdal`` optionally points to the PDAL binary.
+    ``csf_cache``   : path to ARCHIVE and REUSE the raw CSF ground. If set and the file
+                      exists, it is loaded (CSF skipped, ~20 s); if set and absent, CSF
+                      runs once, is saved there, and KEPT. The move (lateral shift) and
+                      tilt (datum) corrections and the drift are applied to this kept
+                      cloud downstream, so iterating on the correction never re-runs the
+                      slow deterministic classification.
     ``after_ground``: how the gen2 (3DEP) bare-earth is obtained. "class2" (default)
                       uses the survey's OWN ASPRS ground classification, a QC'd
                       ground-return set that is cleaner than last-return (which keeps
@@ -527,10 +533,24 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
     # ground_source="csf" (default) runs PDAL CSF on the before cloud first for a
     # cleaner, more general bare-earth (removes structures/understory); "last_return"
     # skips it and uses the raw last-return heuristic. CSF is slow (min/tile).
+    # CSF ground is classified ONCE and kept: it is deterministic and slow (~min/tile),
+    # and every downstream step (move/tilt/drift/grid) leaves it unchanged. With
+    # csf_cache set, the raw classified cloud is archived there and reused on later runs
+    # (move + tilt are applied to it below); without it, a temp is used and deleted.
+    import os as _os, shutil as _sh
     _csf_tmp = None
     if ground_source == "csf":
-        _csf_tmp = classify_ground_csf(before_laz, pdal=csf_pdal)
-        before_laz = _csf_tmp
+        if csf_cache and _os.path.exists(csf_cache):
+            before_laz = csf_cache                       # reuse the archived raw CSF
+        else:
+            _tmp = classify_ground_csf(before_laz, pdal=csf_pdal)
+            if csf_cache:                                # archive the raw CSF, keep it
+                _os.makedirs(_os.path.dirname(csf_cache) or ".", exist_ok=True)
+                _sh.move(_tmp, csf_cache)
+                _sh.rmtree(_os.path.dirname(_tmp), ignore_errors=True)
+                before_laz = csf_cache
+            else:
+                _csf_tmp = _tmp; before_laz = _tmp
     f = laspy.read(str(before_laz))
     x8 = np.asarray(f.x); y8 = np.asarray(f.y); z8 = np.asarray(f.z)
     ps8 = np.asarray(f.point_source_id); gt8 = np.asarray(f.gps_time)

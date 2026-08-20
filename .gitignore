@@ -16,6 +16,7 @@ __pycache__/
 /figures/
 /scratch/
 /scratchpad/
+/data/csf_cache/
 
 # OS / editor
 .DS_Store

@@ -112,7 +112,7 @@ def run_site(name, figdir="figures/rerun_class2"):
     print(f"[{name}] difference_dem  bounds={tuple(round(b,1) for b in bounds)} stream={stream}", flush=True)
     r = difference_dem(before, after, bounds, res=res, ground="slope_normal",
                        ground_source="csf", after_ground="class2", stream=stream,
-                       robust_stable=True)
+                       robust_stable=True, csf_cache=f"data/csf_cache/{name}.las")
     dod, lod, Z21, stable = r["dod"], r["lod"], r["z_after"], r["stable"]
     nx, ny = r["nx"], r["ny"]; X0, Y0 = r["bounds"][0], r["bounds"][1]
     ex = np.isfinite(dod)
