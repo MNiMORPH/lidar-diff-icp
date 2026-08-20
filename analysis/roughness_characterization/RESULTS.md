@@ -82,10 +82,30 @@ the sparser gen1's per-cell estimation noise, not by real surface differences. S
 mowed grass shows **no** clean vegetation-specific divergence; it is just another
 smooth, sensor-dominated surface.
 
-The vegetation divergence is real — under forest canopy roughness broke down
-entirely (roughness failed to predict DoD error; see the roughness-covariate work).
-But it needs a surface where real roughness clears the ranging noise. Mowed turf
-does not; **prairie grass and, above it, brush/forest are the rungs where the gen1
-over-read (sparse 2008 mixing canopy returns into "ground") should emerge.** That
-ladder — smooth (sensor-limited) → prairie → brush → forest (breakdown) — is the
-open characterization thread.
+The vegetation divergence is real — but see the oak-forest result below: much of
+it is a *ground-definition* artifact, not sensor physics. The ladder — smooth
+(sensor-limited) → prairie → forest — is characterized in `oak_forest.py`.
+
+## Oak forest ground error structure (`oak_forest.py`)
+
+Top of the ladder: a deciduous **leaf-off oak** block (box `498150 4975200 498850
+4976050`, NDVI>0.5). Here gen1 is **CSF-classified ground** (not last-return), so
+it is a fair *ground-vs-ground* comparison — and the story changes:
+
+- **Penetration is comparable:** gen1 (CSF) median **167** ground returns/cell,
+  gen2 **148**. Leaf-off oak lets both surveys reach ground; gen1 is not starved.
+- **The divergence nearly vanishes with CSF:** gen1 ground roughness **0.067 m**
+  vs gen2 **0.043 m — ratio 1.58, ≈ the sensor ratio.** Versus prairie's 8.7×
+  (which used gen1 *last-return*). So the huge vegetation "divergence" is chiefly a
+  **ground-DEFINITION artifact** — last-return grabs canopy — and **CSF closes it**,
+  pulling gen1 forest roughness from 1.13 m (last-return canopy) to 0.067 m (ground).
+- **Error is near-white:** gen2 ground-roughness autocorrelation drops 0.48 (5 m) →
+  0.26 (15 m), 1/e length ~7 m, with a weak ~0.25 canopy-scale plateau. Largely
+  cell-independent, mild dependence on density (gen2 roughness↔count Spearman −0.24:
+  rougher where sparser).
+
+**Implication:** in deciduous leaf-off oak, proper CSF ground makes *both* epochs
+sensor-limited — validating the pipeline's use of CSF for gen1, and showing the
+prairie/last-return divergence was mostly a classification artifact. The forest
+roughness *breakdown* seen at Cook is a **different regime** (conifer, leaf-on,
+poor penetration), not a universal property of "forest".
