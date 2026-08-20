@@ -26,8 +26,19 @@ import numpy as np
 from scipy.ndimage import convolve
 
 
-def spatial_coherence_probability(dod, perror, *, window=5, low=None, up=None,
-                                  dof=1000):
+def isotropic_counts(dod, valid, window=5):
+    """Wheaton's default neighbourhood evidence: the COUNT of same-sign cells in an
+    isotropic ``window`` x ``window`` square (GCD m_3NeighbourhoodClass.m). Returns
+    ``(ndepos, neros, n)`` -- deposition/erosion same-sign counts and the window's
+    max count ``n`` (used to calibrate the coherence-weight bounds)."""
+    k = np.ones((window, window))
+    ndepos = convolve((valid & (dod > 0)).astype(float), k, mode="constant")
+    neros = convolve((valid & (dod < 0)).astype(float), k, mode="constant")
+    return ndepos, neros, window * window
+
+
+def spatial_coherence_probability(dod, perror, *, counts=None, window=5, low=None,
+                                  up=None, dof=1000):
     """Wheaton et al. (2010) posterior probability of real change, signed in
     [-1 (erosion) .. +1 (deposition)]. Threshold ``|posterior|`` at a confidence
     level (e.g. 0.95) for a change mask (see :func:`coherence_change`).
@@ -35,8 +46,13 @@ def spatial_coherence_probability(dod, perror, *, window=5, low=None, up=None,
     ``dod``   : DEM of Difference (gen2 - gen1), m.
     ``perror``: propagated per-cell 1-sigma error sqrt(sigma_gen1^2 + sigma_gen2^2)
                 (m); equals ``lod / 1.96`` for our heteroscedastic LoD.
-    ``window``: neighbourhood size (GCD uses 5). ``low``/``up``: counts mapped to
-    coherence weight 0..1 (defaults calibrated to the window's random-sign null).
+
+    The spatial-coherence NEIGHBOURHOOD is pluggable. ``counts`` = ``(ndepos, neros,
+    n)`` supplies the same-sign counts from ANY neighbourhood -- the isotropic square
+    (default, :func:`isotropic_counts`) or a flow-aligned one (:func:`flow_counts`).
+    Everything else -- the amplitude prior, the count->weight mapping, and the
+    Bayesian posterior -- is Wheaton's, unchanged; only the neighbourhood geometry
+    varies. ``window``/``low``/``up`` set the isotropic default and the weight bounds.
     """
     from scipy.stats import t as tdist
     dod = np.asarray(dod, float); perror = np.asarray(perror, float)
@@ -47,18 +63,15 @@ def spatial_coherence_probability(dod, perror, *, window=5, low=None, up=None,
     tscore = np.where(valid, dod / np.where(perror > 0, perror, 1.0), 0.0)
     priorp = np.abs(2.0 * tdist.cdf(tscore, dof) - 1.0)
 
-    # 5x5 neighbourhood COUNT of same-sign cells (raw sign of DoD) -- the spatial
-    # coherence evidence (GCD m_3NeighbourhoodClass.m).
-    k = np.ones((window, window))
-    ndepos = convolve((valid & (dod > 0)).astype(float), k, mode="constant")
-    neros = convolve((valid & (dod < 0)).astype(float), k, mode="constant")
+    # Neighbourhood COUNT of same-sign cells (the spatial-coherence evidence),
+    # default isotropic square; pass `counts` for a flow-aligned neighbourhood.
+    ndepos, neros, n = counts if counts is not None else isotropic_counts(dod, valid, window)
 
     # Coherence weights = P(neighbourhood | change): linearly rescale counts
     # between low..up (GCD leaves these user-defined). Default calibration (ours):
     # a window of n cells has same-sign count ~Binomial(n, 0.5) ~ n/2 +/- sqrt(n)/2
     # under random signs, so weight 0 up to ~1 sigma above chance and 1 at strong
     # agreement (~7/8 of the window).
-    n = window * window
     if low is None:
         low = 0.80 * n                            # 20 for 5x5: need >=80% same-sign agreement to boost
     if up is None:
@@ -81,6 +94,52 @@ def spatial_coherence_probability(dod, perror, *, window=5, low=None, up=None,
 def coherence_change(dod, perror, *, conf=0.95, **kw):
     """Boolean change mask: ``|Wheaton posterior| > conf`` (default 95%)."""
     post = spatial_coherence_probability(dod, perror, **kw)
+    return np.isfinite(post) & (np.abs(post) > conf)
+
+
+def flow_counts(dod, valid, flowdown, flowup, k=12):
+    """FLOW-ALIGNED neighbourhood evidence for Wheaton's coherence: the COUNT of
+    same-sign cells along the FLOW LINE through each cell -- ``k`` cells downstream
+    (via ``flowdown``) and ``k`` upstream (via ``flowup``), a symmetric 2k+1 window
+    following the thalweg instead of an isotropic square.
+
+    This is Wheaton's neighbourhood count with the neighbourhood re-shaped along
+    flow, so it detects gullies/rills/channels (change coherent *down-slope*) that
+    the isotropic square suppresses -- while staying in Wheaton's soft Bayesian
+    framework (see :func:`spatial_coherence_probability`). It follows a single flow
+    line each way (no branching), so the window is a fixed 2k+1 cells regardless of
+    drainage area -- no accumulation bias -- and a single sign-flipped cell only
+    lowers the count by one (robust), rather than severing a run.
+
+    ``flowdown``/``flowup``: per-cell flat indices of the downstream / dominant-
+    upstream neighbour (-1 where none), e.g. from a D8/D-infinity routing. Returns
+    ``(ndepos, neros, n)`` with ``n = 2k+1``.
+    """
+    N = dod.size; dep = (valid & (dod > 0)).astype(float).ravel()
+    ero = (valid & (dod < 0)).astype(float).ravel()
+
+    def line_sum(ind):
+        tot = ind.copy()
+        for nb in (flowdown, flowup):
+            pos = np.arange(N); ok = np.ones(N, bool)
+            for _ in range(k):
+                nxt = nb[pos]; ok = ok & (nxt >= 0)
+                pos = np.where(ok, nxt, pos)
+                tot += np.where(ok, ind[pos], 0.0)
+        return tot.reshape(dod.shape)
+    return line_sum(dep), line_sum(ero), 2 * k + 1
+
+
+def flow_coherence_change(dod, perror, flowdown, flowup, *, k=12, conf=0.95,
+                          low=None, up=None, dof=1000):
+    """Boolean change mask from Wheaton coherence with a FLOW-ALIGNED neighbourhood
+    (:func:`flow_counts`). For patch detection use isotropic :func:`coherence_change`;
+    OR the two for patches-plus-gullies. Flow directions come from a DEM routing
+    (RichDEM D8/D-infinity), passed in so this module stays routing-agnostic."""
+    dod = np.asarray(dod, float); perror = np.asarray(perror, float)
+    valid = np.isfinite(dod) & np.isfinite(perror) & (perror > 0)
+    counts = flow_counts(dod, valid, flowdown, flowup, k)
+    post = spatial_coherence_probability(dod, perror, counts=counts, low=low, up=up, dof=dof)
     return np.isfinite(post) & (np.abs(post) > conf)
 
 
