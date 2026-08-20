@@ -187,7 +187,7 @@ def _grf(shape, sig_cells, rng):
 
 def detect_change_standard(dod, lod, stable, res, *, mask=None, conf=0.95,
                            low=None, up=None, window=5, sys_block_m=150.0,
-                           amp_z=1.96, linear=True):
+                           amp_z=1.96, linear=False):
     """STANDARD change detector: Wheaton et al. (2010) spatial-coherence Bayesian
     thresholding (see ``coherence.py``) with a systematic-error amplitude floor,
     OR-combined with a ridge/vesselness pass for LINEAR change.
@@ -199,14 +199,16 @@ def detect_change_standard(dod, lod, stable, res, *, mask=None, conf=0.95,
     "coherent". Pass ``mask`` = ~open_water (from ``wetland.wetland_flag``) to keep
     stage-dependent water surfaces out.
 
-    Two complementary paradigms, both included: Wheaton coherence detects broad
-    PATCHES but is isotropic and SUPPRESSES narrow LINEAR change (a gully <~5 cells
-    wide has too few same-sign neighbours in the window, so it is erased even at
-    strong amplitude). ``linear=True`` (default) OR-combines
-    :func:`coherence.ridge_change` -- the Sato et al. (1998) tubular-structure filter,
-    the established tool for elongated features -- so the detector keeps both patches
-    AND gullies/rills/levees. On a synthetic test the combination recovers 1-3 cell
-    gullies at ~100% (Wheaton alone: 4-30%) with no added false positives.
+    Wheaton coherence detects broad PATCHES but is isotropic and SUPPRESSES narrow
+    LINEAR change (a gully <~5 cells wide has too few same-sign neighbours in the
+    window, so it is erased even at strong amplitude). ``linear=True`` OR-combines
+    :func:`coherence.ridge_change` -- the Sato et al. (1998) tubular-structure filter
+    -- which recovers 1-3 cell gullies at ~100% on synthetic data (Wheaton alone:
+    4-30%). It is **off by default**: on a real DoD (Elba) the orientation-agnostic
+    ridge filter chases the biggest linear signals -- the river channel and spurious
+    ridgetop patches -- not hillslope gullies. Its successor is flow-directional
+    coherence (same-sign change along the DEM's drainage direction), which targets
+    erosion where it forms.
 
     Returns the same dict shape as ``detect_change`` (labels, regions, change, sigma,
     corr_length_m, tau_sys_m).
