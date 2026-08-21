@@ -381,7 +381,9 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
                    correction_surface=False, along_track_drift=True, tie="reference",
                    ground="slope_normal", sn_smooth_cells=1.2, stream=False,
                    ground_source="csf", after_ground="class2", csf_pdal=None,
-                   csf_cache=None, robust_stable=True, before_crs=io.MN_GEN1_CRS):
+                   csf_cache=None, robust_stable=True, before_crs=io.MN_GEN1_CRS,
+                   allow_parabola=False, ref_polys=None, save_ref_cells=None,
+                   datum_tilt=True):
     """Corrected bare-earth DEM of Difference (after - before).
 
     ``before_laz``  : first-generation (gen1) MN lidar tile (retains point_source_id + gps_time).
@@ -670,8 +672,27 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
         yc += coreg.eval_poly_field(hs["b"], xc, yc, hs["norm"], 0)
         refc = references.flat_hard_cells(xc[be], yc[be], zc[be],
                                           A["x"], A["y"], A["z"], bounds, res=2.0)
+        if ref_polys is not None:                      # restrict to real hard surfaces (OSM etc.)
+            from matplotlib.path import Path as _Path
+            pts = np.c_[refc["x"], refc["y"]]
+            keep = np.zeros(len(pts), bool)
+            for poly in ref_polys:
+                keep |= _Path(np.asarray(poly)).contains_points(pts)
+            refc = {k: (v[keep] if hasattr(v, "__len__") and len(v) == keep.size else v)
+                    for k, v in refc.items()}
+            print(f"  restricted datum refs to {len(ref_polys)} hard-surface polys -> "
+                  f"{int(keep.sum())} cells", flush=True)
+        if save_ref_cells is not None:                 # PERSIST the datum cells (never lose them)
+            np.savez(save_ref_cells, **{k: np.asarray(v) for k, v in refc.items()})
         if refc["x"].size >= 30:
-            pl = references.datum_plane(refc)
+            if datum_tilt:
+                pl = references.datum_plane(refc)
+            else:                                      # clustered clean refs: const only, no tilt
+                do = references.datum_offset(refc)
+                pl = {"a": do["raw"], "b": 0.0, "c": 0.0,
+                      "cx": float(np.median(refc["x"])), "cy": float(np.median(refc["y"])),
+                      "tilt_mag_m_km": 0.0, "n": do["n"], "rejected": 0,
+                      "resid_nmad_m": do["nmad"]}
             zc += references.eval_datum_correction(pl, xc, yc)
             print(f"  cross-epoch datum: {refc['x'].size} flat-hard refs, "
                   f"horizontal shift ({100*hs['a'][0]:+.1f},{100*hs['b'][0]:+.1f}) cm, "
@@ -690,6 +711,17 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
         else:
             tie_method = "parabola"
     if tie_method == "parabola":
+        if not allow_parabola:
+            raise RuntimeError(
+                "PARABOLA TIE IS DEACTIVATED. The order-2 parabola warps gen1's z and "
+                "ABSORBS real hillslope change, so it must never run silently. It was "
+                "reached because the pad-based reference datum could not run: either "
+                "stream=True (after cloud not in memory, so flat_hard_cells cannot find "
+                "hard surfaces) or fewer than 30 flat-hard reference cells were found. "
+                "FIX: run non-streaming with the gen2 points in memory (e.g. extract the "
+                "gen2 class-2 ground to its own file) so the reference (const+tilt pad) "
+                "datum runs. To deliberately override for a throwaway test, pass "
+                "allow_parabola=True.")
         tp = coreg.tie_polynomial(Zref, groundg(xc[be], yc[be], zc[be]),
                                   res, X0, Y0, order=2)
         xc += coreg.eval_poly_field(tp["a"], xc, yc, tp["norm"], 2)
