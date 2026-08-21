@@ -383,7 +383,7 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
                    ground_source="csf", after_ground="class2", csf_pdal=None,
                    csf_cache=None, robust_stable=True, before_crs=io.MN_GEN1_CRS,
                    allow_parabola=False, ref_polys=None, save_ref_cells=None,
-                   datum_tilt=True):
+                   datum_tilt=True, geoid_datum=None):
     """Corrected bare-earth DEM of Difference (after - before).
 
     ``before_laz``  : first-generation (gen1) MN lidar tile (retains point_source_id + gps_time).
@@ -670,9 +670,21 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
                                   res, X0, Y0, order=0)
         xc += coreg.eval_poly_field(hs["a"], xc, yc, hs["norm"], 0)
         yc += coreg.eval_poly_field(hs["b"], xc, yc, hs["norm"], 0)
-        refc = references.flat_hard_cells(xc[be], yc[be], zc[be],
-                                          A["x"], A["y"], A["z"], bounds, res=2.0)
-        if ref_polys is not None:                      # restrict to real hard surfaces (OSM etc.)
+        _geoid = geoid_datum is not None
+        if _geoid:                        # KNOWN geoid-model difference (reusable); NO pad const
+            gc, gb, gcc = geoid_datum      # (const_m, b East, c North) m,m/km of (N_gen1 - N_gen2), ADD to gen1
+            cxg = 0.5*(bounds[0]+bounds[2]); cyg = 0.5*(bounds[1]+bounds[3])
+            zc += gc + gb*(xc-cxg)/1000.0 + gcc*(yc-cyg)/1000.0
+            print(f"  geoid-difference datum: const {1000*gc:+.1f} mm, tilt "
+                  f"({1000*gb:+.3f},{1000*gcc:+.3f}) mm/km; horiz "
+                  f"({100*hs['a'][0]:+.1f},{100*hs['b'][0]:+.1f}) cm; NO pad const", flush=True)
+            tie_info = {"method": "geoid_difference", "const_m": gc, "tilt_b_m_per_km": gb,
+                        "tilt_c_m_per_km": gcc, "centroid": [cxg, cyg],
+                        "horizontal_shift_m": [round(float(hs["a"][0]),4), round(float(hs["b"][0]),4)]}
+        refc = (references.flat_hard_cells(xc[be], yc[be], zc[be],
+                                           A["x"], A["y"], A["z"], bounds, res=2.0)
+                if not _geoid else {"x": np.zeros(0)})
+        if ref_polys is not None and refc["x"].size:   # restrict to real hard surfaces (OSM etc.)
             from matplotlib.path import Path as _Path
             pts = np.c_[refc["x"], refc["y"]]
             keep = np.zeros(len(pts), bool)
@@ -708,7 +720,7 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
                         "rejected_resurfacing": pl["rejected"],
                         "resid_nmad_m": round(pl["resid_nmad_m"], 5),
                         "geoid_tilt_crosscheck_m_per_km": 0.004}
-        else:
+        elif not _geoid:
             tie_method = "parabola"
     if tie_method == "parabola":
         if not allow_parabola:
