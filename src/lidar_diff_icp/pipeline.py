@@ -625,7 +625,12 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
     x8 = np.asarray(f.x); y8 = np.asarray(f.y); z8 = np.asarray(f.z)
     ps8 = np.asarray(f.point_source_id); gt8 = np.asarray(f.gps_time)
     rn8 = np.asarray(f.return_number); nr8 = np.asarray(f.number_of_returns)
-    be = rn8 == nr8
+    cl8 = np.asarray(f.classification)
+    # before-epoch ground POINT selection. "csf"/"last_return" -> last returns of the
+    # (CSF-classified or raw) cloud; "class2" -> the before survey's OWN ASPRS ground
+    # class (a test path: gen1's 2008 vendor classification, which the CSF default was
+    # chosen to replace -- see read_after_ground note).
+    be = (cl8 == 2) if ground_source == "class2" else (rn8 == nr8)
     if _csf_tmp is not None:
         import shutil, os
         shutil.rmtree(os.path.dirname(_csf_tmp), ignore_errors=True)
