@@ -25,7 +25,10 @@ def main():
                     "intact (the full delivery, not a pre-filtered last-return file)")
     ap.add_argument("--bounds", nargs=4, type=float, required=True)
     ap.add_argument("--res", type=float, default=5.0)
-    ap.add_argument("--ground-q", type=float, default=0.10)
+    ap.add_argument("--ground-q", type=float, default=0.50,
+                    help="per-cell ground quantile for gridding; 0.50 (median) matches "
+                         "difference_dem and the slope_normal convention. 0.10 is the "
+                         "LEGACY low-percentile (downhill-biased on slopes) -- do not use.")
     ap.add_argument("--correction-surface", action="store_true",
                     help="enable the data-driven DeLong correction surface (OFF by "
                          "default; the physical along-track drift is preferred and "
