@@ -89,9 +89,7 @@ def fig_dem_change(name, Z21, dod, change, regions, res, X0, Y0, nx, ny, figdir)
     fig, ax = plt.subplots(figsize=(10, 11))
     ax.imshow(hs, extent=ext, origin="lower", cmap="gray")
     im = ax.imshow(over, extent=ext, origin="lower", cmap="RdBu", vmin=-v, vmax=v, alpha=0.7)
-    ax.set_title(f"{name}: robustly-detected change over the DEM\n"
-                 f"{len(regions)} regions, net {net:+,.0f} m3 "
-                 "(red = erosion, blue = deposition)")
+    ax.set_title(f"{name}: topographic change above detection limits")
     ax.set_xlabel("Easting (m)"); ax.set_ylabel("Northing (m)")
     fig.colorbar(im, ax=ax, shrink=0.6, extend="both", label="detected DoD (m)")
     out = f"{figdir}/{name}_change.png"
@@ -123,6 +121,22 @@ def run_site(name, figdir="figures/rerun_class2"):
     print(f"[{name}] gen2 null cells: {n_null} ({100*n_null/Z21.size:.2f}%) -- water/"
           "dropouts, interpolated in the shaded-relief backdrop ONLY, never on the map "
           "or in the DoD (recorded in regions.json)", flush=True)
+
+    # leaf-on / closed-canopy flag: gen2 flown under leaf-on canopy starves ground
+    # returns, biasing bare-earth on forested slopes (verified at Elba, 2021-05-01
+    # green-up). Widen the LoD where ground penetration is poor on slopes so change
+    # there is held to a higher bar (a data limit, not a griddable artifact).
+    from lidar_diff_icp.canopy import ground_penetration, leafon_slope_flag, inflate_lod
+    _Zf = Z21.copy(); _nm = ~np.isfinite(_Zf)
+    if _nm.any():
+        from scipy.ndimage import distance_transform_edt as _edt
+        _Zf = _Zf[tuple(_edt(_nm, return_distances=False, return_indices=True))]
+    _sl = np.degrees(np.arctan(np.hypot(*np.gradient(_Zf, res)[::-1])))
+    leafon = leafon_slope_flag(ground_penetration(after, r["bounds"], res, nx, ny), _sl)
+    lod = inflate_lod(lod, leafon)
+    np.save(f"{outdir}/leafon_flag.npy", leafon)
+    print(f"[{name}] leaf-on/forest-slope flag: {int(leafon.sum())} cells "
+          f"({100*leafon.mean():.0f}%) -- LoD widened there", flush=True)
 
     det = detect_change_standard(dod, lod, stable, res)
     change = det["change"]; regions = det["regions"]
