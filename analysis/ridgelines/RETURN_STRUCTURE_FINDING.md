@@ -71,6 +71,41 @@ now traced to its physical cause in the return column.
 - **Ruled in — leaf-off/leaf-on ground exposure:** the penetration advantage is forest-only,
   in the direction and magnitude expected from Nov-dormant vs May-green-up phenology.
 
+## Decomposition — groundcover shoulder vs leaf-off penetration (`groundcover_decomp.py`)
+Andy's reading of `return_structure_ground.png`: gen2's broader near-ground peak = gen1's
+true ground (still detected) *plus* an added upward shoulder from leaf-on herbaceous
+groundcover. Tested directly on the forest ground-class column (unit area, no scaling):
+
+- **Common ground MODE preserved: gen1 −0.125 m, gen2 −0.125 m (shift 0 mm).** The
+  true-ground return sits in the identical place both epochs — gen2 does not shift off
+  the ground. Confirms the model's core claim.
+- **gen2 adds a +19.2-point upper shoulder** (mass above the mode: 30.1 % → 49.3 %),
+  concentrated ~0–0.15 m — the leaf-on groundcover/litter layer. This is the dominant
+  half of the asymmetry.
+- **gen1 has +8.3 points more deep tail** (mass below the mode: 10.9 % vs 2.6 %) — the
+  leaf-off penetration effect. Smaller, opposite side, *same* sign of DoD error.
+
+So the forest rise is TWO mechanisms of the same leaf-state mismatch, both making
+gen2−gen1 positive: (1) gen2 groundcover shoulder up (~⅔), (2) gen1 deeper penetration
+down (~⅓).
+
+Two consequences for correction design:
+- **The median rise does not scale with groundcover amount** (corr = +0.007 vs the correct
+  0.1–0.6 m near-ground band; *not* `understory_frac`, which is the 0.5–2 m shrub band and
+  missed this). The median saturates — any shoulder past the 50 % point bumps it ~one step
+  then stops. So a linear per-cell `f(groundcover)` off the median is not recoverable.
+- **A lower ground percentile recovers the true ground under the cover — partially:**
+
+  | estimator | forest rise | open rise | forest-specific anomaly |
+  |---|---|---|---|
+  | p50 (current) | +80 mm | +50 mm | **+30 mm** |
+  | p25 | +54 mm | +39 mm | **+14.5 mm** |
+  | p10 | +100 mm | +80 mm | +20 mm |
+
+  p25 halves the forest anomaly by dropping beneath the groundcover shoulder — no external
+  veg model. p10 overshoots: it falls into gen1's deeper-penetration tail and re-inflates
+  the difference. A single percentile cannot cancel both mechanisms; ~p25 is the sweet spot.
+
 ## Consequence for the workflow
 1. The forest +dz is an artifact; do **not** count it as deposition. Apply the `f(veg_frac)`
    forest-floor correction (`dod_corrections.py`), or — the durable fix — pair **leaf-off
