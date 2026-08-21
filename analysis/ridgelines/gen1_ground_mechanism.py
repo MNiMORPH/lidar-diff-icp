@@ -91,4 +91,45 @@ for i in range(len(e)-1):
     if b.sum()<500: continue
     print(f"  pen {e[i]:.3f}-{e[i+1]:.3f} (med {np.median(pb[b]):.3f}): d {med(db[b]):+6.1f} mm  n={b.sum()}")
 print(f"  -> single-return fixed-intensity d still sinks with density? corr(d,pen | nr=1,mid-I) = {np.corrcoef(db,pb)[0,1]:+.3f}")
-print(f"  ground-return DENSITY per cell may also matter: n class-2 forest returns all vs core computed above")
+
+print("\n(D) Does canopy scatter WEAKEN the ground return? intensity vs canopy density (single-return):")
+s1=nr==1; i1=inten[s1]; p1=pn[s1]; d1=d[s1]
+e=np.quantile(p1,np.linspace(0,1,7))
+print("   pen-bin (dense->sparse)   intensity med / mean / %weak(<8)     d med")
+for i in range(len(e)-1):
+    b=(p1>=e[i])&(p1<e[i+1] if i<len(e)-2 else p1<=e[i+1])
+    if b.sum()<500: continue
+    print(f"   pen {e[i]:.3f}-{e[i+1]:.3f} (med {np.median(p1[b]):.3f}): "
+          f"int med {np.median(i1[b]):4.0f}  mean {np.mean(i1[b]):5.1f}  weak {100*np.mean(i1[b]<8):4.1f}%   d {med(d1[b]):+6.1f}")
+print(f"   corr(intensity, pen | single) = {np.corrcoef(i1,p1)[0,1]:+.3f}  "
+      f"(negative => weaker in denser canopy, as scatter predicts)")
+print(f"\n   LINK TEST: if scatter drives BOTH, d and intensity should co-move with density.")
+print(f"   intensity drop dense->sparse: {np.median(i1[p1<0.13])-np.median(i1[p1>0.22]):+.0f} counts ; "
+      f"d change: {med(d1[p1<0.13])-med(d1[p1>0.22]):+.0f} mm")
+print(f"   BUT sink persists at FIXED intensity (test C) -> delay is NOT explained by attenuation/range-walk.")
+
+# ---- figure: intensity and d both vs canopy density; and d vs intensity (decoupling) ----
+import matplotlib; matplotlib.use("Agg"); import matplotlib.pyplot as plt
+def binned(x,y,xe):
+    mx=[];my=[]
+    for i in range(len(xe)-1):
+        b=(x>=xe[i])&(x<xe[i+1] if i<len(xe)-2 else x<=xe[i+1])
+        if b.sum()<500: continue
+        mx.append(np.median(x[b])); my.append(np.median(y[b]))
+    return np.array(mx),np.array(my)
+e=np.quantile(p1,np.linspace(0,1,9))
+pmid,dmid=binned(p1,d1,e); pmid2,imid=binned(p1,i1,e)
+fig,ax=plt.subplots(1,2,figsize=(13,6))
+axL=ax[0]; axR=axL.twinx()
+axL.plot(pmid,dmid,"C0o-",label="ground d (mm)"); axR.plot(pmid2,imid,"C3s--",label="intensity")
+axL.set_xlabel("penetration (LEFT=denser canopy)"); axL.set_ylabel("ground d (mm)",color="C0"); axR.set_ylabel("intensity",color="C3")
+axL.invert_xaxis(); axL.set_title("both sink with canopy density..."); axL.grid(alpha=.3)
+# d vs intensity directly (range-walk curve); overlay the density-driven range
+ie=np.quantile(i1,np.linspace(0,1,10)); imx,dmx=binned(i1,d1,ie)
+ax[1].plot(imx,dmx,"C2o-")
+ax[1].axhspan(min(dmid),max(dmid),color="0.85",alpha=.6,label=f"d range across density ({max(dmid)-min(dmid):.0f} mm)")
+ax[1].set_xlabel("intensity"); ax[1].set_ylabel("ground d (mm)")
+ax[1].set_title("...but at fixed intensity, d barely moves\n(density range >> intensity range)"); ax[1].legend(fontsize=8); ax[1].grid(alpha=.3)
+fig.suptitle("gen1 forest ground: attenuation (intensity drop) is real but does NOT explain the elevation sink",y=1.0)
+fig.savefig("figures/refdatum/gen1_scatter_intensity.png",dpi=130,bbox_inches="tight"); plt.close(fig)
+print("\nwrote figures/refdatum/gen1_scatter_intensity.png")
