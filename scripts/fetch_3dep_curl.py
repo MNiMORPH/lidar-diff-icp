@@ -141,7 +141,9 @@ def main():
     # accumulating everything then concatenating OOMs. Fixed header offsets (the
     # bbox min, which every clipped point is >=) avoid needing all data up front.
     tr = Transformer.from_crs("EPSG:3857", "EPSG:26915", always_xy=True)
+    from laspy.header import GpsTimeType
     hdr = laspy.LasHeader(point_format=1, version="1.2")
+    hdr.global_encoding.gps_time_type = GpsTimeType.STANDARD   # 3DEP gps_time = Adjusted Standard GPS Time
     hdr.offsets = [a.bounds[0], a.bounds[1], 0.0]; hdr.scales = [0.01, 0.01, 0.01]
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
     total = 0; psids = set()
@@ -169,6 +171,11 @@ def main():
             ch.classification = np.asarray(f.classification)[m].astype(np.uint8)
             ch.return_number = np.asarray(f.return_number)[m].astype(np.uint8)
             ch.number_of_returns = np.asarray(f.number_of_returns)[m].astype(np.uint8)
+            # PRESERVE acquisition time + scan geometry + intensity (a merge that drops
+            # these is why the flight date and scan angle were lost -- read from source).
+            ch.gps_time = np.asarray(f.gps_time)[m]
+            ch.scan_angle_rank = np.asarray(f.scan_angle_rank)[m].astype(np.int8)
+            ch.intensity = np.asarray(f.intensity)[m].astype(np.uint16)
             writer.write_points(ch.points)
             total += int(m.sum()); psids.update(np.unique(ps).tolist())
             if (i + 1) % 20 == 0:
