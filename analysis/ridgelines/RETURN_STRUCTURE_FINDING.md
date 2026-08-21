@@ -106,6 +106,38 @@ Two consequences for correction design:
   veg model. p10 overshoots: it falls into gen1's deeper-penetration tail and re-inflates
   the difference. A single percentile cannot cancel both mechanisms; ~p25 is the sweet spot.
 
+## CORRECTION at 1 cm resolution — penetration dominates, not a groundcover shoulder
+The decomposition above (0.25 m bins, `groundcover_decomp.py`) over-credited a "groundcover
+shoulder." Re-streamed at **1 cm** (`ground_mixture_fit.py` → `ground_fine_pooled.npz`,
+`ground_mixture_fit2.py`) the ground CLASS tells a different, cleaner story. Three
+frame-invariant diagnostics (independent of the reference plane):
+- **Upper tails coincide:** gen1 & gen2 forest ground-class share p90 (+0.123 m); the
+  per-percentile rise is **+129 mm at p10 but 0 mm at p90** — it *falls* low→high.
+- **Monotone-falling rise** (p10 +129, p25 +104, p50 +70, p75 +34, p90 0) is the signature
+  of gen1's **deeper low tail (leaf-off penetration)**, not a gen2 upper shoulder (which
+  would make the rise grow toward high percentiles).
+- **gen2 forest is symmetric** (Bowley skew −0.004); if groundcover leaked upward into the
+  ground class, gen2 forest would be the most right-skewed — instead gen1 *open* is.
+
+This agrees with the earlier classifier-independent deep-echo test (gen1 forest floor −0.81
+vs gen2 −0.54 m). The intermediate coarse "shoulder-dominant" claim was a 0.25 m binning +
+cell-subset artifact and is **retracted**.
+
+**Two-Gaussian fit on gen2 class-2 ground (1 cm):** the ground class is essentially ONE
+symmetric Gaussian — μ_g = −0.001 m, σ_g = 0.080 m (forest) / 0.023 m (open); the 2nd
+"plant" component collapses onto the same mean (symmetric halo, offset +0.000 m), i.e. no
+resolvable upward plant mode. Extraction level = μ_g ≈ the median; nothing to strip from the
+ground class. The groundcover returns are real (visible in the all-returns column) but 3DEP's
+classifier files them as VEGETATION, so they don't enter the ground class — the "plant leak"
+into ground is negligible.
+
+**Corrected mechanism:** gen1 (leaf-off) reaches a lower, truer forest floor; gen2 (leaf-on)
+ground sits ~70 mm higher (pulses can't penetrate as deep). gen1 is closer to true ground;
+gen2 is biased high. Both ground classes are internally clean. The mixture decomposition is
+the right tool but belongs on the **all-returns** near-ground column (where plant returns
+actually live and gen2 still has deep ground returns under the canopy), applied identically
+to both epochs to recover ground independent of vendor classifiers — the promising next step.
+
 ## Consequence for the workflow
 1. The forest +dz is an artifact; do **not** count it as deposition. Apply the `f(veg_frac)`
    forest-floor correction (`dod_corrections.py`), or — the durable fix — pair **leaf-off
