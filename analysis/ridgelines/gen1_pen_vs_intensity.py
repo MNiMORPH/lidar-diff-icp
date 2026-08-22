@@ -28,9 +28,12 @@ pen=np.where(tot>0,gnd/np.maximum(tot,1),np.nan)
 gint=np.where(gnd>0,isum/np.maximum(gnd,1),np.nan)
 pen=pen.reshape(NY,NX); gint=gint.reshape(NY,NX)
 
-forest=(g2pen<0.25)&~fld&np.isfinite(g2pen)&np.isfinite(pen)&np.isfinite(gint)&(gnd.reshape(NY,NX)>=5)
-allc=~fld&np.isfinite(pen)&np.isfinite(gint)&(gnd.reshape(NY,NX)>=5)
-for msk,lbl in [(allc,"all cells"),(forest,"forest cells")]:
+cf=np.load("data/derived/elba_fulldensity/core_forest.npy")
+valid=np.isfinite(pen)&np.isfinite(gint)&(gnd.reshape(NY,NX)>=5)
+allc=~fld&valid
+forest=(g2pen<0.25)&~fld&np.isfinite(g2pen)&valid
+core=cf&valid
+for msk,lbl in [(allc,"all cells"),(forest,"forest cells"),(core,"core forest")]:
     p=pen[msk]; g=gint[msk]
     print(f"{lbl}: n={msk.sum()}  corr(gen1_pen, gen1_ground_intensity) = {np.corrcoef(p,g)[0,1]:+.3f}")
     e=np.quantile(p,np.linspace(0,1,9))
@@ -39,8 +42,8 @@ for msk,lbl in [(allc,"all cells"),(forest,"forest cells")]:
         if b.sum()<50: continue
         print(f"    pen {e[i]:.3f}-{e[i+1]:.3f} (med {np.median(p[b]):.3f}): ground intensity med {np.median(g[b]):.1f}")
 
-fig,ax=plt.subplots(1,2,figsize=(14,6))
-for a,(msk,lbl) in zip(ax,[(allc,"all cells"),(forest,"forest cells")]):
+fig,ax=plt.subplots(1,3,figsize=(20,6))
+for a,(msk,lbl) in zip(ax,[(allc,"all cells"),(forest,"forest cells"),(core,"core forest")]):
     p=pen[msk]; g=gint[msk]
     hb=a.hexbin(p,g,gridsize=45,bins="log",cmap="viridis",mincnt=1)
     e=np.quantile(p,np.linspace(0,1,11)); mx=[];my=[]
