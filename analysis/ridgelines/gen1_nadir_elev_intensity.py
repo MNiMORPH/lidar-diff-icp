@@ -15,8 +15,7 @@ Zg=np.load("data/derived/elba_fulldensity/z_after.npy"); Zf=Zg.copy(); m=~np.isf
 if m.any(): Zf=Zf[tuple(distance_transform_edt(m,return_distances=False,return_indices=True))]
 gy,gx=np.gradient(Zf,RES); cosd=1.0/np.sqrt(1.0+gx*gx+gy*gy)
 Zff=Zf.ravel(); gxf=gx.ravel(); gyf=gy.ravel(); cosf=cosd.ravel()
-g2pen=np.load("data/derived/elba_fulldensity/penetration.npy"); fld=np.load("data/derived/elba_fulldensity/floodplain_mask.npy").astype(bool)
-is_forest=((g2pen<0.25)&~fld&np.isfinite(g2pen)).ravel()
+is_forest=np.load("data/derived/elba_fulldensity/core_forest.npy").ravel()   # CORE forest only
 
 D=[];I=[]
 with laspy.open(GEN1) as f:
@@ -35,7 +34,7 @@ with laspy.open(GEN1) as f:
         d=(z-(Zff[cell]+gxf[cell]*(x-xc)+gyf[cell]*(y-yc)))*cosf[cell]
         D.append(d*1000); I.append(inten[keep][fm])
 d=np.concatenate(D); I=np.concatenate(I)
-print(f"near-nadir (|angle|<={NADIR}) forest ground returns: {d.size:,}")
+print(f"near-nadir (|angle|<={NADIR}) CORE forest ground returns: {d.size:,}")
 print(f"corr(d, intensity) = {np.corrcoef(d,I)[0,1]:+.3f}")
 print("\nmedian d by intensity bin (near-nadir):")
 e=np.quantile(I,np.linspace(0,1,11))
@@ -51,7 +50,7 @@ hb=ax.hexbin(I,d,gridsize=50,bins="log",cmap="viridis",mincnt=1,extent=(0,60,-40
 ax.plot(mx,my,"r.-",lw=2.5,ms=10,label="median d")
 ax.set_xlim(0,60); ax.set_ylim(-350,250)
 ax.set_xlabel("ground-return intensity"); ax.set_ylabel("relative ground elevation d (mm)")
-ax.set_title(f"gen1 near-nadir (|angle|<={NADIR:.0f}deg) forest: elevation vs intensity  (r={np.corrcoef(d,I)[0,1]:+.2f}, n={d.size:,})")
+ax.set_title(f"gen1 near-nadir (|angle|<={NADIR:.0f}deg) CORE forest: elevation vs intensity  (r={np.corrcoef(d,I)[0,1]:+.2f}, n={d.size:,})")
 ax.legend(); fig.colorbar(hb,label="log10 count")
-fig.savefig("figures/refdatum/gen1_nadir_elev_intensity.png",dpi=130,bbox_inches="tight"); plt.close(fig)
-print("\nwrote figures/refdatum/gen1_nadir_elev_intensity.png")
+fig.savefig("figures/refdatum/gen1_nadir_elev_intensity_core.png",dpi=130,bbox_inches="tight"); plt.close(fig)
+print("\nwrote figures/refdatum/gen1_nadir_elev_intensity_core.png")
