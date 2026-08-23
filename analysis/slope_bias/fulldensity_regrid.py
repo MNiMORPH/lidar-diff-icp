@@ -12,6 +12,10 @@ Metric: median DoD (gen2 - gen1) in slope bins on FORESTED cells (where the fals
 aggradation lives) and on BEDROCK (stable control). If the full cloud flattens the
 slope trend, the bias was the decimation.
 
+Datum: GEOID03->GEOID18 tie (geoid_datum), NON-streaming on the class2-extracted after
+cloud, NO parabola -- matches run_geoid_datum.py. Produces the geoid-tied elba_fulldensity
+product set (was parabola before 2026-08-23; the order-2 parabola absorbs hillslope change).
+
     env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/slope_bias/fulldensity_regrid.py
 """
 import json, time
@@ -24,10 +28,12 @@ BEFORE = "data/before/4342-29-64.laz"
 BOUNDS = (577492.8, 4882737.6, 580032.8, 4886237.6)
 RES = 5.0
 AFTERS = {"decimated":   "data/after/3dep2021_fulltile.laz",
-          "fulldensity": "data/after/3dep2021_fulldensity.laz"}
+          "fulldensity": "data/after/3dep2021_fd_class2.laz"}   # class2-extracted: loadable non-streaming
+GEOID = (0.067, 0.00061, -0.00073)   # GEOID03->GEOID18 (N03-N18) const_m, b(E), c(N) m/km -> ADD to gen1
 COMMON = dict(res=RES, ground="slope_normal", ground_source="csf",
-              after_ground="class2", stream=True, robust_stable=True,
-              csf_cache="data/csf_cache/elba.las")
+              after_ground="class2", stream=False, robust_stable=True,
+              csf_cache="data/csf_cache/elba.las",
+              tie="reference", allow_parabola=False, geoid_datum=GEOID)
 
 runs = {}
 for tag, after in AFTERS.items():
