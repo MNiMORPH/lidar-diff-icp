@@ -33,7 +33,7 @@ GEOID = (0.067, 0.00061, -0.00073)   # GEOID03->GEOID18 (N03-N18) const_m, b(E),
 COMMON = dict(res=RES, ground="slope_normal", ground_source="csf",
               after_ground="class2", stream=False, robust_stable=True,
               csf_cache="data/csf_cache/elba.las",
-              tie="reference", allow_parabola=False, geoid_datum=GEOID)
+              tie="reference", geoid_datum=GEOID)
 
 runs = {}
 for tag, after in AFTERS.items():

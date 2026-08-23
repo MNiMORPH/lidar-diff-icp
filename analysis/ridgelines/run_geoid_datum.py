@@ -7,7 +7,7 @@ G = (0.067, 0.00061, -0.00073)   # (N03-N18) const_m, b(E), c(N) m/km -> ADD to 
 r = difference_dem("data/before/4342-29-64.laz","data/after/3dep2021_fd_class2.laz",
     (577492.8,4882737.6,580032.8,4886237.6),res=5.0,ground="slope_normal",ground_source="csf",
     after_ground="class2",stream=False,robust_stable=True,csf_cache="data/csf_cache/elba.las",
-    tie="reference",allow_parabola=False,geoid_datum=G)
+    tie="reference",geoid_datum=G)
 dod=r["dod"]; np.save("data/derived/elba_refdatum/dod_geoid.npy",dod)
 json.dump(r["corrections"],open("data/derived/elba_refdatum/corrections_geoid.json","w"),indent=2)
 crest=np.load("data/derived/elba_fulldensity/crest_mask.npy"); pen=np.load("data/derived/elba_fulldensity/penetration.npy")
