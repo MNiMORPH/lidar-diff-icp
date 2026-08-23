@@ -15,7 +15,7 @@ AOI grid. Splits by canopy closure (penetration) for a dose-response.
 import numpy as np, laspy
 
 RES = 5.0; X0, Y0 = 577492.8, 4882737.6
-dod = np.load("data/derived/elba_fulldensity/dod.npy")
+dod = np.load("data/derived/elba_refdatum/dod_geoid.npy")
 slope = np.load("data/derived/elba_fulldensity/slope.npy")
 ny, nx = dod.shape
 

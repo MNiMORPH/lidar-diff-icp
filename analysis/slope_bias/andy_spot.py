@@ -12,7 +12,7 @@ RES = 5.0; X0, Y0 = 577492.8, 4882737.6
 E, N = 579143.9, 4885062.5
 z = np.load("data/derived/elba_fulldensity/z_after.npy")
 slope = np.load("data/derived/elba_fulldensity/slope.npy")
-dod = np.load("data/derived/elba_fulldensity/dod.npy")
+dod = np.load("data/derived/elba_refdatum/dod_geoid.npy")
 margin = np.load("data/derived/elba_fulldensity/blufftop_margin_mask.npy")
 ny, nx = z.shape
 cc, cr = int((E-X0)/RES), int((N-Y0)/RES)

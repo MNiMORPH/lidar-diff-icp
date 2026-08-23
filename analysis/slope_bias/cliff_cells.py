@@ -18,7 +18,7 @@ import laspy, numpy as np
 
 RES = 5.0
 X0, Y0 = 577492.8, 4882737.6                     # elba AOI grid origin (matches dod.npy)
-dod = np.load("data/derived/elba_fulldensity/dod.npy")
+dod = np.load("data/derived/elba_refdatum/dod_geoid.npy")
 slope = np.load("data/derived/elba_fulldensity/slope.npy")
 bed = np.load("data/derived/elba/bedrock_mask.npy").astype(bool)
 ny, nx = dod.shape

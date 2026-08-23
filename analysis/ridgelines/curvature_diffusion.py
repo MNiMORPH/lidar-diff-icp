@@ -21,7 +21,7 @@ from scipy.ndimage import correlate, distance_transform_edt
 
 RES = 5.0; X0, Y0 = 577492.8, 4882737.6
 z = np.load("data/derived/elba_fulldensity/z_after.npy")
-dod = np.load("data/derived/elba_fulldensity/dod.npy")
+dod = np.load("data/derived/elba_refdatum/dod_geoid.npy")
 pen = np.load("data/derived/elba_fulldensity/penetration.npy")
 crest = np.load("data/derived/elba_fulldensity/crest_mask.npy")
 ny, nx = z.shape
