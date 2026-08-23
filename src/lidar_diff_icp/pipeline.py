@@ -382,8 +382,7 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
                    ground="slope_normal", sn_smooth_cells=1.2, stream=False,
                    ground_source="csf", after_ground="class2", csf_pdal=None,
                    csf_cache=None, robust_stable=True, before_crs=io.MN_GEN1_CRS,
-                   allow_parabola=False, ref_polys=None, save_ref_cells=None,
-                   datum_tilt=True, geoid_datum=None):
+                   geoid_datum=None):
     """Corrected bare-earth DEM of Difference (after - before).
 
     ``before_laz``  : first-generation (gen1) MN lidar tile (retains point_source_id + gps_time).
@@ -399,15 +398,17 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
                       surface, double-counts the cloth, and biases the ground low by
                       an epoch-dependent, roughness-/slope-growing amount that does
                       not cancel in the difference.
-    ``tie``         : cross-epoch vertical datum. "reference" (default) fits a robust
-                      PLANAR datum (constant + tilt) on FLAT-HARD STABLE surfaces
-                      (:mod:`lidar_diff_icp.references`) -- the ground-truth local basis,
-                      free of the "sloped ground is stable" assumption of the parabolic
-                      tie (which absorbs real hillslope erosion). "parabola" is the
-                      legacy order-2 spatial tie, and the automatic fallback where too
-                      few reference surfaces exist (dense forest / no pavement) or when
-                      streaming. The datum tilt is carried from the references and
-                      cross-checked against the independent geoid-model tilt.
+    ``tie``         : must be "reference" (the only value). The cross-epoch datum is:
+                      align to the lowest-numbered flightline, apply the Nuth-Kaeaeb
+                      lateral (x,y) shift, then add the geoid-model z offset
+                      N_gen1 - N_gen2 (auto-computed from the PROJ geoid grids by
+                      :func:`lidar_diff_icp.references.geoid_difference` unless
+                      ``geoid_datum`` is supplied). No plane is fitted to "stable"
+                      surfaces; residual offsets are left for later analysis. The
+                      reference_plane fit and the parabola tie were removed (git history).
+    ``geoid_datum`` : optional ``(const_m, b, c)`` geoid shift to ADD to gen1 (const +
+                      E/N tilt in m/km about the bounds centroid). Auto-computed from the
+                      geoid grids when None (default).
     ``ground``      : ground GRIDDING estimator. "slope_normal" (default) = the
                       ``ground_q`` quantile of the residual to a common smoothed
                       regional surface (both epochs), which removes the downhill bias
@@ -643,107 +644,37 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
     for s, (dx, dy, dz) in corr.items():
         m = ps8 == s; xc[m] += dx; yc[m] += dy; zc[m] += dz
 
-    # cross-epoch vertical datum. "reference" (default): a robust PLANAR datum
-    # (constant + tilt) from FLAT-HARD STABLE surfaces (references.flat_hard_cells) --
-    # pavement/pads/courts/cemetery: flat (no roof-pitch x misregistration confound)
-    # and truly stable (no erosion). A robust before-after plane on them is the vertical
-    # registration WITHOUT the "sloped ground is stable" assumption of the parabolic tie
-    # (which absorbs real hillslope change). The tilt is carried from this ground truth
-    # (~10 mm/km at the pilot, consistent with the independent geoid-model tilt ~4 mm/km,
-    # recorded as a cross-check). "parabola" = legacy order-2 spatial tie; also the
-    # fallback when too few reference surfaces exist (dense forest / no pavement) or when
-    # streaming (no in-memory after cloud). Horizontal misregistration is left to
-    # align_swaths (flat references cannot see it, and it is ~0 on the pilot).
+    # cross-epoch vertical datum, in the principled order: get x,y right, then z.
+    # (1) HORIZONTAL: one constant Nuth & Kaeaeb lateral shift from the full topography
+    #     (order-0 tie) so the two DEMs are registered in x,y before z is touched.
+    #     Drainage divides / ridgelines do not move to first order, so registering the
+    #     whole DEM recovers the lateral shift; the aspect-DIPOLE it fits is EROSION-
+    #     robust (diffuse erosion has no aspect dependence). (2) VERTICAL: the geoid-model
+    #     datum shift N_gen1 - N_gen2 (e.g. GEOID03 - GEOID18) -- a REQUIRED geodetic
+    #     offset, auto-computed from the PROJ geoid grids if not supplied (no hard-coded
+    #     constant, no arbitrary plane fitted to "stable" surfaces). Residual offsets are
+    #     left for later analysis, not baked into the datum.
     from . import references
-    tie_method = "parabola" if (tie == "reference" and A is None) else tie
-    if tie_method == "reference":
-        # HORIZONTAL: one constant Nuth & Kaeaeb shift from the full topography
-        # (order-0 tie). Drainage divides / ridgelines do not move to first order, so
-        # registering the whole DEM recovers the lateral shift; and the aspect-DIPOLE
-        # it fits (dh/tan(slope) = a*cos(aspect-b)+c) is EROSION-ROBUST -- diffuse
-        # erosion has no aspect dependence, so it falls in the mean c, not the cos(aspect)
-        # shift term. So slopes give the HORIZONTAL even though they cannot give a trusted
-        # vertical. Take ONLY the horizontal part (a,b); the vertical datum comes from the
-        # stable FLAT references below. (Backup for horizontal if terrain is too flat:
-        # roof edges -- not needed on dissected terrain.)
-        hs = coreg.tie_polynomial(Zref, groundg(xc[be], yc[be], zc[be]),
-                                  res, X0, Y0, order=0)
-        xc += coreg.eval_poly_field(hs["a"], xc, yc, hs["norm"], 0)
-        yc += coreg.eval_poly_field(hs["b"], xc, yc, hs["norm"], 0)
-        _geoid = geoid_datum is not None
-        if _geoid:                        # KNOWN geoid-model difference (reusable); NO pad const
-            gc, gb, gcc = geoid_datum      # (const_m, b East, c North) m,m/km of (N_gen1 - N_gen2), ADD to gen1
-            cxg = 0.5*(bounds[0]+bounds[2]); cyg = 0.5*(bounds[1]+bounds[3])
-            zc += gc + gb*(xc-cxg)/1000.0 + gcc*(yc-cyg)/1000.0
-            print(f"  geoid-difference datum: const {1000*gc:+.1f} mm, tilt "
-                  f"({1000*gb:+.3f},{1000*gcc:+.3f}) mm/km; horiz "
-                  f"({100*hs['a'][0]:+.1f},{100*hs['b'][0]:+.1f}) cm; NO pad const", flush=True)
-            tie_info = {"method": "geoid_difference", "const_m": gc, "tilt_b_m_per_km": gb,
-                        "tilt_c_m_per_km": gcc, "centroid": [cxg, cyg],
-                        "horizontal_shift_m": [round(float(hs["a"][0]),4), round(float(hs["b"][0]),4)]}
-        refc = (references.flat_hard_cells(xc[be], yc[be], zc[be],
-                                           A["x"], A["y"], A["z"], bounds, res=2.0)
-                if not _geoid else {"x": np.zeros(0)})
-        if ref_polys is not None and refc["x"].size:   # restrict to real hard surfaces (OSM etc.)
-            from matplotlib.path import Path as _Path
-            pts = np.c_[refc["x"], refc["y"]]
-            keep = np.zeros(len(pts), bool)
-            for poly in ref_polys:
-                keep |= _Path(np.asarray(poly)).contains_points(pts)
-            refc = {k: (v[keep] if hasattr(v, "__len__") and len(v) == keep.size else v)
-                    for k, v in refc.items()}
-            print(f"  restricted datum refs to {len(ref_polys)} hard-surface polys -> "
-                  f"{int(keep.sum())} cells", flush=True)
-        if save_ref_cells is not None:                 # PERSIST the datum cells (never lose them)
-            np.savez(save_ref_cells, **{k: np.asarray(v) for k, v in refc.items()})
-        if refc["x"].size >= 30:
-            if datum_tilt:
-                pl = references.datum_plane(refc)
-            else:                                      # clustered clean refs: const only, no tilt
-                do = references.datum_offset(refc)
-                pl = {"a": do["raw"], "b": 0.0, "c": 0.0,
-                      "cx": float(np.median(refc["x"])), "cy": float(np.median(refc["y"])),
-                      "tilt_mag_m_km": 0.0, "n": do["n"], "rejected": 0,
-                      "resid_nmad_m": do["nmad"]}
-            zc += references.eval_datum_correction(pl, xc, yc)
-            print(f"  cross-epoch datum: {refc['x'].size} flat-hard refs, "
-                  f"horizontal shift ({100*hs['a'][0]:+.1f},{100*hs['b'][0]:+.1f}) cm, "
-                  f"const {1000*pl['a']:+.1f} mm, tilt {1000*pl['tilt_mag_m_km']:.1f} mm/km",
-                  flush=True)
-            tie_info = {"method": "reference_plane", "n_ref": int(refc["x"].size),
-                        "horizontal_shift_m": [round(float(hs["a"][0]), 4),
-                                               round(float(hs["b"][0]), 4)],
-                        "const_m": round(pl["a"], 5),
-                        "tilt_m_per_km": [round(pl["b"], 5), round(pl["c"], 5)],
-                        "tilt_mag_m_per_km": round(pl["tilt_mag_m_km"], 5),
-                        "centroid_xy": [round(pl["cx"], 2), round(pl["cy"], 2)],
-                        "rejected_resurfacing": pl["rejected"],
-                        "resid_nmad_m": round(pl["resid_nmad_m"], 5),
-                        "geoid_tilt_crosscheck_m_per_km": 0.004}
-        elif not _geoid:
-            tie_method = "parabola"
-    if tie_method == "parabola":
-        if not allow_parabola:
-            raise RuntimeError(
-                "PARABOLA TIE IS DEACTIVATED. The order-2 parabola warps gen1's z and "
-                "ABSORBS real hillslope change, so it must never run silently. It was "
-                "reached because the pad-based reference datum could not run: either "
-                "stream=True (after cloud not in memory, so flat_hard_cells cannot find "
-                "hard surfaces) or fewer than 30 flat-hard reference cells were found. "
-                "FIX: run non-streaming with the gen2 points in memory (e.g. extract the "
-                "gen2 class-2 ground to its own file) so the reference (const+tilt pad) "
-                "datum runs. To deliberately override for a throwaway test, pass "
-                "allow_parabola=True.")
-        tp = coreg.tie_polynomial(Zref, groundg(xc[be], yc[be], zc[be]),
-                                  res, X0, Y0, order=2)
-        xc += coreg.eval_poly_field(tp["a"], xc, yc, tp["norm"], 2)
-        yc += coreg.eval_poly_field(tp["b"], xc, yc, tp["norm"], 2)
-        zc += coreg.eval_poly_field(tp["c"], xc, yc, tp["norm"], 2)
-        tie_info = {"method": "parabola",
-                    "dx": [round(float(v), 6) for v in tp["a"]],
-                    "dy": [round(float(v), 6) for v in tp["b"]],
-                    "dz": [round(float(v), 6) for v in tp["c"]],
-                    "norm_xm_xhr_ym_yhr": [round(float(v), 3) for v in tp["norm"]]}
+    if tie != "reference":
+        raise ValueError(
+            f"tie={tie!r} is not supported. The only cross-epoch datum is the geoid "
+            "difference applied after the lateral shift; the reference_plane fit and the "
+            "parabola tie were removed (see git history if ever needed).")
+    hs = coreg.tie_polynomial(Zref, groundg(xc[be], yc[be], zc[be]),
+                              res, X0, Y0, order=0)
+    xc += coreg.eval_poly_field(hs["a"], xc, yc, hs["norm"], 0)
+    yc += coreg.eval_poly_field(hs["b"], xc, yc, hs["norm"], 0)
+    if geoid_datum is None:                          # auto-compute from the geoid grids
+        geoid_datum = references.geoid_difference(bounds, 26915)
+    gc, gb, gcc = geoid_datum        # (const_m, b East, c North) m,m/km of (N_gen1 - N_gen2), ADD to gen1
+    cxg = 0.5*(bounds[0]+bounds[2]); cyg = 0.5*(bounds[1]+bounds[3])
+    zc += gc + gb*(xc-cxg)/1000.0 + gcc*(yc-cyg)/1000.0
+    print(f"  geoid-difference datum: const {1000*gc:+.1f} mm, tilt "
+          f"({1000*gb:+.3f},{1000*gcc:+.3f}) mm/km; lateral shift "
+          f"({100*hs['a'][0]:+.1f},{100*hs['b'][0]:+.1f}) cm", flush=True)
+    tie_info = {"method": "geoid_difference", "const_m": gc, "tilt_b_m_per_km": gb,
+                "tilt_c_m_per_km": gcc, "centroid": [cxg, cyg],
+                "horizontal_shift_m": [round(float(hs["a"][0]),4), round(float(hs["b"][0]),4)]}
 
     if correction_surface:
         C = coreg.correction_surface(Zref, groundg(xc[be], yc[be], zc[be]),

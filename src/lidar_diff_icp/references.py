@@ -1,152 +1,70 @@
-"""Stable flat-reference-surface detection for co-registration datum estimation.
+"""Deterministic cross-epoch vertical datum from the geoid-model difference.
 
-Roofs fail as vertical control on rural tiles: they are small and pitched, so any
-horizontal misregistration turns roof slope into an apparent vertical offset, and the
-2008 sensor barely resolves them (validated on Elba -- see analysis). The reliable
-references are **flat, hard, stable** surfaces -- parking lots, courts, running
-tracks, cemeteries, concrete pads, and generally low-slope low-roughness ground:
+Two lidar epochs of the same ground can carry different NAVD88 realizations because
+they were reduced with different geoid models -- e.g. 2008 MN lidar on GEOID03 vs 2021
+3DEP on GEOID18. The orthometric-height datum shift to ADD to the before-epoch (gen1)
+so it matches the after-epoch (gen2) is exactly the geoid-undulation difference
+``N_before - N_after``: a smooth, nearly planar field over a tile (~sub-mm from a
+plane on the Elba pilot). :func:`geoid_difference` GATHERS that field from the PROJ
+geoid grids -- no hard-coded constants -- and returns it as ``const + tilt``, the
+``geoid_datum`` tuple the pipeline adds to gen1 after the lateral (x,y) registration.
 
-* **flat** -> no pitch, so no slope x misregistration confound; a robust median of
-  (before - after) IS the vertical datum, no plane fitting;
-* **hard** (low within-cell roughness) -> densely and accurately sensed in *both*
-  epochs, unlike small pitched roofs;
-* **stable** -> pavement/concrete/mown-lawn do not erode over the survey interval.
+This is the principled datum: get x,y right (Nuth-Kaeaeb lateral shift), then apply the
+required geodetic z offset (this). No arbitrary plane is fitted to "stable" surfaces --
+messy residuals are left for later analysis, not baked into the datum.
 
-This module PICKS THEM OUT -- geometrically (the workhorse, especially rural) plus
-optional OSM labels -- and estimates the vertical datum offset between two epochs on
-them. On the Elba pilot the geometric detector yields ~470 hard-flat cells across the
-tile and a datum of gen1 - gen2 = -55 mm (SE ~3 mm), consistent across surface
-hardness (pavement/compacted/soil) -- far more reliable than roofs. The datum tilt is
-better constrained by the independent geoid-model difference (~4 mm/km here) than by
-the references themselves (clustered, vulnerable to a resurfaced lot), so this returns
-the CONSTANT; keep any linear term to the geoid.
+:func:`osm_flat_references` is an optional standalone utility (OSM flat footprints);
+it is not part of the datum path.
 """
 from __future__ import annotations
 
 import numpy as np
 
 
-def _cell_stats(x, y, z, bounds, res):
-    """Per-cell median, robust roughness (IQR->sigma), and count on a `res` grid."""
-    import pandas as pd
+def geoid_difference(bounds, crs, *, before_geoid="us_noaa_geoid03_conus.tif",
+                     after_geoid="us_noaa_g2018u0.tif", n=7,
+                     proj_data="/usr/share/proj"):
+    """Geoid-model datum shift ``(const_m, b, c)`` to ADD to the before-epoch (gen1).
+
+    ``before_geoid`` / ``after_geoid`` are PROJ geoid grid names for the two epochs'
+    NAVD88 realizations (defaults: GEOID03 for 2008 gen1, GEOID18 for 2021 gen2). The
+    shift is ``N_before - N_after`` (geoid-undulation difference), sampled on an ``n x n``
+    grid over ``bounds`` and fit as::
+
+        shift(E,N) = a + b*(E - cx)/1000 + c*(N - cy)/1000       [m; tilt in m/km]
+
+    about the ``bounds`` centroid ``(cx, cy)`` -- the same centroid the pipeline uses --
+    so the returned ``(a, b, c)`` is a drop-in ``geoid_datum``. On the Elba pilot this is
+    ~(+0.0673, +0.00078, -0.00057), reproducing the independently derived +67 mm.
+
+    ``bounds``=(X0,Y0,X1,Y1) in ``crs`` (EPSG int or CRS). pyproj's data dir is set to
+    ``proj_data`` explicitly so this works when PROJ_DATA is unset for GDAL/rasterio --
+    pyproj and GDAL do not share a data dir, so this does not disturb rasterio.
+    """
+    import pyproj
+    pyproj.datadir.set_data_dir(proj_data)     # pyproj-only; leaves GDAL/rasterio untouched
+    from pyproj import Transformer
     X0, Y0, X1, Y1 = bounds
-    nx = int((X1 - X0) / res); ny = int((Y1 - Y0) / res)
-    ok = (x >= X0) & (x < X1) & (y >= Y0) & (y < Y1)
-    c = ((y[ok] - Y0) / res).astype(int) * nx + ((x[ok] - X0) / res).astype(int)
-    g = pd.DataFrame({"c": c, "z": z[ok]}).groupby("c")["z"]
-    q = g.quantile([0.25, 0.5, 0.75]).unstack()
-    return q[0.5], 0.7413 * (q[0.75] - q[0.25]), g.size(), nx, ny
+    cx = 0.5 * (X0 + X1); cy = 0.5 * (Y0 + Y1)
+    xs = np.linspace(X0, X1, n); ys = np.linspace(Y0, Y1, n)
+    XX, YY = (a.ravel() for a in np.meshgrid(xs, ys))
+    lon, lat = Transformer.from_crs(crs, 4326, always_xy=True).transform(XX, YY)
 
+    def undulation(grid):
+        tr = Transformer.from_pipeline(f"+proj=vgridshift +grids={grid} +multiplier=1")
+        return np.asarray(tr.transform(lon, lat, np.zeros_like(lon))[2])
 
-def flat_hard_cells(bx, by, bz, ax, ay, az, bounds, *, res=2.0, max_slope_deg=4.0,
-                    max_rough_m=0.04, min_before=4, min_after=6):
-    """Detect flat, hard, both-epochs stable reference cells and their raw offset.
-
-    ``bx,by,bz`` / ``ax,ay,az``: before/after point coordinates (any returns -- on a
-    hard flat surface every return is the surface). ``bounds``=(X0,Y0,X1,Y1) CRS units.
-    A cell is a reference if: slope < ``max_slope_deg`` (flat), after-epoch within-cell
-    roughness < ``max_rough_m`` (hard), and it has >= ``min_before``/``min_after``
-    returns (measured in both epochs). Returns a dict of arrays for the kept cells:
-    ``x, y, before_z, after_z, roughness, offset`` where ``offset = before_z - after_z``
-    (m; the raw datum, gen1 relative to gen2).
-    """
-    from scipy.ndimage import distance_transform_edt as edt
-    import pandas as pd
-    X0, Y0, X1, Y1 = bounds
-    am, ar, an, nx, ny = _cell_stats(ax, ay, az, bounds, res)
-    bm, br, bn, _, _ = _cell_stats(bx, by, bz, bounds, res)
-    Z = np.full(nx * ny, np.nan); Z[am.index.values] = am.values; Z = Z.reshape(ny, nx)
-    nanm = ~np.isfinite(Z); Zf = Z.copy()
-    if nanm.any():
-        Zf = Zf[tuple(edt(nanm, return_distances=False, return_indices=True))]
-    gy, gx = np.gradient(Zf, res)
-    slope = np.degrees(np.arctan(np.hypot(gx, gy))).ravel()
-    common = np.intersect1d(am.index.values, bm.index.values)
-    d = pd.DataFrame({"c": common, "am": am.reindex(common).values,
-                      "bm": bm.reindex(common).values, "ar": ar.reindex(common).values,
-                      "an": an.reindex(common).values, "bn": bn.reindex(common).values,
-                      "slope": slope[common]})
-    keep = d[(d.slope < max_slope_deg) & (d.ar < max_rough_m) &
-             (d.bn >= min_before) & (d.an >= min_after)]
-    return dict(x=X0 + (keep.c.values % nx + 0.5) * res,
-                y=Y0 + (keep.c.values // nx + 0.5) * res,
-                before_z=keep.bm.values, after_z=keep.am.values,
-                roughness=keep.ar.values, offset=keep.bm.values - keep.am.values)
-
-
-def datum_offset(cells, *, keep_frac=1.0):
-    """Robust vertical datum from stable flat-hard reference cells.
-
-    Returns a dict: ``dz_before`` (the shift to ADD to the before-epoch so stable
-    surfaces match the after-epoch, = -median(offset), m), ``raw`` (median before-after,
-    m), ``nmad`` (m), ``se`` (standard error of the median, m), ``n``, and
-    ``by_hardness`` (offset by roughness band -- a consistency check: a datum that does
-    not depend on surface hardness is real, not a surface artifact). ``keep_frac`` < 1
-    trims the most extreme cells (robustness to a resurfaced lot).
-    """
-    o = np.asarray(cells["offset"], float); r = np.asarray(cells["roughness"], float)
-    o = o[np.isfinite(o)]
-    if keep_frac < 1.0:
-        lo, hi = np.quantile(o, [(1 - keep_frac) / 2, 1 - (1 - keep_frac) / 2])
-        o = o[(o >= lo) & (o <= hi)]
-    med = float(np.median(o)); nmad = float(1.4826 * np.median(np.abs(o - med)))
-    by = {}
-    for a, b, lbl in [(0, .025, "pavement<2.5cm"), (.025, .04, "compacted"), (.04, .06, "soil")]:
-        s = cells["offset"][(r >= a) & (r < b)]
-        if s.size >= 8:
-            by[lbl] = (round(1000 * float(np.median(s)), 1), int(s.size))
-    return dict(dz_before=-med, raw=med, nmad=nmad, se=nmad / np.sqrt(max(len(o), 1)),
-                n=len(o), by_hardness=by)
-
-
-def datum_plane(cells, *, reject_nmad=3.0):
-    """Robust PLANAR vertical datum -- constant + linear tilt -- from flat-hard
-    reference cells, the ground-truth local basis for co-registering the two epochs.
-
-    ``offset = before - after`` is fit as ``offset(E,N) = a + b*E + c*N`` (E,N in km
-    from the reference centroid) by robust IRLS, after a ``reject_nmad``-NMAD clip that
-    drops resurfacing outliers. The constant sets the vertical datum; the tilt captures
-    any residual planar warp -- included because on the pilot it is robust (10 mm/km,
-    95% CI [4,17]) and consistent with the independent geoid-model tilt (~4 mm/km), so
-    the ground truth carries it directly rather than deferring to the geoid.
-
-    Feed the result to :func:`eval_datum_correction`. Returns: ``a`` (const, m),
-    ``b,c`` (tilt, m/km), ``cx,cy`` (centroid, CRS units), ``tilt_mag_m_km``, ``n``,
-    ``rejected``, ``resid_nmad_m``.
-    """
-    x = np.asarray(cells["x"], float); y = np.asarray(cells["y"], float)
-    o = np.asarray(cells["offset"], float)
-    fin = np.isfinite(o); x, y, o = x[fin], y[fin], o[fin]
-    cx = float(np.median(x)); cy = float(np.median(y))
-    med = np.median(o); s = 1.4826 * np.median(np.abs(o - med))
-    keep = np.abs(o - med) < reject_nmad * max(s, 1e-6)
-    E = (x[keep] - cx) / 1000.0; N = (y[keep] - cy) / 1000.0; oo = o[keep]
-    A = np.c_[np.ones(len(oo)), E, N]; w = np.ones(len(oo)); c = np.zeros(3); r = oo
-    for _ in range(8):
-        c, *_ = np.linalg.lstsq(A * w[:, None], oo * w, rcond=None)
-        r = oo - A @ c
-        sd = 1.4826 * np.median(np.abs(r - np.median(r))) + 1e-9
-        w = np.minimum(1.0, 1.345 * sd / np.maximum(np.abs(r), 1e-9))
-    return dict(a=float(c[0]), b=float(c[1]), c=float(c[2]), cx=cx, cy=cy,
-                tilt_mag_m_km=float(np.hypot(c[1], c[2])), n=int(keep.sum()),
-                rejected=int(np.sum(~keep)),
-                resid_nmad_m=float(1.4826 * np.median(np.abs(r - np.median(r)))))
-
-
-def eval_datum_correction(plane, x, y):
-    """Vertical correction (m) to ADD to the before-epoch at points ``(x, y)``: the
-    negative of the fitted offset plane, so stable reference surfaces match the after-
-    epoch. ``before_corrected = before + eval_datum_correction(plane, x, y)``."""
-    E = (np.asarray(x, float) - plane["cx"]) / 1000.0
-    N = (np.asarray(y, float) - plane["cy"]) / 1000.0
-    return -(plane["a"] + plane["b"] * E + plane["c"] * N)
+    diff = undulation(before_geoid) - undulation(after_geoid)   # N_gen1 - N_gen2 (m)
+    A = np.c_[np.ones_like(XX), (XX - cx) / 1000.0, (YY - cy) / 1000.0]
+    (a, b, c), *_ = np.linalg.lstsq(A, diff, rcond=None)
+    return float(a), float(b), float(c)
 
 
 def osm_flat_references(bbox_latlon, *, to_epsg=26915, timeout=100):
     """Optional: fetch OSM flat-reference footprints (parking, pitches, tracks,
     cemeteries) for ``bbox_latlon``=(lat0,lon0,lat1,lon1). Needs network + requests +
     pyproj. Returns a list of dicts ``{kind, name, poly (list of [x,y] in to_epsg)}``.
-    Sparse on rural tiles (use :func:`flat_hard_cells` as the workhorse); rich in towns.
+    Standalone utility, not part of the datum path.
     """
     import requests
     from pyproj import Transformer
