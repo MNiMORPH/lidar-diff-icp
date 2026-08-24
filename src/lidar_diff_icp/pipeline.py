@@ -413,6 +413,17 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
     ``geoid_datum`` : optional ``(const_m, b, c)`` geoid shift to ADD to gen1 (const +
                       E/N tilt in m/km about the bounds centroid). Auto-computed from the
                       geoid grids when None (default).
+    ``correct_boresight`` : if True, remove a scanner boresight ROLL (elevation error
+                      proportional to scan angle, a sensor constant) from gen1 per point,
+                      ``z -= b*scan_angle``, BEFORE the empirical alignment -- an
+                      instrumental term applied first. Default False (opt-in): it removes
+                      the cross-track scan-angle asymmetry but its tile-wide DoD footprint
+                      is small (self-cancels in overlap medians / absorbed by per-swath
+                      alignment). See :mod:`lidar_diff_icp.boresight`.
+    ``boresight_roll_mm_per_deg`` : the roll to apply (mm/deg). If None (and
+                      ``correct_boresight``), it is self-calibrated from gen1 flight-line
+                      overlap via :func:`coreg.estimate_boresight_roll`; pass a value to
+                      reuse a lift-wide sensor constant. Recorded in ``corrections.json``.
     ``ground``      : ground GRIDDING estimator. "slope_normal" (default) = the
                       ``ground_q`` quantile of the residual to a common smoothed
                       regional surface (both epochs), which removes the downhill bias

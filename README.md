@@ -65,16 +65,33 @@ point.
    validated to preserve a known change). `ground="low_q"` is the older horizontal
    pick. Coherent bias, not incoherent noise, fools change detection.
 3. **Correct the 2008 points in the acquisition frame, per point, *before*
-   gridding** (not post-hoc on the difference):
-   1. per-swath internal alignment (translation, lowest swath pinned);
-   2. lateral **Nuth–Kääb (x,y) registration** to 3DEP — get the horizontal right
+   gridding** (not post-hoc on the difference) — one **instrumental** term first,
+   then the **empirical** ones:
+   1. **scanner boresight roll — instrumental, so applied first (opt-in, off by
+      default).** A residual scanner-to-IMU mounting-angle error puts an elevation
+      bias *proportional to scan angle* into every flight line identically (a sensor
+      constant), unlike the per-swath offsets below. With no raw trajectory from the
+      vendor, it is self-calibrated from 2008 flight-line **overlap** — where the
+      between-line offset difference cancels terrain, so its slope against the
+      between-line scan-angle difference *is* the roll — then removed per point as
+      `z −= b·scan_angle`. On the pilot `b = +2.19 mm/deg` (±0.7 between flight-line
+      pairs). Referencing 2008 against *itself* decouples it from the 3DEP lateral
+      tie below, so the chain needs no iteration. It removes the cross-track
+      scan-angle asymmetry cleanly (the within-cell tilt drops +2.2 → −0.1 mm/deg),
+      but its tile-wide DoD footprint is small — much of it self-cancels in the
+      per-cell median where swaths overlap, and the per-line-mean part is already
+      absorbed by the alignment below — so it is a correctness/consistency fix (a
+      tilt attributed to a tilt, reusable across a lift), *not* a scatter reduction.
+      Enable with `correct_boresight=True`;
+   2. per-swath internal alignment (translation, lowest swath pinned);
+   3. lateral **Nuth–Kääb (x,y) registration** to 3DEP — get the horizontal right
       before touching z — then the **deterministic geoid-model vertical offset**
       (`N_gen1 − N_gen2`, GEOID03 → GEOID18), auto-computed per tile from the PROJ
       geoid grids as a constant plus the model's small tilt. Nothing is *fitted* —
       no pad constant, no plane on "stable" surfaces — so the datum cannot absorb
       real hillslope change (the removed reference-plane and order-2 parabola ties
       could; git history keeps them);
-   3. **per-swath along-track GNSS-drift spline `f(gps_time)`** — the deterministic,
+   4. **per-swath along-track GNSS-drift spline `f(gps_time)`** — the deterministic,
       physical form of the residual error, and the reusable core: the same failure
       mode statewide, only the coefficients differ per tile.
 
@@ -194,8 +211,10 @@ Reference point 44.101944, −92.004137 (E 579705.72, N 4883677.71, EPSG:26915).
 
 - `src/lidar_diff_icp/` — the package: `pipeline` (the end-to-end
   `difference_dem`), `coreg` (per-swath alignment, Nuth & Kääb registration, DeLong
-  correction surface, along-track drift), `references` (deterministic geoid-model
-  datum), `io`, `tiles`
+  correction surface, along-track drift, `estimate_boresight_roll`), `boresight`
+  (scanner-roll self-calibration from flight-line overlap — `estimate_boresight`,
+  `apply_boresight`, and the boresight/lateral coupling self-check),
+  `references` (deterministic geoid-model datum), `io`, `tiles`
   (county-parametrized gen1 tile discovery + coordinate→county), `threedep`
   (gen2 3DEP project lookup + coverage check), `swathdiff`, `variogram`.
 - **Change detection.** `detect.detect_change_standard` is the recommended
