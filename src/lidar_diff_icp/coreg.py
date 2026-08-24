@@ -492,6 +492,30 @@ def apply_alignment(pc, corrections):
     return x, y, z
 
 
+def estimate_boresight_roll(pc, res: float = 5.0, exclude=(5, 6, 9)):
+    """Common scanner boresight roll from gen1 flight-line SELF-overlap -- an instrumental
+    term, calibrated empirically because the vendor supplied no raw trajectory.
+
+    gen2-free: in a shared grid cell the between-line difference of the per-line mean
+    elevation cancels the terrain, so its regression on the between-line scan-angle
+    difference isolates the roll (elevation error proportional to scan angle, the same on
+    every line). Because this references gen1 against ITSELF, it is decoupled from the
+    gen1-vs-gen2 lateral tie (which references the other epoch) -- so the two corrections
+    need no iteration. ``pc.scan_angle`` must be in DEGREES; returns a
+    :class:`~lidar_diff_icp.boresight.BoresightSolution` with ``b`` in mm per degree.
+    """
+    from .boresight import estimate_boresight
+    g = pc.classification == 2                       # CSF / ASPRS bare-earth ground
+    if not g.any():
+        g = ~np.isin(pc.classification, exclude)     # fallback: terrain proxy
+    x = pc.x[g]; y = pc.y[g]
+    x0 = float(x.min()); y0 = float(y.min())
+    nx = int((x.max() - x0) / res) + 1
+    cell = (((y - y0) / res).astype(np.int64)) * nx + ((x - x0) / res).astype(np.int64)
+    return estimate_boresight(cell, pc.point_source_id[g],
+                              np.asarray(pc.scan_angle, float)[g], pc.z[g] * 1000.0)
+
+
 def coregister_swaths(pc, swath_ref: int, swath_src: int, res: float = 2.0,
                       exclude=(5, 6, 9)) -> Coreg:
     """Nuth & Kaeaeb co-registration of ``swath_src`` onto ``swath_ref`` over
