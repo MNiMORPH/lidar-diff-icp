@@ -50,6 +50,53 @@ def _write_laz(path, x, y, z, psid, gps):
     las.write(str(path))
 
 
+def _write_laz14(path, x, y, z, psid, gps, scan_deg):
+    """LAS 1.4 / point format 6 writer that carries a per-point scan angle (0.006 deg units,
+    what the pipeline reads for the boresight term)."""
+    hdr = laspy.LasHeader(point_format=6, version="1.4")
+    hdr.offsets = [x.min(), y.min(), z.min()]; hdr.scales = [0.01, 0.01, 0.01]
+    las = laspy.LasData(hdr)
+    las.x, las.y, las.z = x, y, z
+    las.return_number = np.ones(len(x), np.uint8); las.number_of_returns = np.ones(len(x), np.uint8)
+    las.point_source_id = psid.astype(np.uint16); las.gps_time = gps.astype(np.float64)
+    las.classification = np.zeros(len(x), np.uint8)
+    las.scan_angle = np.round(scan_deg / 0.006).astype(np.int16)
+    las.write(str(path))
+
+
+def test_boresight_correction_recovers_injected_roll(tmp_path):
+    """End-to-end: inject a known scanner roll into two overlapping gen1 swaths, then check
+    difference_dem(correct_boresight=True) recovers it, records None when off, and keeps the
+    real bump. Bites: without the wiring the recorded roll is None and the roll tilt survives."""
+    rng = np.random.default_rng(1)
+    ROLL = 3.0                                             # mm/deg injected
+    n = int(3.0 * 120 * W)
+    x1 = rng.uniform(X0, X0 + 120, n); y1 = rng.uniform(Y0, Y0 + W, n)
+    x2 = rng.uniform(X0 + 80, X0 + W, n); y2 = rng.uniform(Y0, Y0 + W, n)
+    xb = np.concatenate([x1, x2]); yb = np.concatenate([y1, y2])
+    ps = np.concatenate([np.ones(n), np.full(n, 2)])
+    sc = np.concatenate([(x1 - (X0 + 60)) * 0.3, (x2 - (X0 + 140)) * 0.3])   # opposite, x-varying
+    zb = _ground(xb, yb) + ROLL * sc / 1000.0 + rng.normal(0, 0.02, len(xb))  # inject roll tilt
+    _write_laz14(tmp_path / "before.laz", xb, yb, zb, ps, yb, sc)
+    na = int(4.0 * W * W)
+    xa = rng.uniform(X0, X0 + W, na); ya = rng.uniform(Y0, Y0 + W, na)
+    za = _ground(xa, ya) + _bump(xa, ya) + rng.normal(0, 0.02, na)
+    _write_laz14(tmp_path / "after.laz", xa, ya, za, np.ones(na), ya, np.zeros(na))
+    before = str(tmp_path / "before.laz"); after = str(tmp_path / "after.laz")
+    kw = dict(res=5.0, ground_q=0.10, ground="low_q", ground_source="last_return",
+              after_ground="last_return", geoid_datum=(0.0, 0.0, 0.0))
+    r_off = difference_dem(before, after, BOUNDS, correct_boresight=False, **kw)
+    r_on = difference_dem(before, after, BOUNDS, correct_boresight=True, **kw)
+    assert r_off["corrections"]["boresight_roll_mm_per_deg"] is None
+    b = r_on["corrections"]["boresight_roll_mm_per_deg"]
+    assert b is not None and 2.0 < b < 4.0, f"injected 3.0 mm/deg, recovered {b}"
+    # applying it flattens the roll-induced cross-swath disagreement (bites on the apply step)
+    assert r_on["stable_sigma"] < 0.7 * r_off["stable_sigma"], \
+        f"correction did not flatten the roll: {r_off['stable_sigma']:.4f} -> {r_on['stable_sigma']:.4f}"
+    ci = int((BUMP_XY[0] - X0) / 5.0); ri = int((BUMP_XY[1] - Y0) / 5.0)
+    assert r_on["dod"][ri, ci] > 0.7, "boresight correction ate the real bump"
+
+
 def _make_tiles(tmp_path):
     rng = np.random.default_rng(0)
     # before: two swaths overlapping in x in [X0+80, X0+120], ~3 pts/m^2 (dense
