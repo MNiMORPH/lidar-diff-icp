@@ -20,8 +20,11 @@ Lessons baked in
   cancel -- it reappears as COHERENT slope-correlated false change, ~+8-20 mm,
   physically-impossible ridgetop "deposition". The median removes it.)
 * **Correct in the ACQUISITION frame, per point, BEFORE gridding:** per-swath
-  internal alignment (translation) -> spatially varying quadratic tie -> per-swath
-  along-track GNSS-drift spline ``f(gps_time)``. The residual warp and real
+  internal alignment (translation) -> one constant Nuth & Kaeaeb lateral shift
+  (order-0 tie) + a geoid-model vertical datum -> per-swath along-track GNSS-drift
+  spline ``f(gps_time)``. (The earlier spatially-varying quadratic/parabola tie
+  and the reference-plane fit were REMOVED -- geoid-only datum now; see git
+  history.) The residual warp and real
   localized change share the same ~100-400 m scale, so no data-driven interpolator
   on the elevation residual can separate them; only the acquisition geometry can.
   The drift uses it (per-swath, time-ordered), is deterministic and reusable, and
@@ -674,6 +677,9 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
             f"tie={tie!r} is not supported. The only cross-epoch datum is the geoid "
             "difference applied after the lateral shift; the reference_plane fit and the "
             "parabola tie were removed (see git history if ever needed).")
+    # ORDER 0 = a single CONSTANT (dx, dy) lateral shift (Nuth & Kaeaeb order-0 tie), NOT the
+    # removed order-2 parabola. tie_polynomial is a general polynomial fit; only order 0 is used
+    # here, and only its horizontal shift (hs["a"][0], hs["b"][0]) is applied to xc, yc.
     hs = coreg.tie_polynomial(Zref, groundg(xc[be], yc[be], zc[be]),
                               res, X0, Y0, order=0)
     xc += coreg.eval_poly_field(hs["a"], xc, yc, hs["norm"], 0)

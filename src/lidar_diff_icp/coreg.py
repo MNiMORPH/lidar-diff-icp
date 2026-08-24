@@ -244,6 +244,12 @@ def tie_polynomial(z_ref, z_src, res, x_origin, y_origin, order=2,
     too low-order to absorb finer geomorphic change. Returns the coefficient
     vectors (a=dx, b=dy, c=dz), the correction fields on the grid, the
     normalization for re-evaluating the fields at points, and residuals.
+
+    NOTE on ``order``: this is a GENERAL polynomial fit. The production pipeline
+    (``pipeline.difference_dem``) calls it ONLY at ``order=0`` -- a single constant
+    (dx, dy, dz) tie, i.e. the Nuth & Kaeaeb lateral shift of the geoid-only datum.
+    ``order=2`` is the spatially-varying "parabola" tie, which was REMOVED from the
+    pipeline and survives only in offline analysis scripts (decimation / M3C2 tests).
     """
     ny, nx = z_ref.shape
     gy_i, gx_i = np.mgrid[0:ny, 0:nx]
