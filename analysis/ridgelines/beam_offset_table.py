@@ -42,6 +42,12 @@ cc = np.load(f"{TILE}/canopy_cover_pfs.npy")
 assert cc.shape == (NY, NX), f"canopy raster {cc.shape} != {(NY, NX)}"
 canopy_cover = cc.ravel()[cell].astype(np.float32)
 
+# --- local surface curvature (Laplacian of gen2 elevation) at each return's cell ---
+# per-cell covariate: ~0 on planar ridgetops/hillslopes, signed on convex/concave forms.
+lap = np.load(f"{TILE}/curv_laplacian.npy")
+assert lap.shape == (NY, NX), f"curvature raster {lap.shape} != {(NY, NX)}"
+curv_laplacian = lap.ravel()[cell].astype(np.float32)
+
 # --- per-return fields the npz did not carry: read the SAME cached LAS, in order ---
 las = laspy.read(LAS)
 assert len(las.x) == n, f"LAS {len(las.x):,} != npz {n:,} -- alignment broken"
@@ -55,6 +61,8 @@ cols = {
     "d_mm":         ang["d_mm"],                # mm, slope-normal offset of return vs gen2 surface
     # forest cover
     "canopy_cover": canopy_cover,               # PyForestScan cover fraction at the cell
+    # local surface form
+    "curv_laplacian": curv_laplacian,           # Laplacian of gen2 elevation at the cell (curvature)
     "core_forest":  ang["core_forest"],         # bool, forest-core stratum
     "core_open":    ang["core_open"],           # bool, open/farmland-core stratum
     "stratum":      ang["stratum"],             # 1 forest / 2 open / 0 other
@@ -100,7 +108,8 @@ ing = cols["in_grid"].astype(bool)
 print(f"summary over {ing.sum():,} in-grid returns:")
 print(f"  {'column':22s} {'min':>12s} {'median':>12s} {'max':>12s}  {'note'}")
 notes = {"scan_angle": "deg", "slope": "deg", "incidence": "deg", "d_mm": "mm offset vs gen2",
-         "canopy_cover": "fraction", "intensity": "raw DN", "gps_time": "s", "z": "m elev"}
+         "canopy_cover": "fraction", "curv_laplacian": "elev Laplacian (curvature)",
+         "intensity": "raw DN", "gps_time": "s", "z": "m elev"}
 for k, v in cols.items():
     a = np.asarray(v)[ing]
     if a.dtype == bool:
