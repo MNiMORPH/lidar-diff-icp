@@ -18,7 +18,7 @@ fixed slope band on near-planar cells -- an orientation-based offset independent
 """
 import sys, math, json, numpy as np, pandas as pd, laspy
 import matplotlib; matplotlib.use("Agg"); import matplotlib.pyplot as plt
-from lidar_diff_icp.boresight import (estimate_boresight, lateral_sensitivity,
+from lidar_diff_icp.boresight import (estimate_boresight, apply_boresight, lateral_sensitivity,
                                       _cellline_means, _pair_rows)
 
 TILE = sys.argv[1] if len(sys.argv) > 1 else "data/derived/elba_fulldensity"
@@ -82,25 +82,35 @@ print(f"  SELF-CHECK (apply per-swath lateral shift, re-estimate): b {b0:+.2f} -
 
 b_pool, ic_pool = np.polyfit(m.dsc, m.dd, 1)    # for the figure fit line (== sol.b)
 
-# ---- B. terrain-ASPECT offset (near-planar cells, fixed slope band) ----
+# ---- B. terrain-ASPECT offset, BEFORE vs AFTER boresight removal (Andy's ordering) ----
+# If the aspect signal is largely boresight aliased through scan-angle sampling, removing the
+# roll should shrink its amplitude; what survives is a real terrain-orientation offset.
+df["d_corr"] = df.d_mm.to_numpy() - apply_boresight(df.scan_angle.to_numpy(), sol.b)
 stab = df[df.curv_laplacian.abs() <= CURV_MAX]
 pc = (stab.groupby("cell")
-          .agg(d=("d_mm", "mean"), asp=("aspect_deg", "first"), slp=("slope", "first")).dropna())
+          .agg(d=("d_mm", "mean"), d_corr=("d_corr", "mean"),
+               asp=("aspect_deg", "first"), slp=("slope", "first")).dropna())
 band = pc[(pc.slp >= 8) & (pc.slp <= 15)]
 print(f"\nB. OFFSET vs terrain ASPECT (near-planar |curv|<={CURV_MAX}, slope 8-15 deg, {len(band):,} cells):")
 edges = np.arange(0, 361, 30)
-print(f"  {'aspect(deg)':>12s} {'median_d(mm)':>12s} {'n':>8s}")
-a = band.asp.to_numpy(); dd = band.d.to_numpy()
+a = band.asp.to_numpy()
+
+def _cosfit(y):     # d = c0 + A cos(aspect - phi); returns amplitude, peak aspect, mean
+    ar = np.radians(a); M = np.c_[np.ones_like(ar), np.cos(ar), np.sin(ar)]
+    c0, ca, cb = np.linalg.lstsq(M, y, rcond=None)[0]
+    return math.hypot(ca, cb), math.degrees(math.atan2(cb, ca)) % 360, c0
+
+print(f"  {'aspect(deg)':>12s} {'raw_d(mm)':>10s} {'bore-corr(mm)':>14s} {'n':>8s}")
+draw = band.d.to_numpy(); dcor = band.d_corr.to_numpy()
 for i in range(len(edges) - 1):
     bb = (a >= edges[i]) & (a < edges[i + 1])
     if bb.sum() < 30: continue
-    print(f"  {(edges[i]+edges[i+1])/2:12.0f} {np.median(dd[bb]):+12.1f} {bb.sum():8,d}")
-# directional (cosine) fit: d = c0 + A cos(aspect - phi)
-ar = np.radians(a); M = np.c_[np.ones_like(ar), np.cos(ar), np.sin(ar)]
-c0, ca, cb = np.linalg.lstsq(M, dd, rcond=None)[0]
-amp = math.hypot(ca, cb); phi = math.degrees(math.atan2(cb, ca)) % 360
-print(f"  cosine fit: amplitude {amp:.1f} mm, peak at aspect {phi:.0f} deg, mean {c0:+.1f} mm "
-      f"(amplitude = orientation-based offset)")
+    print(f"  {(edges[i]+edges[i+1])/2:12.0f} {np.median(draw[bb]):+10.1f} {np.median(dcor[bb]):+14.1f} {bb.sum():8,d}")
+amp0, phi0, c00 = _cosfit(draw); amp1, phi1, c01 = _cosfit(dcor)
+print(f"  cosine amplitude (orientation offset):  RAW {amp0:.1f} mm @ {phi0:.0f} deg  ->  "
+      f"BORESIGHT-CORRECTED {amp1:.1f} mm @ {phi1:.0f} deg")
+print(f"  => boresight explains {100*(1-amp1/amp0):.0f}% of the aspect signal; "
+      f"{amp1:.1f} mm terrain-orientation residual remains")
 
 # ---- figure ----
 fig, ax = plt.subplots(1, 2, figsize=(14, 6))
