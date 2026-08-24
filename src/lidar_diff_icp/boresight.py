@@ -41,7 +41,9 @@ class BoresightSolution:
     """Result of :func:`estimate_boresight`."""
 
     b: float                       # common boresight roll (d-units per degree of scan angle)
-    b_se: float                    # bootstrap standard error of b (over overlap cells)
+    b_se: float                    # bootstrap SE of the pooled b (cell sampling only -- OPTIMISTIC)
+    b_pair_std: float              # std of the per-pair roll estimates -- the HONEST uncertainty,
+                                   # catching between-pair systematics the pooled SE misses
     registration: dict             # flight-line id -> vertical offset (d-units), mean-zero gauge
     pairs: list                    # per-pair dicts: a, b, n_cells, slope, intercept, median_dd
     n_overlap_cells: int
@@ -123,8 +125,15 @@ def estimate_boresight(cell, point_source_id, scan_angle, d, *,
         boot[k] = np.polyfit(dsc[ridx], dd[ridx], 1)[0]
     b_se = float(np.std(boot))
 
-    return BoresightSolution(b=float(b_pool), b_se=b_se, registration=registration,
-                             pairs=pairs, n_overlap_cells=int(uniq.size), units=units)
+    # honest uncertainty: how much the roll estimate varies BETWEEN flight-line pairs. The
+    # pooled SE only sees within-sample scatter; systematic per-pair differences (terrain
+    # sampling, model incompleteness) are usually the larger, real uncertainty.
+    pair_slopes = [p["slope"] for p in pairs if p["n_cells"] >= min_pair_cells]
+    b_pair_std = float(np.std(pair_slopes)) if len(pair_slopes) > 1 else float("nan")
+
+    return BoresightSolution(b=float(b_pool), b_se=b_se, b_pair_std=b_pair_std,
+                             registration=registration, pairs=pairs,
+                             n_overlap_cells=int(uniq.size), units=units)
 
 
 def apply_boresight(scan_angle, b):
