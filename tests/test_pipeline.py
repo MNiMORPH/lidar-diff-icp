@@ -74,9 +74,11 @@ def test_difference_dem_recovers_bump_and_zero_on_stable(tmp_path):
     # test the deterministic core without the PDAL/CSF dependency (the synthetic
     # clouds are last-return with no ASPRS classification, so opt into the
     # last-return heuristic for both epochs rather than 3DEP's class 2)
+    # synthetic clouds sit at fake coordinates with no geoid-grid coverage, so pass an
+    # explicit zero geoid datum rather than let the datum step compute (nan) from PROJ.
     r = difference_dem(before, after, BOUNDS, res=5.0, ground_q=0.10,
                        ground="low_q", ground_source="last_return",
-                       after_ground="last_return")
+                       after_ground="last_return", geoid_datum=(0.0, 0.0, 0.0))
     dod = r["dod"]; res = r["res"]
     ci = int((BUMP_XY[0] - X0) / res); ri = int((BUMP_XY[1] - Y0) / res)
     # the 1 m bump is recovered (above dz_thresh, so kept as real change)
