@@ -74,6 +74,22 @@ cols = {
 }
 
 df = pd.DataFrame(cols)
+
+# --- per-cell aggregates (each 5 m cell = one bin; all returns in a cell see the same ground) ---
+# cell_mean is the TOTAL offset (real change + mean beam-geometry + datum, inseparable here);
+# cell_std is the within-cell scatter (reliability / precision floor); d_resid = the per-beam
+# within-cell residual that isolates beam geometry with all per-cell effects differenced out.
+ingm = df["in_grid"].to_numpy().astype(bool)
+sub = df.loc[ingm]
+gd = sub.groupby("cell")["d_mm"]
+for name, col in (("cell_n", gd.transform("size")),
+                  ("cell_mean_d_mm", gd.transform("mean")),
+                  ("cell_std_d_mm", gd.transform("std")),      # NaN where cell n == 1
+                  ("cell_inc_std", sub.groupby("cell")["incidence"].transform("std"))):
+    df[name] = np.float32("nan")
+    df.loc[ingm, name] = col.to_numpy(np.float32)
+df["d_resid_mm"] = (df["d_mm"] - df["cell_mean_d_mm"]).astype(np.float32)  # within-cell residual
+
 df.to_parquet(f"{TILE}/beam_offset_table.parquet", index=False, compression="zstd")
 df.head(50).to_csv(f"{TILE}/beam_offset_table.head.csv", index=False)   # eyeball preview only
 print(f"wrote {TILE}/beam_offset_table.parquet  ({df.shape[1]} cols, {len(df):,} rows)")
