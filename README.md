@@ -67,9 +67,13 @@ point.
 3. **Correct the 2008 points in the acquisition frame, per point, *before*
    gridding** (not post-hoc on the difference):
    1. per-swath internal alignment (translation, lowest swath pinned);
-   2. spatially varying **quadratic tie** to 3DEP on stable ground — removes the
-      smooth cross-epoch warp a rigid tie would leave (with a divergence guard: on
-      gentle/well-aligned terrain it falls back to a rigid vertical offset);
+   2. lateral **Nuth–Kääb (x,y) registration** to 3DEP — get the horizontal right
+      before touching z — then the **deterministic geoid-model vertical offset**
+      (`N_gen1 − N_gen2`, GEOID03 → GEOID18), auto-computed per tile from the PROJ
+      geoid grids as a constant plus the model's small tilt. Nothing is *fitted* —
+      no pad constant, no plane on "stable" surfaces — so the datum cannot absorb
+      real hillslope change (the removed reference-plane and order-2 parabola ties
+      could; git history keeps them);
    3. **per-swath along-track GNSS-drift spline `f(gps_time)`** — the deterministic,
       physical form of the residual error, and the reusable core: the same failure
       mode statewide, only the coefficients differ per tile.
@@ -80,9 +84,9 @@ point.
    correction surface (data-driven IDW, TPI floodplain buffer) is available for
    legacy data lacking `gps_time`, but it absorbs localized flat change up to its
    threshold and adds only ~4 mm here, so it is **off by default**.
-4. **Difference:** gridded low-percentile ground, DoD = 3DEP − 2008 (positive =
+4. **Difference:** gridded median ground, DoD = 3DEP − 2008 (positive =
    deposition). Cell size (default 5 m) is set by the sparse 2008 density
-   (~0.8 pts/m² → ~20 points per 5 m cell for a stable percentile).
+   (~0.8 pts/m² → ~20 points per 5 m cell for a stable median).
 
 Convention, held everywhere: **DoD is `after − before`; red = erosion, blue =
 deposition; standard NW (315°/45°) hillshade.**
@@ -134,7 +138,7 @@ Or from Python:
 
 ```python
 from lidar_diff_icp.pipeline import difference_dem
-r = difference_dem("before.laz", "3dep_last.laz", bounds, res=5.0, ground_q=0.10)
+r = difference_dem("before.laz", "3dep_last.laz", bounds, res=5.0)  # ground_q defaults to 0.50 (median)
 # r["dod"], r["lod"], r["corrections"], r["stable_sigma"]
 ```
 
@@ -150,6 +154,21 @@ Both data sources resolve from a coordinate: `tiles.county_for_lonlat` picks the
 MnGeo county directory (verified against the live listing), and
 `threedep.resolve_reference` picks the covering gen2 3DEP project (most recent,
 non-mosaic) and refuses to proceed unless its boundary fully covers the tile bbox.
+
+## Forest structure and large clouds
+
+- **Forest metrics** (`analysis/forest_metrics_pfs.py`) — per-cell canopy cover and
+  PAI from the gen2 cloud via **PyForestScan** (plant-area density), a geometry-robust
+  land-cover signal that replaces the scan-angle-confounded ground-return "penetration"
+  proxy. Runs in the conda `lidar-icp` env, tiles small (400 m) to stay memory-bounded,
+  and uses our own `z_after` as the height-above-ground DTM.
+- **Large clouds → COPC.** `pdal translate` builds a COPC by holding every point in
+  RAM and OOMs on big tiles; **untwine** (conda-forge, isolated env) builds it out-of-core
+  (~0.4 GB RAM, external-sorted to disk). The COPC spatial index turns per-tile crops into
+  fast indexed seeks — the enabler for forest metrics at statewide scale.
+- **Ridgeline tracer** (`analysis/ridgelines/trace_ridgelines.py`) — ridgelines as the
+  Scherler & Schwanghart (2020) divide network (via `rivernetworkx.dreich`), generalized
+  to run on any tile (grid read from the tile's corrections JSON).
 
 ## Data
 
@@ -171,8 +190,9 @@ Reference point 44.101944, −92.004137 (E 579705.72, N 4883677.71, EPSG:26915).
 ## Repository layout
 
 - `src/lidar_diff_icp/` — the package: `pipeline` (the end-to-end
-  `difference_dem`), `coreg` (per-swath alignment, quadratic tie, DeLong
-  correction surface, along-track drift, Nuth & Kääb), `io`, `tiles`
+  `difference_dem`), `coreg` (per-swath alignment, Nuth & Kääb registration, DeLong
+  correction surface, along-track drift), `references` (deterministic geoid-model
+  datum), `io`, `tiles`
   (county-parametrized gen1 tile discovery + coordinate→county), `threedep`
   (gen2 3DEP project lookup + coverage check), `swathdiff`, `variogram`.
 - **Change detection.** `detect.detect_change_standard` is the recommended
