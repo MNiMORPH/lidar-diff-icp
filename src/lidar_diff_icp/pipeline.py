@@ -382,7 +382,8 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
                    ground="slope_normal", sn_smooth_cells=1.2, stream=False,
                    ground_source="csf", after_ground="class2", csf_pdal=None,
                    csf_cache=None, robust_stable=True, before_crs=io.MN_GEN1_CRS,
-                   geoid_datum=None):
+                   geoid_datum=None, correct_boresight=False,
+                   boresight_roll_mm_per_deg=None):
     """Corrected bare-earth DEM of Difference (after - before).
 
     ``before_laz``  : first-generation (gen1) MN lidar tile (retains point_source_id + gps_time).
@@ -641,8 +642,17 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
     if _csf_tmp is not None:
         import shutil, os
         shutil.rmtree(os.path.dirname(_csf_tmp), ignore_errors=True)
-    pc = io.PointCloud(x8, y8, z8, ps8, np.asarray(f.classification),
+    pc = io.PointCloud(x8, y8, z8, ps8, cl8,
                        np.zeros_like(z8), sa8, before_crs)
+    # INSTRUMENTAL boresight roll (opt-in), removed per point BEFORE the empirical swath
+    # alignment. Calibrated from gen1 self-overlap (gen2-free), so it is decoupled from the
+    # gen1-vs-gen2 lateral tie and needs no iteration.
+    boresight_used = None
+    if correct_boresight:
+        boresight_used = (boresight_roll_mm_per_deg if boresight_roll_mm_per_deg is not None
+                          else coreg.estimate_boresight_roll(pc, res).b)
+        z8 = z8 - boresight_used * sa8 / 1000.0      # mm/deg * deg -> mm -> m
+        pc = io.PointCloud(x8, y8, z8, ps8, cl8, np.zeros_like(z8), sa8, before_crs)
     corr, _, _ = coreg.align_swaths(pc, ref=int(ps8.min()))
     xc, yc, zc = x8.copy(), y8.copy(), z8.copy()
     for s, (dx, dy, dz) in corr.items():
@@ -759,6 +769,8 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
         "robust_stable": robust_stable,
         "stable_clip_fraction": round(float(stable_clip_frac), 4),
         "lod_method": lod_method,
+        "boresight_roll_mm_per_deg": (round(float(boresight_used), 3)
+                                      if boresight_used is not None else None),
         "per_swath_internal_alignment_dxdydz_m":
             {str(k): [round(float(v), 4) for v in val] for k, val in corr.items()},
         "cross_epoch_datum": tie_info,
