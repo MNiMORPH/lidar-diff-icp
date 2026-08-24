@@ -629,6 +629,10 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
     ps8 = np.asarray(f.point_source_id); gt8 = np.asarray(f.gps_time)
     rn8 = np.asarray(f.return_number); nr8 = np.asarray(f.number_of_returns)
     cl8 = np.asarray(f.classification)
+    try:                                             # LAS 1.4 scan angle is stored in 0.006 deg
+        sa8 = np.asarray(f.scan_angle).astype(float) * 0.006
+    except Exception:                                # older formats / missing -> no boresight term
+        sa8 = np.zeros_like(z8)
     # before-epoch ground POINT selection. "csf"/"last_return" -> last returns of the
     # (CSF-classified or raw) cloud; "class2" -> the before survey's OWN ASPRS ground
     # class (a test path: gen1's 2008 vendor classification, which the CSF default was
@@ -638,7 +642,7 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
         import shutil, os
         shutil.rmtree(os.path.dirname(_csf_tmp), ignore_errors=True)
     pc = io.PointCloud(x8, y8, z8, ps8, np.asarray(f.classification),
-                       np.zeros_like(z8), np.zeros_like(ps8), before_crs)
+                       np.zeros_like(z8), sa8, before_crs)
     corr, _, _ = coreg.align_swaths(pc, ref=int(ps8.min()))
     xc, yc, zc = x8.copy(), y8.copy(), z8.copy()
     for s, (dx, dy, dz) in corr.items():
