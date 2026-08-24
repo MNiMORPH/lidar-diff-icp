@@ -15,7 +15,11 @@ Reads the canonical per-beam table (beam_offset_table.parquet). Reports, in this
                  (scatter should grow with incidence spread if incidence drives the offset).
 
     env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python \
-        analysis/ridgelines/offset_vs_incidence.py [tile_dir]
+        analysis/ridgelines/offset_vs_incidence.py [tile_dir] [curv_max]
+
+Optional curv_max restricts to near-planar cells (|curv_laplacian| <= curv_max) to
+suppress hillslope-diffusion / convex-concave real change; the figure form is identical,
+only the point subset changes (output filename and title carry the threshold).
 
 No fitting is imposed beyond robust bin statistics and simple correlations.
 """
@@ -24,13 +28,20 @@ import matplotlib; matplotlib.use("Agg"); import matplotlib.pyplot as plt
 from scipy.stats import spearmanr
 
 TILE = sys.argv[1] if len(sys.argv) > 1 else "data/derived/elba_fulldensity"
+CURV_MAX = float(sys.argv[2]) if len(sys.argv) > 2 else None
 INC_EDGES = np.arange(0, 48, 3)          # incidence bins: 3 deg, 0-45 (held fixed for this axis)
 MIN_N = 300                              # drop bins below this (matches prior slope analysis)
 
 df = pd.read_parquet(f"{TILE}/beam_offset_table.parquet")
 df = df[df.in_grid.values].copy()
+lab, suffix = "all curvatures", ""
+if CURV_MAX is not None:
+    keep = (df.curv_laplacian.abs() <= CURV_MAX).to_numpy()
+    frac = 100 * keep.mean(); df = df[keep].copy()
+    lab = f"|Laplacian| <= {CURV_MAX:g}  ({len(df):,} returns, {frac:.0f}% kept)"
+    suffix = f"_curv{CURV_MAX:g}"
 inc = df.incidence.to_numpy(float); d = df.d_mm.to_numpy(float)
-print(f"{len(df):,} in-grid returns\n")
+print(f"{len(df):,} returns  [{lab}]\n")
 
 def nmad(x): return 1.4826 * np.median(np.abs(x - np.median(x)))
 
@@ -108,6 +119,6 @@ if len(cf): ax[1].plot(cf, mf, "C1^-", label="forest (cc>0.50)")
 ax[1].axhline(0, color="k", lw=.6); ax[1].set_xlim(0, 45)
 ax[1].set_xlabel("incidence angle to surface (deg)"); ax[1].set_ylabel("median offset d (mm)")
 ax[1].set_title("median offset vs incidence, by canopy cover"); ax[1].legend(); ax[1].grid(alpha=.3)
-fig.suptitle("gen1 per-beam offset vs beam incidence angle (elba)", y=1.0)
-fig.savefig("figures/refdatum/offset_vs_incidence.png", dpi=130, bbox_inches="tight"); plt.close(fig)
-print("wrote figures/refdatum/offset_vs_incidence.png")
+fig.suptitle(f"gen1 per-beam offset vs beam incidence angle (elba) — {lab}", y=1.0)
+fig.savefig(f"figures/refdatum/offset_vs_incidence{suffix}.png", dpi=130, bbox_inches="tight"); plt.close(fig)
+print(f"wrote figures/refdatum/offset_vs_incidence{suffix}.png")
