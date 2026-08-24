@@ -30,6 +30,7 @@ import sys, numpy as np, pandas as pd, laspy
 TILE = sys.argv[1] if len(sys.argv) > 1 else "data/derived/elba_fulldensity"
 LAS  = sys.argv[2] if len(sys.argv) > 2 else "data/csf_cache/elba.las"
 NY, NX = 700, 508          # elba grid (cell = iy*NX + ix, C-order == raster.ravel())
+RES = 5.0                  # grid resolution (m), for surface-gradient aspect
 
 # --- geometry + offset already computed per return (parabola-free; geoid tie applied later) ---
 ang = np.load(f"{TILE}/gen1_csf_angles.npz")
@@ -48,6 +49,16 @@ lap = np.load(f"{TILE}/curv_laplacian.npy")
 assert lap.shape == (NY, NX), f"curvature raster {lap.shape} != {(NY, NX)}"
 curv_laplacian = lap.ravel()[cell].astype(np.float32)
 
+# --- surface ASPECT (downslope azimuth) at each return's cell, from gen2 elevation ---
+# orientation covariate: which way the terrain faces. Degrees clockwise from North, of the
+# DOWNSLOPE direction; NaN on near-flat cells where aspect is undefined. Grid rows increase
+# northward (cell = iy*NX+ix, iy=(y-Y0)/RES), so np.gradient gives (d/dNorth, d/dEast) uphill.
+Zaf = np.load(f"{TILE}/z_after.npy"); assert Zaf.shape == (NY, NX)
+gN, gE = np.gradient(Zaf, RES)                      # uphill gradient components (north, east)
+aspect = np.degrees(np.arctan2(-gE, -gN)) % 360.0   # downslope azimuth, CW from North
+aspect[np.hypot(gE, gN) < 1e-4] = np.nan            # undefined on flat cells
+aspect_deg = aspect.ravel()[cell].astype(np.float32)
+
 # --- per-return fields the npz did not carry: read the SAME cached LAS, in order ---
 las = laspy.read(LAS)
 assert len(las.x) == n, f"LAS {len(las.x):,} != npz {n:,} -- alignment broken"
@@ -63,6 +74,7 @@ cols = {
     "canopy_cover": canopy_cover,               # PyForestScan cover fraction at the cell
     # local surface form
     "curv_laplacian": curv_laplacian,           # Laplacian of gen2 elevation at the cell (curvature)
+    "aspect_deg":   aspect_deg,                 # downslope azimuth (deg CW from N); NaN on flat cells
     "core_forest":  ang["core_forest"],         # bool, forest-core stratum
     "core_open":    ang["core_open"],           # bool, open/farmland-core stratum
     "stratum":      ang["stratum"],             # 1 forest / 2 open / 0 other
