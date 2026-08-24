@@ -16,8 +16,10 @@ fixed slope band on near-planar cells -- an orientation-based offset independent
     env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python \
         analysis/ridgelines/per_flightline_offset.py [tile_dir]
 """
-import sys, math, numpy as np, pandas as pd
+import sys, math, json, numpy as np, pandas as pd, laspy
 import matplotlib; matplotlib.use("Agg"); import matplotlib.pyplot as plt
+from lidar_diff_icp.boresight import (estimate_boresight, lateral_sensitivity,
+                                      _cellline_means, _pair_rows)
 
 TILE = sys.argv[1] if len(sys.argv) > 1 else "data/derived/elba_fulldensity"
 NX, X0, Y0, RES = 508, 577492.8, 4882737.6, 5.0
@@ -38,34 +40,47 @@ for pid, g in df.groupby("point_source_id"):
     head[pid] = math.degrees(math.atan2(vy, vx))
     print(f"  {pid:5d} {len(g):10,d} {head[pid]:+8.1f} {g.scan_angle.mean():+9.2f} {g.d_mm.median():+9.1f}")
 
-# ---- A. overlap-cell between-line differences -> boresight + registration ----
-cl = (df.groupby(["cell", "point_source_id"])
-        .agg(d=("d_mm", "mean"), sc=("scan_angle", "mean"), nn=("d_mm", "size")).reset_index())
-cl = cl[cl.nn >= MIN_CELL_LINE]
-m = cl.merge(cl, on="cell", suffixes=("_a", "_b"))
-m = m[m.point_source_id_a < m.point_source_id_b].copy()
-m["dd"] = m.d_a - m.d_b; m["dsc"] = m.sc_a - m.sc_b
-
-print(f"\nA. PAIRWISE between-line (overlap cells, per-cell means), Dd = reg_diff + boresight*Dscan:")
+# ---- A. overlap-cell between-line differences -> boresight + registration (module) ----
+# estimate via the reusable module (single source of truth); recompute the pair table only
+# for the figure's scatter.
+sol = estimate_boresight(df.cell.values, df.point_source_id.values,
+                         df.scan_angle.values, df.d_mm.values,
+                         min_cell_line=MIN_CELL_LINE, min_pair_cells=50)
+m = _pair_rows(_cellline_means(df.cell.values, df.point_source_id.values,
+                               df.scan_angle.values, df.d_mm.values, MIN_CELL_LINE))
+print("\nA. PAIRWISE between-line (overlap cells), Dd = reg_diff + boresight*Dscan:")
 print(f"  {'pair':>9s} {'n_cells':>8s} {'median_Dd':>10s} {'boresight':>10s} {'registration':>13s} {'headings'}")
-pair_int = []
-for (a, b), g in m.groupby(["point_source_id_a", "point_source_id_b"]):
-    if len(g) < 50: continue
-    sl, ic = np.polyfit(g.dsc, g.dd, 1)
+for p in sol.pairs:
+    a, b = p["a"], p["b"]
     rel = "opp" if abs((head[a] - head[b] + 180) % 360 - 180) > 90 else "same"
-    print(f"  {a}-{b} {len(g):8,d} {g.dd.median():+10.1f} {sl:+9.2f}/d {ic:+12.1f}   {rel} ({head[a]:+.0f},{head[b]:+.0f})")
-    pair_int.append((a, b, ic))
-b_pool, ic_pool = np.polyfit(m.dsc, m.dd, 1)
-print(f"  POOLED boresight roll b = {b_pool:+.2f} mm/deg   (pooled intercept {ic_pool:+.1f} mm)")
-
-# per-line registration offsets: least squares on pairwise intercepts, mean-zero constraint
-idx = {p: i for i, p in enumerate(lines)}; rows, rhs = [], []
-for a, b, ic in pair_int:
-    r = np.zeros(len(lines)); r[idx[a]] = 1; r[idx[b]] = -1; rows.append(r); rhs.append(ic)
-rows.append(np.ones(len(lines))); rhs.append(0.0)          # sum(reg) = 0 gauge
-reg, *_ = np.linalg.lstsq(np.array(rows), np.array(rhs), rcond=None)
+    print(f"  {a}-{b} {p['n_cells']:8,d} {p['median_dd']:+10.1f} {p['slope']:+9.2f}/d "
+          f"{p['intercept']:+12.1f}   {rel} ({head[a]:+.0f},{head[b]:+.0f})")
+print(f"  POOLED boresight roll b = {sol.b:+.2f} mm/deg   "
+      f"(bootstrap SE {sol.b_se:.2f} [optimistic]; between-pair std {sol.b_pair_std:.2f} [honest], "
+      f"{sol.n_overlap_cells:,} overlap cells)")
 print("  per-line REGISTRATION offset (mean-zero gauge):  " +
-      "  ".join(f"{p}:{reg[idx[p]]:+.1f}mm" for p in lines))
+      "  ".join(f"{p}:{sol.registration[p]:+.1f}mm" for p in lines))
+
+# ---- self-check: does b move under the per-swath lateral shift? (boresight<->lateral coupling)
+cj = json.load(open(f"{TILE}/corrections.json"))
+shifts = {int(k): (v[0], v[1]) for k, v in cj["per_swath_internal_alignment_dxdydz_m"].items()}
+bnds = cj["bounds"]; res = cj.get("res_m") or cj.get("res")
+nx = round((bnds[2] - bnds[0]) / res); ny = round((bnds[3] - bnds[1]) / res)
+dff = pd.read_parquet(f"{TILE}/beam_offset_table.parquet")           # full order == cached LAS
+ing = dff.in_grid.to_numpy()
+xy = laspy.read("data/csf_cache/elba.las")
+b0, bsh, delta = lateral_sensitivity(
+    dff.cell.to_numpy()[ing], np.asarray(xy.x)[ing], np.asarray(xy.y)[ing],
+    dff.scan_angle.to_numpy()[ing], dff.point_source_id.to_numpy()[ing], dff.d_mm.to_numpy()[ing],
+    shifts, res=res, x0=bnds[0], y0=bnds[1], nx=nx, ny=ny, min_cell_line=MIN_CELL_LINE)
+# judge the coupling against the HONEST (between-pair) uncertainty, not the optimistic SE
+verdict = ("one pass suffices" if abs(delta) < sol.b_pair_std
+           else "iterate (delta exceeds between-pair uncertainty)")
+print(f"  SELF-CHECK (apply per-swath lateral shift, re-estimate): b {b0:+.2f} -> {bsh:+.2f} "
+      f"mm/deg, delta {delta:+.2f} vs between-pair std {sol.b_pair_std:.2f}  => {verdict} "
+      f"(iterating would shift the swath-edge correction by {abs(delta)*17:.2f} mm)")
+
+b_pool, ic_pool = np.polyfit(m.dsc, m.dd, 1)    # for the figure fit line (== sol.b)
 
 # ---- B. terrain-ASPECT offset (near-planar cells, fixed slope band) ----
 stab = df[df.curv_laplacian.abs() <= CURV_MAX]
