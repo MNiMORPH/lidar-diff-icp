@@ -179,7 +179,10 @@ non-mosaic) and refuses to proceed unless its boundary fully covers the tile bbo
   (county resolved automatically) or name.
   https://www.mngeo.state.mn.us/chouse/elevation/lidar_2008-2012.html
 - **After (`gen2`)** — USGS Second-Generation 3DEP (pilot: `MN_SEDriftless_2_2021`,
-  EPT on AWS `usgs-lidar-public`, stored EPSG:3857; both generations are leaf-off).
+  EPT on AWS `usgs-lidar-public`, stored EPSG:3857). Leaf state differs: gen1 is
+  leaf-off (Fall 2008 dormant), gen2 is leaf-on (2021 spring green-up) — the
+  mismatch biases the forest DoD (gen2 canopy sits high), which the forest-structure
+  tooling above is for.
 
 ## Pilot study area
 
