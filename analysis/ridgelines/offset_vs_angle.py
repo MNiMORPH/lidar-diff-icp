@@ -27,7 +27,7 @@ from scipy.stats import spearmanr
 
 XCFG = {  # values: how to derive the x axis from the table; hdr: table header; fname: file/label token
     "incidence":  dict(values=lambda df: df.incidence,          edges=np.arange(0, 48, 3),
-                       label="incidence angle to surface (deg)", short="incidence", hdr="incid(deg)", xlim=(0, 45)),
+                       label="incidence + δ (deg; δ = unknown nadir offset)", short="incidence", hdr="incid(deg)", xlim=(0, 45)),
     "scan_angle": dict(values=lambda df: df.scan_angle.abs(),   edges=np.arange(0, 20, 2),
                        label="|scan angle| (deg)",               short="|scan angle|", hdr="|scan|(deg)", xlim=(0, 18)),
     "scan_angle_signed": dict(values=lambda df: df.scan_angle,  edges=np.arange(-17, 18, 2),
@@ -41,8 +41,14 @@ ap = argparse.ArgumentParser()
 ap.add_argument("--tile", default="data/derived/elba_fulldensity")
 ap.add_argument("--x", default="incidence", choices=list(XCFG))
 ap.add_argument("--curv-max", type=float, default=None)
+ap.add_argument("--bin", type=float, default=None, help="override bin width (deg)")
+ap.add_argument("--ridge", action="store_true", help="restrict to ridge_mask cells (divides: no overland flow)")
+ap.add_argument("--boresight", type=float, default=None,
+                help="subtract this roll (mm/deg) * scan_angle from d_mm before analysis, and "
+                     "recompute the within-cell residual -- to show the boresight asymmetry removed")
 A = ap.parse_args()
-cfg = XCFG[A.x]; EDGES = cfg["edges"]; XNAME = cfg["short"]; XLIM = cfg["xlim"]
+cfg = XCFG[A.x]; XNAME = cfg["short"]; XLIM = cfg["xlim"]
+EDGES = np.arange(cfg["edges"][0], cfg["edges"][-1] + A.bin, A.bin) if A.bin else cfg["edges"]
 
 df = pd.read_parquet(f"{A.tile}/beam_offset_table.parquet")
 df = df[df.in_grid.values].copy()
@@ -52,6 +58,14 @@ if A.curv_max is not None:
     frac = 100 * keep.mean(); df = df[keep].copy()
     lab = f"|Laplacian| <= {A.curv_max:g}  ({len(df):,} returns, {frac:.0f}% kept)"
     suffix = f"_curv{A.curv_max:g}"
+if A.boresight is not None:                       # remove boresight roll, then re-derive residual
+    df["d_mm"] = df.d_mm - A.boresight * df.scan_angle
+    df["d_resid_mm"] = df.d_mm - df.groupby("cell")["d_mm"].transform("mean")
+    lab += f"; boresight-corrected {A.boresight:g} mm/deg"; suffix += f"_bore{A.boresight:g}"
+if A.ridge:                                       # divides only: zero contributing area -> no overland flow
+    rm = np.load(f"{A.tile}/ridge_mask.npy").astype(bool).ravel()
+    df = df[rm[df.cell.to_numpy()]].copy()
+    lab += "; RIDGELINES"; suffix += "_ridge"
 df["_x"] = cfg["values"](df).to_numpy(float)
 xv = df["_x"].to_numpy(float); d = df.d_mm.to_numpy(float)
 print(f"{len(df):,} returns  [x = {A.x}; {lab}]\n")
