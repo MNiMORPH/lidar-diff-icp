@@ -19,11 +19,16 @@ import numpy as np
 from datetime import date
 from scipy.ndimage import correlate, distance_transform_edt
 
-RES = 5.0; X0, Y0 = 577492.8, 4882737.6
-z = np.load("data/derived/elba_fulldensity/z_after.npy")
-dod = np.load("data/derived/elba_refdatum/dod_geoid.npy")
-pen = np.load("data/derived/elba_fulldensity/penetration.npy")
-crest = np.load("data/derived/elba_fulldensity/crest_mask.npy")
+import sys, os, json
+TILE = sys.argv[1] if len(sys.argv) > 1 else "elba_fulldensity"
+D = f"data/derived/{TILE}"
+def _res(tile):
+    for fn in ("meta.json", "corrections_geoid.json", "corrections.json"):
+        p = f"data/derived/{tile}/{fn}"
+        if os.path.exists(p): j = json.load(open(p)); return float(j.get("res") or j.get("res_m"))
+    return 5.0
+RES = _res(TILE)
+z = np.load(f"{D}/z_after.npy")
 ny, nx = z.shape
 zf = z.copy(); nm = ~np.isfinite(zf)
 if nm.any():
@@ -42,19 +47,25 @@ zxx = correlate(zf, kxx, mode="nearest")                # 1/m, convex-up NEGATIV
 zyy = correlate(zf, kyy, mode="nearest")
 lap = zxx + zyy                                         # Laplacian (orientation-free)
 for nm_, arr in [("curv_xx", zxx), ("curv_yy", zyy), ("curv_laplacian", lap)]:
-    np.save(f"data/derived/elba_fulldensity/{nm_}.npy", arr)
+    np.save(f"{D}/{nm_}.npy", arr)
+print(f"saved {D}/curv_xx/curv_yy/curv_laplacian (L=+/-{L*RES:.0f} m)")
 
-# add curvature to the per-pixel ridgecrest table (re-save)
-R = dict(np.load("data/derived/elba_fulldensity/ridgecrest_pixels.npz", allow_pickle=True))
-rr = R["row"].astype(int); cci = R["col"].astype(int)
-R["curv_xx"] = zxx[rr, cci]; R["curv_yy"] = zyy[rr, cci]; R["curv_laplacian"] = lap[rr, cci]
-np.savez("data/derived/elba_fulldensity/ridgecrest_pixels.npz", **R)
-print(f"saved curv_xx/curv_yy/curv_laplacian (full map + per-crest-pixel table, L=+/-{L*RES:.0f} m)")
-cmask = crest & np.isfinite(dod)
-print(f"crest curvature (1/m): d2z/dx2 med={np.median(zxx[cmask]):+.4f}  "
-      f"d2z/dy2 med={np.median(zyy[cmask]):+.4f}  Laplacian med={np.median(lap[cmask]):+.4f}")
+# elba-only: add curvature to the ridgecrest table + report crest diffusion (needs crest/dod/pen)
+if os.path.exists(f"{D}/ridgecrest_pixels.npz") and os.path.exists(f"{D}/crest_mask.npy"):
+    dod = np.load("data/derived/elba_refdatum/dod_geoid.npy"); crest = np.load(f"{D}/crest_mask.npy")
+    R = dict(np.load(f"{D}/ridgecrest_pixels.npz", allow_pickle=True))
+    rr = R["row"].astype(int); cci = R["col"].astype(int)
+    R["curv_xx"] = zxx[rr, cci]; R["curv_yy"] = zyy[rr, cci]; R["curv_laplacian"] = lap[rr, cci]
+    np.savez(f"{D}/ridgecrest_pixels.npz", **R)
+    cmask = crest & np.isfinite(dod)
+    print(f"crest curvature (1/m): d2z/dx2 med={np.median(zxx[cmask]):+.4f}  "
+          f"d2z/dy2 med={np.median(zyy[cmask]):+.4f}  Laplacian med={np.median(lap[cmask]):+.4f}")
 
-# --- (2) diffusion K on agricultural (open) crests --------------------------------------
+# --- (2) diffusion K on agricultural (open) crests (elba only; needs crest/pen/dod) ------
+if not (os.path.exists(f"{D}/crest_mask.npy") and os.path.exists(f"{D}/penetration.npy")):
+    import sys; sys.exit(0)
+crest = np.load(f"{D}/crest_mask.npy"); pen = np.load(f"{D}/penetration.npy")
+dod = np.load("data/derived/elba_refdatum/dod_geoid.npy")
 dt_yr = (date(2021, 5, 1) - date(2008, 11, 21)).days / 365.25   # flight-date span
 dzdt = dod / dt_yr                                       # m/yr per cell
 ag = crest & (pen >= 0.45) & np.isfinite(dod)
