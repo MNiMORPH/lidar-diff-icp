@@ -74,8 +74,10 @@ point.
       vendor, it is self-calibrated from 2008 flight-line **overlap** — where the
       between-line offset difference cancels terrain, so its slope against the
       between-line scan-angle difference *is* the roll — then removed per point as
-      `z −= b·scan_angle`. On the pilot `b = +2.19 mm/deg` (±0.7 between flight-line
-      pairs). Referencing 2008 against *itself* decouples it from the 3DEP lateral
+      `z −= b·scan_angle`. On the pilot the overlap fit gives `b = +2.19 mm/deg`,
+      but the ±0.7 spread between flight-line pairs is too wide to call a residual
+      resolved, so nothing is applied by default and `boresight_roll_mm_per_deg`
+      stays `None` in the delivered corrections. Referencing 2008 against *itself* decouples it from the 3DEP lateral
       tie below, so the chain needs no iteration. It removes the cross-track
       scan-angle asymmetry cleanly (the within-cell tilt drops +2.2 → −0.1 mm/deg),
       but its tile-wide DoD footprint is small — much of it self-cancels in the
