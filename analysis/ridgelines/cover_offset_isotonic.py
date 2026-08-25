@@ -91,20 +91,43 @@ for c in (0.10, 0.30, 0.50, 0.70):
     v = float(iso.predict([c])[0]); l = a0 + b0*c
     print(f"  {c:>7.2f} {v:>10.1f} {l:>8.1f} {l-v:>+12.1f}")
 
-fig, ax = plt.subplots(figsize=(8.8, 5.8), dpi=130)
+# ---- FIGURE: show every observation, and resolve the high-cover end explicitly ----
+# quantile bins collapse everything above ~0.39 into one point plotted at its MEAN cover,
+# which hides the very data the curve is about. Bins here are quantile-spaced only up to
+# 0.45 and FIXED above it, so each high-cover interval is drawn where it actually sits.
+fig, ax = plt.subplots(2, 1, figsize=(9.2, 8.0), dpi=130, sharex=True,
+                       gridspec_kw={"height_ratios": [3, 1]})
+a0x = ax[0]
+hb = a0x.hexbin(x, np.clip(y, -400, 400), gridsize=(70, 45), bins="log", cmap="Greys",
+                mincnt=1, extent=(0, x.max(), -400, 400))
+fig.colorbar(hb, ax=a0x, label="log10 cells", pad=0.01)
+lowe = bs.quantile_edges(x[x <= 0.45], 10, first_edge=0.02)
+edges = np.unique(np.concatenate([lowe[lowe <= 0.45], [0.45, 0.55, 0.65, 0.75, 0.85, 1.0]]))
+ck = bs.binned_stats(x, y, edges, block=blk, min_n=5)
+a0x.errorbar(ck.x, ck.y, yerr=ck.se, xerr=[ck.x-ck.lo, ck.hi-ck.x], fmt="o", ms=5, capsize=2,
+             color="C3", lw=1.3, zorder=6, label="binned medians ± block SE (bars = bin span)")
 xs = np.linspace(0, x.max(), 600)
-ax.plot(xs, iso.predict(xs), "-", lw=2.4, color="C2", label="isotonic (shape-free)", zorder=4)
-ax.fill_between(GRID, curve-se, curve+se, color="C2", alpha=.25, label="± block jackknife SE", zorder=3)
-ax.plot(xs, a0 + b0*xs, "--", lw=1.4, color="C0", label=f"straight line {a0:+.0f}{b0:+.0f}·cover")
-ck = bs.binned_stats(x, y, bs.quantile_edges(x, 12, first_edge=0.02), block=blk, min_n=50)
-ax.errorbar(ck.x, ck.y, yerr=ck.se, xerr=[ck.x-ck.lo, ck.hi-ck.x], fmt="o", ms=4, capsize=2,
-            color="0.35", lw=1, zorder=5, label="binned medians (check only; bars = bin span)")
-ax.axhline(0, color="k", lw=.7)
-ax.set_xlabel("canopy cover (fraction)")
-ax.set_ylabel("offset d (mm)   [gen1 − gen2; + = lower in 2021]")
-ax.set_title(f"offset vs cover, shape-free — {TILE}\n"
-             f"divides, |Laplacian|≤{A.curv_max:g}, incidence<{A.inc_max:g}°, {len(y):,} cells", fontsize=10)
-ax.legend(fontsize=8); ax.grid(alpha=.3)
+a0x.plot(xs, iso.predict(xs), "-", lw=2.4, color="C2", zorder=7, label="isotonic (shape-free)")
+a0x.fill_between(GRID, curve-se, curve+se, color="C2", alpha=.25, zorder=5)
+a0x.plot(xs, a0 + b0*xs, "--", lw=1.4, color="C0", zorder=4,
+         label=f"straight line {a0:+.0f}{b0:+.0f}·cover")
+a0x.axhline(0, color="k", lw=.7)
+a0x.set_ylim(-400, 400); a0x.set_xlim(0, x.max()*1.01)
+a0x.set_ylabel("offset d (mm)   [gen1 − gen2; + = lower in 2021]")
+a0x.set_title(f"offset vs cover, every cell shown — {TILE}\n"
+              f"divides, |Laplacian|≤{A.curv_max:g}, incidence<{A.inc_max:g}°, {len(y):,} cells",
+              fontsize=10)
+a0x.legend(fontsize=8, loc="lower left"); a0x.grid(alpha=.3)
+for lo_, hi_, n_ in zip(ck.lo, ck.hi, ck.n):
+    if lo_ >= 0.45:
+        a0x.annotate(f"n={n_}", (0.5*(lo_+hi_), -370), ha="center", fontsize=6.5, color="C3")
+ax[1].bar(0.5*(ck.lo+ck.hi), ck.n, width=(ck.hi-ck.lo)*0.9, color="0.6")
+ax[1].set_yscale("log"); ax[1].set_ylabel("cells per bin"); ax[1].set_xlabel("canopy cover (fraction)")
+ax[1].grid(alpha=.3)
 out = f"figures/refdatum/cover_offset_isotonic{TAG}.png"
 fig.savefig(out, bbox_inches="tight"); plt.close(fig)
 print(f"\nwrote {out}")
+print(f"\nbins actually drawn above cover 0.45:")
+for lo_, hi_, xx_, yy_, se_, n_ in zip(ck.lo, ck.hi, ck.x, ck.y, ck.se, ck.n):
+    if lo_ >= 0.45:
+        print(f"   {lo_:.2f}-{hi_:.2f}: median {yy_:+8.1f} ± {se_:5.1f} mm   n={n_:,} cells")
