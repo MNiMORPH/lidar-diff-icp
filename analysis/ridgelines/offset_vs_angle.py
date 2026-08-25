@@ -186,6 +186,7 @@ ax[1].set_title(ttl); ax[1].legend(fontsize=8); ax[1].grid(alpha=.3)
 import os as _os
 _tile = _os.path.basename(A.tile.rstrip("/"))                       # tag figures by tile
 _tt = "" if _tile == "elba_fulldensity" else f"_{_tile}"
+if A.bin is not None: suffix += f"_bin{A.bin:g}"   # bin width changes the curve: keep it in the name
 if A.cover_bands: suffix += "_cbands"
 fig.suptitle(f"gen1 per-beam offset vs {XNAME} ({_tile}) — {lab}", y=1.0)
 fig.savefig(f"figures/refdatum/offset_vs_{A.x}{suffix}{_tt}.png", dpi=130, bbox_inches="tight"); plt.close(fig)
