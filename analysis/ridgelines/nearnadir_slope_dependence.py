@@ -27,6 +27,7 @@ Sign: gen1 BELOW the gen2 plane -> d_mm NEGATIVE. residual r < 0 = gen1 reads lo
 Size effects by MEDIAN mm shifts against the ~20 mm signal budget, NOT r
 (per-return NMAD is ~150-270 mm).
 """
+import argparse
 import os
 import numpy as np
 import matplotlib
@@ -35,10 +36,13 @@ import matplotlib.pyplot as plt
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
-DERIVED = os.path.join(ROOT, "data", "derived", "elba_fulldensity")
+_ap = argparse.ArgumentParser()
+_ap.add_argument("--tile", default=os.path.join(ROOT, "data", "derived", "elba_fulldensity"))
+_A = _ap.parse_args()
+DERIVED = _A.tile
+TILE = os.path.basename(DERIVED.rstrip("/"))
+TAG = "" if TILE == "elba_fulldensity" else f"_{TILE}"
 NPZ = os.path.join(DERIVED, "gen1_csf_angles.npz")
-
-NX, NY = 508, 700
 FLAT_SLOPE_DEG = 3.0
 
 # fine slope bins (deg): headline curve resolution
@@ -65,7 +69,7 @@ def load():
     ing = d["in_grid"]
     out = {k: d[k][ing] for k in
            ["incidence", "scan_angle", "slope", "d_mm", "cell",
-            "point_source_id", "stratum", "core_forest", "core_open"]}
+            "point_source_id", "stratum", "pfs_forest", "pfs_open"]}
     out["absa"] = np.abs(out["scan_angle"])
 
     flat = out["slope"] < FLAT_SLOPE_DEG
@@ -75,9 +79,9 @@ def load():
     out["n_flat"] = int(flat.sum())
 
     # gen2-derived canopy_cover as a SPATIAL land-cover selector (magnitude NOT used)
-    cc = np.load(os.path.join(DERIVED, "canopy_cover.npy"))  # (NY, NX), fraction
+    cc = np.load(os.path.join(DERIVED, "canopy_cover_pfs.npy"))  # (NY, NX) PyForestScan cover
     cc_flat = cc.ravel()
-    ok = (out["cell"] >= 0) & (out["cell"] < NX * NY)
+    ok = (out["cell"] >= 0) & (out["cell"] < cc.size)
     cc_pt = np.full(out["cell"].shape, np.nan)
     cc_pt[ok] = cc_flat[out["cell"][ok]]
     out["cc"] = cc_pt
@@ -270,8 +274,8 @@ def main():
     # land-cover split (near-nadir)
     m_for, nm_for, n_for = bin_curve(res, sl, nadir & D["cc_forest"])
     m_open, nm_open, n_open = bin_curve(res, sl, nadir & D["cc_open"])
-    m_forC, nm_forC, n_forC = bin_curve(res, sl, nadir & D["core_forest"])
-    m_openC, nm_openC, n_openC = bin_curve(res, sl, nadir & D["core_open"])
+    m_forC, nm_forC, n_forC = bin_curve(res, sl, nadir & D["pfs_forest"])
+    m_openC, nm_openC, n_openC = bin_curve(res, sl, nadir & D["pfs_open"])
 
     # ---- report ----
     o = []
@@ -427,9 +431,9 @@ def main():
         d = f"{mf-mo2:+.1f}" if (np.isfinite(mf) and np.isfinite(mo2)) else "-"
         o.append(f"| {lab} | {fs} | {os_} | {d} |")
     o.append("")
-    o.append("### 4b. strict core_forest / core_open masks")
+    o.append("### 4b. PyForestScan forest / open masks (cover >= 0.5 / <= 0.1)")
     o.append("")
-    o.append("| slope (deg) | core_FOREST r (n) | core_OPEN r (n) | forest - open |")
+    o.append("| slope (deg) | pfs_FOREST r (n) | pfs_OPEN r (n) | forest - open |")
     o.append("|---|---|---|---|")
     for i, lab in enumerate(SLOPE_LABELS):
         mf, nf = m_forC[i], n_forC[i]
@@ -453,7 +457,7 @@ def main():
              "GENTLE ground; steep open ridgeline/hillslope cells are near-absent "
              "in this tile, so above ~12 deg the 'open' median rests on n~30-3000 "
              "and swings wildly (+8 -> -150 mm) -- noise, not a matched-slope "
-             "comparison. The core_open mask (4b) is EMPTY above 12 deg entirely. "
+             "comparison. The pfs_open mask (4b) empties out at high slope. "
              "So the matched-slope canopy test can only be made where both are "
              "reliably populated:")
     o.append("")
@@ -489,11 +493,11 @@ def main():
              "not a failure.")
     o.append("")
 
-    out_md = os.path.join(HERE, "NEARNADIR_SLOPE_DEPENDENCE.md")
+    out_md = os.path.join(HERE, f"NEARNADIR_SLOPE_DEPENDENCE{TAG.upper()}.md")
     with open(out_md, "w") as f:
         f.write("\n".join(o))
 
-    fig = make_figure(D, os.path.join(HERE, "nearnadir_slope_dependence.png"))
+    fig = make_figure(D, os.path.join(HERE, f"nearnadir_slope_dependence{TAG}.png"))
 
     print(f"datum = {datum:.1f} mm (n_flat={D['n_flat']:,})")
     print("wrote", out_md)

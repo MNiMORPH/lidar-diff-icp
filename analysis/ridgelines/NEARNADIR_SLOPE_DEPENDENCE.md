@@ -126,53 +126,56 @@ Forest = canopy_cover > 0.5 cells; open = canopy_cover < 0.2 cells (gen2-derived
 
 | slope (deg) | FOREST r (n) | OPEN r (n) | forest - open |
 |---|---|---|---|
-| 0-3 | -7.3 (141,757) | -3.3 (378,588) | -4.0 |
-| 3-6 | -31.7 (80,366) | -13.8 (266,290) | -17.9 |
-| 6-9 | -23.8 (118,651) | -10.2 (154,169) | -13.6 |
-| 9-12 | -21.3 (138,632) | -5.6 (41,350) | -15.6 |
-| 12-15 | -19.0 (110,356) | -26.7 (14,387) | +7.7 |
-| 15-18 | -14.2 (98,531) | -11.3 (8,216) | -2.9 |
-| 18-21 | -8.0 (100,471) | +12.4 (6,798) | -20.4 |
-| 21-24 | -14.7 (116,399) | +5.7 (5,560) | -20.4 |
-| 24-27 | -22.6 (138,609) | +8.0 (2,984) | -30.6 |
-| 27-30 | -41.2 (152,624) | -15.0 (1,628) | -26.2 |
-| 30-35 | -44.8 (112,035) | -77.4 (1,842) | +32.6 |
-| 35-40 | -28.8 (12,072) | -108.5 (924) | +79.7 |
-| >40 | +80.1 (3,270) | -149.7 (30) | +229.8 |
+| 0-3 | -40.8 (847) | -2.5 (466,667) | -38.3 |
+| 3-6 | -55.2 (1,154) | -14.9 (303,970) | -40.3 |
+| 6-9 | -55.4 (2,215) | -11.4 (195,969) | -43.9 |
+| 9-12 | -36.6 (1,731) | -7.1 (83,767) | -29.5 |
+| 12-15 | -63.3 (523) | -12.4 (48,363) | -50.9 |
+| 15-18 | -10.6 (377) | -4.4 (39,335) | -6.2 |
+| 18-21 | +33.3 (417) | +7.9 (36,410) | +25.3 |
+| 21-24 | -61.1 (429) | +6.2 (37,345) | -67.3 |
+| 24-27 | -97.7 (533) | -4.0 (31,843) | -93.7 |
+| 27-30 | -55.9 (579) | -17.7 (24,199) | -38.2 |
+| 30-35 | -69.8 (939) | -26.4 (16,308) | -43.3 |
+| 35-40 | +81.7 (219) | -43.3 (2,302) | +125.0 |
+| >40 | +353.9 (277) | +91.1 (291) | +262.8 |
 
-### 4b. strict core_forest / core_open masks
+### 4b. PyForestScan forest / open masks (cover >= 0.5 / <= 0.1)
 
-| slope (deg) | core_FOREST r (n) | core_OPEN r (n) | forest - open |
+| slope (deg) | pfs_FOREST r (n) | pfs_OPEN r (n) | forest - open |
 |---|---|---|---|
-| 0-3 | -43.4 (215) | -12.3 (109,609) | -31.1 |
-| 3-6 | -54.4 (920) | -9.9 (141,360) | -44.5 |
-| 6-9 | -49.9 (5,198) | -5.3 (59,259) | -44.6 |
-| 9-12 | -55.0 (8,026) | +29.8 (1,491) | -84.8 |
-| 12-15 | -57.5 (6,724) | - (0) | - |
-| 15-18 | -52.1 (8,512) | - (0) | - |
-| 18-21 | -36.5 (10,454) | - (0) | - |
-| 21-24 | -29.5 (12,939) | - (0) | - |
-| 24-27 | -46.0 (12,223) | - (0) | - |
-| 27-30 | -71.8 (18,446) | - (0) | - |
-| 30-35 | -64.0 (24,062) | - (0) | - |
-| 35-40 | -22.0 (2,912) | - (0) | - |
-| >40 | +200.0 (1,151) | - (0) | - |
+| 0-3 | -43.3 (860) | -3.6 (384,523) | -39.8 |
+| 3-6 | -55.2 (1,158) | -14.2 (269,032) | -41.0 |
+| 6-9 | -55.4 (2,215) | -10.8 (158,274) | -44.6 |
+| 9-12 | -36.6 (1,731) | -7.3 (46,515) | -29.3 |
+| 12-15 | -59.2 (539) | -19.3 (17,729) | -39.9 |
+| 15-18 | -10.6 (377) | -2.2 (11,506) | -8.4 |
+| 18-21 | +33.3 (417) | +17.0 (9,870) | +16.3 |
+| 21-24 | -61.1 (429) | +19.2 (8,142) | -80.3 |
+| 24-27 | -97.7 (533) | +10.5 (5,056) | -108.2 |
+| 27-30 | -55.9 (579) | -4.6 (3,207) | -51.3 |
+| 30-35 | -69.9 (944) | -44.5 (3,041) | -25.4 |
+| 35-40 | +81.6 (220) | -71.2 (969) | +152.9 |
+| >40 | +353.9 (277) | +306.9 (50) | +46.9 |
 
 **Matched-slope forest vs open (near-nadir):**
 
-Open (cc<0.2) is only well-populated (n>=2,000) on GENTLE ground; steep open ridgeline/hillslope cells are near-absent in this tile, so above ~12 deg the 'open' median rests on n~30-3000 and swings wildly (+8 -> -150 mm) -- noise, not a matched-slope comparison. The core_open mask (4b) is EMPTY above 12 deg entirely. So the matched-slope canopy test can only be made where both are reliably populated:
+Open (cc<0.2) is only well-populated (n>=2,000) on GENTLE ground; steep open ridgeline/hillslope cells are near-absent in this tile, so above ~12 deg the 'open' median rests on n~30-3000 and swings wildly (+8 -> -150 mm) -- noise, not a matched-slope comparison. The pfs_open mask (4b) empties out at high slope. So the matched-slope canopy test can only be made where both are reliably populated:
 
-- slope 0-3: forest -7.3 mm vs open -3.3 mm (open n=378,588) -- forest sits BELOW (lower than) open by -4.0 mm
-- slope 3-6: forest -31.7 mm vs open -13.8 mm (open n=266,290) -- forest sits BELOW (lower than) open by -17.9 mm
-- slope 6-9: forest -23.8 mm vs open -10.2 mm (open n=154,169) -- forest sits BELOW (lower than) open by -13.6 mm
-- slope 9-12: forest -21.3 mm vs open -5.6 mm (open n=41,350) -- forest sits BELOW (lower than) open by -15.6 mm
-- slope 12-15: forest -19.0 mm vs open -26.7 mm (open n=14,387) -- forest sits ABOVE (less low than) open by +7.7 mm
-- slope 15-18: forest -14.2 mm vs open -11.3 mm (open n=8,216) -- forest sits BELOW (lower than) open by -2.9 mm
-- slope 18-21: forest -8.0 mm vs open +12.4 mm (open n=6,798) -- forest sits BELOW (lower than) open by -20.4 mm
-- slope 21-24: forest -14.7 mm vs open +5.7 mm (open n=5,560) -- forest sits BELOW (lower than) open by -20.4 mm
-- slope 24-27: forest -22.6 mm vs open +8.0 mm (open n=2,984) -- forest sits BELOW (lower than) open by -30.6 mm
+- slope 0-3: forest -40.8 mm vs open -2.5 mm (open n=466,667) -- forest sits BELOW (lower than) open by -38.3 mm
+- slope 3-6: forest -55.2 mm vs open -14.9 mm (open n=303,970) -- forest sits BELOW (lower than) open by -40.3 mm
+- slope 6-9: forest -55.4 mm vs open -11.4 mm (open n=195,969) -- forest sits BELOW (lower than) open by -43.9 mm
+- slope 9-12: forest -36.6 mm vs open -7.1 mm (open n=83,767) -- forest sits BELOW (lower than) open by -29.5 mm
+- slope 12-15: forest -63.3 mm vs open -12.4 mm (open n=48,363) -- forest sits BELOW (lower than) open by -50.9 mm
+- slope 15-18: forest -10.6 mm vs open -4.4 mm (open n=39,335) -- forest sits BELOW (lower than) open by -6.2 mm
+- slope 18-21: forest +33.3 mm vs open +7.9 mm (open n=36,410) -- forest sits ABOVE (less low than) open by +25.3 mm
+- slope 21-24: forest -61.1 mm vs open +6.2 mm (open n=37,345) -- forest sits BELOW (lower than) open by -67.3 mm
+- slope 24-27: forest -97.7 mm vs open -4.0 mm (open n=31,843) -- forest sits BELOW (lower than) open by -93.7 mm
+- slope 27-30: forest -55.9 mm vs open -17.7 mm (open n=24,199) -- forest sits BELOW (lower than) open by -38.2 mm
+- slope 30-35: forest -69.8 mm vs open -26.4 mm (open n=16,308) -- forest sits BELOW (lower than) open by -43.3 mm
+- slope 35-40: forest +81.7 mm vs open -43.3 mm (open n=2,302) -- forest sits ABOVE (less low than) open by +125.0 mm
 
-In the reliably-populated band (~0-12 deg), forest reads LOWER than open at matched slope by a median -15.6 mm -- a canopy/forest-floor term ON TOP of slope. This is the disentangling result: even at NEAR-NADIR and MATCHED SLOPE, forest ground reads lower than open ground, so the near-nadir low is not slope alone. The steep band where the gen1 low is largest (>27 deg) is ENTIRELY forest here (no steep open control), so slope and canopy cannot be separated there in this tile.
+In the reliably-populated band (~0-12 deg), forest reads LOWER than open at matched slope by a median -39.3 mm -- a canopy/forest-floor term ON TOP of slope. This is the disentangling result: even at NEAR-NADIR and MATCHED SLOPE, forest ground reads lower than open ground, so the near-nadir low is not slope alone. The steep band where the gen1 low is largest (>27 deg) is ENTIRELY forest here (no steep open control), so slope and canopy cannot be separated there in this tile.
 
 ## Caveats
 
