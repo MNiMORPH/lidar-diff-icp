@@ -7,12 +7,20 @@ reads the ground low. Error bar = robust SE of the median = 1.2533 * NMAD / sqrt
 
     ./lidar-icp/bin/python analysis/ridgelines/nearnadir_vs_perp_slope.py
 """
+import argparse, os
 import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-A = np.load("data/derived/elba_fulldensity/gen1_csf_angles.npz")
+ap = argparse.ArgumentParser()
+ap.add_argument("--tile", default="data/derived/elba_fulldensity")   # any tile with gen1_csf_angles
+A_ = ap.parse_args()
+TILE = os.path.basename(A_.tile.rstrip("/"))
+TAG = "" if TILE == "elba_fulldensity" else f"_{TILE}"
+# default tile keeps its original title/filename, so the elba figures stay byte-identical
+TITLE_TAG = "" if not TAG else f"  ({TILE})"
+A = np.load(f"{A_.tile}/gen1_csf_angles.npz")
 d = A["d_mm"].astype(float); sa = np.abs(A["scan_angle"].astype(float))
 inc = np.abs(A["incidence"].astype(float)); sl = A["slope"].astype(float)
 ok = np.isfinite(d) & np.isfinite(sa) & np.isfinite(inc) & np.isfinite(sl)
@@ -43,12 +51,12 @@ ax.errorbar(xp, mp, yerr=ep, fmt="s-", ms=4, lw=1.3, capsize=2, color="#d62728",
             label="low incidence  |inc|<5°  (perpendicular to surface)")
 ax.set_xlabel("slope (deg)")
 ax.set_ylabel("gen1 depth below gen2 surface  (mm)   [r<0 = gen1 low]")
-ax.set_title("gen1 near-nadir vs surface-perpendicular beams, per 1° slope bin")
+ax.set_title("gen1 near-nadir vs surface-perpendicular beams, per 1° slope bin" + TITLE_TAG)
 ax.legend(loc="lower left", fontsize=9)
 ax.set_xlim(0, 40)
 ax.grid(True, alpha=0.25)
 fig.tight_layout()
-out = "analysis/ridgelines/nearnadir_vs_perp_slope.png"
+out = f"analysis/ridgelines/nearnadir_vs_perp_slope{TAG}.png"
 fig.savefig(out)
 print("wrote", out, "size", fig.get_size_inches() * fig.dpi)
 print("near-nadir  last x:", xs[-1] if len(xs) else None,

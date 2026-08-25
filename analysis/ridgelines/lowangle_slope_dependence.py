@@ -7,12 +7,20 @@ reads the ground low. Error bar = robust SE of the median = 1.2533 * NMAD / sqrt
 
     ./lidar-icp/bin/python analysis/ridgelines/lowangle_slope_dependence.py
 """
+import argparse, os
 import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-A = np.load("data/derived/elba_fulldensity/gen1_csf_angles.npz")
+ap = argparse.ArgumentParser()
+ap.add_argument("--tile", default="data/derived/elba_fulldensity")   # any tile with gen1_csf_angles
+A_ = ap.parse_args()
+TILE = os.path.basename(A_.tile.rstrip("/"))
+TAG = "" if TILE == "elba_fulldensity" else f"_{TILE}"
+# default tile keeps its original title/filename, so the elba figures stay byte-identical
+TITLE_TAG = "" if not TAG else f"  ({TILE})"
+A = np.load(f"{A_.tile}/gen1_csf_angles.npz")
 d = A["d_mm"].astype(float); sa = np.abs(A["scan_angle"].astype(float))
 sl = A["slope"].astype(float)
 ok = np.isfinite(d) & np.isfinite(sa) & np.isfinite(sl)
@@ -55,11 +63,11 @@ ax.errorbar(xs, ms, yerr=es, fmt="s-", ms=4, lw=1.3, capsize=2, color="#1f77b4",
             label="low scan angle  |scan|<5°  (near-nadir, reference)")
 ax.set_xlabel("slope (deg)")
 ax.set_ylabel("gen1 depth below gen2 surface  (mm)   [r<0 = gen1 low]")
-ax.set_title("gen1 most-oblique vs near-nadir beams, per 1° slope bin")
+ax.set_title("gen1 most-oblique vs near-nadir beams, per 1° slope bin" + TITLE_TAG)
 ax.legend(loc="lower left", fontsize=9)
 ax.set_xlim(0, 40)
 ax.grid(True, alpha=0.25)
 fig.tight_layout()
-out = "analysis/ridgelines/lowangle_slope_dependence.png"
+out = f"analysis/ridgelines/lowangle_slope_dependence{TAG}.png"
 fig.savefig(out)
 print("wrote", out, "size", fig.get_size_inches() * fig.dpi)
