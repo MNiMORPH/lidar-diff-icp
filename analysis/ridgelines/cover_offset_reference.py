@@ -14,8 +14,10 @@ as close to zero as the landscape allows and only the measurement effect should 
 
 On that population the offset is regressed on PyForestScan canopy cover. Reported as binned
 medians with a robust standard error (1.2533*NMAD/sqrt(n)) so the reader can see which bins
-carry the fit, plus a straight line and a saturating form -- canopy cover is bounded and an
-effect that grows without limit in cover is not physical.
+carry the fit, and candidate FORMS ARE COMPARED, not assumed: linear, quadratic, and a Beer-Lambert optical
+depth -ln(1-cover), which is the physically motivated one if cover behaves like 1 minus a gap
+fraction. Selection is by AIC on the weighted binned medians. The binned medians themselves
+are the model-free answer; the fitted forms are descriptions of them.
 
 Uses the REGISTRATION-CORRECTED offset by default: on raw d_mm the per-swath misalignment
 would be read as a cover effect wherever cover and flight-line geometry covary.
@@ -34,12 +36,22 @@ ap.add_argument("--offset", default="corr", choices=("raw", "corr"))
 ap.add_argument("--slope-max", type=float, default=12.0)
 ap.add_argument("--tpi-window", type=float, default=500.0, help="upland test window (m)")
 ap.add_argument("--ridge", action="store_true", help="ALSO include divide cells of any slope")
+ap.add_argument("--ref", default="upland", choices=("upland", "divides"),
+                help="upland = low-gradient, TPI>0 (default); divides = the S&S divide "
+                     "network ONLY, which has zero contributing area by construction")
+ap.add_argument("--inc-max", type=float, default=None,
+                help="keep only returns below this beam incidence (deg). Fixing incidence "
+                     "removes the beam-geometry term, leaving cover as the only variable -- "
+                     "but note incidence ~ slope for near-nadir beams, so this also selects "
+                     "near-flat ground and cannot speak to the cover effect on steep slopes")
 ap.add_argument("--curv-max", type=float, default=None)
 ap.add_argument("--min-n", type=int, default=200, help="minimum returns per cover bin")
 A = ap.parse_args()
 TILE = os.path.basename(A.tile.rstrip("/"))
 TAG = ("" if TILE == "elba_fulldensity" else f"_{TILE}") + ("" if A.offset == "corr" else "_raw")
 TAG += "_ridge" if A.ridge else ""
+TAG += "" if A.ref == "upland" else "_divides"
+TAG += "" if A.inc_max is None else f"_inc{A.inc_max:g}"
 DCOL = "d_mm_corr" if A.offset == "corr" else "d_mm"
 
 
@@ -61,13 +73,21 @@ k = max(3, int(round(A.tpi_window / RES)) | 1)
 tpi = (zf - uniform_filter(zf, size=k, mode="nearest")).ravel()
 
 df = pd.read_parquet(f"{A.tile}/beam_offset_table.parquet",
-                     columns=["cell", DCOL, "slope", "canopy_cover", "curv_laplacian", "in_grid"])
+                     columns=["cell", DCOL, "slope", "canopy_cover", "curv_laplacian",
+                              "incidence", "in_grid"])
 df = df[df.in_grid.values].copy()
 if A.curv_max is not None:
     df = df[(df.curv_laplacian.abs() <= A.curv_max).to_numpy()].copy()
 cell = df.cell.to_numpy()
-ref = (df.slope.to_numpy() < A.slope_max) & (tpi[cell] > 0)
-label = f"low-gradient upland (slope<{A.slope_max:g} deg, TPI{A.tpi_window:g}>0)"
+if A.ref == "divides":
+    ref = np.load(f"{A.tile}/ridge_mask.npy").astype(bool).ravel()[cell]
+    label = "divides (zero contributing area)"
+else:
+    ref = (df.slope.to_numpy() < A.slope_max) & (tpi[cell] > 0)
+    label = f"low-gradient upland (slope<{A.slope_max:g} deg, TPI{A.tpi_window:g}>0)"
+if A.inc_max is not None:
+    ref &= df.incidence.to_numpy() < A.inc_max
+    label += f", incidence<{A.inc_max:g} deg"
 if A.ridge:
     rm = np.load(f"{A.tile}/ridge_mask.npy").astype(bool).ravel()
     ref = ref | rm[cell]
@@ -80,6 +100,8 @@ print("=" * 86)
 print(f"OFFSET vs FOREST DENSITY on non-eroding reference ground  [{TILE}]")
 print(f"reference = {label};  offset = {DCOL}")
 print(f"{ref.sum():,} returns of {len(df):,} in-grid  ({100*ref.sum()/len(df):.1f}%)")
+print(f"median slope of the reference population: {np.median(df.slope.to_numpy()[ref]):.1f} deg;"
+      f"  median incidence {np.nanmedian(df.incidence.to_numpy()[ref]):.1f} deg")
 print("=" * 86)
 
 EDGES = np.array([0, .02, .05, .10, .15, .20, .30, .40, .50, .65, 1.01])
@@ -97,35 +119,46 @@ cc, mm, se, nn = map(np.array, (cc, mm, se, nn))
 
 if cc.size >= 3:
     w = 1.0 / se**2
-    b = np.polyfit(cc, mm, 1, w=np.sqrt(w))
-    pred = np.polyval(b, cc)
-    chi2 = np.sum(w * (mm - pred)**2) / max(cc.size - 2, 1)
-    print(f"\nLINEAR   d(mm) = {b[1]:+.1f} {b[0]:+.1f} * cover        "
-          f"(SE-weighted; reduced chi2 {chi2:.1f})")
-    print(f"   open (cover 0) -> {b[1]:+.1f} mm ;  full canopy (cover 1) -> {b[1]+b[0]:+.1f} mm")
-    # saturating: cover cannot grow an effect without bound
-    from scipy.optimize import curve_fit
-    f = lambda x, a, c, k: a + c * (1 - np.exp(-x / k))
-    try:
-        p0 = [mm[0], mm[-1] - mm[0], 0.2]
-        pop, _ = curve_fit(f, cc, mm, p0=p0, sigma=se, absolute_sigma=True, maxfev=20000)
-        chi2s = np.sum(w * (mm - f(cc, *pop))**2) / max(cc.size - 3, 1)
-        print(f"SATURATING d(mm) = {pop[0]:+.1f} {pop[1]:+.1f} * (1 - exp(-cover/{pop[2]:.3f}))  "
-              f"(reduced chi2 {chi2s:.1f})")
-    except Exception as e:                                    # noqa: BLE001
-        pop = None; print(f"saturating fit did not converge: {e}")
+    # --- compare candidate forms rather than assume linearity ---
+    # optical depth: if canopy cover behaves like 1 - gap fraction, Beer-Lambert makes the
+    # path length through canopy proportional to -ln(1 - cover), which ACCELERATES as cover
+    # approaches 1 -- the opposite of saturating, and what the high-cover bins actually do.
+    FORMS = {
+        "linear         d = a + b*cover":        lambda c: np.c_[np.ones_like(c), c],
+        "quadratic      d = a + b*c + e*c^2":    lambda c: np.c_[np.ones_like(c), c, c**2],
+        "optical depth  d = a + b*(-ln(1-c))":   lambda c: np.c_[np.ones_like(c),
+                                                                -np.log(1 - np.clip(c, 0, 0.98))],
+    }
+    print(f"\n{'form':>36s} {'chi2_red':>9s} {'AIC':>9s}   coefficients")
+    bestf = None
+    for nm, dsg in FORMS.items():
+        X = dsg(cc); rw = np.sqrt(w)[:, None]
+        bb, *_ = np.linalg.lstsq(X*rw, mm*np.sqrt(w), rcond=None)
+        chi2 = float(np.sum(w*(mm - X@bb)**2)); k = X.shape[1]
+        print(f"{nm:>36s} {chi2/max(cc.size-k,1):>9.1f} {chi2+2*k:>9.1f}   "
+              + ", ".join(f"{v:+.4g}" for v in bb))
+        if bestf is None or chi2+2*k < bestf[1]: bestf = (nm, chi2+2*k, bb, dsg)
+    print(f"   SELECTED: {bestf[0]}   coefficients "
+          + ", ".join(f"{v:+.5g}" for v in bestf[2]))
+    print(f"   predicted offset at cover 0.1/0.3/0.5/0.7: "
+          + ", ".join(f"{float((bestf[3](np.array([c])) @ bestf[2])[0]):+.0f}" for c in (.1,.3,.5,.7)) + " mm")
+    b, pop, f = bestf[2], None, bestf[3]
 else:
-    b = None; pop = None; print("\ntoo few populated cover bins to fit")
+    b = None; pop = None; f = None; bestf = None
+    print("\ntoo few populated cover bins to fit")
 
 fig, ax = plt.subplots(1, 2, figsize=(13.5, 5.4), dpi=130)
 ax[0].errorbar(cc, mm, yerr=se, fmt="o-", ms=5, lw=1.4, capsize=3, color="C2",
                label="binned median ± robust SE")
-if b is not None:
-    xs = np.linspace(0, max(cc.max(), 0.7), 100)
-    ax[0].plot(xs, np.polyval(b, xs), "--", color="0.35", lw=1.2,
-               label=f"linear {b[1]:+.0f} {b[0]:+.0f}·cover")
-    if pop is not None:
-        ax[0].plot(xs, f(xs, *pop), "-", color="C1", lw=1.2, alpha=.8, label="saturating")
+if bestf is not None:
+    xs = np.linspace(0, min(max(cc.max(), 0.7), 0.95), 200)
+    for nm, dsg in FORMS.items():
+        X = dsg(cc); rw = np.sqrt(w)[:, None]
+        bb, *_ = np.linalg.lstsq(X*rw, mm*np.sqrt(w), rcond=None)
+        sel = nm == bestf[0]
+        ax[0].plot(xs, dsg(xs) @ bb, "-" if sel else "--", lw=1.8 if sel else 0.9,
+                   alpha=1.0 if sel else .55,
+                   label=nm.split()[0] + (" (selected)" if sel else ""))
 ax[0].axhline(0, color="k", lw=.7)
 ax[0].set_xlabel("PyForestScan canopy cover (fraction)")
 ax[0].set_ylabel(f"median offset {DCOL} (mm)   [gen1 \u2212 gen2; + = lower in 2021]")
