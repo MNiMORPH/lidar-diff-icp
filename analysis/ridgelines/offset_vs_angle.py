@@ -147,6 +147,9 @@ if len(cf): ax[1].plot(cf, mf, "C1^-", label="forest (cc>0.50)")
 ax[1].axhline(0, color="k", lw=.6); ax[1].set_xlim(*XLIM)
 ax[1].set_xlabel(cfg["label"]); ax[1].set_ylabel("median offset d (mm)")
 ax[1].set_title(f"median offset vs {XNAME}, by canopy cover"); ax[1].legend(); ax[1].grid(alpha=.3)
-fig.suptitle(f"gen1 per-beam offset vs {XNAME} (elba) — {lab}", y=1.0)
-fig.savefig(f"figures/refdatum/offset_vs_{A.x}{suffix}.png", dpi=130, bbox_inches="tight"); plt.close(fig)
-print(f"wrote figures/refdatum/offset_vs_{A.x}{suffix}.png")
+import os as _os
+_tile = _os.path.basename(A.tile.rstrip("/"))                       # tag figures by tile
+_tt = "" if _tile == "elba_fulldensity" else f"_{_tile}"
+fig.suptitle(f"gen1 per-beam offset vs {XNAME} ({_tile}) — {lab}", y=1.0)
+fig.savefig(f"figures/refdatum/offset_vs_{A.x}{suffix}{_tt}.png", dpi=130, bbox_inches="tight"); plt.close(fig)
+print(f"wrote figures/refdatum/offset_vs_{A.x}{suffix}{_tt}.png")
