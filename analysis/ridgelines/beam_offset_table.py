@@ -72,17 +72,25 @@ aspect_deg = aspect.ravel()[cell].astype(np.float32)
 # --- per-return fields the npz did not carry: read the SAME cached LAS, in order ---
 las = laspy.read(LAS)
 
-# --- registration-corrected offset (geoid datum + constant lateral shift) ---
+# --- registration-corrected offset: ALL FOUR terms the DoD pipeline applies ---
+# cross-epoch (geoid datum, lateral tie) + INTERNAL (per-swath alignment to the lowest
+# flight line, per-swath along-track drift). Without the internal pair the returns are not
+# even self-consistent: the same ground seen from two flight lines disagrees by up to
+# ~1.4 m laterally and ~44 mm vertically here.
 _gx, _gy, _nn = reg.surface_gradients(Zaf, RES)
-_datum = reg.read_cross_epoch_datum(TILE)
-d_corr, dz_geoid, dz_lateral = reg.corrected_offset(
+_terms = reg.registration_terms(
     ang["d_mm"], np.asarray(las.x, float), np.asarray(las.y, float),
-    _gx.ravel()[cell], _gy.ravel()[cell], _nn.ravel()[cell], _datum)
-d_corr = d_corr.astype(np.float32); dz_geoid = dz_geoid.astype(np.float32)
-dz_lateral = dz_lateral.astype(np.float32)
-print(f"registration: geoid {1000*_datum['const_m']:+.1f} mm, lateral shift "
-      f"{_datum['horizontal_shift_m']} m -> lateral term median "
-      f"{np.median(dz_lateral):+.1f} mm, NMAD {1.4826*np.median(np.abs(dz_lateral-np.median(dz_lateral))):.1f} mm")
+    np.asarray(las.gps_time, float), ang["point_source_id"],
+    _gx.ravel()[cell], _gy.ravel()[cell], _nn.ravel()[cell], TILE)
+dz_geoid   = _terms["geoid"].astype(np.float32)
+dz_lateral = _terms["lateral"].astype(np.float32)
+dz_swath   = _terms["swath"].astype(np.float32)
+dz_drift   = _terms["drift"].astype(np.float32)
+d_corr     = _terms["d_corr"].astype(np.float32)
+def _nmad(a): return 1.4826*np.median(np.abs(a-np.median(a)))
+print("registration terms (median / NMAD, mm):")
+for _k, _v in (("geoid", dz_geoid), ("lateral", dz_lateral), ("swath", dz_swath), ("drift", dz_drift)):
+    print(f"   {_k:8s} {np.median(_v):+8.1f} / {_nmad(_v):7.1f}")
 assert len(las.x) == n, f"LAS {len(las.x):,} != npz {n:,} -- alignment broken"
 _dims = set(las.point_format.dimension_names)
 def _opt(name, dt):        # optional LAS dim (PF6+ fields absent in PF<=5) -> zeros
@@ -95,16 +103,25 @@ cols = {
     "incidence":    ang["incidence"],           # deg, beam vs local surface normal
     # response
     "d_mm":         ang["d_mm"],                # mm, slope-normal offset of return vs gen2 surface
-    # --- the SAME offset with the pipeline's cross-epoch registration applied ---
-    # d_mm is measured from RAW gen1 LAS coordinates, so it carries the geoid datum and the
-    # lateral (Nuth-Kaeaeb) misregistration that difference_dem removes. The geoid term is a
-    # constant and can only move the distribution; the lateral term is -(gx*dx+gy*dy), a
-    # tan(slope) signature that can imitate or cancel a slope-dependent instrument error --
-    # so any f(slope) must be checked against BOTH d_mm and d_mm_corr. The per-swath internal
-    # alignment (larger here) is still NOT applied to either. Meaningful where in_grid.
-    "dz_geoid_mm":   dz_geoid,                  # mm added for the geoid-difference datum
-    "dz_lateral_mm": dz_lateral,                # mm added for the constant lateral shift
-    "d_mm_corr":     d_corr,                    # mm, d_mm + dz_geoid_mm + dz_lateral_mm
+    # --- the SAME offset with the pipeline's registration applied ---
+    # d_mm is measured from RAW gen1 LAS coordinates, so it carries every correction
+    # difference_dem applies. Stored as separate terms so any one can be excluded or undone:
+    #   geoid   - cross-epoch datum; a constant, so it can only move the distribution
+    #   lateral - cross-epoch tie; -(gx*dx+gy*dy), a tan(slope) signature that can imitate
+    #             or cancel a slope-dependent instrument error, so f(slope) must be read
+    #             against BOTH d_mm and d_mm_corr
+    #   swath   - INTERNAL alignment of each flight line to the lowest-numbered one; without
+    #             it the cloud disagrees with itself across swaths, and two tiles built from
+    #             different swath sets sit on different gauges
+    #   drift   - INTERNAL per-swath along-track GNSS drift, interpolated in gps_time
+    # Still NOT applied: the boresight-RESIDUAL roll (the vendor TerraMatch boresight is
+    # already in the delivered data; our residual search returned None here).
+    # All meaningful where in_grid.
+    "dz_geoid_mm":   dz_geoid,                  # mm, geoid-difference datum
+    "dz_lateral_mm": dz_lateral,                # mm, constant cross-epoch lateral shift
+    "dz_swath_mm":   dz_swath,                  # mm, per-swath internal alignment
+    "dz_drift_mm":   dz_drift,                  # mm, per-swath along-track drift
+    "d_mm_corr":     d_corr,                    # mm, d_mm + all four terms
     # forest cover
     "canopy_cover": canopy_cover,               # PyForestScan cover fraction at the cell
     # local surface form
@@ -157,8 +174,9 @@ ing = cols["in_grid"].astype(bool)
 print(f"summary over {ing.sum():,} in-grid returns:")
 print(f"  {'column':22s} {'min':>12s} {'median':>12s} {'max':>12s}  {'note'}")
 notes = {"scan_angle": "deg", "slope": "deg", "incidence": "deg", "d_mm": "mm offset vs gen2 (RAW, pre-registration)",
-         "d_mm_corr": "mm offset, geoid+lateral corrected",
+         "d_mm_corr": "mm offset, fully registration-corrected",
          "dz_geoid_mm": "mm, geoid datum term", "dz_lateral_mm": "mm, lateral shift term",
+         "dz_swath_mm": "mm, per-swath alignment", "dz_drift_mm": "mm, along-track drift",
          "canopy_cover": "fraction", "curv_laplacian": "elev Laplacian (curvature)",
          "intensity": "raw DN", "gps_time": "s", "z": "m elev"}
 for k, v in cols.items():
