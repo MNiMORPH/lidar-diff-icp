@@ -34,8 +34,34 @@ print(f"src N={len(x):,}  extent E{X0:.0f}-{X1:.0f} N{Y0:.0f}-{Y1:.0f}", flush=T
 hdr = laspy.LasHeader(point_format=f.header.point_format.id, version=str(f.header.version))
 hdr.scales = f.header.scales; hdr.offsets = f.header.offsets
 
+
+def copy_all_dims(src, out_hdr, mask):
+    """Copy EVERY dimension of ``src`` (masked) into a new LasData on ``out_hdr``.
+
+    Never a hand-picked field list: that is what silently dropped scan_angle_rank
+    from the first elbaext build.  x/y/z go through the scaled accessors so a tile
+    whose header carries different scales/offsets still lands in the right place.
+    """
+    out = laspy.LasData(out_hdr)
+    out.x = np.asarray(src.x)[mask]
+    out.y = np.asarray(src.y)[mask]
+    out.z = np.asarray(src.z)[mask]
+    for d in src.point_format.dimension_names:
+        if d in ("X", "Y", "Z"):
+            continue
+        setattr(out, d, np.asarray(getattr(src, d))[mask])
+    return out
+
+
+# The cache writer's header is taken from PDAL's OUTPUT (opened on the first tile),
+# not from the source: PDAL's writers.las promotes LAS 1.1/PF1 -> 1.4/PF7, which
+# RENAMES scan_angle_rank (int deg) -> scan_angle (int16, 0.006 deg).  Re-imposing
+# the PF1 source header here is what silently zeroed the elbaext scan angles.
+# gen1_save_angles_slope.py reads either name, and the elba cache is PF7 already,
+# so keeping PDAL's format makes both tiles identical in method.
 total = 0
-with laspy.open(CACHE, mode="w", header=hdr) as w:
+w = None
+try:
     for j in range(NY):
         for i in range(NX):
             cx0, cx1 = X0 + i*dx, X0 + (i+1)*dx      # tile CORE (no halo)
@@ -44,12 +70,7 @@ with laspy.open(CACHE, mode="w", header=hdr) as w:
             hm = ((x >= cx0-OVERLAP) & (x <= cx1+OVERLAP) &
                   (y >= cy0-OVERLAP) & (y <= cy1+OVERLAP))
             tile_in = f"data/derived/_csf_tiles_tmp/tile_{i}_{j}.laz"
-            sub = laspy.LasData(hdr)
-            for d in ("x","y","z","intensity","return_number","number_of_returns",
-                      "classification","point_source_id","gps_time","scan_angle_rank"):
-                try: setattr(sub, d, np.asarray(getattr(f, d))[hm])
-                except Exception: pass
-            sub.write(tile_in)
+            copy_all_dims(f, hdr, hm).write(tile_in)
             print(f"tile[{i},{j}] halo N={hm.sum():,} -> CSF ...", flush=True)
             gpath = classify_ground_csf(tile_in)         # class-2 ground LAS
             g = laspy.read(gpath)
@@ -60,15 +81,27 @@ with laspy.open(CACHE, mode="w", header=hdr) as w:
             if i == NX-1:   core |= (gx >= cx1)
             if j == 0:      core |= (gy < cy0)
             if j == NY-1:   core |= (gy >= cy1)
-            gg = laspy.LasData(hdr)
-            for d in ("x","y","z","intensity","return_number","number_of_returns",
-                      "classification","point_source_id","gps_time","scan_angle_rank"):
-                try: setattr(gg, d, np.asarray(getattr(g, d))[core])
-                except Exception: pass
-            w.write_points(gg.points)
+            if w is None:                                # first tile fixes the output format
+                ghdr = laspy.LasHeader(point_format=g.header.point_format.id,
+                                       version=str(g.header.version))
+                ghdr.scales = g.header.scales; ghdr.offsets = g.header.offsets
+                w = laspy.open(CACHE, mode="w", header=ghdr)
+                print(f"cache format: PF{ghdr.point_format.id} v{ghdr.version} "
+                      f"dims={len(list(ghdr.point_format.dimension_names))}", flush=True)
+            w.write_points(copy_all_dims(g, ghdr, core).points)
             total += int(core.sum())
             print(f"tile[{i},{j}] ground-in-core N={core.sum():,}  (cum {total:,})", flush=True)
             os.remove(tile_in)
             import shutil; shutil.rmtree(os.path.dirname(gpath), ignore_errors=True)
+finally:
+    if w is not None:
+        w.close()
 
-print(f"wrote {CACHE}  N={total:,} class-2 ground pts", flush=True)
+# fail loudly rather than leave a silently angle-less cache behind again
+chk = laspy.read(CACHE)
+sa = (np.asarray(chk.scan_angle) * 0.006 if "scan_angle" in chk.point_format.dimension_names
+      else np.asarray(chk.scan_angle_rank).astype(float))
+nz = 100 * (sa != 0).mean()
+print(f"wrote {CACHE}  N={total:,} class-2 ground pts  "
+      f"scan angle: nonzero%={nz:.1f} range[{sa.min():.1f},{sa.max():.1f}] deg", flush=True)
+assert nz > 50, "scan angle lost in the CSF round-trip -- cache is unusable, do NOT ship it"
