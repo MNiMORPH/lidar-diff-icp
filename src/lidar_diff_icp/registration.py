@@ -19,11 +19,26 @@ ground -- larger than the effects being measured. Any f(slope) fitted to uncorre
 per-return offsets is therefore confounded with residual misregistration, and the two
 cannot be told apart after the fact. That is the whole reason these columns exist.
 
-NOT included: the per-swath internal alignment (``per_swath_internal_alignment_dxdydz_m``
-in the same corrections file), which is per-flight-line and at this site is LARGER than
-the cross-epoch shift. Correcting the cross-epoch term alone is an improvement in datum
-but not a guarantee of an improvement in slope-dependence; treat corrected and uncorrected
-offsets as two readings to compare, not as wrong and right.
+The corrections come in two families, and BOTH matter:
+
+* CROSS-EPOCH (gen1 vs gen2): the geoid datum and the constant lateral tie.
+* INTERNAL (gen1 vs itself): the per-swath alignment to the lowest-numbered flight line,
+  and the per-swath along-track GNSS drift. Without these the point returns carry raw
+  swath-to-swath disagreement -- the same ground measured twice from two flight lines
+  differs by up to 1.4 m laterally and ~44 mm vertically here -- so the cloud is not even
+  internally consistent, and any statistic pooled across swaths mixes that in.
+
+The internal terms are also what makes two tiles comparable: the alignment is relative to
+each tile's OWN lowest swath, so tiles built from different swath sets sit on different
+gauges (at this site the elba and elbaext lateral ties differ by 197 mm, of which all but
+25 mm is gauge). Applying the alignment puts them on a common frame.
+
+Terms compose additively: every shift is small enough that the gen2 surface is linear over
+it, so the total is the sum of the individual terms and each can be stored and undone
+separately. NOT included: the opt-in boresight-RESIDUAL roll. The vendor's TerraMatch boresight is
+already applied in the delivered 2008 data; our option searches for a RESIDUAL roll on
+top of it, and that residual was not applied to these products
+(``boresight_roll_mm_per_deg: None``).
 
 Sign convention: the returned terms are ADDED to a slope-normal offset defined as
 ``d = (z_gen1 - plane_gen2(x, y)) / |n|``, positive = gen1 above gen2.
@@ -35,8 +50,9 @@ import os
 
 import numpy as np
 
-__all__ = ["surface_gradients", "read_cross_epoch_datum", "geoid_term", "lateral_term",
-           "corrected_offset"]
+__all__ = ["surface_gradients", "read_cross_epoch_datum", "read_swath_alignment",
+           "read_drift_curves", "geoid_term", "lateral_term", "swath_alignment_term",
+           "along_track_drift_term", "corrected_offset", "registration_terms"]
 
 _CORRECTION_FILES = ("corrections_geoid.json", "corrections.json")
 
@@ -100,3 +116,90 @@ def corrected_offset(d_mm, x, y, gx_pt, gy_pt, nnorm_pt, datum):
     g = geoid_term(x, y, nnorm_pt, datum)
     lat = lateral_term(gx_pt, gy_pt, nnorm_pt, datum)
     return np.asarray(d_mm, float) + g + lat, g, lat
+
+
+def _load(tile_dir, key):
+    for fn in _CORRECTION_FILES:
+        p = os.path.join(tile_dir, fn)
+        if os.path.exists(p):
+            j = json.load(open(p))
+            if key in j:
+                return j[key]
+    raise FileNotFoundError(f"no {key} in {tile_dir} (looked for {', '.join(_CORRECTION_FILES)})")
+
+
+def read_swath_alignment(tile_dir):
+    """``{point_source_id: (dx, dy, dz)}`` -- the internal alignment of each flight line
+    to the lowest-numbered one (which is the reference and maps to zeros)."""
+    return {int(k): tuple(float(c) for c in v)
+            for k, v in _load(tile_dir, "per_swath_internal_alignment_dxdydz_m").items()}
+
+
+def read_drift_curves(tile_dir):
+    """``{point_source_id: (gps_time, drift_m)}`` -- the per-swath along-track GNSS drift
+    curve, to be interpolated in gps_time within each swath."""
+    out = {}
+    for k, v in _load(tile_dir, "along_track_drift_gpsTime_to_m").items():
+        t = np.asarray(v["gps_time"], float); d = np.asarray(v["drift_m"], float)
+        order = np.argsort(t)
+        out[int(k)] = (t[order], d[order])
+    return out
+
+
+def swath_alignment_term(psid, gx_pt, gy_pt, nnorm_pt, align):
+    """Slope-normal mm to add for the per-swath internal alignment.
+
+    Each flight line gets its own ``(dx, dy, dz)``: the vertical part enters directly and
+    the lateral part through the surface gradient, exactly as the cross-epoch shift does.
+    An unmapped point_source_id raises rather than silently contributing zero -- a swath
+    quietly left uncorrected is the failure this whole module exists to prevent.
+    """
+    psid = np.asarray(psid)
+    gx_pt = np.asarray(gx_pt, float); gy_pt = np.asarray(gy_pt, float)
+    nnorm_pt = np.asarray(nnorm_pt, float)
+    missing = set(np.unique(psid).tolist()) - set(align)
+    if missing:
+        raise KeyError(f"no alignment for point_source_id {sorted(missing)}; "
+                       f"known: {sorted(align)}")
+    dx = np.empty(psid.shape, float); dy = np.empty(psid.shape, float); dz = np.empty(psid.shape, float)
+    for s, (ax, ay, az) in align.items():
+        m = psid == s
+        if m.any():
+            dx[m] = ax; dy[m] = ay; dz[m] = az
+    return 1000.0 * (dz - (gx_pt * dx + gy_pt * dy)) / nnorm_pt
+
+
+def along_track_drift_term(psid, gps_time, nnorm_pt, curves):
+    """Slope-normal mm to add for the per-swath along-track GNSS drift.
+
+    The drift is a vertical, time-varying, per-flight-line term: each return is
+    interpolated on its own swath's curve (clamped to the curve ends outside its span).
+    """
+    psid = np.asarray(psid); gps_time = np.asarray(gps_time, float)
+    nnorm_pt = np.asarray(nnorm_pt, float)
+    missing = set(np.unique(psid).tolist()) - set(curves)
+    if missing:
+        raise KeyError(f"no drift curve for point_source_id {sorted(missing)}; "
+                       f"known: {sorted(curves)}")
+    dz = np.zeros(psid.shape, float)
+    for s, (t, d) in curves.items():
+        m = psid == s
+        if m.any():
+            dz[m] = np.interp(gps_time[m], t, d)
+    return 1000.0 * dz / nnorm_pt
+
+
+def registration_terms(d_mm, x, y, gps_time, psid, gx_pt, gy_pt, nnorm_pt, tile_dir):
+    """Every registration term for a per-return offset, plus their sum.
+
+    Returns a dict with ``geoid``, ``lateral``, ``swath``, ``drift`` (each slope-normal mm)
+    and ``d_corr`` = ``d_mm`` + all four -- the offset as the DoD pipeline would measure it.
+    Terms are kept separate so any one can be inspected, excluded, or undone.
+    """
+    datum = read_cross_epoch_datum(tile_dir)
+    geoid = geoid_term(x, y, nnorm_pt, datum)
+    lateral = lateral_term(gx_pt, gy_pt, nnorm_pt, datum)
+    swath = swath_alignment_term(psid, gx_pt, gy_pt, nnorm_pt, read_swath_alignment(tile_dir))
+    drift = along_track_drift_term(psid, gps_time, nnorm_pt, read_drift_curves(tile_dir))
+    return {"geoid": geoid, "lateral": lateral, "swath": swath, "drift": drift,
+            "d_corr": np.asarray(d_mm, float) + geoid + lateral + swath + drift}
