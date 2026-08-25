@@ -19,7 +19,10 @@ from lidar_diff_icp.ground import classify_ground_csf
 
 SRC   = "data/before/elbaext_gen1_merged.laz"
 CACHE = "data/csf_cache/elbaext.las"
-NX, NY = 2, 2          # 2x2 tiles -> ~4.3M pts/tile, well within RAM
+NX, NY = 3, 3          # 3x3 tiles -> ~2.5M pts/tile incl. halo.  2x2 (~5.4M) ran to
+                       # completion but PDAL CSF costs ~1 kB/point, and its peak on top
+                       # of a loaded desktop drove this shared laptop into swap; 3x3
+                       # halves the peak for a few extra minutes of CSF.
 OVERLAP = 150.0        # m halo; CSF edge reach is a few cloth cells, 150 m is ample
 
 os.makedirs("data/csf_cache", exist_ok=True)
