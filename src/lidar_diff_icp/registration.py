@@ -35,10 +35,11 @@ gauges (at this site the elba and elbaext lateral ties differ by 197 mm, of whic
 
 Terms compose additively: every shift is small enough that the gen2 surface is linear over
 it, so the total is the sum of the individual terms and each can be stored and undone
-separately. NOT included: the opt-in boresight-RESIDUAL roll. The vendor's TerraMatch boresight is
-already applied in the delivered 2008 data; our option searches for a RESIDUAL roll on
-top of it, and that residual was not applied to these products
-(``boresight_roll_mm_per_deg: None``).
+separately. NOT included, and deliberately so: the boresight-RESIDUAL roll. The vendor's TerraMatch
+boresight is already applied in the delivered 2008 data; our opt-in term searches for a
+RESIDUAL roll on top of it, and when that search was run it found nothing resolvable --
+hence ``boresight_roll_mm_per_deg: None`` in the corrections files. That is a settled
+negative result, not an outstanding correction to add later.
 
 Sign convention: the returned terms are ADDED to a slope-normal offset defined as
 ``d = (z_gen1 - plane_gen2(x, y)) / |n|``, positive = gen1 above gen2.

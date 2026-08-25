@@ -114,8 +114,9 @@ cols = {
     #             it the cloud disagrees with itself across swaths, and two tiles built from
     #             different swath sets sit on different gauges
     #   drift   - INTERNAL per-swath along-track GNSS drift, interpolated in gps_time
-    # Still NOT applied: the boresight-RESIDUAL roll (the vendor TerraMatch boresight is
-    # already in the delivered data; our residual search returned None here).
+    # Not represented, by design: the boresight-RESIDUAL roll. The vendor TerraMatch
+    # boresight is already in the delivered data, and our search for a residual on top of
+    # it found nothing resolvable -- a settled negative, not a missing term.
     # All meaningful where in_grid.
     "dz_geoid_mm":   dz_geoid,                  # mm, geoid-difference datum
     "dz_lateral_mm": dz_lateral,                # mm, constant cross-epoch lateral shift
