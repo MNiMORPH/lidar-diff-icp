@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Core forest: PDF of near-perpendicular (<=10deg) ground-return elevations vs PDF of ALL
+"""Forest (PyForestScan cover>=0.5): PDF of near-perpendicular (<=10deg) ground-return elevations vs PDF of ALL
 ground-return elevations, as a function of slope. near-perpendicular = incidence to surface
 <= 2 deg. Elevation = d_mm (contains ~67 mm constant datum). gen1 CSF cloth ground.
 (Expect the perpendicular sample to dwindle as slope steepens: scanner +-17deg can't reach
@@ -7,11 +7,18 @@ perpendicular on steep slopes.)
 
     ./lidar-icp/bin/python analysis/ridgelines/perp_vs_all_pdf_by_slope.py
 """
+import argparse, os
 import numpy as np
 import matplotlib; matplotlib.use("Agg"); import matplotlib.pyplot as plt
 
-Z=np.load("data/derived/elba_fulldensity/gen1_csf_angles.npz")
-d=Z["d_mm"]; inc=Z["incidence"]; slp=Z["slope"]; cf=Z["core_forest"]; ing=Z["in_grid"]
+ap = argparse.ArgumentParser()
+ap.add_argument("--tile", default="data/derived/elba_fulldensity")
+A_ = ap.parse_args()
+TILE = os.path.basename(A_.tile.rstrip("/"))
+TAG = "" if TILE == "elba_fulldensity" else f"_{TILE}"
+TITLE_TAG = "" if not TAG else f"  ({TILE})"
+Z=np.load(f"{A_.tile}/gen1_csf_angles.npz")
+d=Z["d_mm"]; inc=Z["incidence"]; slp=Z["slope"]; cf=Z["pfs_forest"]; ing=Z["in_grid"]
 base=cf&ing&np.isfinite(d)&np.isfinite(inc)&np.isfinite(slp)
 perp=base&(inc<=10.0)
 
@@ -33,14 +40,14 @@ for ax,(lo,hi) in zip(axes,bands):
     ax.set_title(f"slope {lo}-{hi}°"); ax.set_xlabel("ground-return elevation d (mm)")
     ax.legend(fontsize=7,loc="upper left"); ax.grid(alpha=.3)
 axes[0].set_ylabel("PDF (density)")
-fig.suptitle("Core forest: near-perpendicular (<=10°) vs all ground-return elevation PDFs, by slope",y=1.02)
-fig.savefig("figures/refdatum/perp10_vs_all_pdf_by_slope.png",dpi=100,bbox_inches="tight"); plt.close(fig)
+fig.suptitle(f"Forest (PyForestScan cover>=0.5): near-perpendicular (<=10°) vs all ground-return elevation PDFs, by slope{TITLE_TAG}",y=1.02)
+fig.savefig(f"figures/refdatum/perp10_vs_all_pdf_by_slope{TAG}.png",dpi=100,bbox_inches="tight"); plt.close(fig)
 
-print("core forest, ground-return elevation medians (mm); perp = incidence<=10deg:")
+print("forest (PFS cover>=0.5), ground-return elevation medians (mm); perp = incidence<=10deg:")
 print(f"{'slope':>10} {'all n':>10} {'all med':>9} {'perp n':>9} {'perp med':>10}")
 for lo,hi in bands:
     ma=base&(slp>=lo)&(slp<hi); mp=perp&(slp>=lo)&(slp<hi)
     am=np.median(d[ma]) if ma.sum()>50 else float("nan")
     pm=np.median(d[mp]) if mp.sum()>50 else float("nan")
     print(f"{lo:>4}-{hi:<4} {ma.sum():>10,} {am:>+9.1f} {mp.sum():>9,} {pm:>+10.1f}")
-print("\nwrote figures/refdatum/perp10_vs_all_pdf_by_slope.png")
+print(f"\nwrote figures/refdatum/perp10_vs_all_pdf_by_slope{TAG}.png")
