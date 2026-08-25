@@ -143,7 +143,7 @@ for lo, hi in zip(np.arange(0, 45, 1.0), np.arange(1, 46, 1.0)):
     if m.sum() >= 50: bc.append(0.5*(lo+hi)); bm.append(np.median(d[m]))
 a0.plot(bc, bm, "o-", color="crimson", ms=3.5, lw=1.3, label="binned median (all returns)")
 a0.axhline(0, color="k", lw=.6); a0.set_xlim(0, 45); a0.set_ylim(-300, 300)
-a0.set_xlabel("surface slope (deg)"); a0.set_ylabel("offset d (mm), gen1 vs gen2")
+a0.set_xlabel("surface slope (deg)"); a0.set_ylabel("offset d (mm) = gen1 − gen2   (+ = ground lower in 2021)")
 a0.set_title("ALL returns: per-beam offset vs slope"); a0.legend(fontsize=8)
 
 for axi, (sname, smask) in zip((ax[0, 1], ax[1, 0], ax[1, 1]), STRATA):
@@ -152,7 +152,7 @@ for axi, (sname, smask) in zip((ax[0, 1], ax[1, 0], ax[1, 1]), STRATA):
         if c.size:
             axi.plot(c, m, "o-", ms=4, lw=1.5, color=COLORS[k], label=f"{k} (n={nn.sum():,})")
     axi.axhline(0, color="k", lw=.6); axi.set_xlim(0, 45)
-    axi.set_xlabel("surface slope (deg)"); axi.set_ylabel("median offset d (mm)")
+    axi.set_xlabel("surface slope (deg)"); axi.set_ylabel("median offset d (mm)   [gen1 − gen2; + = lower in 2021]")
     axi.set_title(f"best beam per cell, by geometry — {sname}")
     axi.legend(fontsize=7.5); axi.grid(alpha=.3)
 fig.suptitle(f"gen1 offset by BEAM SELECTION vs slope — {lab}", y=1.0)

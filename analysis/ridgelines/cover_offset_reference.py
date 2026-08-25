@@ -128,7 +128,7 @@ if b is not None:
         ax[0].plot(xs, f(xs, *pop), "-", color="C1", lw=1.2, alpha=.8, label="saturating")
 ax[0].axhline(0, color="k", lw=.7)
 ax[0].set_xlabel("PyForestScan canopy cover (fraction)")
-ax[0].set_ylabel(f"median offset {DCOL} (mm)")
+ax[0].set_ylabel(f"median offset {DCOL} (mm)   [gen1 \u2212 gen2; + = lower in 2021]")
 ax[0].set_title(f"offset vs forest density on non-eroding ground\n{label}", fontsize=10)
 ax[0].legend(fontsize=8); ax[0].grid(alpha=.3)
 ax[1].bar(cc, nn, width=0.03, color="0.6")
