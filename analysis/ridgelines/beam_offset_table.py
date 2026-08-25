@@ -27,6 +27,8 @@ smaller than CSV at this row count, and read natively by pandas/polars/R/DuckDB/
 """
 import sys, numpy as np, pandas as pd, laspy
 
+from lidar_diff_icp import registration as reg
+
 import os, json
 TILE = sys.argv[1] if len(sys.argv) > 1 else "data/derived/elba_fulldensity"
 LAS  = sys.argv[2] if len(sys.argv) > 2 else "data/csf_cache/elba.las"
@@ -39,7 +41,8 @@ def _grid(tile):           # (NY, NX, RES) from tile meta/corrections (cell = iy
     raise SystemExit(f"no grid meta in {tile}")
 NY, NX, RES = _grid(TILE)
 
-# --- geometry + offset already computed per return (parabola-free; geoid tie applied later) ---
+# --- geometry + offset already computed per return (parabola-free; RAW d_mm is
+# pre-registration -- the registration-corrected columns are added below) ---
 ang = np.load(f"{TILE}/gen1_csf_angles.npz")
 n = ang["d_mm"].shape[0]
 cell = ang["cell"].astype(np.int64)
@@ -68,6 +71,18 @@ aspect_deg = aspect.ravel()[cell].astype(np.float32)
 
 # --- per-return fields the npz did not carry: read the SAME cached LAS, in order ---
 las = laspy.read(LAS)
+
+# --- registration-corrected offset (geoid datum + constant lateral shift) ---
+_gx, _gy, _nn = reg.surface_gradients(Zaf, RES)
+_datum = reg.read_cross_epoch_datum(TILE)
+d_corr, dz_geoid, dz_lateral = reg.corrected_offset(
+    ang["d_mm"], np.asarray(las.x, float), np.asarray(las.y, float),
+    _gx.ravel()[cell], _gy.ravel()[cell], _nn.ravel()[cell], _datum)
+d_corr = d_corr.astype(np.float32); dz_geoid = dz_geoid.astype(np.float32)
+dz_lateral = dz_lateral.astype(np.float32)
+print(f"registration: geoid {1000*_datum['const_m']:+.1f} mm, lateral shift "
+      f"{_datum['horizontal_shift_m']} m -> lateral term median "
+      f"{np.median(dz_lateral):+.1f} mm, NMAD {1.4826*np.median(np.abs(dz_lateral-np.median(dz_lateral))):.1f} mm")
 assert len(las.x) == n, f"LAS {len(las.x):,} != npz {n:,} -- alignment broken"
 _dims = set(las.point_format.dimension_names)
 def _opt(name, dt):        # optional LAS dim (PF6+ fields absent in PF<=5) -> zeros
@@ -80,6 +95,16 @@ cols = {
     "incidence":    ang["incidence"],           # deg, beam vs local surface normal
     # response
     "d_mm":         ang["d_mm"],                # mm, slope-normal offset of return vs gen2 surface
+    # --- the SAME offset with the pipeline's cross-epoch registration applied ---
+    # d_mm is measured from RAW gen1 LAS coordinates, so it carries the geoid datum and the
+    # lateral (Nuth-Kaeaeb) misregistration that difference_dem removes. The geoid term is a
+    # constant and can only move the distribution; the lateral term is -(gx*dx+gy*dy), a
+    # tan(slope) signature that can imitate or cancel a slope-dependent instrument error --
+    # so any f(slope) must be checked against BOTH d_mm and d_mm_corr. The per-swath internal
+    # alignment (larger here) is still NOT applied to either. Meaningful where in_grid.
+    "dz_geoid_mm":   dz_geoid,                  # mm added for the geoid-difference datum
+    "dz_lateral_mm": dz_lateral,                # mm added for the constant lateral shift
+    "d_mm_corr":     d_corr,                    # mm, d_mm + dz_geoid_mm + dz_lateral_mm
     # forest cover
     "canopy_cover": canopy_cover,               # PyForestScan cover fraction at the cell
     # local surface form
@@ -131,7 +156,9 @@ print(f"wrote {TILE}/beam_offset_table.head.csv  (first 50 rows, preview)\n")
 ing = cols["in_grid"].astype(bool)
 print(f"summary over {ing.sum():,} in-grid returns:")
 print(f"  {'column':22s} {'min':>12s} {'median':>12s} {'max':>12s}  {'note'}")
-notes = {"scan_angle": "deg", "slope": "deg", "incidence": "deg", "d_mm": "mm offset vs gen2",
+notes = {"scan_angle": "deg", "slope": "deg", "incidence": "deg", "d_mm": "mm offset vs gen2 (RAW, pre-registration)",
+         "d_mm_corr": "mm offset, geoid+lateral corrected",
+         "dz_geoid_mm": "mm, geoid datum term", "dz_lateral_mm": "mm, lateral shift term",
          "canopy_cover": "fraction", "curv_laplacian": "elev Laplacian (curvature)",
          "intensity": "raw DN", "gps_time": "s", "z": "m elev"}
 for k, v in cols.items():
@@ -146,7 +173,7 @@ for k, v in cols.items():
 # --- a few sample rows ---
 print("\nsample rows (in-grid):")
 idx = np.where(ing)[0][:: max(1, ing.sum() // 5)][:5]
-show = ["scan_angle", "slope", "incidence", "d_mm", "canopy_cover", "intensity",
+show = ["scan_angle", "slope", "incidence", "d_mm", "d_mm_corr", "canopy_cover", "intensity",
         "return_number", "number_of_returns", "overlap"]
 print("  " + " ".join(f"{c:>10s}" for c in show))
 for i in idx:
