@@ -39,10 +39,21 @@ def geoid_difference(bounds, crs, *, before_geoid="us_noaa_geoid03_conus.tif",
 
     ``bounds``=(X0,Y0,X1,Y1) in ``crs`` (EPSG int or CRS). pyproj's data dir is set to
     ``proj_data`` explicitly so this works when PROJ_DATA is unset for GDAL/rasterio --
-    pyproj and GDAL do not share a data dir, so this does not disturb rasterio.
+    pyproj and GDAL do not share a data dir, so this does not disturb rasterio. PROJ grid
+    NETWORK access is enabled by default (set ``PROJ_NETWORK=OFF`` to forbid it): the geoid
+    grids ship with no PROJ install, and fetching them is what makes the datum reproducible
+    on a new machine rather than something to hard-code per tile.
     """
+    import os
     import pyproj
     pyproj.datadir.set_data_dir(proj_data)     # pyproj-only; leaves GDAL/rasterio untouched
+    # The GEOID03/GEOID18 grids are large and are NOT part of a normal PROJ install, so on a
+    # machine without them this dies with "could not find required grid(s)". PROJ can fetch
+    # and cache them itself, so network access is enabled by DEFAULT here -- an explicit
+    # PROJ_NETWORK=OFF is still honoured for anyone who wants a strictly offline run.
+    if os.environ.get("PROJ_NETWORK", "").upper() != "OFF":
+        os.environ.setdefault("PROJ_NETWORK", "ON")
+        pyproj.network.set_network_enabled(True)
     from pyproj import Transformer
     X0, Y0, X1, Y1 = bounds
     cx = 0.5 * (X0 + X1); cy = 0.5 * (Y0 + Y1)
