@@ -28,7 +28,10 @@ ap.add_argument("--min-n", type=int, default=3, help="minimum returns per cell f
 ap.add_argument("--min-cells", type=int, default=30, help="cells needed before a grid box is reported")
 A = ap.parse_args()
 TILE = os.path.basename(A.tile.rstrip("/"))
-TAG = ("" if TILE == "elba_fulldensity" else f"_{TILE}") + ("_ridge" if A.ridge else "")
+# the curvature cut MUST be in the name: different cuts are different analyses and
+# gave materially different coefficients, so one filename for all of them loses work.
+TAG = (("" if TILE == "elba_fulldensity" else f"_{TILE}")
+       + f"_curv{A.curv_max:g}" + ("_ridge" if A.ridge else ""))
 
 SLOPE_EDGES = np.array([0, 3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 35, 45], float)
 COVER_EDGES = np.array([0.0, 0.05, 0.10, 0.20, 0.35, 0.50, 1.01])
