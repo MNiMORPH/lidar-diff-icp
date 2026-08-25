@@ -22,18 +22,44 @@ steep-open cells are geographically special (eroding banks, road/quarry cuts) wh
 REAL change is also plausible.  So this control is directional, not conclusive on
 its own; read it together with HELP #3.
 
-    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/ridgelines/HELP_open_vs_forest_control.py
+    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/ridgelines/HELP_open_vs_forest_control.py [--tile elbaext]
+
+The cover proxy stays GEN1-INTERNAL (gen1 above-ground return fraction) on purpose:
+this asks a gen1-only mechanism question, so it must not be stratified by a
+gen2-derived cover raster.
 """
+import argparse, json, os
 import numpy as np, laspy, math
 from scipy.ndimage import distance_transform_edt
 
-NY, NX = 700, 508
-X0, Y0 = 577492.8, 4882737.6
-RES = 5.0
+_ap = argparse.ArgumentParser()
+_ap.add_argument("--tile", default="elba_fulldensity")
+_ap.add_argument("--csf",  default=None, help="CSF ground cache (default data/csf_cache/<tile>.las)")
+_ap.add_argument("--gen1", default=None, help="raw gen1 cloud for the ABOVE-GROUND FRACTION cover proxy")
+_A = _ap.parse_args()
+TILE = os.path.basename(_A.tile.rstrip("/"))
+D = f"data/derived/{TILE}/"
+_DEF_CSF = {"elba_fulldensity": "data/csf_cache/elba.las"}
+_DEF_G1  = {"elba_fulldensity": "data/before/4342-29-64.laz",
+            "elbaext":          "data/before/elbaext_gen1_merged.laz"}
+CSF  = _A.csf  or _DEF_CSF.get(TILE, f"data/csf_cache/{TILE}.las")
+GEN1 = _A.gen1 or _DEF_G1.get(TILE)
+if GEN1 is None:
+    raise SystemExit(f"no default gen1 cloud for tile {TILE}; pass --gen1")
+
+
+def _grid(tile):                                        # (X0,Y0,NX,NY,RES) from tile meta/corrections
+    for fn in ("meta.json", "corrections_geoid.json", "corrections.json"):
+        p = f"data/derived/{tile}/{fn}"
+        if os.path.exists(p):
+            j = json.load(open(p)); b = j["bounds"]; r = float(j.get("res") or j.get("res_m"))
+            nx = int(j.get("nx") or round((b[2]-b[0])/r)); ny = int(j.get("ny") or round((b[3]-b[1])/r))
+            return b[0], b[1], nx, ny, r
+    raise SystemExit(f"no grid meta for {tile}")
+
+
+X0, Y0, NX, NY, RES = _grid(TILE)
 BUDGET = 20.0
-CSF = "data/csf_cache/elba.las"
-GEN1 = "data/before/4342-29-64.laz"
-D = "data/derived/elba_fulldensity/"
 
 Zg = np.load(D + "z_after.npy"); Zf = Zg.copy(); m = ~np.isfinite(Zf)
 if m.any():
@@ -57,7 +83,10 @@ g1af = np.where(tot >= 5, above / np.maximum(tot, 1), np.nan)
 
 las = laspy.read(CSF)
 x = np.asarray(las.x, np.float64); y = np.asarray(las.y, np.float64); z = np.asarray(las.z, np.float64)
-sa = np.asarray(las.scan_angle).astype(float) * 0.006
+try:                                                    # scan angle -> DEGREES, both formats
+    sa = np.asarray(las.scan_angle).astype(float) * 0.006      # PF6+ (0.006 deg units)
+except Exception:
+    sa = np.asarray(las.scan_angle_rank).astype(float)         # PF<=5 (integer degrees)
 psid = np.asarray(las.point_source_id); gt = np.asarray(las.gps_time)
 ix = ((x - X0) / RES).astype(np.int64); iy = ((y - Y0) / RES).astype(np.int64)
 ing = (ix >= 0) & (ix < NX) & (iy >= 0) & (iy < NY)
@@ -91,7 +120,7 @@ SL_BANDS = [(3, 6), (6, 9), (9, 12), (12, 15), (15, 18), (18, 21), (21, 25)]
 ILO, IHI = 6, 10  # the incidence band both open and forest populate best on slopes
 
 print("=" * 78)
-print("HELP #4 -- OPEN vs FOREST slope-deepening at MATCHED incidence 6-10 deg")
+print(f"HELP #4 -- OPEN vs FOREST slope-deepening at MATCHED incidence 6-10 deg  [{TILE}]")
 print("self-anchored to each cover's own flat (<3 deg) floor")
 print("=" * 78)
 for lbl, sel in [("OPEN (no canopy)", OPEN), ("FOREST", FOREST)]:
