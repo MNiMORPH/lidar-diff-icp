@@ -128,36 +128,68 @@ for s_at in (5, 25):
 for c_at in (0.02, 0.60):
     print(f"   d(offset)/d(slope) at cover {c_at:.2f} : {mi.d_dslope(c_at):+.2f} mm/deg")
 
-# ---------------------------------------------------------------- 6. figure
+# ---------------------------------------------------------------- 6. figures
+# PRIMARY figure follows the offset_vs_angle house style: per-beam density with a binned
+# median on the left, medians split by canopy cover on the right -- here at the model's
+# full cover resolution, with the fitted surface overlaid so model and data are read
+# against each other in one place.
+sl_ret = d.slope.to_numpy(float); d_ret = d.d_mm.to_numpy(float); cc_ret = d.canopy_cover.to_numpy(float)
+XLIM = (0, 45)
 fig, ax = plt.subplots(1, 2, figsize=(14.5, 5.6), dpi=130)
-vm = np.nanmax(np.abs(grid))
-im = ax[0].imshow(grid, origin="lower", aspect="auto", cmap="RdBu_r", vmin=-vm, vmax=vm,
-                  extent=[0, NC, 0, NS])
-for i in range(NS):
-    for j in range(NC):
-        ax[0].text(j+0.5, i+0.5, f"{grid[i,j]:+.0f}" if np.isfinite(grid[i,j]) else "·",
-                   ha="center", va="center", fontsize=7.5,
-                   color="k" if np.isfinite(grid[i,j]) else "0.55")
-ax[0].set_xticks(np.arange(NC)+0.5)
-ax[0].set_xticklabels([f"{COVER_EDGES[j]:.2f}-{COVER_EDGES[j+1]:.2f}" for j in range(NC)], fontsize=7, rotation=30)
-ax[0].set_yticks(np.arange(NS)+0.5)
-ax[0].set_yticklabels([f"{SLOPE_EDGES[i]:.0f}-{SLOPE_EDGES[i+1]:.0f}" for i in range(NS)], fontsize=7)
-ax[0].set_xlabel("canopy cover (PyForestScan fraction)"); ax[0].set_ylabel("surface slope (deg)")
-ax[0].set_title("median offset (mm) on the slope x cover grid\n'·' = unsupported by the terrain")
-fig.colorbar(im, ax=ax[0], label="median offset d (mm)")
+
+hb = ax[0].hexbin(sl_ret, d_ret, gridsize=(60, 60), bins="log", cmap="viridis",
+                  extent=(XLIM[0], XLIM[1], -300, 300), mincnt=1)
+fig.colorbar(hb, ax=ax[0], label="log10 count")
+be = np.arange(XLIM[0], XLIM[1] + 1.0, 1.0)
+bc, bm = [], []
+for lo, hi in zip(be[:-1], be[1:]):
+    m = (sl_ret >= lo) & (sl_ret < hi)
+    if m.sum() >= 50:
+        bc.append(0.5*(lo+hi)); bm.append(np.median(d_ret[m]))
+ax[0].plot(bc, bm, "o-", color="crimson", ms=4, lw=1.4, label="binned median")
+ax[0].axhline(0, color="k", lw=.6); ax[0].set_xlim(*XLIM); ax[0].set_ylim(-300, 300)
+ax[0].set_xlabel("surface slope (deg)")
+ax[0].set_ylabel("offset d (mm), gen1 vs gen2")
+ax[0].set_title("PRIMARY: per-beam offset vs slope (all returns)"); ax[0].legend()
 
 cen_s = 0.5*(SLOPE_EDGES[:-1]+SLOPE_EDGES[1:])
+allc, allm = [], []
+for lo, hi in zip(SLOPE_EDGES[:-1], SLOPE_EDGES[1:]):
+    m = (sl_ret >= lo) & (sl_ret < hi)
+    if m.sum() >= 50: allc.append(0.5*(lo+hi)); allm.append(np.median(d_ret[m]))
+ax[1].plot(allc, allm, "o-", color="0.35", lw=2.0, ms=5, label="all returns", zorder=5)
 for j in range(NC):
     c_c = 0.5*(COVER_EDGES[j]+COVER_EDGES[j+1]); good = np.isfinite(grid[:, j])
     if good.sum() < 2: continue
-    line, = ax[1].plot(cen_s[good], grid[good, j], "o-", ms=4, lw=1.4,
+    line, = ax[1].plot(cen_s[good], grid[good, j], "o-", ms=4, lw=1.3,
                        label=f"cover {COVER_EDGES[j]:.2f}-{COVER_EDGES[j+1]:.2f} (n={cnt[good, j].sum():,})")
-    ax[1].plot(cen_s[good], mi.predict(cen_s[good], c_c), "--", lw=1.0, color=line.get_color(), alpha=.7)
-ax[1].axhline(0, color="k", lw=.6)
+    ax[1].plot(cen_s[good], mi.predict(cen_s[good], c_c), "--", lw=1.0, color=line.get_color(), alpha=.75)
+ax[1].axhline(0, color="k", lw=.6); ax[1].set_xlim(*XLIM)
 ax[1].set_xlabel("surface slope (deg)"); ax[1].set_ylabel("median offset d (mm)")
-ax[1].set_title("offset vs slope AT FIXED cover (solid = observed, dashed = median-surface fit)")
+ax[1].set_title("median offset vs slope, by canopy cover\n(solid = observed, dashed = joint model)")
 ax[1].legend(fontsize=7); ax[1].grid(alpha=.3)
-fig.suptitle(f"gen1 median offset as f(slope, canopy cover) — {lab}", y=1.0)
+fig.suptitle(f"gen1 offset vs slope and canopy cover — {lab}", y=1.0)
 out = f"figures/refdatum/offset_model_slope_cover{TAG}.png"
 fig.savefig(out, bbox_inches="tight"); plt.close(fig)
 print(f"\nwrote {out}")
+
+# SECONDARY: the (slope x cover) support grid -- where the terrain does and does not sample
+fig2, bx = plt.subplots(figsize=(7.6, 5.6), dpi=130)
+vm = np.nanmax(np.abs(grid))
+im = bx.imshow(grid, origin="lower", aspect="auto", cmap="RdBu_r", vmin=-vm, vmax=vm,
+               extent=[0, NC, 0, NS])
+for i in range(NS):
+    for j in range(NC):
+        bx.text(j+0.5, i+0.5, f"{grid[i,j]:+.0f}" if np.isfinite(grid[i,j]) else "·",
+                ha="center", va="center", fontsize=7.5,
+                color="k" if np.isfinite(grid[i,j]) else "0.55")
+bx.set_xticks(np.arange(NC)+0.5)
+bx.set_xticklabels([f"{COVER_EDGES[j]:.2f}-{COVER_EDGES[j+1]:.2f}" for j in range(NC)], fontsize=7, rotation=30)
+bx.set_yticks(np.arange(NS)+0.5)
+bx.set_yticklabels([f"{SLOPE_EDGES[i]:.0f}-{SLOPE_EDGES[i+1]:.0f}" for i in range(NS)], fontsize=7)
+bx.set_xlabel("canopy cover (PyForestScan fraction)"); bx.set_ylabel("surface slope (deg)")
+bx.set_title(f"median offset (mm) on the slope x cover grid — {lab}\n'·' = unsupported by the terrain", fontsize=9)
+fig2.colorbar(im, ax=bx, label="median offset d (mm)")
+out2 = f"figures/refdatum/offset_model_grid{TAG}.png"
+fig2.savefig(out2, bbox_inches="tight"); plt.close(fig2)
+print(f"wrote {out2}")
