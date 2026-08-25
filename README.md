@@ -77,9 +77,10 @@ point.
       `z −= b·scan_angle`. On the pilot the overlap fit gives `b = +2.19 mm/deg`,
       but the ±0.7 spread between flight-line pairs is too wide to call a residual
       resolved, so nothing is applied by default and `boresight_roll_mm_per_deg`
-      stays `None` in the delivered corrections. Referencing 2008 against *itself* decouples it from the 3DEP lateral
-      tie below, so the chain needs no iteration. It removes the cross-track
-      scan-angle asymmetry cleanly (the within-cell tilt drops +2.2 → −0.1 mm/deg),
+      stays `None` in the delivered corrections. Referencing 2008 against *itself*
+      decouples it from the 3DEP lateral tie below, so the chain needs no iteration.
+      It removes the cross-track scan-angle asymmetry cleanly (the within-cell tilt
+      drops +2.2 → −0.1 mm/deg),
       but its tile-wide DoD footprint is small — much of it self-cancels in the
       per-cell median where swaths overlap, and the per-line-mean part is already
       absorbed by the alignment below — so it is a correctness/consistency fix (a
