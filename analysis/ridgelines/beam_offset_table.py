@@ -85,9 +85,11 @@ cols = {
     # local surface form
     "curv_laplacian": curv_laplacian,           # Laplacian of gen2 elevation at the cell (curvature)
     "aspect_deg":   aspect_deg,                 # downslope azimuth (deg CW from N); NaN on flat cells
-    "core_forest":  ang["core_forest"],         # bool, forest-core stratum
-    "core_open":    ang["core_open"],           # bool, open/farmland-core stratum
-    "stratum":      ang["stratum"],             # 1 forest / 2 open / 0 other
+    "pfs_forest":   ang["pfs_forest"],          # bool, PyForestScan forest mask -- the cross-tile
+    "pfs_open":     ang["pfs_open"],            # bool, PyForestScan open mask    -- cover definition
+    "core_forest":  ang["core_forest"],         # bool, forest-core stratum (penetration-derived,
+    "core_open":    ang["core_open"],           # bool, open-core stratum   -- elba only, ALL FALSE
+    "stratum":      ang["stratum"],             # 1 forest / 2 open / 0 other  elsewhere; see pfs_*
     # per-return beam characteristics (from LAS)
     "intensity":    np.asarray(las.intensity, np.uint16),      # raw, uncalibrated return intensity
     "return_number":     np.asarray(las.return_number, np.uint8),
