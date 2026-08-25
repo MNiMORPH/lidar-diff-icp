@@ -43,6 +43,9 @@ ap.add_argument("--x", default="incidence", choices=list(XCFG))
 ap.add_argument("--curv-max", type=float, default=None)
 ap.add_argument("--bin", type=float, default=None, help="override bin width (deg)")
 ap.add_argument("--ridge", action="store_true", help="restrict to ridge_mask cells (divides: no overland flow)")
+ap.add_argument("--offset", default="raw", choices=("raw", "corr"),
+                help="raw = d_mm as measured (pre-registration); corr = d_mm_corr, with the "
+                     "geoid, lateral tie, per-swath alignment and along-track drift applied")
 ap.add_argument("--boresight", type=float, default=None,
                 help="subtract this roll (mm/deg) * scan_angle from d_mm before analysis, and "
                      "recompute the within-cell residual -- to show the boresight asymmetry removed")
@@ -58,6 +61,12 @@ if A.curv_max is not None:
     frac = 100 * keep.mean(); df = df[keep].copy()
     lab = f"|Laplacian| <= {A.curv_max:g}  ({len(df):,} returns, {frac:.0f}% kept)"
     suffix = f"_curv{A.curv_max:g}"
+if A.offset == "corr":                            # registration-corrected offset, then re-derive residual
+    # d_resid_mm and the per-cell scatter in the table were built from the RAW d_mm, so they
+    # must be re-derived here or the "within-cell" panels would mix two different offsets.
+    df["d_mm"] = df.d_mm_corr
+    df["d_resid_mm"] = df.d_mm - df.groupby("cell")["d_mm"].transform("mean")
+    lab += "; REGISTRATION-CORRECTED"; suffix += "_reg"
 if A.boresight is not None:                       # remove boresight roll, then re-derive residual
     df["d_mm"] = df.d_mm - A.boresight * df.scan_angle
     df["d_resid_mm"] = df.d_mm - df.groupby("cell")["d_mm"].transform("mean")
