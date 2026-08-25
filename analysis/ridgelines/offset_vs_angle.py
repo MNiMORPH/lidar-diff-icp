@@ -43,6 +43,10 @@ ap.add_argument("--x", default="incidence", choices=list(XCFG))
 ap.add_argument("--curv-max", type=float, default=None)
 ap.add_argument("--bin", type=float, default=None, help="override bin width (deg)")
 ap.add_argument("--ridge", action="store_true", help="restrict to ridge_mask cells (divides: no overland flow)")
+ap.add_argument("--cover-bands", action="store_true",
+                help="stratify the right panel into canopy-cover PERCENT bands (one line per "
+                     "band) instead of the two open/forest classes, so the progression with "
+                     "forest fraction is visible rather than just its end members")
 ap.add_argument("--offset", default="raw", choices=("raw", "corr"),
                 help="raw = d_mm as measured (pre-registration); corr = d_mm_corr, with the "
                      "geoid, lateral tie, per-swath alignment and along-track drift applied")
@@ -123,10 +127,22 @@ print(f"   within-cell slope d(offset)/d({XNAME}) = {slope_wc:+.2f} mm/deg "
 cc = df.canopy_cover.to_numpy(float)
 open_m = np.isfinite(cc) & (cc < 0.10)   # provisional (forest/open threshold not yet calibrated)
 for_m  = np.isfinite(cc) & (cc > 0.50)
-print(f"3. STRATIFY by canopy cover (PROVISIONAL: open cc<0.10 n={open_m.sum():,}, "
-      f"forest cc>0.50 n={for_m.sum():,}; threshold calibration is an open item):")
-co, mo, so = table("   -- OPEN (cc<0.10):", xv[open_m], d[open_m])
-cf, mf, sf = table("   -- FOREST (cc>0.50):", xv[for_m], d[for_m])
+COVER_EDGES = np.array([0, .05, .10, .20, .35, .50, 1.01])   # same bands as the slope x cover model
+bands = []
+if A.cover_bands:
+    print(f"3. STRATIFY by canopy-cover band (percent forest fraction):")
+    for lo, hi in zip(COVER_EDGES[:-1], COVER_EDGES[1:]):
+        bm = np.isfinite(cc) & (cc >= lo) & (cc < hi)
+        if bm.sum() < 500:
+            print(f"   -- cover {100*lo:.0f}-{100*hi:.0f}%: n={bm.sum():,} (sparse, skipped)"); continue
+        cb, mb, sb = table(f"   -- cover {100*lo:.0f}-{100*min(hi,1.0):.0f}% (n={bm.sum():,}):",
+                           xv[bm], d[bm])
+        bands.append((lo, min(hi, 1.0), cb, mb, int(bm.sum())))
+else:
+    print(f"3. STRATIFY by canopy cover (PROVISIONAL: open cc<0.10 n={open_m.sum():,}, "
+          f"forest cc>0.50 n={for_m.sum():,}; threshold calibration is an open item):")
+    co, mo, so = table("   -- OPEN (cc<0.10):", xv[open_m], d[open_m])
+    cf, mf, sf = table("   -- FOREST (cc>0.50):", xv[for_m], d[for_m])
 
 # ---------------------------------------------------------------- 4. CHECK scatter vs x-spread
 per_cell = df.groupby("cell").agg(x_std=("_x", "std"), std_d=("d_mm", "std")).dropna()
@@ -150,15 +166,27 @@ ax[0].axhline(0, color="k", lw=.6); ax[0].set_xlim(*XLIM); ax[0].set_ylim(-300, 
 ax[0].set_xlabel(cfg["label"]); ax[0].set_ylabel("offset d (mm) = gen1 − gen2   (+ = ground lower in 2021)")
 ax[0].set_title(f"PRIMARY: per-beam offset vs {XNAME} (all returns)")
 ax[0].legend(loc="upper right"); fig.colorbar(hb, ax=ax[0], label="log10 count")
-ax[1].plot(c, m, "C0o-", label="all returns")
-if len(co): ax[1].plot(co, mo, "C2s-", label="open (cc<0.10)")
-if len(cf): ax[1].plot(cf, mf, "C1^-", label="forest (cc>0.50)")
+if A.cover_bands:
+    ax[1].plot(c, m, "k-", lw=2.2, alpha=.55, label="all returns", zorder=1)
+    cmap = plt.get_cmap("viridis")
+    for i, (lo, hi, cb, mb, nb) in enumerate(bands):
+        if not len(cb): continue
+        col = cmap(0.08 + 0.84 * i / max(len(bands) - 1, 1))
+        ax[1].plot(cb, mb, "o-", ms=4, lw=1.6, color=col,
+                   label=f"{100*lo:.0f}\u2013{100*hi:.0f}% cover (n={nb:,})")
+    ttl = f"median offset vs {XNAME}, by forest fraction"
+else:
+    ax[1].plot(c, m, "C0o-", label="all returns")
+    if len(co): ax[1].plot(co, mo, "C2s-", label="open (cc<0.10)")
+    if len(cf): ax[1].plot(cf, mf, "C1^-", label="forest (cc>0.50)")
+    ttl = f"median offset vs {XNAME}, by canopy cover"
 ax[1].axhline(0, color="k", lw=.6); ax[1].set_xlim(*XLIM)
 ax[1].set_xlabel(cfg["label"]); ax[1].set_ylabel("median offset d (mm)   [gen1 − gen2; + = lower in 2021]")
-ax[1].set_title(f"median offset vs {XNAME}, by canopy cover"); ax[1].legend(); ax[1].grid(alpha=.3)
+ax[1].set_title(ttl); ax[1].legend(fontsize=8); ax[1].grid(alpha=.3)
 import os as _os
 _tile = _os.path.basename(A.tile.rstrip("/"))                       # tag figures by tile
 _tt = "" if _tile == "elba_fulldensity" else f"_{_tile}"
+if A.cover_bands: suffix += "_cbands"
 fig.suptitle(f"gen1 per-beam offset vs {XNAME} ({_tile}) — {lab}", y=1.0)
 fig.savefig(f"figures/refdatum/offset_vs_{A.x}{suffix}{_tt}.png", dpi=130, bbox_inches="tight"); plt.close(fig)
 print(f"wrote figures/refdatum/offset_vs_{A.x}{suffix}{_tt}.png")
