@@ -27,10 +27,17 @@ smaller than CSV at this row count, and read natively by pandas/polars/R/DuckDB/
 """
 import sys, numpy as np, pandas as pd, laspy
 
+import os, json
 TILE = sys.argv[1] if len(sys.argv) > 1 else "data/derived/elba_fulldensity"
 LAS  = sys.argv[2] if len(sys.argv) > 2 else "data/csf_cache/elba.las"
-NY, NX = 700, 508          # elba grid (cell = iy*NX + ix, C-order == raster.ravel())
-RES = 5.0                  # grid resolution (m), for surface-gradient aspect
+def _grid(tile):           # (NY, NX, RES) from tile meta/corrections (cell = iy*NX+ix, C-order)
+    for fn in ("meta.json", "corrections_geoid.json", "corrections.json"):
+        p = f"{tile}/{fn}"
+        if os.path.exists(p):
+            j = json.load(open(p)); b = j["bounds"]; r = float(j.get("res") or j.get("res_m"))
+            return int(j.get("ny") or round((b[3]-b[1])/r)), int(j.get("nx") or round((b[2]-b[0])/r)), r
+    raise SystemExit(f"no grid meta in {tile}")
+NY, NX, RES = _grid(TILE)
 
 # --- geometry + offset already computed per return (parabola-free; geoid tie applied later) ---
 ang = np.load(f"{TILE}/gen1_csf_angles.npz")
@@ -62,6 +69,9 @@ aspect_deg = aspect.ravel()[cell].astype(np.float32)
 # --- per-return fields the npz did not carry: read the SAME cached LAS, in order ---
 las = laspy.read(LAS)
 assert len(las.x) == n, f"LAS {len(las.x):,} != npz {n:,} -- alignment broken"
+_dims = set(las.point_format.dimension_names)
+def _opt(name, dt):        # optional LAS dim (PF6+ fields absent in PF<=5) -> zeros
+    return np.asarray(getattr(las, name), dt) if name in _dims else np.zeros(n, dt)
 
 cols = {
     # beam geometry (from npz)
@@ -83,8 +93,8 @@ cols = {
     "return_number":     np.asarray(las.return_number, np.uint8),
     "number_of_returns": np.asarray(las.number_of_returns, np.uint8),
     "edge_of_flight_line": np.asarray(las.edge_of_flight_line, np.uint8),  # swath-edge flag
-    "overlap":      np.asarray(las.overlap, np.uint8),         # flightline-overlap flag
-    "scanner_channel":   np.asarray(las.scanner_channel, np.uint8),
+    "overlap":      _opt("overlap", np.uint8),                 # flightline-overlap flag (PF6+)
+    "scanner_channel":   _opt("scanner_channel", np.uint8),    # PF6+
     "scan_direction_flag": np.asarray(las.scan_direction_flag, np.uint8),
     "gps_time":     np.asarray(las.gps_time, np.float64),      # along-track time (drift / flight line)
     "z":            np.asarray(las.z, np.float64),             # return elevation (m)
