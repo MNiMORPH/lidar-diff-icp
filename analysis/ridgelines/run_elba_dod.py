@@ -13,7 +13,14 @@ one returned nothing resolvable, so applying a value would be fitting noise.
 
     env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/ridgelines/run_elba_dod.py
 """
-import json, time
+import json, os, time
+
+# The geoid auto-compute samples the GEOID03/GEOID18 grids through PROJ. Those grids are not
+# installed on this machine, so PROJ must be allowed to fetch (and cache) them; without this
+# the run dies at the datum step with "could not find required grid(s)". Set before pyproj
+# is imported anywhere.
+os.environ.setdefault("PROJ_NETWORK", "ON")
+
 import numpy as np
 from lidar_diff_icp.pipeline import difference_dem
 
