@@ -23,7 +23,10 @@ TITLE_TAG = "" if not TAG else f"  ({TILE})"
 A = np.load(f"{A_.tile}/gen1_csf_angles.npz")
 d = A["d_mm"].astype(float); sa = np.abs(A["scan_angle"].astype(float))
 inc = np.abs(A["incidence"].astype(float)); sl = A["slope"].astype(float)
-ok = np.isfinite(d) & np.isfinite(sa) & np.isfinite(inc) & np.isfinite(sl)
+# in_grid is essential off elba: returns outside the gen2 grid carry a fill slope (~24.5 deg)
+# and |d| of ~1 km, which would dump ~1.65M garbage points into one slope bin on elbaext.
+ing = A["in_grid"].astype(bool)
+ok = ing & np.isfinite(d) & np.isfinite(sa) & np.isfinite(inc) & np.isfinite(sl)
 d, sa, inc, sl = d[ok], sa[ok], inc[ok], sl[ok]
 datum = np.median(d[sl < 3]); r = d - datum
 
