@@ -153,3 +153,80 @@ def test_correction_removes_a_known_synthetic_misregistration():
     corr, g, lat = reg.corrected_offset(d_meas, 0.0, 0.0, gx[5, 5], gy[5, 5], nn[5, 5], datum)
     assert g == pytest.approx(0.0)
     assert corr == pytest.approx(0.0, abs=1e-9), "applying the known shift must zero the error"
+
+
+ALIGN = {135: (0.0, 0.0, 0.0), 136: (0.32, -0.08, -0.024), 138: (1.05, 0.09, -0.044)}
+CURVES = {135: (np.array([100.0, 200.0]), np.array([0.000, 0.020])),
+          136: (np.array([100.0, 200.0]), np.array([-0.010, 0.010]))}
+
+
+def test_swath_alignment_reference_swath_contributes_nothing():
+    gx, gy, nn = reg.surface_gradients(plane(20.0, 30.0), 5.0)
+    t = reg.swath_alignment_term(np.array([135, 135]), gx[5, 5], gy[5, 5], nn[5, 5], ALIGN)
+    assert np.allclose(t, 0.0), "the reference flight line is the gauge and must not move"
+
+
+def test_swath_alignment_matches_closed_form_per_swath():
+    gx, gy, nn = reg.surface_gradients(plane(20.0, 30.0), 5.0)
+    psid = np.array([135, 136, 138])
+    t = reg.swath_alignment_term(psid, gx[5, 5], gy[5, 5], nn[5, 5], ALIGN)
+    for i, s in enumerate(psid):
+        ax, ay, az = ALIGN[s]
+        assert t[i] == pytest.approx(1000 * (az - (gx[5, 5]*ax + gy[5, 5]*ay)) / nn[5, 5], rel=1e-9)
+    assert t[0] == 0.0 and abs(t[2]) > abs(t[1])          # 138 is displaced furthest
+
+
+def test_swath_alignment_vertical_part_survives_on_flat_ground():
+    """On flat ground the lateral part vanishes but the dz part must NOT: that vertical
+    swath-to-swath disagreement is exactly the internal inconsistency being removed."""
+    gx, gy, nn = reg.surface_gradients(plane(0.0, 0.0), 5.0)
+    t = reg.swath_alignment_term(np.array([136]), gx[5, 5], gy[5, 5], nn[5, 5], ALIGN)
+    assert t[0] == pytest.approx(-24.0, abs=1e-6)
+
+
+def test_swath_alignment_raises_on_an_unmapped_swath():
+    gx, gy, nn = reg.surface_gradients(plane(10.0, 0.0), 5.0)
+    with pytest.raises(KeyError, match="137"):
+        reg.swath_alignment_term(np.array([135, 137]), gx[5, 5], gy[5, 5], nn[5, 5], ALIGN)
+
+
+def test_drift_interpolates_within_each_swath_independently():
+    psid = np.array([135, 135, 136, 136])
+    gt = np.array([100.0, 150.0, 100.0, 150.0])
+    t = reg.along_track_drift_term(psid, gt, 1.0, CURVES)
+    assert t[0] == pytest.approx(0.0) and t[1] == pytest.approx(10.0)      # 0 -> 20 mm
+    assert t[2] == pytest.approx(-10.0) and t[3] == pytest.approx(0.0)     # -10 -> +10 mm
+
+
+def test_drift_clamps_outside_the_curve_span():
+    t = reg.along_track_drift_term(np.array([135, 135]), np.array([0.0, 1e6]), 1.0, CURVES)
+    assert t[0] == pytest.approx(0.0) and t[1] == pytest.approx(20.0)
+
+
+def test_drift_raises_on_a_swath_without_a_curve():
+    with pytest.raises(KeyError, match="999"):
+        reg.along_track_drift_term(np.array([999]), np.array([100.0]), 1.0, CURVES)
+
+
+def test_drift_is_slope_normalised():
+    flat = reg.along_track_drift_term(np.array([135]), np.array([200.0]), 1.0, CURVES)
+    steep_nn = reg.surface_gradients(plane(30.0, 0.0), 5.0)[2][5, 5]
+    steep = reg.along_track_drift_term(np.array([135]), np.array([200.0]), steep_nn, CURVES)
+    assert steep[0] == pytest.approx(flat[0] / steep_nn, rel=1e-9)
+
+
+def test_registration_terms_sum_to_d_corr_and_stay_separable(tmp_path):
+    (tmp_path / "corrections.json").write_text(json.dumps({
+        "cross_epoch_datum": dict(DATUM),
+        "per_swath_internal_alignment_dxdydz_m": {str(k): list(v) for k, v in ALIGN.items()},
+        "along_track_drift_gpsTime_to_m": {
+            str(k): {"gps_time": list(t), "drift_m": list(d)} for k, (t, d) in CURVES.items()}}))
+    gx, gy, nn = reg.surface_gradients(plane(15.0, 40.0), 5.0)
+    d = np.array([-84.0, -60.0])
+    out = reg.registration_terms(d, np.zeros(2), np.zeros(2), np.array([120.0, 180.0]),
+                                 np.array([135, 136]), gx[5, 5], gy[5, 5], nn[5, 5], str(tmp_path))
+    assert set(out) == {"geoid", "lateral", "swath", "drift", "d_corr"}
+    assert np.allclose(out["d_corr"], d + out["geoid"] + out["lateral"] + out["swath"] + out["drift"])
+    assert np.allclose(out["swath"][0], 0.0)                      # reference swath
+    assert not np.allclose(out["swath"][1], 0.0)
+    assert not np.allclose(out["drift"], 0.0)
