@@ -25,7 +25,10 @@ ap.add_argument("--tile", default="data/derived/elba_fulldensity")
 ap.add_argument("--curv-max", type=float, default=0.015, help="|Laplacian| cut (near-planar cells)")
 ap.add_argument("--ridge", action="store_true", help="restrict to ridge_mask cells (divides: no overland flow)")
 ap.add_argument("--min-n", type=int, default=3, help="minimum returns per cell for a cell median")
-ap.add_argument("--min-cells", type=int, default=30, help="cells needed before a grid box is reported")
+ap.add_argument("--min-cells", type=int, default=1,
+                help="cells needed before a grid box is reported. 1 is the definitional "
+                     "floor (a median needs a sample). Raising it blanks boxes the terrain "
+                     "DOES supply and flatters the model's fit to the table")
 A = ap.parse_args()
 TILE = os.path.basename(A.tile.rstrip("/"))
 # the curvature cut MUST be in the name: different cuts are different analyses and
@@ -98,8 +101,8 @@ for lo, hi, nb, grad, vmin, vmax in matched_band_effects(cov, slp, med, COVER_ED
 grid, cnt = median_surface(slp, cov, med, SLOPE_EDGES, COVER_EDGES, min_cells=A.min_cells)
 NS, NC = grid.shape
 print(f"\n5. EMPIRICAL MEDIAN OFFSET (mm) on the (slope x cover) grid -- the prediction table.")
-print(f"   '.' = fewer than {A.min_cells} cells: the terrain does not supply that combination,")
-print(f"   so it is UNSUPPORTED, not extrapolated.  n cells in parentheses.")
+print(f"   Every box holding at least {A.min_cells} cell(s) is reported, sparse ones included;")
+print(f"   '.' means the box is EMPTY. n cells in parentheses -- read a box against its n.")
 print("   slope\\cover " + "".join(f"{COVER_EDGES[j]:.2f}-{COVER_EDGES[j+1]:.2f}".rjust(14) for j in range(NC)))
 for i in range(NS):
     row = f"   {SLOPE_EDGES[i]:4.0f}-{SLOPE_EDGES[i+1]:<4.0f}   "
@@ -108,19 +111,33 @@ for i in range(NS):
                 else f"{'.':>7}({cnt[i,j]:>5,})").rjust(14)
     print(row)
 ok = np.isfinite(grid)
-print(f"   supported boxes: {ok.sum()}/{grid.size} ({100*ok.sum()/grid.size:.0f}%) "
-      f"-- the empty ones ARE the slope-cover covariance.")
+print(f"   populated boxes: {ok.sum()}/{grid.size} ({100*ok.sum()/grid.size:.0f}%); "
+      f"sparsest holds {cnt[ok].min():,} cell(s).")
 
 SC, CC = surface_centres(SLOPE_EDGES, COVER_EDGES)
 print(f"   per-cell interaction model vs this table: "
       f"RMS {np.sqrt(np.mean((grid[ok]-pi.predict(SC[ok], CC[ok]))**2)):.1f} mm, "
       f"max |resid| {np.max(np.abs(grid[ok]-pi.predict(SC[ok], CC[ok]))):.1f} mm")
+# What a minimum-cells rule would buy, priced in the open: the model fits the sparse
+# steep/high-cover corner WORST, so blanking it improves the reported RMS without
+# improving the model. Print the comparison so that cost is never invisible again.
+for probe in (30,):
+    g2, c2 = median_surface(slp, cov, med, SLOPE_EDGES, COVER_EDGES, min_cells=probe)
+    o2 = np.isfinite(g2)
+    if o2.sum() < ok.sum():
+        print(f"   [with --min-cells {probe} this table would lose {ok.sum()-o2.sum()} "
+              f"populated box(es) holding {cnt[ok & ~o2].sum():,} cells, and the same "
+              f"model-vs-table RMS would read "
+              f"{np.sqrt(np.mean((g2[o2]-pi.predict(SC[o2], CC[o2]))**2)):.1f} mm "
+              f"instead of "
+              f"{np.sqrt(np.mean((grid[ok]-pi.predict(SC[ok], CC[ok]))**2)):.1f} mm -- "
+              f"the filter would flatter the fit, not improve it]")
 
 # ---------------------------------------------------------------- 5b. the median-surface fit
 w = cnt[ok].astype(float)
 ma = fit_offset_model(SC[ok], CC[ok], grid[ok], weights=w, interaction=False)
 mi = fit_offset_model(SC[ok], CC[ok], grid[ok], weights=w, interaction=True)
-print(f"\n5b. MEDIAN-SURFACE FIT (n-weighted over the {ok.sum()} supported boxes) -- THE PREDICTOR")
+print(f"\n5b. MEDIAN-SURFACE FIT (n-weighted over all {ok.sum()} populated boxes) -- THE PREDICTOR")
 print(f"   additive    : {ma}")
 print(f"   +interaction: {mi}")
 for s_at in (5, 25):
@@ -144,7 +161,7 @@ be = np.arange(XLIM[0], XLIM[1] + 1.0, 1.0)
 bc, bm = [], []
 for lo, hi in zip(be[:-1], be[1:]):
     m = (sl_ret >= lo) & (sl_ret < hi)
-    if m.sum() >= 50:
+    if m.sum():
         bc.append(0.5*(lo+hi)); bm.append(np.median(d_ret[m]))
 ax[0].plot(bc, bm, "o-", color="crimson", ms=4, lw=1.4, label="binned median")
 ax[0].axhline(0, color="k", lw=.6); ax[0].set_xlim(*XLIM); ax[0].set_ylim(-300, 300)
@@ -156,7 +173,7 @@ cen_s = 0.5*(SLOPE_EDGES[:-1]+SLOPE_EDGES[1:])
 allc, allm = [], []
 for lo, hi in zip(SLOPE_EDGES[:-1], SLOPE_EDGES[1:]):
     m = (sl_ret >= lo) & (sl_ret < hi)
-    if m.sum() >= 50: allc.append(0.5*(lo+hi)); allm.append(np.median(d_ret[m]))
+    if m.sum(): allc.append(0.5*(lo+hi)); allm.append(np.median(d_ret[m]))
 ax[1].plot(allc, allm, "o-", color="0.35", lw=2.0, ms=5, label="all returns", zorder=5)
 for j in range(NC):
     c_c = 0.5*(COVER_EDGES[j]+COVER_EDGES[j+1]); good = np.isfinite(grid[:, j])
@@ -188,7 +205,7 @@ bx.set_xticklabels([f"{COVER_EDGES[j]:.2f}-{COVER_EDGES[j+1]:.2f}" for j in rang
 bx.set_yticks(np.arange(NS)+0.5)
 bx.set_yticklabels([f"{SLOPE_EDGES[i]:.0f}-{SLOPE_EDGES[i+1]:.0f}" for i in range(NS)], fontsize=7)
 bx.set_xlabel("canopy cover (PyForestScan fraction)"); bx.set_ylabel("surface slope (deg)")
-bx.set_title(f"median offset (mm) on the slope x cover grid — {lab}\n'·' = unsupported by the terrain", fontsize=9)
+bx.set_title(f"median offset (mm) on the slope x cover grid — {lab}\n'·' = EMPTY box (no cell in it)", fontsize=9)
 fig2.colorbar(im, ax=bx, label="median offset d (mm)   [gen1 − gen2; + = lower in 2021]")
 out2 = f"figures/refdatum/offset_model_grid{TAG}.png"
 fig2.savefig(out2, bbox_inches="tight"); plt.close(fig2)
