@@ -45,7 +45,12 @@ ap.add_argument("--inc-max", type=float, default=None,
                      "but note incidence ~ slope for near-nadir beams, so this also selects "
                      "near-flat ground and cannot speak to the cover effect on steep slopes")
 ap.add_argument("--curv-max", type=float, default=None)
-ap.add_argument("--min-n", type=int, default=200, help="minimum returns per cover bin")
+ap.add_argument("--min-n", type=int, default=1,
+                help="minimum returns per cover bin. 1 is the definitional floor (a median "
+                     "needs a return). It removes nothing at 200 on these tiles either, but "
+                     "the top cover bin is only n=273 (elba) / 400 (elbaext) and carries the "
+                     "-140 / -130 mm point that is the whole finding, so any threshold here "
+                     "is one tile away from deleting the result")
 A = ap.parse_args()
 TILE = os.path.basename(A.tile.rstrip("/"))
 TAG = ("" if TILE == "elba_fulldensity" else f"_{TILE}") + ("" if A.offset == "corr" else "_raw")
@@ -110,7 +115,7 @@ cc, mm, se, nn = [], [], [], []
 print(f"{'cover bin':>14s} {'median d (mm)':>14s} {'robust SE':>10s} {'NMAD':>8s} {'n':>10s} {'med slope':>10s}")
 for lo, hi in zip(EDGES[:-1], EDGES[1:]):
     m = (cov >= lo) & (cov < hi)
-    if m.sum() < A.min_n:
+    if m.sum() < max(1, A.min_n):
         print(f"{lo:6.2f}-{hi:<6.2f} {'--':>14s} {'':>10s} {'':>8s} {m.sum():>10,}"); continue
     v = d[m]; s = nmad(v); e = 1.2533 * s / np.sqrt(m.sum())
     cc.append(cov[m].mean()); mm.append(np.median(v)); se.append(e); nn.append(int(m.sum()))

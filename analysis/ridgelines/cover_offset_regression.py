@@ -123,7 +123,11 @@ print(f"  predicted offset:  " + "  ".join(f"{c:.0%}: OLS {a0+b0*c:+.0f} / LAD {
                                            for c in (0.1, 0.3, 0.5)))
 
 fig, ax = plt.subplots(figsize=(8.6, 5.6), dpi=130)
-ck = bs.binned_stats(x, y, bs.quantile_edges(x, 12, first_edge=0.02), block=blk, min_n=200)
+# min_n=1 is binned_stats' definitional floor. These check bins are equipopulated by
+# construction (quantile edges), so a minimum count removes nothing here today -- which is
+# exactly why carrying one is dead weight that would start deleting the sparse tail the
+# moment the tile, the bin count or the selection changed.
+ck = bs.binned_stats(x, y, bs.quantile_edges(x, 12, first_edge=0.02), block=blk, min_n=1)
 ax.errorbar(ck.x, ck.y, yerr=ck.se, fmt="o", ms=5, capsize=3, color="0.35", zorder=4,
             label="binned medians ± block SE (check only, not fitted)")
 xs = np.linspace(0, x.max(), 200)
