@@ -619,10 +619,10 @@ moment one of them acquires a default.
 * **Which cover treatment is right.** §7 and §8 say the cover-covariate field predicts an
   open mark better than the open-only field does, on the common set of 230 open marks and
   at every block size. That is evidence, not a decision, and the decision moves the answer
-  at Elba by 71 mm in the median of the sweep. *(Hypothesis, untested here: the cover-covariate field wins because
-  963 marks constrain the neighbourhood of Elba where 230 do not, and it would lose if the
-  per-class offset varied regionally. A county × cover interaction test would separate
-  those; it has not been run.)*
+  at Elba by 71 mm in the median of the sweep. *(Hypothesis, untested here: the
+  cover-covariate field wins because 963 marks constrain the neighbourhood of Elba where
+  230 do not, and it would lose if the per-class offset varied regionally. A county ×
+  cover interaction test would separate those; it has not been run.)*
 * **Whether the vendor's delivered surface and our reconstruction differ by a constant.**
   §9 estimates one offset per reconstruction, each an SE of a mean over 16–18 marks; the
   16-mark sd of 95.7 mm says the per-mark agreement is not good, as
@@ -644,5 +644,7 @@ TRUST_GIT_REV=$(git rev-parse --short HEAD) ./lidar-icp/bin/python analysis/cont
   --tie-table-16 analysis/GEN1_OWN_CONTROL_TIE.md
 ```
 
-Runtime about twelve minutes, all of it in `numpy`'s dense solves; peak memory is a
-969 × 969 matrix.
+Runtime **110.8 s** in the run that produced every table above
+(`.trust/runs/20260826T224937-1477008.json`); an identical earlier run on a busier
+machine took 475.1 s. Almost all of it is `numpy`'s dense solves, and the largest object
+is the 969 × 969 cover-covariate kriging system — about 7.5 MB. Nothing here is heavy.
