@@ -178,14 +178,18 @@ def section_alongtrack(R, pair, tile_glob, half_width, res_m, exclude, shape, ce
         "northing": "northing of the window centre (nearest overlap cell to tile centre), m",
         "d_elba_km": "signed along-track distance from the Elba centroid, km",
         "easting": "easting of the window centre, m",
-        "dz_med_mm": f"tie for pair {a}-{b} in that window, tie='overlap_median', mm",
+        "dz_med_mm": f"tie for the pair (ref={a}, src={b}) in that window with "
+                     f"tie='overlap_median' -- what to ADD to line {b} to bring it into "
+                     f"line {a}'s frame there, mm",
         "sig_med_mm": "coreg's formal 1-sigma for it, mm",
         "flag_med": "D if the Nuth & Kaeaeb fit used zero cells there, X if the window "
                     "does not sample dtan = 0",
-        "dz_int_mm": f"tie for pair {a}-{b} in that window, tie='intercept', mm",
+        "dz_int_mm": f"the same tie with tie='intercept' (LAD intercept at across-track "
+                     f"position zero), mm",
         "sig_int_mm": "coreg's formal 1-sigma for it, mm",
         "flag_int": "same two flags for the intercept run",
-        "dz_plain_mm": "median of the UNSHIFTED overlap difference in that window, mm",
+        "dz_plain_mm": f"median of the UNSHIFTED overlap difference z({a}) - z({b}) in "
+                       f"that window -- no horizontal solution applied, mm",
         "c_mm_tan": "across-track slope fitted with the intercept there, mm per unit tangent",
         "ovl_cells": "cells where both lines have terrain returns in that window",
     }
@@ -238,7 +242,8 @@ def section_repeat(R, pair, tile, half_widths, step_m, res_m, exclude, shape):
     defs = {
         "half_width_m": "window half-width about each sample location, m",
         "tie_mode": "which coreg tie estimator produced the number, overlap_median or intercept",
-        "n_windows": f"windows tied along the {a}-{b} overlap inside {os.path.basename(tile)}",
+        "n_windows": f"windows tied along the (ref={a}, src={b}) overlap inside "
+                     f"{os.path.basename(tile)}, count",
         "mean_mm": "mean of the tie over those windows, mm",
         "sd_mm": "standard deviation of the tie between those windows, mm",
         "min_mm": "smallest tie among those windows, mm",
@@ -333,8 +338,8 @@ def section_marks(R, half_width, res_m, exclude, shape, radius_m, target_line,
         "n_near": f"how many of its returns are within {radius_m} m",
         "path": f"lines walked from that line to line {target_line}; a single entry means "
                 f"the mark is ALREADY on the target line and no transfer is needed",
-        "local_mm": f"constant that puts the mark's line into line {target_line}'s frame, "
-                    f"measured AT THE MARK, mm",
+        "local_mm": f"constant to ADD to the mark's line to put it into line "
+                    f"{target_line}'s frame, measured AT THE MARK, mm",
         "sig_formal_mm": "coreg's per-link sigmas in quadrature, mm -- known optimistic",
         "sig_window_mm": "per-link window-ladder spreads in quadrature, mm",
         "imported_mm": f"the same constant implied by elbaext's fitted set "
