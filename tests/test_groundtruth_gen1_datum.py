@@ -241,11 +241,24 @@ def test_line_assignment_comes_from_the_returns_not_the_centreline():
     assert nearest_track == 136                       # what the centreline rule would say
 
     x, y = _disc(cx=e, cy=n)
-    got = G.assign_line_from_returns(_returns(x, y, 100.0, 137), e, n, 7.5)
+    ground = _returns(x, y, 100.0, 137)
+    got = G.assign_line_from_returns(ground, e, n, 7.5)
     assert got.dominant == 137
     assert got.n_lines == 1
     assert not got.mixed
     assert got.dominant_fraction == pytest.approx(1.0)
+
+    # and the measurement path must use the returns too, not the search's own answer
+    site = G.MarkSite(_mark("CL", e, n, 100.0), 100.0, "nearest of 2 tracks",
+                      nearest_feature="136")
+    m = G.measure_site(site, "fake.laz", ground_loader=_loader(ground))
+    assert m.line_id == 137
+    assert m.swath_shift_m == (0.0, 0.0, 0.0)
+    shifted = G.measure_site(site, "fake.laz", ground_loader=_loader(ground),
+                             swath_constants={136: (0.0, 0.0, -0.050),
+                                              137: (0.0, 0.0, -0.010)},
+                             swath_constants_source="test")
+    assert shifted.tie_mm == pytest.approx(10.0, abs=1e-3)   # line 137's constant, not 136's
 
 
 def test_a_mark_lit_by_two_lines_is_flagged_and_counted_not_dropped():
