@@ -760,13 +760,18 @@ def main():
     R.table(["tile", "swath", "cells_used", "x_track", "h_m", "h_r2"], rows)
     hm = float(np.median(hs))
     xt = sorted(float(r[3]) for r in rows)
+    sp = [b - a for a, b in zip(xt, xt[1:]) if b - a > 100]     # >100 m: the same line
+    S = float(np.mean(sp))                                       # refit by the other tile
+    stan = float(np.mean(np.abs(np.concatenate(
+        [T["m"].stan.to_numpy() for T in tiles.values()]))))
+    W = 2 * hm * np.tan(np.radians(17.0))
     print(f"\n  median fitted |flying height| = {hm:.0f} m. Nadir-track spacings: "
-          + ", ".join(f"{b - a:.0f}" for a, b in zip(xt, xt[1:]) if b - a > 100) + " m.")
-    print(f"  Cross-check: with sum_tan = S/h ~ 0.37 and S ~ 940 m this gives h ~ "
-          f"{940 / 0.37:.0f} m, and a full swath 2*h*tan(17 deg) = "
-          f"{2 * hm * np.tan(np.radians(17.0)):.0f} m against a {940:.0f} m spacing -- "
-          f"a {100 * (2 * hm * np.tan(np.radians(17.0)) - 940) / (2 * hm * np.tan(np.radians(17.0))):.0f}% sidelap, "
-          f"which is the overlap this test uses.")
+          + ", ".join(f"{v:.0f}" for v in sp) + f" m (mean {S:.0f}).")
+    print(f"  Cross-check, two independent routes to h: the mean |sum_tan| = {stan:.3f} is "
+          f"S/h, giving h = {S / stan:.0f} m against the {hm:.0f} m fitted above. A full "
+          f"swath is 2*h*tan(17 deg) = {W:.0f} m against a {S:.0f} m spacing -- a "
+          f"{100 * (W - S) / W:.0f}% sidelap ({W - S:.0f} m wide), which is the overlap "
+          f"this test uses.")
     R.column("c_arcsec", "the pair coefficient expressed as an equivalent pointing (roll) "
                          "error, arcseconds: 206265 * c_mm / (1000 * h_m)")
     rows = [[os.path.basename(t), f"{a}-{b_}", f"{percc[(t, a, b_)][0]:+.1f}",
