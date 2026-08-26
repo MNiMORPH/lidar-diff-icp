@@ -7,6 +7,7 @@ a known shift into a synthetic surface and require it to be recovered (as its
 inverse) to sub-centimetre accuracy. They need no downloaded data.
 """
 import numpy as np
+import pytest
 
 from lidar_diff_icp import coreg
 
@@ -203,3 +204,61 @@ if __name__ == "__main__":
     test_along_track_drift_recovers_known()
     test_tie_falls_back_on_gentle_terrain()
     print("coreg regression tests PASS")
+
+
+def _cut_edge_swaths(n_sw=4, seed=0):
+    """Four overlapping N-S strips over a curved surface, each with a known z offset.
+
+    The outermost strip is deliberately cut to half width -- the geometry of the real
+    Elba tiles, where the pinned reference swath is the one the tile clips and is
+    therefore sampled far off-nadir.
+    """
+    from lidar_diff_icp.io import PointCloud
+    rng = np.random.default_rng(seed)
+    xs, ys, zs, ps = [], [], [], []
+    for k in range(n_sw):
+        x0 = 100.0 * k
+        width = 60.0 if k else 30.0
+        x = rng.uniform(x0, x0 + 100.0 + width, 40000)
+        y = rng.uniform(0.0, 400.0, x.size)
+        z = 8.0 * np.sin(x / 40.0) + 6.0 * np.cos(y / 55.0) + 0.02 * x + (0.010 * k - 0.015)
+        xs.append(x); ys.append(y); zs.append(z); ps.append(np.full(x.size, k))
+    x = np.concatenate(xs); y = np.concatenate(ys); z = np.concatenate(zs)
+    return PointCloud(x=x, y=y, z=z, point_source_id=np.concatenate(ps).astype(np.int32),
+                      classification=np.full(x.size, 2, np.uint8),
+                      gps_time=np.zeros(x.size), scan_angle=np.zeros(x.size),
+                      crs="EPSG:26915")
+
+
+def test_align_swaths_reference_is_a_gauge_not_an_observation():
+    """Choosing a different reference swath shifts every constant by ONE number and
+    leaves every swath-to-swath difference untouched.
+
+    This is what makes "the reference swath is cut off-nadir, so every constant is
+    measured against a biased reference" a statement about the absolute level only:
+    ``align_swaths`` solves the free network first and applies the reference afterwards
+    (``c -= c[idx[ref]]``). Re-solving against a symmetrically-sampled interior swath
+    therefore cannot move the relative solution, and cannot change what a ground-control
+    tie transports. Verified to bite: restricting the network to the edges incident on
+    the reference -- i.e. measuring every swath directly AGAINST it, which is what the
+    worry describes -- makes this fail. Note what does NOT break it: adding the reference
+    to the design as a soft constraint still passes, because the free network has a
+    rank-1 null space and every gauge on it gives the same relative solution. That
+    robustness is the result, not a weakness of the test.
+    """
+    pc = _cut_edge_swaths()
+    free, _, _ = coreg.align_swaths(pc, res=2.0)
+    sw = sorted(free)
+    levels = []
+    for ref in sw:
+        pinned, _, _ = coreg.align_swaths(pc, res=2.0, ref=ref)
+        assert pinned[ref] == (0.0, 0.0, 0.0) or abs(pinned[ref][2]) < 1e-12
+        for a in sw:
+            for b in sw:
+                for k in range(3):
+                    assert (pinned[b][k] - pinned[a][k]) == pytest.approx(
+                        free[b][k] - free[a][k], abs=1e-12), (
+                        f"ref={ref} changed the {a}->{b} difference on axis {k}")
+        levels.append(pinned[sw[0]][2] - free[sw[0]][2])
+    # and the gauge really is doing something: the absolute level moves between choices
+    assert max(levels) - min(levels) > 1e-3
