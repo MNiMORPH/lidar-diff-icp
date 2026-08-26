@@ -19,6 +19,7 @@ for EVERY grid cell (the existing class-split cube covers only the divide refere
 """
 import argparse, json, os
 import numpy as np, laspy, pyarrow.parquet as pq
+from lidar_diff_icp import registration as reg
 from scipy.ndimage import distance_transform_edt
 
 ap = argparse.ArgumentParser()
@@ -32,7 +33,9 @@ ap.add_argument("--dz", type=float, default=0.02)
 A = ap.parse_args()
 
 D = A.tile
-j = json.load(open(f"{D}/corrections.json"))
+j = reg.read_corrections(D)   # geoid sidecar wins where a tile carries both;
+                              # reading "corrections.json" by name picks elbaext's
+                              # obsolete reference_plane product
 b = j["bounds"]; RES = float(j["res_m"]); X0, Y0 = b[0], b[1]
 zf = np.load(f"{D}/z_after.npy"); NY, NX = zf.shape; NC = zf.size
 _zf = zf.copy(); _m = ~np.isfinite(_zf)
