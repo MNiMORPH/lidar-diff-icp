@@ -1,4 +1,4 @@
-# Choice and calibration of the per-cell vertical statistic in bare-earth lidar DTMs
+# Vertical shift of the lidar ground surface with vegetation cover, and its compensation by a per-cell order statistic
 
 **A literature review for the 2008 MN DNR vs. 2021 USGS 3DEP change-detection study
 (forested southeastern Minnesota bluffland).**
@@ -7,312 +7,357 @@ Compiled 2026-08-26. Not committed to git.
 
 ---
 
-## How to read this document
+## The question this document is organised around
 
-Every finding below carries a verification tag. Nothing is stated from a title alone,
-and nothing is stated from recall.
+> **Does the lidar-derived ground surface shift vertically as a function of forest /
+> vegetation cover, and can a per-cell percentile (or equivalent order statistic) of the
+> return distribution be used to compensate that shift?**
+
+Everything below is evidence on that single question. **The sign of a reported shift is a
+result *within* the phenomenon, not a criterion for admitting a study.** A paper reporting
++0.31 m under uncut conifer and a paper reporting a negative shift are both evidence that
+the ground estimate *moves with cover*, which is what we are asking. Sign, magnitude,
+biome, leaf state, sensor era, point density, reference method and terrain form are
+**covariates to tabulate** — things that may explain why studies disagree — never reasons
+to demote a study.
+
+The same applies to biome. Marsh, shrubland, floodplain and tropical work bears directly
+on the general question even where its *numbers* do not transfer to Minnesota bluffland.
+Transferability is a caveat attached to a **number**, not a demotion of a **study**.
+
+**Status of the two halves, as of this revision.** The literature supports the *first* half
+(the ground surface does shift with cover) strongly and across every biome surveyed. The
+*second* half (can a per-cell percentile compensate it) has since been answered **no** for
+our site by our own data — see `FRAME_2026-08-26.md`, commit 5335359: the ground column is
+symmetric at every cover level, so there is no skew for a shifted percentile to exploit, and
+per cell the column width anti-correlates with the correction needed. Sections 2–5 below
+report what the literature says regardless; "What this means for us" reconciles the two, and
+notes that two published results (Clark et al. 2004; Ewald 2013) independently anticipate our
+negative.
+
+*Revision note.* An earlier draft of this file organised around the sign of the bias and
+used it to rule studies in and out — demoting marsh work to a "for completeness, low
+transferability" appendix, and setting aside positive-bias forest results as "a different
+effect" from our negative one. That framing was wrong, and it cost real evidence: it is
+why the first draft missed Clark et al. (2004) — a peer-reviewed *forest* local-minima
+gridding scheme with the window scale tuned against 3859 ground-survey points — and
+concluded, incorrectly, that minimum-bin-style gridding "has never been evaluated outside
+coastal wetland." It also missed Cobby et al. (2001), the one study that makes the ground
+statistic itself a function of vegetation class. Both are now central to §3.
+
+---
+
+## How to read this document
 
 | Tag | Meaning |
 |---|---|
-| **[FULL TEXT]** | I downloaded the PDF and read the passage. Quotes are transcribed from the PDF text layer. |
-| **[ABSTRACT]** | I retrieved the publisher's abstract verbatim (via OpenAlex / Semantic Scholar / publisher page). Quotes are from that abstract. Body-text details are **not** verified. |
-| **[SECONDARY]** | The number is quoted from a *different* paper's description of the source. The original was not opened. |
-| **[NOT VERIFIED]** | Cited for completeness; I could not obtain the source text. No numbers asserted. |
+| **[FULL TEXT]** | I downloaded the PDF and read the passage. Quotes transcribed from the PDF text layer. |
+| **[ABSTRACT]** | Publisher's abstract retrieved verbatim (OpenAlex / Semantic Scholar / publisher page). Body details **not** verified. |
+| **[SECONDARY]** | The number is quoted from a *different* paper's description of the source. The original was not opened. Both papers are named. |
+| **[NOT VERIFIED]** | Cited for completeness; source text not obtained. No numbers asserted. |
 
-Study-setting notes are given for every source, because most of the directly relevant
-work is in **tidal marsh**, not forest. Marsh findings do not transfer to Minnesota
-bluffland without argument (see "What this means for us").
+Nothing here is stated from a title alone, and nothing from recall.
 
 ---
 
-## 1. Percentile / quantile choice when gridding classified ground returns
+## 1. Synthesis table: the spread of reported ground shifts
 
-### 1.1 The short answer
+Sign convention: **positive = lidar ground surface sits ABOVE the surveyed ground.**
+Where a source's own convention is ambiguous or internally inconsistent, that is noted in
+the body section and flagged here with (†).
 
-**There is no published guidance on choosing a vertical percentile per cell for a
-forested bare-earth DTM.** The peer-reviewed literature on "how do I turn ground
-points into a raster" is almost entirely about *interpolation algorithms* (TIN, IDW,
-kriging, splines, natural neighbour), not about *which order statistic of the points
-inside a cell* to use. The one named percentile-like technique with a peer-reviewed
-pedigree — **minimum-bin gridding** — is a coastal-marsh method, and its primary
-sources are all marsh papers.
+| Study | Biome / cover type | Terrain | Leaf state | Sensor era & density | Reference method | Ground statistic / DTM construction | Reported shift (signed) | How cover was quantified | Tag |
+|---|---|---|---|---|---|---|---|---|---|
+| Reutebuch et al. 2003 | Temperate conifer (70-yr Douglas-fir), clearcut→uncut | W. Washington, 0–45° | Evergreen (spring) | Saab TopEye helicopter, 1999; 4.22 raw returns/m², 0.58 ground pts/m² | Total station, 347 checkpoints | Proprietary last-return filter; 1.52 m grid; bilinear | **+0.16** clearcut, **+0.18** heavy thin, **+0.18** light thin, **+0.31** uncut; all-data **+0.22 ± 0.24** | 4 managed canopy-density classes (TPH) | [FULL TEXT] |
+| Su & Bork 2006 | Aspen parkland: deciduous aspen forest, shrub, grassland, meadow | Alberta, knob-and-kettle, 5–10 m relief | Deciduous, leaf state not stated | Last-return, 1998-era | Total station + DGPS, 27 benchmarks, 256 plots | IDW, 1.5 m | **+0.20** aspen forest; **−0.22** lowland meadow; **+0.02** overall | 8 field vegetation classes | [FULL TEXT] |
+| Hodgson & Bresnahan 2004 | 6 land-cover classes incl. deciduous & evergreen forest | Richland Co., SC | Not stated | Optech ALTM 1210, 1207 m AGL, 2 m posting | Total station + rapid-static GPS **at the lidar point itself** | Points surveyed directly (no interpolation) | **−0.06 (±0.23)** to **+0.06 (±0.19)** across covers — **both signs**; RMSE 17–19 cm (pavement/low grass/evergreen) to 26 cm (deciduous) | 6 land-cover categories | RMSE [ABSTRACT]; signed range [SECONDARY via Hopkinson et al. 2005] |
+| Hodgson et al. 2003 | Leaf-on pine/deciduous landscape | South Carolina | **Leaf-on** | Last-return | 1470 survey-grade points | TIN from ground points | RMSE 0.93 m overall; **0.33** low grass, **1.22** scrub/shrub, **1.53** deciduous; ~2 m error increase from 0–2° to 6–8° slopes in shrub/scrub | Land-use classes | [SECONDARY via Clark et al. 2004] — see §2.4 conflict |
+| Clark et al. 2004 | Tropical rain forest (old-growth, secondary, agroforestry, pasture) | La Selva, Costa Rica; flat→steep | Evergreen leaf-on | FLI-MAP, 0.33 m DSM support | 3859 ground-survey points | **Local-minima cell in a grid, scale tuned 5/10/15/20/30 m**; then IDW or OK | **All DTMs positive mean-signed error**; +0.08 to +1.10 depending on scheme; RMSE 2.29 m best, 1.95 m old-growth, 0.58 m flat open canopy | Land-use / forest-age classes | [FULL TEXT] |
+| Cobby et al. 2001 | Floodplain incl. deciduous forest | UK floodplain, 10–15° in forest | **Leaf-on** | Last-return DSM, 2 m support | Field survey (n small: 5 and 12) | **Local-minima in 5×5-px (10 m) windows, then algorithm tailored to short vs tall vegetation classes** | RMSE **0.17 m** short vegetation; **3.99 m** deciduous forest on steeper slopes | Short vs tall vegetation classes | [SECONDARY via Clark et al. 2004] |
+| Hopkinson et al. 2005 | Boreal wetland: grass/herb, low shrub, willow, aquatic, aspen, black spruce, jack pine | N. Alberta, 75 m total relief | August (leaf-on) | Optech ALTM 2050 | GPS reference points, 127 vegetated | Ground-classified points; also rasterised | **+0.07 ± 0.16** mean over vegetated transects (+0.04 rasterised); **no significant difference** for grass/herbs → **+0.15** aquatic | Ducks Unlimited vegetation classes | [FULL TEXT proceedings] + [ABSTRACT journal] |
+| Töyrä et al. 2003 | Boreal wetland: graminoid, willow scrub | N. Alberta | Not stated | — | Field survey | — | **+0.07 (±0.15)** graminoid; **+0.15 (±0.26)** willow scrub | Vegetation classes | [SECONDARY via Hopkinson et al. 2005] |
+| Simpson et al. 2017 | Temperate deciduous broadleaf (alder, field maple, hazel) + grassland clearing | UK, median slope 5.7° | **Both leaf-on and leaf-off, same site** | NERC ARSF; 3–5 returns/m² | Total station + GNSS, n = 657 | lasground last-return; IDW 1 m | RMSE **0.83 m leaf-on** vs **0.22 m leaf-off**; direction stated as positive (lidar high) (†) | Pgap in 3 vertical strata → 6 structural categories | [FULL TEXT] |
+| Stereńczak & Kozak 2011 | Temperate lowland forest: pine, oak, larch, alder | Poland, 1000 ha | **Spring vs summer, same year** | ALS | 95 checkpoints | Varying raster resolution | Mean errors **−0.2 to +0.34 m**; RMSE 0.28–0.79 m; summer variability > spring | Species + number of vegetation layers | [ABSTRACT] |
+| Tinkham et al. 2012 | High-biomass western conifer | Western USA, slopes >30° | Evergreen | — | 54 ground survey plots | Two classification algorithms compared | **Vegetation structure: no influence**; error variability rises above 30° slope; RMSE 0.24 m | Vegetation structure metrics | [ABSTRACT] |
+| Salleh et al. 2015 | Tropical: rubber plantation, mixed forest | Bentong, Malaysia | Evergreen | Riegl, "low density" | GCPs → reference DTM | ATIN ground filter | MBE by canopy density — rubber: **+0.011 / +0.008 / +0.002**; mixed forest: **+0.162 / +0.075 / +0.019** (70–80 / 81–90 / 91–100 % cover). RMSE rises with cover: 0.230→0.789 | **Canopy cover % from non-ground return fraction** | [FULL TEXT] |
+| Duchan et al. 2026 | Czech forest, drainage ditches | Czech Republic | Not stated | ALS | 706 GNSS + total station | National DTM product | **+0.415 m** mean elevation error, RMSE 0.464 m; **ditch geometry, not canopy height, was the dominant predictor** | Forest height as proxy for density/closure; ground reflection density | [FULL TEXT] |
+| Hladik & Alber 2012 | Salt marsh, 10 cover classes | Sapelo I., GA; flat | n/a herbaceous | Optech Gemini ALTM, 125 kHz | RTK GPS | Vendor bare-earth + per-class offsets | **+0.03 to +0.25 m** by cover class; pooled **+0.10 ± 0.12** → **−0.01 ± 0.09** after correction | Field-mapped species classes | [ABSTRACT] |
+| Ewald 2013 | Oregon tidal marsh, 12 vegetation associations + pasture | Flat, with channels/dikes | n/a herbaceous | DOGAMI OLC | >13,000 RTK GPS | **Minimum-bin**, cell size tuned 0.1–6.0 m | **+0.104** to **+0.488** by association; **0** in open cover (FVA 4.5 cm RMSE); **−0.70 to −0.90 m** along channels/dikes | Percent cover by species, quadrats | [FULL TEXT] |
+| Schmid et al. 2011 | Coastal marsh (*Spartina*, *Juncus*) | Flat | n/a herbaceous | — | Survey-grade GPS (280 pts) | **Minimum bin**, cell size tuned 2–10 m | Bias **reduced by 12 cm**, accuracy improved 8 cm vs as-received | Marsh species classes | [ABSTRACT] |
+| Wang et al. 2009 | Salt marsh, Venice Lagoon | Flat | n/a herbaceous | — | Field observations (240 pts) | **Filter window size tuned to minimise DTM bias** | **+0.022 ± 0.064 m** residual after tuning | Marsh species | [ABSTRACT] |
+| Medeiros et al. 2015 | Coastal marsh | Apalachicola, FL; flat | n/a herbaceous | — | 229 elevation points | Vendor DTM + **median vs quartile** class offsets | **+0.61 ± 0.24** raw → **+0.32 ± 0.24** adjusted; RMSE 0.65 → 0.40 m | Biomass-density classes from ASTER + IfSAR + CHM | [ABSTRACT] |
+| Buffington et al. 2016 | 17 Pacific-coast tidal marshes | Flat | n/a herbaceous | — | RTK GPS | LEAN regression on NDVI; benchmarked vs min-bin | RMSE **0.072 m**, 40–75 % improvement over bare-earth DEM | NDVI from NAIP imagery | [ABSTRACT] |
+| Viedma 2022 | Mediterranean mountain vegetation | Sierra de Gredos, Spain | — | Low- vs high-density lidar pair | High-density lidar as benchmark | Filter × interpolator × resolution search; **pseudo-geoid** correction | P50 **+0.02 to −2.09 m** before → **−0.004 to −0.016 m** after | Vegetation height | [FULL TEXT] |
+| Fradette et al. 2019 | Quebec forest | Canada | — | High (21 pulses/m²) vs low density | High-density lidar as reference | 1 m resolution | **DTM judged to need no adjustment**; CHM did | Stand density, species composition | [ABSTRACT] |
+| DeLong et al. 2022 | NE Minnesota forest | 8,000 km² | 2011 **leaf-on** (May–Jun) vs 2012 **leaf-off** (Oct–Nov) | Repeat MN DNR ALS | Stable terrain, ICP | TerraScan ground; IDW 1 m, power 2, r = 30 m | Stable-ground residual **+0.002 ± 0.103 m** after correction surface (surface itself mean 0.20 ± 0.26 m) | **Not quantified — no vegetation term** | [ABSTRACT + body] |
 
-### 1.2 Minimum-bin gridding: primary sources
+**What the spread shows.** Reported shifts run from **−0.22 m to +1.10 m**, and the same
+land-cover label gives different signs in different studies. The variance is not noise
+about a consensus; it is structure. The covariates that plausibly carry it, in rough order
+of how strongly the sources implicate them:
 
-**Schmid, K.A., Hadley, B.C., & Wijekoon, N. (2011). Vertical Accuracy and Use of
-Topographic LIDAR Data in Coastal Marshes. *Journal of Coastal Research*, 27(6A),
-116–132.** doi:[10.2112/JCOASTRES-D-10-00188.1](https://doi.org/10.2112/JCOASTRES-D-10-00188.1)
-— peer-reviewed journal article. **[ABSTRACT]**
+1. **Undergrowth stature and leaf state** (Simpson: RMSE 0.83 vs 0.22 m at one site;
+   Stereńczak & Kozak: season effect *modified by* species and stand layering).
+2. **Terrain form at short horizontal distances** — concave/convex microtopography, not
+   cover (Ewald's channels −0.70 to −0.90 m; Duchan's ditch geometry beating canopy
+   height; Hodgson et al.'s ~2 m rise from 0–2° to 6–8° slopes *within* shrub/scrub).
+3. **Slope** (Hodgson & Bresnahan 2× from 1.5° to 25°; Su & Bork 2× from <2° to >10°;
+   Tinkham >30°; Salleh r = 0.87–0.99; Kraus's ±(18 + 120·tan α) cm law).
+4. **The ground statistic and its scale** (Clark: RMSE 2.29–5.09 m across local-minima
+   scales at one site with one point cloud — a *larger* range than most cover effects).
+5. **Ground-return density / penetration** (Duchan: forest height reduces ground
+   reflection density and increases distance to nearest ground reflection, p < 0.05).
+6. **Reference method** — Hodgson & Bresnahan surveyed the lidar point itself and got the
+   tightest, most symmetric numbers of anyone; GPS-under-canopy studies get the loosest.
 
-This is the clearest primary definition I found. Verbatim from the abstract:
-
-> "Custom digital elevation model (DEM) generation techniques and point classification
-> processes can be used to improve estimates of ground elevations in coastal marshes.
-> The simplest of these methods is minimum bin gridding, which extracts the lowest
-> elevation value included within a user-specified search window and assigns that value
-> to the appropriate DEM grid cell."
-
-and the headline result:
-
-> "By employing the minimum bin technique to the bare-earth classified LIDAR data, the
-> overall bias in the resultant surface was reduced by 12 cm, and the vertical accuracy
-> was improved by 8 cm when compared with the 'as-received' data."
-
-Note the explicit cost, also verbatim:
-
-> "Despite lowering the spatial resolution of the DEM, the application of these
-> techniques significantly improves the vertical accuracy of the LIDAR-derived
-> bare-earth surfaces."
-
-*Setting:* US south-Atlantic coastal marsh (*Spartina alterniflora*, *Juncus
-roemerianus*); flat; discrete-return lidar of the mid-2000s. Point density not verified.
-
----
-
-**Wang, C., Menenti, M., Stoll, M.P., Feola, A., Belluco, E., & Marani, M. (2009).
-Separation of Ground and Low Vegetation Signatures in LiDAR Measurements of Salt-Marsh
-Environments. *IEEE Transactions on Geoscience and Remote Sensing*, 47(7), 2014–2023.**
-doi:[10.1109/TGRS.2008.2010490](https://doi.org/10.1109/TGRS.2008.2010490)
-— peer-reviewed journal article. **[ABSTRACT]**
-
-The second antecedent Ewald names. Verbatim:
-
-> "In this paper, we introduce reliable methods to remove random and systematic errors
-> and to register raw data, as well as a new procedure, to determine the optimal filter
-> window size to separate ground and canopy returns. A limited amount of field
-> observations is used to determine the size of the filtering window which produces the
-> minimally biased estimates of the digital terrain model (DTM)."
-
-> "We apply this procedure to a study marsh within the Venice Lagoon, Italy, and obtain
-> a high-accuracy DTM. The error (z_LiDAR − z_field) is 2.2 cm, with a standard
-> deviation of 6.4 cm."
-
-*Setting:* Venice Lagoon salt marsh, Italy; flat; short marsh vegetation where
-"the characteristic short vegetation does not give rise to detectable differences
-between first and last LiDAR returns" (verbatim). Deliberately **not** a forest method.
+Point 4 deserves emphasis: **at least one study finds the choice of ground statistic moves
+the answer more than the cover does.** That is the strongest single argument that the
+statistic is a first-class parameter rather than a processing detail.
 
 ---
 
-**Ewald, M.J. (2013). *Where's the Ground Surface? Elevation Bias in LIDAR-derived
-Digital Elevation Models Due to Dense Vegetation in Oregon Tidal Marshes.* MS thesis,
-Oregon State University.** <https://ir.library.oregonstate.edu/downloads/1n79h8198>
-— **MS thesis, not peer-reviewed**, but it is the fullest published *evaluation* of the
-technique. **[FULL TEXT]** (all quotes below transcribed from the PDF)
+## 2. Does the ground surface shift with cover?
 
-Definition as Ewald states it (p. 15):
+Yes, in every study that stratified by cover. The interesting content is in *how* and
+*how much*, and in the fact that the sign is not universal.
 
-> "Schmid et al. (2011) and Wang et al. (2009) employ a minimum-bin gridding technique
-> to identify the optimum search radius for ground LIDAR returns and interpolate a
-> raster DEM from the LIDAR point cloud. This gridding and interpolation technique
-> selects the lowest LIDAR return within a specified search radius. As the search radius
-> and cell size is increased, the probability of capturing a true ground also increases
-> as more candidate LIDAR returns are considered. The minimum-bin technique is
-> attractive because it is easy to implement and validate in the field."
+### 2.1 The shift is real, cover-dependent, and directly recommended as a target for correction
 
-The evaluation is the valuable part, because it documents the **two-sided failure**:
+**Hopkinson, C., Chasmer, L., Sass, G.Z., Creed, I.F., Sitar, M., Kalbfleisch, W., &
+Treitz, P. (2005). Vegetation class dependent errors in lidar ground elevation and canopy
+height estimates in a boreal wetland environment. *Canadian Journal of Remote Sensing*,
+31(2), 191–206.** doi:[10.5589/m05-007](https://doi.org/10.5589/m05-007)
+— peer-reviewed journal article. **[ABSTRACT]**, plus the earlier conference version
+(Hopkinson et al., ISPRS Archives XXXVI-8/W2, <https://www.isprs.org/proceedings/xxxvi/8-w2/HOPKINSON.pdf>,
+**not peer-reviewed**) **[FULL TEXT]**.
 
-> "DEM accuracy increased with cell size until an inflection point near 1.4 m as the
-> influence of vegetation is mitigated by the minimum-bin gridding technique
-> (Figure 2.3a). Low features within the landscape were captured by the gridding
-> technique and degrade DEM performance after cell size enlarged beyond the optimum."
+The title is the finding. Verbatim from the journal abstract:
 
-> "Even at the optimum cell size, the DEM is still positively biased when compared to
-> known ground elevations. Mean LIDAR-GPS discrepancy remains positive until a cell size
-> of 1.6 m is achieved. At cell sizes greater than 1.6 m, DEM are negatively biased as
-> the minimum-bin method continues to capture and favor low features within the
-> landscape."
+> "These data were analysed to quantify vegetation class dependent errors in lidar ground
+> surface elevation and vegetation canopy surface height… Aquatic vegetation was
+> associated with the largest error in lidar ground surface definition (+0.15 m, SD = 0.22,
+> probability of no difference in height P < 0.01), likely a result of saturated ground
+> conditions."
 
-> "Minimum-bin LIDAR-derived DEM elevations underpredict (typically 70 cm to 90 cm
-> below) the measured elevation along channels and the man-made dike that form the
-> southern edge of the site adjacent to the Coquille River. These features are
-> characterized by high ground, a moderate to steep slope, and low ground over a short
-> horizontal distance. For example, the minimum-bin filter is likely to select a LIDAR
-> return from an adjacent low riverbank rather than the surveyed wetland surface. The
-> likelihood of upslope areas being assigned an elevation lower than the true ground
-> elevation increases as the cell size is increased."
+From the conference version's conclusions **[FULL TEXT]**:
 
-**This is the single most transferable result in the marsh literature for us.** The
-minimum statistic reaches downhill. On a bluffland with 20–35° slopes, that failure mode
-is not an edge case — it is the dominant one, and it is *exactly* the low-percentile
-downhill bias already identified in this project as the source of DoD banding.
+> "ground classified LiDAR data for 127 RPs over vegetated transects, an average bias of
+> +0.07 (± 0.16 m) was found (+0.04 m in rasterised LiDAR data). The observation of ground
+> height errors in vegetated areas is consistent with the findings of other studies (Töyrä
+> et al. 2003; Hodgson and Bresnahan, 2004). The vertical bias was found to vary with
+> vegetation cover, from no significant difference for grass and herbs to +0.15 m for
+> aquatic vegetation."
 
-Crucially, Ewald also finds min-bin barely beats the vendor bare-earth surface:
+And then, the sentence that most directly answers our question — a peer-reviewed
+recommendation that the **ground-point extraction rule itself be made cover-dependent**:
 
-> "Throughout the vegetation types we evaluated, the minimum-bin DEM performs slightly
-> better than the DOGAMI bare-earth DEM. With 95% confidence, the DOGAMI bare-earth DEM
-> elevation is between 2.0 cm and 3.1 cm above the minimum-bin DEM elevation across the
-> entire dataset (mean 2.5 cm, paired two-sided t-test, p-value < 0.001)."
+> "These observations support the rationale that ground level LiDAR point classification
+> should be vegetation class dependent (e.g. Cobby et al., 2001)."
 
-> "Unfortunately, our results show that LIDAR estimates of the ground surface are
-> positively biased even when the minimum-bin technique is used. This suggests that the
-> LIDAR laser pulse never reaches the ground surface within the vegetation communities
-> we studied."
+*Setting:* Utikuma Uplands, northern Alberta boreal wetland complex; 40 × 6 km transect,
+total relief ~75 m; trembling aspen, jack pine, black spruce, willow, low shrub, grass/herb,
+aquatic; Optech ALTM 2050, August 2002. Wetland and low-relief, so the *magnitudes* are not
+ours — but the *structure of the claim* (bias varies by class; extraction should therefore
+vary by class) is exactly our thesis, stated in 2005.
 
-*Setting:* Ni-les'tun Unit, Bandon Marsh NWR and five other Oregon estuaries; 174 ha;
-tidal marsh and diked pasture; flat except channels and dikes; > 13,000 RTK GPS points.
+Also recovered from this paper, **[SECONDARY]** for Töyrä et al.:
 
----
+> "known comparable statistics detailing vertical bias in ground elevation for a northern
+> wetland environment range from + 0.07 m (± 0.15 m) to + 0.15 m (± 0.26 m) for graminoid
+> and willow scrub, respectively (Töyra et al., 2003)."
 
-**Buffington, K.J., Dugger, B.D., Thorne, K.M., & Takekawa, J.Y. (2016). Statistical
-correction of lidar-derived digital elevation models with multispectral airborne imagery
-in tidal marshes. *Remote Sensing of Environment*, 186, 616–625.**
-doi:[10.1016/j.rse.2016.09.020](https://doi.org/10.1016/j.rse.2016.09.020)
-— peer-reviewed journal article. **[ABSTRACT]** (text obtained from the NOAA NCCOS
-record page, which reproduces the publisher abstract; I could not open ScienceDirect,
-which returned HTTP 403)
+**Töyrä, J., Pietroniro, A., & Martz, L.W. (2001). Multisensor Hydrologic Assessment of a
+Freshwater Wetland. *Remote Sensing of Environment*, 75(2), 162–173.**
+doi:[10.1016/S0034-4257(00)00164-4](https://doi.org/10.1016/S0034-4257(00)00164-4)
+— peer-reviewed. **[NOT VERIFIED]** (abstract null on OpenAlex; note Hopkinson cites a
+2003 Töyrä work, which may be a different paper — do not cite the 2001 record for the
+2003 numbers without checking).
 
-Verbatim from that page:
+### 2.2 The sign is NOT universal — both signs occur, in the same study
 
-> "Using 17 study sites along the Pacific coast of the U.S., we achieved an average root
-> mean squared error (RMSE) of 0.072 m, with a 40–75% improvement in accuracy from the
-> lidar bare earth DEM. Results from our method compared favorably with results from
-> three other methods (minimum-bin gridding, mean error correction, and vegetation
-> correction factors)."
+This is the correction that the narrow framing had buried. From Hopkinson et al.'s
+literature review **[FULL TEXT]**, describing Hodgson & Bresnahan **[SECONDARY]**:
 
-This is the most useful *benchmarking* statement available: it establishes that
-minimum-bin gridding is one of the three recognised correction families, and that a
-fitted statistical model beat all three. A widely-repeated figure of "118 points
-necessary to calibrate a site-specific correction model" appeared in a search summary
-but **I could not verify it against the source text — treat as [NOT VERIFIED]**.
+> "Analysis carried out by Hodgson and Bresnahan (2004) in South Carolina demonstrated
+> both positive and negative absolute errors, from – 0.06 m (± 0.23 m) to + 0.06 m
+> (± 0.19 m), in LiDAR ground elevation for various ground covers."
 
-*Setting:* 17 Pacific-coast tidal marshes; flat; RTK-GPS reference; NAIP imagery.
+So the paper most often cited for "vegetation biases lidar high" in fact reports a signed
+range **straddling zero across its six land-cover classes**. The published picture is *a
+cover-dependent shift of either sign*, not a one-way positive bias.
 
-### 1.3 The principled continuous alternative: asymmetric (skew) robust interpolation
+Independently, **Su & Bork (2006) [FULL TEXT]** report opposite signs in adjacent cover
+types within one survey:
 
-The forestry/photogrammetry tradition solved the same problem *without* a percentile,
-by making the residual weight function asymmetric so the fitted surface is pulled toward
-the low returns. This is the closest thing to a theory of "why not just take a low
-quantile."
+> "In identifying a tendency to under- or over-estimate elevations, the mean signed errors
+> in Figure 3c show that elevations within aspen forest were over-estimated (0.20 m) while
+> those in lowland meadows were under-estimated (0.22 m)."
 
-**Kraus, K. & Pfeifer, N. (1998). Determination of terrain models in wooded areas with
-airborne laser scanner data. *ISPRS Journal of Photogrammetry and Remote Sensing*,
-53(4), 193–203.** doi:[10.1016/S0924-2716(98)00009-4](https://doi.org/10.1016/S0924-2716(98)00009-4)
-— peer-reviewed journal article. **[NOT VERIFIED]** — I could not obtain the full text
-or a verbatim abstract. I therefore assert nothing numerical from it directly, and
-instead quote the companion conference paper below, which restates the method and cites
-Kraus & Pfeifer (1998) for the numbers.
+and their pooled figure is near zero — "overall signed error and RMSE were 0.02 m and
+0.59 m, respectively" — which is precisely what happens when two cover classes shift in
+opposite directions and are averaged. **A pooled bias near zero is not evidence of no
+cover effect.** That is a methodological warning for us as much as a literature finding.
 
-**Kraus, K. & Rieger, W. (1999). Processing of laser scanning data for wooded areas.
-In D. Fritsch & R. Spiller (Eds.), *Photogrammetric Week '99*, pp. 221–231. Wichmann,
-Heidelberg.** <https://phowo.ifp.uni-stuttgart.de/publications/phowo99/kraus.pdf>
-— **conference proceedings, not peer-reviewed journal.** **[FULL TEXT]**
+And **Stereńczak & Kozak (2011) [ABSTRACT]** span both signs across resolutions and
+seasons: "mean errors varied between −0.2 and 0.34 m".
 
-The method, verbatim:
+Our own result — 2008 reading low on steep forested slopes — sits inside this published
+range rather than outside it. The earlier draft's claim that it was "a different effect"
+that "should not be blurred" was an over-reach: there is no single-signed consensus for it
+to contradict.
 
-> "This algorithm estimates the skewness of the error distribution of the laser scanner
-> data in forests and assigns small weights to those points that show large positive
-> errors during the interpolation with filtering. The process results in a
-> classification of the laser points in terrain and off-terrain (mainly vegetation)
-> points."
+### 2.3 Cover quantified continuously, with signed bias: the closest methodological analogue
 
-And the accuracy law — directly relevant to our slope-dependent residual:
+**Salleh, M.R.M., Ismail, Z., & Abdul Rahman, M.Z. (2015). Accuracy Assessment of
+Lidar-Derived Digital Terrain Model (DTM) with Different Slope and Canopy Cover in
+Tropical Forest Region. *ISPRS Annals of the Photogrammetry, Remote Sensing and Spatial
+Information Sciences*, II-2/W2, 183–189.**
+doi:[10.5194/isprsannals-II-2-W2-183-2015](https://doi.org/10.5194/isprsannals-II-2-W2-183-2015)
+— **conference annals; the paper states "This contribution has been peer-reviewed. The
+double-blind peer-review was conducted on the basis of the full paper."** **[FULL TEXT]**
 
-> "σH[cm] = ± (18 + 120·tanα)"
->
-> "Equation (1) is valid for a ground penetration rate of the laser signal of at least
-> 25 % and a good mixture of vegetation and ground points for the whole region."
+Method note worth copying: cover is derived **from the point cloud itself**, not from
+external imagery — "the point clouds belong to non-ground are then used in determining the
+relative percentage of canopy cover" (verbatim), i.e. the non-ground return fraction. That
+is the same family of data-derived cover metric this project uses.
 
-> "The elimination of inherent systematic errors allows a significant improvement of the
-> accuracy of the laser DTM particularly in flat terrain. The constant value of ± 18 cm
-> in equation (1) can be reduced down to ± 10 cm (K. Kraus, N. Pfeifer, 1998)."
+Verbatim result:
 
-*Setting:* Austrian wooded areas (Danube riparian forest, Vienna Woods); mixed
-deciduous/conifer; late-1990s fixed-wing scanners, ~3 m point spacing. Old sensors, but
-the *form* of the accuracy law (a slope term ~10× the flat-ground term) is the published
-statement closest to what this project has measured.
+> "The results show that terrain slope has high correlation for both study area (0.993 and
+> 0.870) with the RMSE of the LiDAR-derived DTM. This is similar to canopy cover where
+> high value of correlation (0.989 and 0.924) obtained. This indicates that the accuracy of
+> airborne LiDAR-derived DTM is significantly affected by terrain slope and canopy caver of
+> study area."
 
-### 1.4 What the field actually compares (and therefore what is missing)
+Tables 3 and 4, transcribed from the PDF (MBE = mean bias error, signed):
 
-**Boreggio, M., Bernard, M., & Gregoretti, C. (2018). Evaluating the Differences of
-Gridding Techniques for Digital Elevation Models Generation and Their Influence on the
-Modeling of Stony Debris Flows Routing. *Frontiers in Earth Science*, 6, 89.**
-doi:[10.3389/feart.2018.00089](https://doi.org/10.3389/feart.2018.00089)
-— peer-reviewed journal article. **[ABSTRACT + body via publisher page]**
+*By slope, rubber-tree area / mixed-forest area:*
 
-Despite the title promising "gridding techniques", the compared set is
-"linear triangulation, natural neighbor, nearest neighbor, Inverse Distance to a Power,
-ANUDEM, Radial Basis Functions, and ordinary kriging" (verbatim) — i.e. **interpolators
-only, no per-cell order statistic.** *Setting:* Rovina di Cancia debris-flow basin,
-Italian Dolomites; steep, largely unvegetated.
+| Slope | RMSE (m) | MAE (m) | MBE (m) | | RMSE (m) | MAE (m) | MBE (m) |
+|---|---|---|---|---|---|---|---|
+| 0–5° | 0.613 | 0.364 | +0.020 | | 0.379 | 0.153 | +0.010 |
+| 6–10° | 0.723 | 0.410 | +0.002 | | 0.589 | 0.012 | −0.024 |
+| 11–15° | 0.890 | 0.619 | +0.017 | | 0.590 | 0.425 | +0.054 |
 
-**Montealegre, A.L., Lamelas, M.T., & de la Riva, J. (2015). Interpolation Routines
-Assessment in ALS-Derived Digital Elevation Models for Forestry Applications.
-*Remote Sensing*, 7(7), 8631–8654.** doi:[10.3390/rs70708631](https://doi.org/10.3390/rs70708631)
-— peer-reviewed journal article. **[ABSTRACT]**
+*By canopy density, rubber-tree area / mixed-forest area:*
 
-Same story in a forest setting. Verbatim:
+| Canopy cover | RMSE (m) | MAE (m) | MBE (m) | | RMSE (m) | MAE (m) | MBE (m) |
+|---|---|---|---|---|---|---|---|
+| 70–80 % | 0.230 | 0.035 | +0.011 | | 0.333 | 0.333 | +0.162 |
+| 81–90 % | 0.437 | 0.255 | +0.008 | | 0.367 | 0.179 | +0.075 |
+| 91–100 % | 0.789 | 0.495 | +0.002 | | 0.576 | 0.076 | +0.019 |
 
-> "In this study, six interpolation routines were tested over a range of land cover and
-> terrain roughness in order to generate a collection of DEMs with spatial resolution of
-> 1 and 2 m."
+Note the structure: **RMSE rises steeply with cover while the signed bias *falls*.**
+Scatter and shift move in opposite directions here. Any correction fitted to RMSE rather
+than to signed bias would get the sign of the adjustment wrong. (Their own summary
+sentence — "Most of the slope class shows the positive bias means underestimate exists in
+DTM generated at high terrain" — is confusingly worded; I quote the tables rather than
+that sentence.)
 
-> "The Triangulated Irregular Network (TIN) to raster interpolation method produced the
-> best result in the validation process with the training data set while the Inverse
-> Distance Weighted (IDW) routine was the best in the validation with GPS (RMSE of 2.68
-> cm and RMSE of 37.10 cm, respectively)."
+*Setting:* Bentong, Pahang, Malaysia; rubber plantation and mixed tropical forest; Riegl
+system, described by the authors as "low density"; ATIN ground filter.
 
-*Setting:* Mediterranean forest, Spain. Again: **interpolators, not statistics.** Note
-the ~14× gap between self-validation and GPS validation — a caution about validating a
-gridding choice against the same point cloud that produced it.
+### 2.4 Cover-stratified error in a leaf-on temperate pine/deciduous landscape
 
-**USGS Lidar Base Specification (agency standard, not peer-reviewed).**
-<https://www.usgs.gov/ngp-standards-and-specifications/lidar-base-specification-digital-elevation-model-surface>
-**[partially verified]** — I read the "Digital Elevation Model Surface Treatments" page
-of *Lidar Base Specification 2025 rev. A*. It specifies which points are **excluded**
-(e.g. "Bare-earth lidar points (serving as mass points) that are in close proximity to
-any breakline shall be classified as Ignored Ground (class 20) and shall be excluded
-from the DEM generation process", verbatim). **The page I read does not state an
-interpolation method and does not specify any per-cell statistic.** I did *not* verify
-the separate "Data Processing and Handling Requirements" page, so I make no claim about
-whether TIN is mandated elsewhere in the spec. What is safe to say: the governing
-specification for 3DEP treats the DEM as an *interpolation over all valid ground points*,
-not as a per-cell order statistic — so a percentile-gridded product is a departure from
-the delivered-product convention and must be built identically for both epochs.
+**Hodgson, M.E., Jensen, J.R., Schmidt, L., Schill, S., & Davis, B. (2003). An evaluation
+of LIDAR- and IFSAR-derived digital elevation models in leaf-on conditions with USGS Level
+1 and Level 2 DEMs. *Remote Sensing of Environment*, 84(2), 295–308.**
+doi:[10.1016/S0034-4257(02)00114-1](https://doi.org/10.1016/S0034-4257(02)00114-1)
+— peer-reviewed. **[NOT VERIFIED directly]** — abstract withheld by the publisher and null
+on Crossref, OpenAlex and Semantic Scholar; ScienceDirect returns 403.
 
-### 1.5 Does anyone use a percentile *above* the median?
+Two independent **[SECONDARY]** descriptions, which I quote because they do not agree.
 
-**Not for ground elevation. I found no case.** I searched explicitly for 75th / 90th /
-upper-quartile ground gridding and found only:
+From **Clark et al. (2004) [FULL TEXT]**:
 
-- **Canopy and crop *surface* models**, where high percentiles (Zp90, Zp95) replace the
-  maximum because they are more robust to point-density variation. That is the *opposite*
-  problem — the upper envelope, not the lower — and provides no argument for raising the
-  ground statistic.
-- **Medeiros et al. (2015)** (below), which applies a *quartile-based elevation
-  adjustment*, not a quartile of the returns in a cell. The nearest published relative,
-  but not the same thing.
+> "Working with last-return lidar data flown over a leaf-on pine/deciduous forest
+> landscape, Hodgson et al. (2003) identified ground points through a combination of
+> proprietary software and human interpretation. A comparison of DTM elevation against
+> 1470 survey-grade field measurements had an overall RMSE of 0.93 m. DTM error differed
+> significantly by land use. Although RMSE was 0.33 m for low grass, it increased to 1.22
+> and 1.53 m for the more structurally complex scrubs/shrub and deciduous vegetation types,
+> respectively. Furthermore, these researchers found that in the dense, multi-layered
+> shrub/scrub class, there was a highly significant increase in DTM error of roughly 2 m
+> from lowest (0–2°) to steepest (6–8°) slopes, which the authors attributed to vertical
+> inaccuracies over relatively short horizontal distances under complex canopy."
 
-The one *mechanism* in the literature that would justify a statistic above the minimum
-is Ewald's downhill-capture failure — the minimum is biased **low** on sloping ground
-adjacent to lower ground. That argues for moving *up* from the minimum, and Ewald shows
-the optimum overshoots into negative bias. Nobody has taken the next step and asked which
-percentile is optimal at fixed cell size.
+From **Simpson et al. (2017) Table 1 [FULL TEXT]**, the same source is credited with
+"Temperate deciduous and conifer 1.22", "Temperate grass 0.37", "Temperate pine 0.45",
+"Temperate shrub 1.53".
 
----
+**These conflict.** Clark assigns 1.22 to scrub/shrub and 1.53 to deciduous; Simpson
+assigns 1.22 to deciduous+conifer and 1.53 to shrub. **Do not cite either attribution
+without obtaining Hodgson et al. (2003) itself.** The one thing both agree on is the
+*ordering* — grass lowest by a wide margin, structurally complex vegetation ~4× higher.
 
-## 2. Empirical vertical bias of lidar DTMs under vegetation
+The slope×cover interaction Clark reports — ~2 m of extra error from 0–2° to 6–8° *within a
+single cover class* — is the closest published statement to this project's finding that
+slope and cover interact rather than add.
 
-**Sign convention used below: positive = lidar DTM reads ABOVE surveyed ground.**
-Where a source's own convention is ambiguous I say so.
+### 2.5 Terrain form can beat cover
 
-### 2.1 Temperate conifer, total-station reference — the classic benchmark
+**Duchan, M., Mráz, V., Tichá, A., Jankovský, M., & Zlatuška, K. (2026). The Influence of
+Forest Cover on the Accuracy of Aerial Laser Scanning-Derived Digital Elevation Models for
+Detecting Drainage Ditches in Forests in the Czech Republic. *Forests*, 17(2), 162.**
+doi:[10.3390/f17020162](https://doi.org/10.3390/f17020162)
+— peer-reviewed, open access. **[FULL TEXT]**
+
+Verbatim:
+
+> "The results indicate a positive elevation bias, with a mean elevation error of 0.415 m
+> and an RMSE of 0.464 m, 54.7% higher than the 0.3 m declared in the DTM technical report.
+> Forest height, acting as a proxy for forest structural density and canopy closure, was
+> significantly associated with a reduction in ground reflection density and an increase in
+> the distance to the nearest ground reflection (p < 0.05)."
+
+> "Crucially, multiple regression analysis revealed that forest height was not the primary
+> driver of elevation error; instead, ditch geometry was the most significant predictor.
+> Narrower ditches exhibited substantially higher errors than wider ones, regardless of the
+> canopy height. Furthermore, while ground reflection density decreased in mature stands,
+> this reduction did not significantly diminish DTM vertical accuracy, suggesting that some
+> of the LiDAR reflections of low vegetation could be misclassified as ground reflections,
+> decreasing accuracy."
+
+Two things for us. First, **a cover-driven reduction in ground-return density did not by
+itself degrade vertical accuracy** — which is a published caution against treating
+penetration/return-density as a proxy for bias, and independently consistent with this
+project's finding that ground-return fraction is a poor canopy proxy. Second, **concave
+microtopography dominated**: narrow ditches, i.e. exactly the "low ground over a short
+horizontal distance" geometry that also defeats minimum-bin gridding in Ewald.
+
+### 2.6 The evergreen counterpoint
+
+**Tinkham, W.T., Smith, A.M.S., Hoffman, C., Hudak, A.T., Falkowski, M.J., Swanson, M.E.,
+& Gessler, P.E. (2012). Investigating the influence of LiDAR ground surface errors on the
+utility of derived forest inventories. *Canadian Journal of Forest Research*, 42(3),
+413–422.** doi:[10.1139/x11-193](https://doi.org/10.1139/x11-193)
+— peer-reviewed. **[ABSTRACT]**
+
+> "The study further compared two LiDAR classification algorithms and found no significant
+> difference in their performance. Vegetation structure was found to have no influence,
+> whereas increased variability in the vertical error was observed on slopes exceeding 30°,
+> illustrating that these algorithms are not limited by high-biomass western coniferous
+> forests, but that slope and sensor accuracy both play important roles."
+
+This is a genuine null on the cover effect, and it should be reported as such. Its setting
+is high-biomass **evergreen conifer** — the one forest type where no leaf-state axis exists,
+and where Reutebuch also found the cover effect small ("strikingly small", verbatim). The
+pattern across §2 is that the cover effect is largest where **deciduous leaf state and
+low-stature undergrowth** vary, and smallest in evergreen conifer.
+
+### 2.7 Reutebuch et al. 2003 — the conifer benchmark in full
 
 **Reutebuch, S.E., McGaughey, R.J., Andersen, H.-E., & Carson, W.W. (2003). Accuracy of a
 high-resolution lidar terrain model under a conifer forest canopy. *Canadian Journal of
 Remote Sensing*, 29(5), 527–535.** doi:[10.5589/m03-022](https://doi.org/10.5589/m03-022)
-— peer-reviewed journal article. **[FULL TEXT]**
+— peer-reviewed. **[FULL TEXT]**
 
-Abstract, verbatim:
+> "The mean DTM error was 0.22 ± 0.24 m (mean ± SD). DTM elevation errors for four tree
+> canopy cover classes were: clearcut 0.16 ± 0.23 m, heavily thinned 0.18 ± 0.14 m, lightly
+> thinned 0.18 ± 0.18 m, and uncut 0.31 ± 0.29 m. These DTM errors show a slight increase
+> with canopy density but the differences are strikingly small."
 
-> "Conventional ground survey methods were used to collect coordinates and near-ground
-> vegetation heights at 347 ground checkpoints distributed under a range of canopy
-> covers. These points were used to check the DTM accuracy. The mean DTM error was
-> 0.22 ± 0.24 m (mean ± SD). DTM elevation errors for four tree canopy cover classes
-> were: clearcut 0.16 ± 0.23 m, heavily thinned 0.18 ± 0.14 m, lightly thinned
-> 0.18 ± 0.18 m, and uncut 0.31 ± 0.29 m. These DTM errors show a slight increase with
-> canopy density but the differences are strikingly small."
-
-Table 2 (transcribed from the PDF), lidar DTM minus surveyed checkpoint, metres:
+Table 2 (lidar DTM minus surveyed checkpoint, m), transcribed:
 
 | Canopy class | Mean | SD | Min | Max | n |
 |---|---|---|---|---|---|
@@ -321,79 +366,37 @@ Table 2 (transcribed from the PDF), lidar DTM minus surveyed checkpoint, metres:
 | Lightly thinned | 0.18 | 0.18 | −0.63 | 0.69 | 147 |
 | Uncut | 0.31 | 0.29 | −0.60 | 1.31 | 120 |
 
-Grouped analysis (Table 3, transcribed): no near-ground vegetation, mean 0.15 m (n = 132);
-any vegetation within 6 m of ground, mean 0.26 m (n = 212); slope < 18 %, mean 0.21 m
-(n = 174); slope ≥ 18 %, mean 0.22 m with SD rising from 0.20 to 0.28 m (n = 173).
+Table 3 groupings, transcribed: no near-ground vegetation +0.15 m (n = 132); vegetation
+within 6 m of ground +0.26 m (n = 212); slope < 18 % +0.21 m (n = 174); slope ≥ 18 %
++0.22 m with SD rising 0.20 → 0.28 (n = 173). **Note that the cover contrast (+0.15 vs
++0.26) is larger than the slope contrast (+0.21 vs +0.22) in this conifer stand** — the
+opposite ordering to Tinkham. The two are reconcilable: Reutebuch's split is on
+*near-ground* vegetation presence, Tinkham's on overstory structure.
 
-The **empirical offset removal** — see §3 — verbatim:
+And the empirical offset calibration, verbatim (see also §3.4):
 
 > "The observed error in the clearcut area (0.16 m) is very similar to the lidar
 > manufacturer's stated accuracy of ±0.15 m (Baltsavias, 1999). If one assumes that this
-> error in the open, bare-ground clearcut area is the system bias and adjusts the
-> individual checkpoint errors to remove this bias, then 69% of the observed checkpoint
-> errors are within ±0.22 m (the observed SD of the DTM grid error)."
+> error in the open, bare-ground clearcut area is the system bias and adjusts the individual
+> checkpoint errors to remove this bias, then 69% of the observed checkpoint errors are
+> within ±0.22 m (the observed SD of the DTM grid error)."
 
-*Setting:* 500 ha, western Washington State; slopes 0–45°; 70-year-old conifer with
-clearcuts and thinnings; Saab TopEye helicopter lidar, spring 1999; ~4.22 raw returns/m²,
-~0.58 filtered ground points/m²; 1.52 m DTM grid. **Conifer, not deciduous** — the
-leaf-state axis is absent by construction.
+### 2.8 Su & Bork 2006 in full, including the near-nadir observation
 
-### 2.2 Mixed land cover, deciduous vs. evergreen, GPS + total station
-
-**Hodgson, M.E. & Bresnahan, P. (2004). Accuracy of Airborne Lidar-Derived Elevation:
-Empirical Assessment and Error Budget. *Photogrammetric Engineering and Remote Sensing*,
-70(3), 331–339.** doi:[10.14358/PERS.70.3.331](https://doi.org/10.14358/PERS.70.3.331)
-— peer-reviewed journal article. **[ABSTRACT]**
-
-Verbatim:
-
-> "The variability of vertical accuracy was evaluated for six land-cover categories.
-> Root-mean-squared error (RMSE) values ranged from a low of 17 to 19 cm (pavement, low
-> grass, and evergreen forests) to a high of 26 cm (deciduous forests)."
-
-> "Observed elevation error in steeper slopes (e.g., 25°) was estimated to be twice as
-> large as those on low slopes (e.g., 1.5°)."
-
-Note the method, which is unusually clean and worth emulating:
-
-> "Rather than using an interpolation approach for gathering observed elevations at
-> reference points, the x-y coordinates of lidar points were located in the field and
-> these elevations were surveyed."
-
-*Setting:* Richland County, South Carolina; Optech ALTM 1210, 1207 m AGL, 2 m nominal
-posting. Mixed temperate; includes deciduous forest. **Reports RMSE by cover, not signed
-bias by cover** — so it constrains scatter, not the sign of our offset.
-
-### 2.3 Deciduous (aspen) parkland — signed bias by cover, and a nadir result
-
-**Su, J. & Bork, E. (2006). Influence of Vegetation, Slope, and Lidar Sampling Angle on
-DEM Accuracy. *Photogrammetric Engineering and Remote Sensing*, 72(11), 1265–1274.**
+**Su, J. & Bork, E. (2006). Influence of Vegetation, Slope, and Lidar Sampling Angle on DEM
+Accuracy. *Photogrammetric Engineering and Remote Sensing*, 72(11), 1265–1274.**
 doi:[10.14358/PERS.72.11.1265](https://doi.org/10.14358/PERS.72.11.1265)
-— peer-reviewed journal article. **[FULL TEXT]**
+— peer-reviewed. **[FULL TEXT]**
 
-Abstract, verbatim:
-
-> "Across the study area, overall signed error and RMSE were 0.02 m and 0.59 m,
-> respectively. Signed errors indicated elevations were over-estimated in forest but
-> under-estimated within meadow habitats. Increasing slope gradient increased vertical
-> absolute errors and RMSE. In contrast, lidar sampling angle had little impact on
-> measured error."
-
-The numbers, verbatim from the Results:
-
-> "In identifying a tendency to under- or over-estimate elevations, the mean signed
-> errors in Figure 3c show that elevations within aspen forest were over-estimated
-> (0.20 m) while those in lowland meadows were under-estimated (0.22 m). Examination of
-> the eight detailed classes of vegetation revealed a strong tendency to over-estimate
-> elevations in both closed and semi-open aspen forest (Figure 3d)."
+Beyond the signed errors quoted in §2.2:
 
 > "Finally, RMSE values indicated the lidar-derived DEM accuracy generally decreased as
 > slope gradient increased: the RMSE at slopes over 10° was twice that found when slopes
-> were less than 2°. This finding was similar to Hodgson and Bresnahan (2004), who
-> observed errors on slopes of 25° to be twice that found on relatively flat areas."
+> were less than 2°. This finding was similar to Hodgson and Bresnahan (2004), who observed
+> errors on slopes of 25° to be twice that found on relatively flat areas."
 
-And — directly relevant to this project's near-nadir finding, so quoted in full including
-the authors' own scepticism:
+On sampling angle — the only prior hint of a near-nadir-worst pattern I located, quoted in
+full including the authors' own scepticism:
 
 > "Signed errors and RMSEs were generally greater when lidar data were collected close to
 > nadir (less than 3°) relative to those sampled in angle classes further away from the
@@ -403,559 +406,774 @@ the authors' own scepticism:
 > high (10°) slope gradients, which may also have contributed to the observed elevation
 > errors."
 
-*Transcription note.* The above is quoted exactly as the PDF text layer renders it. Two
-checks: (i) the string "(10°)" almost certainly reads "(>10°)" in print — the extracted
-text of this paper contains **zero** `<` or `>` characters across all 10 pages, despite
-repeated slope-threshold discussion, so those glyphs are systematically lost; (ii) "23
-times" is **not** a mangled "2–3": en-dashes survive extraction elsewhere in the file
-(e.g. the reference page range "3482–3486"), so "23 times larger" appears to be literal,
-and it is physically plausible because the comparison is top-five extremes against an
-overall mean signed error near zero (+0.02 m area-wide). **Verify both against the
-printed page before quoting in the manuscript.** I initially reconstructed these as
-"2–3 times" and ">10°"; the glyph audit overturned the first reconstruction.
+*Transcription note (retained from the first draft, because the self-check matters).* That
+passage is quoted exactly as the PDF text layer renders it. Two checks: (i) "(10°)" almost
+certainly reads "(>10°)" in print — the extracted text of this paper contains **zero** `<`
+or `>` characters across all 10 pages despite repeated slope-threshold discussion, so those
+glyphs are systematically lost; (ii) "23 times" is **not** a mangled "2–3": en-dashes
+survive extraction elsewhere in the same file (the reference page range "3482–3486"), so
+"23 times larger" appears literal, and it is physically plausible because the comparison is
+top-five extremes against an overall mean signed error near zero (+0.02 m area-wide).
+**Verify both against the printed page before quoting in the manuscript.** I initially
+reconstructed these as "2–3 times" and ">10°"; the glyph audit overturned the first
+reconstruction.
 
-*Setting:* Kinsella Research Station, Aspen Parkland, Alberta; 2,700 ha of knob-and-kettle
-terrain with 5–10 m relief; **deciduous aspen forest**, shrubland, grassland, meadow;
-last-return lidar (1998-era), IDW interpolation at 1.5 m; 256 reference plots by total
-station + DGPS against 27 interconnected benchmarks. Of everything in this review, this
-is the **closest analogue to our forest/open contrast** — deciduous, mixed cover, sloping,
-first-generation sensor.
+Their abstract's own summary of the angle result — "lidar sampling angle had little impact
+on measured error" — is the claim they stand behind.
 
-### 2.4 Temperate deciduous broadleaf — the strongest modern study
+### 2.9 Marsh and wetland: same phenomenon, different magnitudes
 
-**Simpson, J.E., Smith, T.E.L., & Wooster, M.J. (2017). Assessment of Errors Caused by
-Forest Vegetation Structure in Airborne LiDAR-Derived DTMs. *Remote Sensing*, 9(11),
-1101.** doi:[10.3390/rs9111101](https://doi.org/10.3390/rs9111101)
-— peer-reviewed journal article, open access. **[FULL TEXT]**
+Reported here as evidence on the general question, with the transferability caveat attached
+to the *numbers*.
 
-Abstract, verbatim:
+**Ewald, M.J. (2013). *Where's the Ground Surface? Elevation Bias in LIDAR-derived Digital
+Elevation Models Due to Dense Vegetation in Oregon Tidal Marshes.* MS thesis, Oregon State
+University.** <https://ir.library.oregonstate.edu/downloads/1n79h8198>
+— **MS thesis, not peer-reviewed.** **[FULL TEXT]**
 
-> "Here, we use ground survey equipment to assess digital terrain model (DTM) accuracy in
-> a deciduous broadleaf forest, during both leaf-on and leaf-off conditions. Using the
-> leaf-on LiDAR dataset we quantitatively assess vertical vegetation structure, and use
-> this as a categorical explanatory variable for DTM accuracy. In the presence of leaf-on
-> vegetation, DTM accuracy is severely reduced, with low-stature undergrowth vegetation
-> (such as ferns) causing the greatest errors (RMSE > 1 m). Errors are lower under
-> leaf-off conditions (RMSE = 0.22 m)."
+> "The fundamental vertical accuracy (FVA) of the LIDAR datasets was 4.5 cm root mean
+> square error (RMSE) and had no consistent positive or negative bias in open landcover.
+> Within wetland vegetation communities, my results suggest that LIDAR estimates of the
+> ground surface in tidal wetlands are typically 10 cm to 30 cm above GPS measurements.
+> Plant associations dominated by *Carex obnupta* and *Carex lyngbyei* exhibited the largest
+> discrepancy between LIDAR and GPS measurements (mean discrepancies 36.6 cm and 48.8 cm
+> respectively). The smallest errors observed in the study were about 10 cm to 11 cm"
 
-Conclusion, verbatim:
+Per-association values, verbatim: association F (*Carex obnupta*) "36.6 cm (95% CI: 29.6 cm
+to 43.6 cm) in the minimum-bin DEM and 39.4 cm (95% CI: 32.2 cm to 46.5 cm) in the DOGAMI
+bare-earth DEM"; association H (*Carex lyngbyei*) "48.8 cm (95% CI: 40.3 cm to 57.3 cm) in
+the minimum-bin DEM and 45.1 cm (95% CI: 36.4 cm to 53.8 cm)"; association A
+(*Deschampsia*/succulents) "10.4 cm (95% CI: 5.6 cm to 15.2 cm)"; association G (*Distichlis
+spicata*) "10.6 cm (95% CI: 3.9 cm to 17.3 cm)".
 
-> "Results demonstrate that leaf-on vegetation causes greater DTM error (RMSE = 0.83 m)
-> than leaf-off vegetation (RMSE = 0.22) across all vegetation categories. Furthermore,
-> DTM accuracy is not affected by all vegetation structures equally; with dense
-> understory vegetation such as ferns and brambles causing the greatest positive DTM
-> errors. Grassland vegetation yields the most accurate DTMs."
+**The zero-bias open-cover result is as important as the vegetated numbers** — it is a
+clean demonstration that the shift is *caused by cover*, with the same sensor, same
+processing, same site. That is the control our own open-ground stable-terrain check plays.
 
-**Sign-convention caveat, flagged because it matters.** The Methods say the reference was
-subtracted from the lidar surface — "The control DTM was subtracted from the ALS-derived
-DTM (DTM_ALS) to produce difference rasters" — which makes positive = lidar high. But the
-caption of Figure 11 reads "Digital Terrain Model (DTM) error (DTM_TS − DTM_ALS)", the
-opposite. **The paper is internally inconsistent.** The physical direction the authors
-intend is nonetheless unambiguous from the Discussion:
+**Hladik, C. & Alber, M. (2012). Accuracy assessment and correction of a LIDAR-derived salt
+marsh digital elevation model. *Remote Sensing of Environment*, 121, 224–235.**
+doi:[10.1016/j.rse.2012.01.018](https://doi.org/10.1016/j.rse.2012.01.018)
+— peer-reviewed. **[ABSTRACT]**
 
-> "The results of the present study suggest that without an adequate ground control
-> scheme, such applications may be prone to significant positive biases, especially in
-> areas of leaf-on, open canopy forest with large amounts of ground cover."
+> "We found that DEM mean vertical errors for different cover classes ranged from 0.03 to
+> 0.25 m in comparison to the RTK ground truth data, with the larger offsets for taller
+> vegetation."
 
-i.e. **lidar reads above true ground under leaf-on vegetation.**
+Vegetation *height* as the ordering variable, cleanly stated.
 
-Also verbatim, and important for us — slope was *not* a driver here:
+**Clark, M.L., Clark, D.B., & Roberts, D.A. (2004). Small-footprint lidar estimation of
+sub-canopy elevation and tree height in a tropical rain forest landscape. *Remote Sensing
+of Environment*, 91(1), 68–89.**
+doi:[10.1016/j.rse.2004.02.008](https://doi.org/10.1016/j.rse.2004.02.008)
+— peer-reviewed. **[FULL TEXT]** (see §3.2 for its gridding method, which is the main
+reason it matters here)
 
-> "The median slope within the plot was 5.7°. The relationship between vertical DTM
-> residuals and slope at 1m resolution was examined using a non-parametric GAM. Slope has
-> no meaningful effect on residuals, with slope explaining 0.25% of the deviance, and a
-> poor goodness of fit (adjusted R2 = 0.002, Figure 10)."
+> "In old-growth forests, RMS error on steep slopes was 0.67 m greater than on flat slopes.
+> On flatter slopes, variation in vegetation complexity associated with land use caused
+> highly significant differences in DTM error distribution across the landscape. The highest
+> DTM accuracy observed in this study was 0.58-m RMSE, under flat, open-canopy areas with
+> relatively smooth surfaces. Lidar ground retrieval was complicated by dense, multi-layered
+> evergreen canopy in old-growth forests, causing DTM overestimation that increased RMS
+> error to 1.95 m."
 
-That null is only informative up to ~6° — it does not speak to bluffland slopes.
+Note the clean factorial statement: slope effect *and* cover effect, measured separately,
+in the same survey.
 
-And the authors' own limitation on transferability, verbatim:
+---
+
+## 3. Can a per-cell order statistic compensate the shift?
+
+This is where the reorganisation pays. There are **two independent traditions** of
+order-statistic ground estimation — a marsh one and a forest one — and the first draft saw
+only the marsh one.
+
+### 3.1 The marsh tradition: "minimum-bin gridding"
+
+**Schmid, K.A., Hadley, B.C., & Wijekoon, N. (2011). Vertical Accuracy and Use of
+Topographic LIDAR Data in Coastal Marshes. *Journal of Coastal Research*, 27(6A), 116–132.**
+doi:[10.2112/JCOASTRES-D-10-00188.1](https://doi.org/10.2112/JCOASTRES-D-10-00188.1)
+— peer-reviewed. **[ABSTRACT]**
+
+The clearest primary definition:
+
+> "Custom digital elevation model (DEM) generation techniques and point classification
+> processes can be used to improve estimates of ground elevations in coastal marshes. The
+> simplest of these methods is minimum bin gridding, which extracts the lowest elevation
+> value included within a user-specified search window and assigns that value to the
+> appropriate DEM grid cell."
+
+> "By employing the minimum bin technique to the bare-earth classified LIDAR data, the
+> overall bias in the resultant surface was reduced by 12 cm, and the vertical accuracy was
+> improved by 8 cm when compared with the 'as-received' data."
+
+> "Despite lowering the spatial resolution of the DEM, the application of these techniques
+> significantly improves the vertical accuracy of the LIDAR-derived bare-earth surfaces."
+
+**Wang, C., Menenti, M., Stoll, M.P., Feola, A., Belluco, E., & Marani, M. (2009).
+Separation of Ground and Low Vegetation Signatures in LiDAR Measurements of Salt-Marsh
+Environments. *IEEE Transactions on Geoscience and Remote Sensing*, 47(7), 2014–2023.**
+doi:[10.1109/TGRS.2008.2010490](https://doi.org/10.1109/TGRS.2008.2010490)
+— peer-reviewed. **[ABSTRACT]**
+
+> "In this paper, we introduce reliable methods to remove random and systematic errors and
+> to register raw data, as well as a new procedure, to determine the optimal filter window
+> size to separate ground and canopy returns. A limited amount of field observations is used
+> to determine the size of the filtering window which produces the minimally biased estimates
+> of the digital terrain model (DTM)."
+
+> "We apply this procedure to a study marsh within the Venice Lagoon, Italy, and obtain a
+> high-accuracy DTM. The error (z_LiDAR − z_field) is 2.2 cm, with a standard deviation of
+> 6.4 cm."
+
+**Ewald (2013) [FULL TEXT]** is the fullest published evaluation, and documents the
+**two-sided failure** that matters most to us:
+
+> "DEM accuracy increased with cell size until an inflection point near 1.4 m as the
+> influence of vegetation is mitigated by the minimum-bin gridding technique (Figure 2.3a).
+> Low features within the landscape were captured by the gridding technique and degrade DEM
+> performance after cell size enlarged beyond the optimum."
+
+> "Even at the optimum cell size, the DEM is still positively biased when compared to known
+> ground elevations. Mean LIDAR-GPS discrepancy remains positive until a cell size of 1.6 m
+> is achieved. At cell sizes greater than 1.6 m, DEM are negatively biased as the minimum-bin
+> method continues to capture and favor low features within the landscape."
+
+> "Minimum-bin LIDAR-derived DEM elevations underpredict (typically 70 cm to 90 cm below)
+> the measured elevation along channels and the man-made dike that form the southern edge of
+> the site adjacent to the Coquille River. These features are characterized by high ground, a
+> moderate to steep slope, and low ground over a short horizontal distance. For example, the
+> minimum-bin filter is likely to select a LIDAR return from an adjacent low riverbank rather
+> than the surveyed wetland surface. The likelihood of upslope areas being assigned an
+> elevation lower than the true ground elevation increases as the cell size is increased."
+
+And the honest limit of the method:
+
+> "Throughout the vegetation types we evaluated, the minimum-bin DEM performs slightly
+> better than the DOGAMI bare-earth DEM. With 95% confidence, the DOGAMI bare-earth DEM
+> elevation is between 2.0 cm and 3.1 cm above the minimum-bin DEM elevation across the
+> entire dataset (mean 2.5 cm, paired two-sided t-test, p-value < 0.001)."
+
+> "Unfortunately, our results show that LIDAR estimates of the ground surface are positively
+> biased even when the minimum-bin technique is used. This suggests that the LIDAR laser
+> pulse never reaches the ground surface within the vegetation communities we studied."
+
+**Buffington, K.J., Dugger, B.D., Thorne, K.M., & Takekawa, J.Y. (2016). Statistical
+correction of lidar-derived digital elevation models with multispectral airborne imagery in
+tidal marshes. *Remote Sensing of Environment*, 186, 616–625.**
+doi:[10.1016/j.rse.2016.09.020](https://doi.org/10.1016/j.rse.2016.09.020)
+— peer-reviewed. **[ABSTRACT via NOAA NCCOS record page; ScienceDirect returned 403]**
+
+> "Using 17 study sites along the Pacific coast of the U.S., we achieved an average root
+> mean squared error (RMSE) of 0.072 m, with a 40–75% improvement in accuracy from the lidar
+> bare earth DEM. Results from our method compared favorably with results from three other
+> methods (minimum-bin gridding, mean error correction, and vegetation correction factors)."
+
+This is the benchmarking statement: minimum-bin gridding is one of three recognised
+correction families, and a fitted statistical model beat all three. (A widely repeated "118
+points" calibration figure appeared only in a search summary — **[NOT VERIFIED]**.)
+
+### 3.2 The forest tradition: "local-minima" ground retrieval — and it IS tuned against ground truth
+
+This is the material the sign-based framing caused me to miss. It is peer-reviewed, it is
+in forest, and it is in *Remote Sensing of Environment*.
+
+**Clark et al. (2004) [FULL TEXT]**, §2.5.1, verbatim:
+
+> "The local-minima algorithm proceeded as follows: a grid of non-overlapping, square cells
+> was overlaid on top of the original DSM. Within each grid cell, one local-minima DSM cell
+> (0.33-m support) was selected and identified as a ground return. This procedure resulted in
+> a population of ground-return cells for each of the five grid scales considered
+> independently: 5, 10, 15, 20 and 30 m… the above local-minima scheme is analogous to
+> selecting the lowest return in a square footprint of a specified scale (i.e., 5, 10 m,
+> etc.). Ground-return cells identified at each scale were then used in separate geostatistical
+> interpolation schemes (described below) that generated DTMs with a 1-m cell size. Samples
+> from each DTM were compared to 3859 co-located reference points… **The overall RMS errors of
+> the resulting DTMs were used as the basis for the selection of a final ground-retrieval/
+> interpolation scheme.**"
+
+The tuning result, verbatim:
+
+> "errors ranging from 2.29 to 5.09 m, using either IDW or OK for surface interpolation (data
+> not shown). The scale with the lowest RMSE for both interpolation methods was found to be
+> 20 m. For this tropical landscape and lidar sampling density, 20 m appears to be the
+> near-optimum scale to identify ground returns with the local-minima approach… This optimal
+> scale is likely determined by the average crown dimensions and canopy gap characteristics in
+> old-growth forest, which comprises 69% of the study area."
+
+Three things follow, all of them useful to us:
+
+1. **The choice of ground statistic and its scale moved RMSE from 2.29 m to 5.09 m** on one
+   point cloud at one site — a 2.2× swing, larger than most of the *cover* effects in §2.
+   The statistic is not a processing detail.
+2. **The optimum scale is set by canopy geometry** — mean maximum crown diameter measured
+   at 19.6 m, optimum window 20 m. That is a physical, transferable selection criterion, and
+   a far better justification than "we tried some values." It also predicts that our optimum
+   should track *our* crown/gap scale, not Clark's.
+3. They then refined it with a **multi-scale** scheme: "the iterative-addition scheme (i.e.,
+   iteratively adding local-minima from 20, 15 to 10-m scales) improved the OK-interpolation
+   RMSE by 0.10 m, resulting in an overall RMSE of 2.29 m."
+
+And, critically for the sign question:
+
+> "All DTMs had a positive mean-signed error, and so they tended to overestimate elevation."
+
+Mean signed errors transcribed from Table 3 — IDW (local-minima) +0.68, IDW
+(iterative-addition) +0.08, OK (local-minima) +1.10, OK (iterative-addition) +0.97 m.
+*Transcription caveat:* the text states the OK-vs-IDW overestimation gap is "up to 0.87 m
+higher" where these figures give 0.89; treat the table values as approximate pending a
+check against the printed page. **Even a pure local-minimum operator left a +0.68 to +1.10 m
+positive shift under tropical old-growth** — i.e. the minimum is not a floor that
+automatically removes the vegetation shift.
+
+Also, on why they preferred kriging — directly relevant to our choice of a robust statistic:
+
+> "OK was determined to be a superior interpolation scheme because it smoothed fine-scale
+> variance created by spurious understory heights in the ground-point dataset."
+
+> "This smoothing of the variance across space tends to minimize the influence of spurious
+> understory vegetation or downed trunks that are inevitably included in the DTM
+> interpolation."
+
+Clark also situates local-minima within the general taxonomy, verbatim:
+
+> "A relatively simple approach is to find local-minima relative to neighboring samples at a
+> specified scale and/or search configuration (Cobby et al., 2001; Petzold et al., 1999).
+> Resulting ground samples (i.e., local minima) must then be interpolated to form a surface."
+
+### 3.3 The one study that makes the ground statistic a FUNCTION OF VEGETATION
+
+**Cobby, D.M., Mason, D.C., & Davenport, I.J. (2001). Image processing of airborne scanning
+laser altimetry data for improved river flood modelling. *ISPRS Journal of Photogrammetry
+and Remote Sensing*, 56(2), 121–138.**
+doi:[10.1016/S0924-2716(01)00039-9](https://doi.org/10.1016/S0924-2716(01)00039-9)
+— peer-reviewed. **[NOT VERIFIED directly]** (abstract null on OpenAlex; full text not
+obtained). Described **[SECONDARY]** by Clark et al. (2004) **[FULL TEXT]**:
+
+> "Cobby et al. (2001) developed an automated ground-retrieval scheme for a floodplain
+> environment that included deciduous forests with leaf-on conditions. An initial DTM was
+> interpolated from local-minima cells retrieved from non-overlapping, 5 × 5-pixel windows
+> (10-m side) overlaid on a last-return DSM (2-m support). **The final DTM was achieved by
+> tailoring the ground-retrieval algorithm to short and tall vegetation classes.** While
+> terrain under short vegetation could be predicted with a 0.17-m RMSE (n = 5), the RMSE was
+> 3.99 m (n = 12) under deciduous forests on steeper slopes (10–15°)."
+
+**This is the direct precedent for our approach**: a local-minimum order statistic whose
+*rule is switched by vegetation class*, in leaf-on deciduous forest on slopes. It is also
+independently endorsed as the right direction by **Hopkinson et al. (2005) [FULL TEXT]**:
+"ground level LiDAR point classification should be vegetation class dependent (e.g. Cobby
+et al., 2001)."
+
+Two caveats, stated plainly. The validation n is tiny (5 and 12 points). And the 3.99 m
+RMSE under leaf-on deciduous forest on 10–15° slopes is a warning, not an endorsement — it
+is the worst forest number in this whole review, from the method closest to ours. **Getting
+Cobby et al. (2001) in full is the single highest-value acquisition on this list.**
+
+### 3.4 Tuning an offset or a statistic against ground truth
+
+Grouped by what is tuned.
+
+**Tuning the aggregation scale under a fixed minimum operator:**
+- Clark et al. 2004 — 5/10/15/20/30 m, RMSE-minimised against 3859 points, optimum 20 m **[FULL TEXT]**
+- Wang et al. 2009 — filter window size, "minimally biased estimates of the DTM" **[ABSTRACT]**
+- Schmid et al. 2011 — cell size 2–10 m; per **Ewald (2013) [SECONDARY]**: "selecting an
+  optimal cell size of 4.0 m in *Spartina alterniflora* and a cell size of 10.0 m in *Juncus
+  roemerianus* by minimizing the Root Mean Square Error (RMSE) on 280 survey-grade GPS
+  measurements in South Carolina." **Note this is a per-vegetation-class scale** — another
+  instance of §3.3's idea.
+- Ewald 2013 — cell size 0.1–6.0 m **[FULL TEXT]**: "Minimizing MAE yielded (1 in Table 2.1)
+  an optimum cell size of 1.4 m (1.92 m²) for this dataset. If RMSE (2 in Table 2.1) was used
+  to define the optimum DEM cell size instead of MAE, the optimum cell size was 1.2 m (1.44
+  m²)." **The loss function moved the optimum by 0.2 m and the bias by 2.9 cm** — a caution
+  for anyone tuning a statistic against checkpoints.
+
+**Tuning an additive offset by cover class:**
+- Hladik & Alber 2012 **[ABSTRACT]**: "We developed species-specific correction factors for
+  ten cover classes… reducing the overall mean DEM error from 0.10 ± 0.12 (SD) to −0.01 ±
+  0.09 m (SD), and the Root Mean Square Error from 0.16 m to 0.10 m."
+- Medeiros, S., Hagen, S., Weishampel, J., & Angelo, J. (2015). *Remote Sensing*, 7(4),
+  3507–3525. doi:[10.3390/rs70403507](https://doi.org/10.3390/rs70403507) **[ABSTRACT]** —
+  the only source treating a **quantile** as the knob: "Elevation adjustments associated with
+  these classes using both median and quartile approaches were applied to adjust lidar-derived
+  elevation values closer to true bare earth elevation… The two-class quartile-based adjusted
+  DEM produced the best results, reducing the RMS error in elevation from 0.65 m to 0.40 m, a
+  38% improvement. The raw mean errors for the lidar DEM and the adjusted DEM were 0.61 ± 0.24
+  m and 0.32 ± 0.24 m, respectively, thereby reducing the high bias by approximately 49%."
+- Buffington et al. 2016 **[ABSTRACT]** — LEAN, NDVI as the continuous cover covariate.
+- Reutebuch et al. 2003 **[FULL TEXT]** — open-clearcut mean subtracted as "the system bias"
+  (§2.7). The forest analogue of an open-ground offset calibration, and the direct precedent
+  for this project's use of stable open ground.
+- Kraus & Rieger 1999 **[FULL TEXT]** — "The elimination of inherent systematic errors allows
+  a significant improvement of the accuracy of the laser DTM particularly in flat terrain. The
+  constant value of ± 18 cm in equation (1) can be reduced down to ± 10 cm (K. Kraus, N.
+  Pfeifer, 1998)."
+
+**The negative:**
+- **Fradette, M.-S., Leboeuf, A., Riopel, M., & Bégin, J. (2019). Method to Reduce the Bias on
+  Digital Terrain Model and Canopy Height Model from LiDAR Data. *Remote Sensing*, 11(7),
+  863.** doi:[10.3390/rs11070863](https://doi.org/10.3390/rs11070863) **[ABSTRACT]**: "the bias
+  of both DTM and CHM were calculated by subtracting two LiDAR datasets: high-density pixels
+  with 21 pulses/m² (first return) and more… and low-density pixels… After preliminary analyses,
+  it was concluded that the DTM did not need specific adjustment. In contrast, the CHM needed
+  adjustments." This is the null our claim must engage with.
+
+**The structural observation.** Under a minimum operator, enlarging the neighbourhood is
+monotonically equivalent to lowering the effective quantile of a fixed neighbourhood. So the
+literature has been **tuning a quantile all along** — just parameterised as cell size or window
+size, which pays a resolution cost and entangles the statistic with the support. Clark's 2.29 →
+5.09 m swing and Ewald's 1.2-vs-1.4 m sensitivity are both really quantile sensitivity in
+disguise. Fixing the cell size and tuning the percentile directly is the same idea with the
+confound removed. **That framing gives our method a lineage rather than making it look ad hoc,
+and it is the single most useful thing this review produces.**
+
+### 3.5 The continuous analogue: asymmetric (skew) robust interpolation
+
+**Kraus, K. & Pfeifer, N. (1998). Determination of terrain models in wooded areas with airborne
+laser scanner data. *ISPRS Journal of Photogrammetry and Remote Sensing*, 53(4), 193–203.**
+doi:[10.1016/S0924-2716(98)00009-4](https://doi.org/10.1016/S0924-2716(98)00009-4)
+— peer-reviewed. **[NOT VERIFIED]** — no full text or verbatim abstract obtained.
+
+**Kraus, K. & Rieger, W. (1999). Processing of laser scanning data for wooded areas.** In
+*Photogrammetric Week '99*, 221–231. Wichmann, Heidelberg. **Conference proceedings, not
+peer-reviewed.** <https://phowo.ifp.uni-stuttgart.de/publications/phowo99/kraus.pdf> **[FULL TEXT]**
+
+> "This algorithm estimates the skewness of the error distribution of the laser scanner data in
+> forests and assigns small weights to those points that show large positive errors during the
+> interpolation with filtering. The process results in a classification of the laser points in
+> terrain and off-terrain (mainly vegetation) points."
+
+This is a *soft* low-quantile: instead of taking the k-th order statistic, it down-weights high
+residuals continuously, so the fitted surface settles toward the low returns without ever
+committing to a single point. It is the principled alternative to a hard percentile and should
+be cited as such.
+
+The accuracy law, verbatim:
+
+> "σH[cm] = ± (18 + 120·tanα)"
+>
+> "Equation (1) is valid for a ground penetration rate of the laser signal of at least 25 % and
+> a good mixture of vegetation and ground points for the whole region."
+
+Clark et al. (2004) **[FULL TEXT]** describes the same method independently: "Kraus and Pfeifer
+(1998) used an automated, iterative technique that interpolated a mean surface from the lidar
+cloud of xyz points and then successively removed or down-weighted points with residuals higher
+than a specified threshold."
+
+### 3.6 What the delivered-product conventions do instead
+
+**Boreggio, M., Bernard, M., & Gregoretti, C. (2018). *Frontiers in Earth Science*, 6, 89.**
+doi:[10.3389/feart.2018.00089](https://doi.org/10.3389/feart.2018.00089) **[ABSTRACT + body]** —
+compares "linear triangulation, natural neighbor, nearest neighbor, Inverse Distance to a Power,
+ANUDEM, Radial Basis Functions, and ordinary kriging" (verbatim): **interpolators only, no order
+statistic.** *Setting:* steep, largely unvegetated Italian Dolomites debris-flow basin.
+
+**Montealegre, A.L., Lamelas, M.T., & de la Riva, J. (2015). *Remote Sensing*, 7(7), 8631–8654.**
+doi:[10.3390/rs70708631](https://doi.org/10.3390/rs70708631) **[ABSTRACT]** — same in a forest
+setting: "six interpolation routines were tested"; "The Triangulated Irregular Network (TIN) to
+raster interpolation method produced the best result in the validation process with the training
+data set while the Inverse Distance Weighted (IDW) routine was the best in the validation with
+GPS (RMSE of 2.68 cm and RMSE of 37.10 cm, respectively)." Note the ~14× gap between
+self-validation and GPS validation — a caution about validating a gridding choice against the
+same point cloud that produced it.
+
+**USGS Lidar Base Specification 2025 rev. A** — agency standard, not peer-reviewed.
+<https://www.usgs.gov/ngp-standards-and-specifications/lidar-base-specification-digital-elevation-model-surface>
+**[partially verified]** — I read only the "Digital Elevation Model Surface Treatments" page. It
+specifies which points are **excluded** ("Bare-earth lidar points (serving as mass points) that
+are in close proximity to any breakline shall be classified as Ignored Ground (class 20) and
+shall be excluded from the DEM generation process", verbatim). **The page I read states no
+interpolation method and no per-cell statistic**, and I did not verify the separate "Data
+Processing and Handling Requirements" page, so I make no claim about TIN being mandated elsewhere
+in the spec. What is safe: the governing specification for 3DEP treats the DEM as an
+*interpolation over all valid ground points*. A percentile-gridded product is therefore a
+departure from the delivered-product convention and must be built identically for both epochs.
+
+### 3.7 Does anyone use a percentile above the median?
+
+**Not for ground elevation. I found no case**, across four differently-phrased searches. What
+exists:
+
+- **Canopy and crop *surface* models** use high percentiles (Zp90, Zp95) in place of the maximum,
+  for robustness to point-density variation. That is the upper envelope — the opposite problem —
+  and supplies no argument for raising the ground statistic.
+- **Medeiros et al. (2015)** apply a *quartile* of the error distribution within a biomass class
+  to set an offset. Nearest relative; not a quantile of returns within a cell.
+
+The *mechanism* that would justify moving up from the minimum is well documented, though:
+Ewald's downhill capture (§3.1), Duchan's narrow-ditch dominance (§2.5), and Clark's preference
+for kriging specifically because it smooths "spurious understory heights" and "downed trunks"
+(§3.2). All three say the low tail contains non-ground returns *below* true ground as well as
+above it. Nobody has taken the next step of asking which percentile is optimal at fixed cell size.
+
+**Our own answer to that unasked question is negative**, and worth recording here so the gap is
+not mistaken for an opportunity: at Elba the classified-ground column is symmetric at every cover
+level in both epochs, so no shifted percentile — above or below the median — has any skew to
+exploit (`FRAME_2026-08-26.md`, commit 5335359). The literature's silence on percentiles above the
+median is therefore probably not an oversight so much as a route that does not lead anywhere in
+forest; the compensation that is actually needed is a translation, not a re-ranking.
+
+---
+
+## 4. Leaf-on vs leaf-off
+
+**Simpson, J.E., Smith, T.E.L., & Wooster, M.J. (2017). Assessment of Errors Caused by Forest
+Vegetation Structure in Airborne LiDAR-Derived DTMs. *Remote Sensing*, 9(11), 1101.**
+doi:[10.3390/rs9111101](https://doi.org/10.3390/rs9111101) — peer-reviewed, open access.
+**[FULL TEXT]**
+
+> "In the presence of leaf-on vegetation, DTM accuracy is severely reduced, with low-stature
+> undergrowth vegetation (such as ferns) causing the greatest errors (RMSE > 1 m). Errors are
+> lower under leaf-off conditions (RMSE = 0.22 m)."
+
+> "Leaf-off conditions improved overall DTM accuracy by 61 cm (RMSE_leaf-off = 0.22 m vs.
+> RMSE_leaf-on = 0.83 m, n = 1750) at 1 m resolution (Figure 11), demonstrating that leaf-on
+> vegetation induces larger positive DTM errors. Leaf-on and leaf-off DTM residuals were
+> significantly different (F = 3086, df = 1, p < 0.001)."
+
+> "In each of the six vertical vegetation structure categories of Table 4, DTM accuracy (RMSE)
+> was better in leaf-off than leaf-on conditions (Figure 12)"
+
+> "Results demonstrate that leaf-on vegetation causes greater DTM error (RMSE = 0.83 m) than
+> leaf-off vegetation (RMSE = 0.22) across all vegetation categories. Furthermore, DTM accuracy
+> is not affected by all vegetation structures equally; with dense understory vegetation such as
+> ferns and brambles causing the greatest positive DTM errors. Grassland vegetation yields the
+> most accurate DTMs."
+
+**(†) Sign-convention caveat, flagged because it matters.** The Methods state the reference was
+subtracted from the lidar surface — "The control DTM was subtracted from the ALS-derived DTM
+(DTM_ALS) to produce difference rasters" — making positive = lidar high. But the caption of
+Figure 11 reads "Digital Terrain Model (DTM) error (DTM_TS − DTM_ALS)", the opposite. **The paper
+is internally inconsistent.** The intended physical direction is unambiguous from the Discussion:
+
+> "The results of the present study suggest that without an adequate ground control scheme, such
+> applications may be prone to significant positive biases, especially in areas of leaf-on, open
+> canopy forest with large amounts of ground cover."
+
+Slope was **not** a driver at this site, and the null is worth recording with its range:
+
+> "The median slope within the plot was 5.7°. The relationship between vertical DTM residuals and
+> slope at 1m resolution was examined using a non-parametric GAM. Slope has no meaningful effect
+> on residuals, with slope explaining 0.25% of the deviance, and a poor goodness of fit (adjusted
+> R2 = 0.002, Figure 10)."
+
+That null is informative only up to ~6° and does not speak to bluffland slopes.
+
+The authors' own caveats:
+
+> "Errors induced by leaf litter were not quantified; DTM_TS was produced using exact ground
+> points from a total station survey, however DTM_ALS will always be erroneous in the presence of
+> leaf litter because measurements cannot penetrate the leaf litter. Here the best accuracies in
+> leaf-off conditions were approximately 20 cm, with mean residuals of less than 0.04 m (1sd <
+> 0.18 m) for structural categories with little vegetation < 3.5 m tall"
 
 > "The results presented here show how DTM accuracy is relatively affected by vegetation
-> structure, and as such they cannot be applied absolutely to other forest environments
-> (i.e., these are not correction factors)."
+> structure, and as such they cannot be applied absolutely to other forest environments (i.e.,
+> these are not correction factors)."
 
-*Setting:* < 1 ha plot in UK deciduous broadleaf woodland (alder, field maple, hazel);
-low relief, median slope 5.7°; NERC ARSF leaf-on 24 June 2014 and leaf-off 9 March 2009;
-~3–5 returns m⁻²; DTMs by IDW at 1 m; reference DTM from total-station survey (n = 657).
-Small plot, low slope, only one site — but the only study that isolates *vertical
-vegetation structure* as the explanatory variable in temperate deciduous forest.
-
-### 2.5 A compiled cross-biome table (secondary, but useful)
-
-Simpson et al. (2017) Table 1, transcribed **[FULL TEXT — but the numbers are their
-transcription of other papers, so [SECONDARY] with respect to the originals]**:
-
-| Biome | Vertical accuracy (m) | Metric | Source as cited |
-|---|---|---|---|
-| Old growth tropical forest | 1.95 | RMSE | Clark et al. 2004 |
-| Secondary tropical forest | 1.44 | RMSE | Clark et al. 2004 |
-| Steep Mediterranean shrubland | 0.13–0.41 | RMSE | Estornell et al. 2011 |
-| Temperate conifer | 0.21 | RMSE | Bao et al. 2008 |
-| Temperate conifer | −0.05 / 0.12 | Mean/SD | Hyyppä et al. 2005 |
-| Temperate conifer | 0.31 / 0.29 | Mean/SD | Reutebuch et al. 2003 |
-| Temperate conifer | 0.59 | RMSE | Su & Bork 2006 |
-| Temperate conifer | 0.24 | RMSE | Tinkham et al. 2012 |
-| **Temperate deciduous and conifer** | **1.22** | RMSE | Hodgson et al. 2003 |
-| Temperate grass | 0.37 | RMSE | Hodgson et al. 2003 |
-| Temperate mixed | 0.38 | N/A | Wasser et al. 2013 |
-| Temperate pine | 0.45 | RMSE | Hodgson et al. 2003 |
-| Temperate shrub | 1.53 | RMSE | Hodgson et al. 2003 |
-| Tropical forest | 1.8 | Mean | Hansen et al. 2015 |
-
-The "1.22 m RMSE, temperate deciduous and conifer" entry is attributed to **Hodgson,
-M.E., Jensen, J.R., Schmidt, L., Schill, S., & Davis, B. (2003). An evaluation of LIDAR-
-and IFSAR-derived digital elevation models in leaf-on conditions with USGS Level 1 and
-Level 2 DEMs. *Remote Sensing of Environment*, 84(2), 295–308.**
-doi:[10.1016/S0034-4257(02)00114-1](https://doi.org/10.1016/S0034-4257(02)00114-1)
-— peer-reviewed. **[NOT VERIFIED]** — the abstract is withheld by the publisher on every
-aggregator I tried (Crossref, OpenAlex, Semantic Scholar all return null; ScienceDirect
-403). **I could not open this paper. Do not cite the 1.22 m figure to it in the manuscript
-without obtaining the original.** Its title does establish a leaf-on acquisition, and
-Simpson et al. (2017) attribute the value to it, but that is a chain of two unverified
-steps.
-
-Also note the two-order-of-magnitude spread in this table. The published "vegetation bias"
-in forest ranges from −0.05 m to +1.95 m depending on biome, sensor and undergrowth. There
-is no canonical number.
-
-### 2.6 A dissenting result worth keeping
-
-**Tinkham, W.T., Smith, A.M.S., Hoffman, C., Hudak, A.T., Falkowski, M.J., Swanson, M.E.,
-& Gessler, P.E. (2012). Investigating the influence of LiDAR ground surface errors on the
-utility of derived forest inventories. *Canadian Journal of Forest Research*, 42(3),
-413–422.** doi:[10.1139/x11-193](https://doi.org/10.1139/x11-193)
-— peer-reviewed journal article. **[ABSTRACT]**
-
-Verbatim:
-
-> "This study combines LiDAR DEMs and 54 ground survey plots to investigate how surface
-> morphology and vegetation structure influence DEM errors. The study further compared
-> two LiDAR classification algorithms and found no significant difference in their
-> performance. Vegetation structure was found to have no influence, whereas increased
-> variability in the vertical error was observed on slopes exceeding 30°, illustrating
-> that these algorithms are not limited by high-biomass western coniferous forests, but
-> that slope and sensor accuracy both play important roles."
-
-*Setting:* western US high-biomass **coniferous** forest. **Conifer, evergreen — no leaf
-state to mismatch.** This is the cleanest published statement that, in conifer, slope
-rather than vegetation dominates. It is consistent with, not contrary to, the deciduous
-results: the leaf-state axis simply does not exist in evergreen stands.
-
-### 2.7 Marsh numbers (for completeness; low transferability)
-
-- **Ewald (2013) [FULL TEXT]:** "Within wetland vegetation communities, my results
-  suggest that LIDAR estimates of the ground surface in tidal wetlands are typically
-  10 cm to 30 cm above GPS measurements. Plant associations dominated by *Carex obnupta*
-  and *Carex lyngbyei* exhibited the largest discrepancy between LIDAR and GPS
-  measurements (mean discrepancies 36.6 cm and 48.8 cm respectively)." Open land cover
-  showed "fundamental vertical accuracy (FVA) of the LIDAR datasets was 4.5 cm root mean
-  square error (RMSE) and had no consistent positive or negative bias in open landcover."
-- **Hladik & Alber (2012) [ABSTRACT]:** "We found that DEM mean vertical errors for
-  different cover classes ranged from 0.03 to 0.25 m in comparison to the RTK ground
-  truth data, with the larger offsets for taller vegetation."
-
-Both are dense, uniform, sub-metre herbaceous canopies on flat ground with essentially
-zero ground-return probability. Minnesota bluffland forest has an open winter canopy, high
-ground-return density, and 20–35° slopes. **These magnitudes should not be carried across.**
+*Setting:* < 1 ha UK deciduous broadleaf plot (alder, field maple, hazel); median slope 5.7°;
+NERC ARSF leaf-on 24 June 2014, leaf-off 9 March 2009; ~3–5 returns m⁻²; IDW at 1 m; total-station
+reference (n = 657).
 
 ---
 
-## 3. Tuning a percentile or an offset against ground-truth checkpoints
+**Stereńczak, K. & Kozak, J. (2011). Evaluation of digital terrain models generated in forest
+conditions from airborne laser scanning data acquired in two seasons. *Scandinavian Journal of
+Forest Research*, 26(4), 374–384.**
+doi:[10.1080/02827581.2011.570781](https://doi.org/10.1080/02827581.2011.570781) — peer-reviewed.
+**[ABSTRACT]**
 
-Yes — this is done routinely, but **almost always on a parameter other than the percentile
-itself**, and almost always in marsh.
+> "Spatial resolutions of output DTMs, season of data acquisition, number of vegetation layers and
+> tree species in the first forest floor were evaluated to assess their influence on the DTM
+> errors. Surveying methods were used to collect coordinates of 95 checkpoints. For various output
+> raster resolutions and seasons of data acquisition, mean errors varied between −0.2 and 0.34 m,
+> and root mean square errors varied from 0.28 to 0.79 m. Errors increased linearly with DTM pixel
+> size, and their variability was significantly higher in DTMs derived from summer data than in
+> DTMs derived from spring data. Effects of seasonality were modified by both forest structure and
+> species composition. One-layer stands were more sensitive to season of data acquisition than
+> were multilayer stands, as were larch and alder stands in comparison to pine and oak stands."
 
-### 3.1 Tuning the aggregation *scale* (the closest published analogue)
-
-- **Wang et al. (2009) [ABSTRACT]:** "A limited amount of field observations is used to
-  determine the size of the filtering window which produces the minimally biased estimates
-  of the digital terrain model (DTM)." — the filter window is explicitly a
-  calibrated parameter fitted to minimise bias.
-- **Schmid et al. (2011)**, as reported by **Ewald (2013) [FULL TEXT, SECONDARY for the
-  Schmid numbers]:** "Schmid et al. (2011) considered cell sizes of between 2.0 m and
-  10.0 m, selecting an optimal cell size of 4.0 m in *Spartina alterniflora* and a cell
-  size of 10.0 m in *Juncus roemerianus* by minimizing the Root Mean Square Error (RMSE)
-  on 280 survey-grade GPS measurements in South Carolina. Wang et al. (2009) used 240
-  survey-grade GPS measurements and cell sizes between 0.5 m and 6.5 m, finding that an
-  optimum cell size of 3.5 m by minimizing the overall RMSE."
-- **Ewald (2013) [FULL TEXT]:** "Minimizing MAE yielded (1 in Table 2.1) an optimum cell
-  size of 1.4 m (1.92 m²) for this dataset. If RMSE (2 in Table 2.1) was used to define
-  the optimum DEM cell size instead of MAE, the optimum cell size was 1.2 m (1.44 m²)."
-  Note that the *choice of loss function moved the optimum by 0.2 m* and the bias by
-  2.9 cm — a caution for anyone tuning a statistic against checkpoints.
-
-**The structural point:** in all three, the minimum is held fixed and the *neighbourhood*
-is tuned. Enlarging the neighbourhood under a minimum operator is monotonically equivalent
-to lowering the effective quantile of a fixed neighbourhood. So the literature has been
-tuning a quantile all along — just parameterised as cell size, which entangles it with
-resolution. **Nobody has decoupled the two by fixing cell size and tuning the percentile
-directly.** That decoupling is, as far as I can establish, unpublished.
-
-### 3.2 Tuning an additive offset by cover class
-
-- **Hladik, C. & Alber, M. (2012). Accuracy assessment and correction of a LIDAR-derived
-  salt marsh digital elevation model. *Remote Sensing of Environment*, 121, 224–235.**
-  doi:[10.1016/j.rse.2012.01.018](https://doi.org/10.1016/j.rse.2012.01.018)
-  — peer-reviewed. **[ABSTRACT]** Verbatim: "We developed species-specific correction
-  factors for ten cover classes and used these correction factors to modify the
-  LIDAR-derived DEM in four areas of the study domain where vegetation boundaries were
-  mapped directly in the field. Application of the derived correction factors greatly
-  improved the accuracy of the LIDAR-derived DEM within these areas, reducing the overall
-  mean DEM error from 0.10 ± 0.12 (SD) to − 0.01 ± 0.09 m (SD), and the Root Mean Square
-  Error from 0.16 m to 0.10 m."
-  *Setting:* Sapelo Island, GA salt marsh; Optech Gemini ALTM at 125 kHz; RTK GPS reference.
-
-- **Medeiros, S., Hagen, S., Weishampel, J., & Angelo, J. (2015). Adjusting
-  Lidar-Derived Digital Terrain Models in Coastal Marshes Based on Estimated Aboveground
-  Biomass Density. *Remote Sensing*, 7(4), 3507–3525.**
-  doi:[10.3390/rs70403507](https://doi.org/10.3390/rs70403507)
-  — peer-reviewed, open access. **[ABSTRACT]** This is the **only source I found that
-  treats a quantile as the tunable knob.** Verbatim: "Elevation adjustments associated
-  with these classes using both median and quartile approaches were applied to adjust
-  lidar-derived elevation values closer to true bare earth elevation. The performance of
-  the method was tested on 229 elevation points in the lower Apalachicola River Marsh. The
-  two-class quartile-based adjusted DEM produced the best results, reducing the RMS error
-  in elevation from 0.65 m to 0.40 m, a 38% improvement. The raw mean errors for the lidar
-  DEM and the adjusted DEM were 0.61 ± 0.24 m and 0.32 ± 0.24 m, respectively, thereby
-  reducing the high bias by approximately 49%."
-  *Setting:* Apalachicola River Marsh, Florida. Note the quartile here is a quantile of
-  the *error distribution within a biomass class*, used to set an offset — not a quantile
-  of returns within a cell.
-
-- **Buffington et al. (2016) [ABSTRACT]:** the LEAN method, RMSE 0.072 m, "40–75%
-  improvement", beating minimum-bin gridding, mean-error correction and vegetation
-  correction factors (quoted in §1.2).
-
-### 3.3 Tuning an offset in *forest* — thin, and one explicit negative
-
-- **Reutebuch et al. (2003) [FULL TEXT]** subtract the open-clearcut mean as a "system
-  bias" (quoted in §2.1). This is the forest analogue of an offset calibration against an
-  open-ground control, and it is closely parallel to what this project already does with
-  stable open ground. It is one sentence in a 9-page paper, presented as a sanity check
-  rather than a method.
-- **Kraus & Rieger (1999) [FULL TEXT]:** "The elimination of inherent systematic errors
-  allows a significant improvement of the accuracy of the laser DTM particularly in flat
-  terrain. The constant value of ± 18 cm in equation (1) can be reduced down to ± 10 cm."
-- **Fradette, M.-S., Leboeuf, A., Riopel, M., & Bégin, J. (2019). Method to Reduce the
-  Bias on Digital Terrain Model and Canopy Height Model from LiDAR Data. *Remote Sensing*,
-  11(7), 863.** doi:[10.3390/rs11070863](https://doi.org/10.3390/rs11070863)
-  — peer-reviewed, open access. **[ABSTRACT]** **A negative result, and worth stating
-  plainly.** Verbatim: "the bias of both DTM and CHM were calculated by subtracting two
-  LiDAR datasets: high-density pixels with 21 pulses/m² (first return) and more (DTM or
-  CHM reference value pixels) and low-density pixels (DTM or CHM value to correct). After
-  preliminary analyses, it was concluded that the DTM did not need specific adjustment.
-  In contrast, the CHM needed adjustments."
-  *Setting:* Quebec forests, multiple sensors, 1 m resolution. Their density contrast is
-  large but both epochs are modern; they found the *canopy* model needed correction and
-  the *terrain* model did not. Our situation differs (2008 vs 2021 sensors, leaf-off vs
-  green-up), but this is the clearest published statement that DTM-side adjustment is not
-  automatically necessary — and it should be cited as the null we are arguing against.
+**The key structural finding for us**: the seasonal effect is *modified by species composition and
+stand structure* — an interaction, not an additive season term. Independently consistent with this
+project's slope×cover interaction result. *(Page range 374–384 is from a listing and is [NOT
+VERIFIED]; volume, issue, year and DOI are verified.)*
 
 ---
 
-## 4. Leaf-on vs leaf-off acquisition and DTM ground elevation
+**Hodgson et al. (2003)** — leaf-on temperate pine/deciduous, §2.4. **[SECONDARY]**, attributions
+in conflict.
 
-This is the best-supported of the five questions, and it supports a **large** effect in
-deciduous forest.
+**Cobby et al. (2001)** — leaf-on deciduous floodplain forest, §3.3. **[SECONDARY]**.
 
-**Simpson et al. (2017) [FULL TEXT]** — the primary result, quoted in full in §2.4:
-RMSE 0.83 m leaf-on vs 0.22 m leaf-off in temperate deciduous broadleaf, same site, total-
-station reference, n = 1750 at 1 m. "Leaf-off conditions improved overall DTM accuracy by
-61 cm (RMSE_leaf-off = 0.22 m vs. RMSE_leaf-on = 0.83 m, n = 1750) at 1 m resolution
-(Figure 11), demonstrating that leaf-on vegetation induces larger positive DTM errors."
-Statistically: "Leaf-on and leaf-off DTM residuals were significantly different
-(F = 3086, df = 1, p < 0.001)."
-
-Their structural breakdown, verbatim:
-
-> "In each of the six vertical vegetation structure categories of Table 4, DTM accuracy
-> (RMSE) was better in leaf-off than leaf-on conditions (Figure 12)"
-
-and, importantly for us, the categories are not equal:
-
-> "with dense understory vegetation such as ferns and brambles causing the greatest
-> positive DTM errors."
-
-Caveat the authors raise themselves, verbatim:
-
-> "Errors induced by leaf litter were not quantified; DTM_TS was produced using exact
-> ground points from a total station survey, however DTM_ALS will always be erroneous in
-> the presence of leaf litter because measurements cannot penetrate the leaf litter. Here
-> the best accuracies in leaf-off conditions were approximately 20 cm, with mean residuals
-> of less than 0.04 m (1sd < 0.18 m) for structural categories with little vegetation
-> < 3.5 m tall".
+**Wasser, L., Day, R., Chasmer, L., & Taylor, A. (2013). *PLoS ONE*, 8(1), e54776.**
+doi:[10.1371/journal.pone.0054776](https://doi.org/10.1371/journal.pone.0054776) — peer-reviewed,
+open access. **[FULL TEXT, targeted read]** — frequently cited in leaf-on/leaf-off discussions but
+**does not address ground elevation**. A targeted read confirmed the document "contains no explicit
+discussion of ground return density, ground-point classification differences between leaf-off and
+leaf-on acquisitions, or elevation differences in the DTM itself between the two acquisition
+periods"; a single leaf-off DEM is the reference for *both* canopy height models. *Setting:* Spring
+Creek Watershed, central Pennsylvania; deciduous simple-leaved, deciduous compound-leaved, conifer
+needle, mixed; leaf-off 26–29 April 2006, leaf-on 15–18 June 2007; 1.4 m point spacing. Cite for
+canopy metrics only.
 
 ---
 
-**Stereńczak, K. & Kozak, J. (2011). Evaluation of digital terrain models generated in
-forest conditions from airborne laser scanning data acquired in two seasons.
-*Scandinavian Journal of Forest Research*, 26(4), 374–384.**
-doi:[10.1080/02827581.2011.570781](https://doi.org/10.1080/02827581.2011.570781)
-— peer-reviewed journal article. **[ABSTRACT]**
+## 5. Matching two lidar epochs
 
-Verbatim:
+**No published study reconciles two epochs by adjusting the per-cell ground statistic.** The
+existing methods operate downstream of the DEM, fitting a spatial correction surface on terrain
+assumed stable.
 
-> "In this study, a series of DTMs were produced from ALS data, acquired twice in one year
-> (spring/summer). The study was carried out in a 1000-ha forested area in Poland. Spatial
-> resolutions of output DTMs, season of data acquisition, number of vegetation layers and
-> tree species in the first forest floor were evaluated to assess their influence on the
-> DTM errors. Surveying methods were used to collect coordinates of 95 checkpoints. For
-> various output raster resolutions and seasons of data acquisition, mean errors varied
-> between −0.2 and 0.34 m, and root mean square errors varied from 0.28 to 0.79 m. Errors
-> increased linearly with DTM pixel size, and their variability was significantly higher
-> in DTMs derived from summer data than in DTMs derived from spring data. Effects of
-> seasonality were modified by both forest structure and species composition. One-layer
-> stands were more sensitive to season of data acquisition than were multilayer stands, as
-> were larch and alder stands in comparison to pine and oak stands."
+### 5.1 Pseudo-geoid correction, with a recipe search
 
-*Setting:* 1000 ha of Polish lowland forest; pine, oak, larch, alder; spring vs summer
-acquisition in the same year. This is the **key structural finding for us**: the
-seasonal effect is *modified by species composition and stand structure* — i.e. it is an
-interaction, not an additive season term. That is independently consistent with this
-project's finding that slope and cover interact rather than add.
+**Viedma, O. (2022). Applying a Robust Empirical Method for Comparing Repeated LiDAR Data with
+Different Point Density. *Forests*, 13(3), 380.**
+doi:[10.3390/f13030380](https://doi.org/10.3390/f13030380) — peer-reviewed, open access.
+**[FULL TEXT]**
 
-*(Note: the page range 374–384 is from the journal listing and is [NOT VERIFIED]; volume,
-issue, year, and DOI are verified.)*
-
----
-
-**Wasser, L., Day, R., Chasmer, L., & Taylor, A. (2013). Influence of Vegetation
-Structure on Lidar-derived Canopy Height and Fractional Cover in Forested Riparian Buffers
-During Leaf-Off and Leaf-On Conditions. *PLoS ONE*, 8(1), e54776.**
-doi:[10.1371/journal.pone.0054776](https://doi.org/10.1371/journal.pone.0054776)
-— peer-reviewed, open access. **[FULL TEXT via publisher, targeted read]**
-
-**This paper is frequently cited in leaf-on/leaf-off discussions but does not answer our
-question.** It compares canopy height and fractional cover, not ground elevation. A
-targeted read confirmed that the document "contains no explicit discussion of ground
-return density, ground-point classification differences between leaf-off and leaf-on
-acquisitions, or elevation differences in the DTM itself between the two acquisition
-periods" — a single leaf-off DEM is used as the reference for *both* canopy height models.
-*Setting:* Spring Creek Watershed, central Pennsylvania; deciduous simple-leaved,
-deciduous compound-leaved, conifer needle, and mixed; leaf-off 26–29 April 2006, leaf-on
-15–18 June 2007; 1.4 m point spacing, 2 returns. Cite it for canopy metrics only.
-
----
-
-## 5. Matching two lidar epochs by adjusting the ground statistic
-
-**No published study adjusts the per-cell ground statistic to reconcile two epochs.** The
-published epoch-matching methods all operate *downstream* of the DEM, by fitting a spatial
-correction surface on terrain assumed stable.
-
-### 5.1 The pseudo-geoid approach — closest to our problem
-
-**Viedma, O. (2022). Applying a Robust Empirical Method for Comparing Repeated LiDAR Data
-with Different Point Density. *Forests*, 13(3), 380.**
-doi:[10.3390/f13030380](https://doi.org/10.3390/f13030380)
-— peer-reviewed, open access. **[FULL TEXT]**
-
-Verbatim from the abstract:
-
-> "Here, we aimed to apply an improved empirical method based on DEMs of difference, that
-> adjust the ground elevation of a low-density LiDAR dataset to that of a high-density
-> LiDAR one for ensuring credible vegetation changes."
+> "Here, we aimed to apply an improved empirical method based on DEMs of difference, that adjust
+> the ground elevation of a low-density LiDAR dataset to that of a high-density LiDAR one for
+> ensuring credible vegetation changes."
 
 > "The methodology consisted of producing 'the best DEM of difference' between low- and
-> high-density LiDAR data (using the classification filter, the interpolation method and
-> the spatial resolution with the lowest vertical error) to generate a local 'pseudo-geoid'
-> (i.e., continuous surfaces of elevation differences) that was used to correct raw
-> low-density LiDAR ground points."
+> high-density LiDAR data (using the classification filter, the interpolation method and the
+> spatial resolution with the lowest vertical error) to generate a local 'pseudo-geoid' (i.e.,
+> continuous surfaces of elevation differences) that was used to correct raw low-density LiDAR
+> ground points."
 
-> "Before correction and aggregating by sites, the vertical error of DEMs ranged from 0.02
-> to −2.09 m (P50), from 0.39 to 0.85 m (NMDA) and from 0.54 to 2.5 m (RMSE). The
-> segmented-based filter algorithm (CSF) showed the highest error, but there were not
-> significant differences among interpolation methods or spatial resolutions. After
-> correction and aggregating by sites, the vertical error of DEMs dropped significantly:
-> from −0.004 to −0.016 m (P50), from 0.10 to 0.06 m (NMDA) and from 0.28 to 0.46 m
-> (RMSE); and the CSF filter algorithm continued showing the greatest vertical error. The
-> terrain slope and the distance to the nearest geoid point were the most important
-> variables for explaining vertical accuracy. After corrections, changes in vegetation
+> "Before correction and aggregating by sites, the vertical error of DEMs ranged from 0.02 to
+> −2.09 m (P50), from 0.39 to 0.85 m (NMDA) and from 0.54 to 2.5 m (RMSE). The segmented-based
+> filter algorithm (CSF) showed the highest error, but there were not significant differences among
+> interpolation methods or spatial resolutions. After correction and aggregating by sites, the
+> vertical error of DEMs dropped significantly: from −0.004 to −0.016 m (P50), from 0.10 to 0.06 m
+> (NMDA) and from 0.28 to 0.46 m (RMSE); and the CSF filter algorithm continued showing the greatest
+> vertical error. The terrain slope and the distance to the nearest geoid point were the most
+> important variables for explaining vertical accuracy. After corrections, changes in vegetation
 > height were decoupled from vertical errors of DEMs."
 
-Two points matter for us. First, this is the only paper that **searches over the
-classification filter × interpolation method × resolution grid to pick the combination
-with lowest vertical error** — a direct precedent for treating the DEM-construction
-recipe as a fitted choice. Second, **it reports CSF as the worst-performing filter**,
-which deserves attention since this project uses CSF for the 2008 epoch. Third, slope is
-again the dominant explanatory variable.
+Three things for us: it is the only paper that **searches the filter × interpolator × resolution
+grid** and picks the lowest-error combination — the nearest precedent for treating the DEM recipe
+as fitted; it reports **CSF as the worst-performing filter**, which deserves attention since this
+project uses CSF for the 2008 epoch; and slope is again the dominant explanatory variable.
 
-*Setting:* six sites, Sierra de Gredos, central Spain; Mediterranean mountain vegetation.
+### 5.2 Stable-ground correction surface — and the leaf-state gap
 
-### 5.2 The stable-ground correction surface — the standard geomorphic practice
+**DeLong, S.B., Hammer, M.N., Engle, Z.T., Richard, E.M., Breckenridge, A.J., Gran, K.B., Jennings,
+C.E., & Jalobeanu, A. (2022). Regional-Scale Landscape Response to an Extreme Precipitation Event
+From Repeat Lidar and Object-Based Image Analysis. *Earth and Space Science*, 9(12), e2022EA002420.**
+doi:[10.1029/2022EA002420](https://doi.org/10.1029/2022EA002420) — peer-reviewed, open access.
+**[ABSTRACT verbatim; body quotes verified via publisher page]**
 
-**DeLong, S.B., Hammer, M.N., Engle, Z.T., Richard, E.M., Breckenridge, A.J., Gran, K.B.,
-Jennings, C.E., & Jalobeanu, A. (2022). Regional-Scale Landscape Response to an Extreme
-Precipitation Event From Repeat Lidar and Object-Based Image Analysis. *Earth and Space
-Science*, 9(12), e2022EA002420.**
-doi:[10.1029/2022EA002420](https://doi.org/10.1029/2022EA002420)
-— peer-reviewed, open access. **[ABSTRACT verbatim; body quotes verified via publisher
-page]**
+Our closest published analogue — repeat MN DNR airborne lidar, 8,000 km², change detection.
+Verified quoted fragments of the workflow: flightline realignment with "BayesStripAlign v2.08
+software"; inter-epoch alignment by an "iterative closest point (ICP) approach" on stable uplands;
+a correction surface from stable areas (slope < 3°, DoD < 0.7 m, > 100 m from streams) interpolated
+with an "inverse distance weighted algorithm and a search radius of 400 m", with "The final
+correction surface had a mean value of 0.20 m and a standard deviation of 0.26 m"; ground points
+reclassified with "industry standard TerraScan software v020" then "gridded to 1-m resolution DEMs
+with an inverse weighted distance algorithm with an inverse distance power weight of two and a
+search radius of 30 m"; "A level of detection of 0.30 m (minimum mean value within an object) was
+selected to classify objects as areas of landscape change"; stable-ground residual "the mean
+elevation difference…was 0.002 m with a standard deviation of 0.103 m".
 
-This is our closest published analogue: repeat MN DNR airborne lidar, 8,000 km², change
-detection. The workflow, with verified quoted fragments:
+**The gap is the point.** Their 2011 epoch was flown 3 May–2 June and their 2012 epoch 29 October–8
+November — a leaf-on/leaf-off mismatch of the same kind as ours — and **the paper does not quantify
+vegetation-induced vertical bias between the epochs.** The error budget is hardware, alignment and
+interpolation. Standard practice in the directly adjacent literature is therefore to absorb any
+leaf-state offset into a stable-ground correction surface and a generous level of detection, without
+ever naming it.
 
-- flightline realignment with "BayesStripAlign v2.08 software";
-- inter-epoch alignment by an "iterative closest point (ICP) approach" on stable uplands;
-- a correction surface built from stable areas (slope < 3°, DoD < 0.7 m, > 100 m from
-  streams) interpolated with an "inverse distance weighted algorithm and a search radius
-  of 400 m"; "The final correction surface had a mean value of 0.20 m and a standard
-  deviation of 0.26 m";
-- DEMs made by reclassifying with "industry standard TerraScan software v020", then
-  ground points "gridded to 1-m resolution DEMs with an inverse weighted distance
-  algorithm with an inverse distance power weight of two and a search radius of 30 m";
-- a level of detection: "A level of detection of 0.30 m (minimum mean value within an
-  object) was selected to classify objects as areas of landscape change";
-- residual quality on stable ground: "the mean elevation difference…was 0.002 m with a
-  standard deviation of 0.103 m".
+### 5.3 Summary
 
-**The gap this exposes is the important part.** Their 2011 epoch was flown 3 May–2 June
-and their 2012 epoch 29 October–8 November — a leaf-on/leaf-off mismatch of the same kind
-as ours — and **the paper does not quantify vegetation-induced vertical bias between the
-epochs.** The error budget is hardware, alignment and interpolation. A targeted read
-confirmed no leaf-state term. So the standard practice in the *directly adjacent*
-literature is to absorb any leaf-state offset into a stable-ground correction surface and
-a generous level of detection, without ever naming it.
-
-### 5.3 The negative result
-
-**Fradette et al. (2019) [ABSTRACT]** concluded, for two lidar densities over Quebec
-forest, that "the DTM did not need specific adjustment" while the canopy height model did.
-Any claim that cross-epoch DTM adjustment is necessary has to engage with this.
-
-### 5.4 Summary of §5
-
-| Approach | Adjusts | Source |
+| Approach | What is adjusted | Source |
 |---|---|---|
 | Stable-ground correction surface (IDW over stable areas) | DEM, spatially | DeLong et al. 2022 |
-| "Pseudo-geoid" DoD surface, applied to raw ground points | Point cloud, spatially | Viedma 2022 |
+| "Pseudo-geoid" DoD surface applied to raw ground points | Point cloud, spatially | Viedma 2022 |
 | Recipe search over filter × interpolator × resolution | DEM construction | Viedma 2022 |
+| Ground-retrieval rule switched by vegetation class (single epoch) | Ground point selection | Cobby et al. 2001 |
 | Nothing — DTM judged adequate as-is | — | Fradette et al. 2019 |
-| **Per-cell ground statistic / percentile matched between epochs** | — | **Not found** |
+| **Per-cell ground statistic matched between epochs** | — | **Not found** |
 
 ---
 
 ## What this means for us
 
-1. **Percentile-matching two epochs is, so far as I can establish, unpublished.** That is
-   a contribution, but it also means there is no methodological precedent to lean on and
-   the manuscript must carry the full justification itself.
+**Read this section against `FRAME_2026-08-26.md` (commit 5335359), which post-dates the
+first draft of this review.** That work established, from our own data, that the
+classified-ground column is **symmetric at every cover level** in both epochs (|Bowley
+skew| ≤ 0.048, tail ratio 0.98–1.14), that cover changes only the column's **width**, and
+that the epoch offset is therefore **a pure translation of the column, not a distortion of
+it**. The consequence recorded there is that a fixed-percentile correction is closed: a
+percentile shift can only deliver `location + k × width`, the need is not proportional to
+width, and per cell the width *anti*-correlates with the need. I take that as
+authoritative and align what follows to it.
 
-2. **The minimum is the wrong direction on a bluffland, and the literature already says
-   why.** Ewald's channel/dike result — min-bin underpredicting by 70–90 cm where "high
-   ground, a moderate to steep slope, and low ground" meet over a short distance — is the
-   published statement of the downhill-capture mechanism this project independently found
-   as DoD banding. Cite Ewald (2013) for it; it is the strongest external corroboration
-   available, even though it is a thesis and the setting is a marsh.
+So the second half of this review's organising question — *can a per-cell percentile
+compensate the shift?* — now has a measured answer for our site: **no.** What the
+literature contributes is (1) strong support for the *first* half of the question, (2) an
+independent explanation of *why* the percentile route fails, which our result and the
+published record agree on, and (3) the correct alternative.
 
-3. **The published tuning precedent exists, but is parameterised as cell size.** Wang
-   et al. (2009), Schmid et al. (2011) and Ewald (2013) all fit an aggregation *scale* to
-   minimise bias or RMSE against survey checkpoints. Under a minimum operator, enlarging
-   the neighbourhood lowers the effective quantile — so the field has been tuning a
-   quantile while calling it a resolution, and paying a resolution cost for it. Fixing the
-   cell size and tuning the percentile directly is the same idea with the confound removed,
-   and that framing gives the method a lineage rather than making it look ad hoc.
+### The first half of the question is well supported, and that premise survives
 
-4. **The leaf-state effect is large and well-documented in deciduous forest, and it is an
-   interaction, not an additive term.** Simpson et al. (2017) give the magnitude
-   (RMSE 0.83 m leaf-on vs 0.22 m leaf-off, same site, total-station reference) and the
-   direction (positive — lidar reads high under leaf-on vegetation). Stereńczak & Kozak
-   (2011) give the structure: "Effects of seasonality were modified by both forest
-   structure and species composition." Both support treating our green-up 2021 epoch as
-   the biased-high one and correcting with a cover-dependent, not constant, term.
+1. **The lidar ground surface shifts with cover — this is established, not contested.**
+   Every study that stratified by cover found a shift. Hopkinson et al. (2005) state the
+   corollary as a recommendation: ground point classification "should be vegetation class
+   dependent." This is the premise our correction rests on, and it is uncontroversial.
 
-5. **Be careful which way we point the correction.** Su & Bork (2006) is the closest
-   analogue — deciduous aspen, sloping, first-generation sensor — and finds
-   *over*-estimation of +0.20 m in forest, with the whole-area signed error near zero
-   (+0.02 m). Reutebuch et al. (2003) likewise find lidar high in conifer. The literature
-   consensus is that lidar reads **high** under vegetation. Our 2008 epoch reads **low**
-   on steep forested slopes. That is not the vegetation-penetration effect the literature
-   describes; it is a separate, near-nadir, slope-carried effect. **The manuscript should
-   not blur the two.** The near-nadir-worst behaviour we measured is genuinely at odds
-   with the usual edge-worst framing, and Su & Bork's nadir paragraph — greater signed
-   errors near nadir, which they attribute to extreme values co-occurring with > 10° slopes
-   — is the only prior hint of it I found, and they explicitly discount it.
+2. **There is no single-signed consensus for our negative shift to contradict.** Reported
+   shifts span −0.22 m to +1.10 m; Hodgson & Bresnahan's six land-cover classes span
+   −0.06 to +0.06 m — both signs in one survey; Su & Bork report +0.20 m in aspen and
+   −0.22 m in adjacent meadow. Our 2008-reads-low result sits inside the published range.
+   The first draft's framing of it as "a different effect" that must not be blurred was an
+   over-reach and should not appear in the manuscript.
 
-6. **The slope term has a published functional form worth engaging.** Kraus & Rieger
-   (1999): σH[cm] = ±(18 + 120·tan α), for forested terrain with ≥ 25 % ground
-   penetration. That is a *scatter* law rather than a bias law, but it establishes both the
-   tan α parameterisation and the ~10:1 ratio of slope term to flat term, which is the
-   right order for what we measure.
+3. **A pooled bias near zero is not evidence of no cover effect.** Su & Bork's whole-area
+   signed error is +0.02 m *because* forest and meadow shift oppositely. Any DoD-wide
+   summary we quote must be stratified or it will hide the effect we are measuring.
 
-7. **Comparability discipline is the thing the literature under-serves.** DeLong et al.
-   (2022) worked on the same MN DNR data family, with the same leaf-on/leaf-off epoch
-   mismatch, and their error budget contains no vegetation term at all. Viedma (2022) is
-   the one paper that treats the *recipe* — filter, interpolator, resolution — as something
-   that must be chosen and held identical across epochs, and even she works through a
-   correction surface rather than the statistic. Whatever percentile we choose, the
-   defensible claim is that **both epochs were reduced by an identical rule** and the
-   percentile was selected against an external criterion, not tuned to make the DoD look
-   good.
+4. **Leaf state is large and acts as an interaction.** Simpson: RMSE 0.83 m leaf-on vs
+   0.22 m leaf-off, same site, total-station reference. Stereńczak & Kozak: "Effects of
+   seasonality were modified by both forest structure and species composition." Both
+   support a cover-dependent, not constant, correction for our green-up 2021 epoch — and
+   "cover-dependent translation" is exactly the form the frame document arrives at.
 
-8. **Do not import marsh magnitudes.** Every number in §1 and most of §3 comes from dense,
-   sub-metre, near-impenetrable herbaceous canopy on flat ground. Simpson et al. state the
-   general principle themselves: "these are not correction factors."
+### The literature already anticipated why a low order statistic cannot fix this
 
----
+This is the most useful thing the broader framing recovered, and it converges with our
+negative result from a completely independent direction.
+
+5. **A pure minimum operator does not remove the vegetation shift.** Clark et al. (2004)
+   ran local-minima ground retrieval at the RMSE-optimal scale under tropical old-growth
+   and still reported "All DTMs had a positive mean-signed error" — +0.68 to +1.10 m
+   remaining. The lowest return in the cell was still far above the ground.
+
+6. **Ewald (2013) says why, in one sentence.** "our results show that LIDAR estimates of
+   the ground surface are positively biased even when the minimum-bin technique is used.
+   This suggests that the LIDAR laser pulse never reaches the ground surface within the
+   vegetation communities we studied." **If the ground is not in the return distribution,
+   no order statistic of that distribution can recover it.** That is the same conclusion
+   our symmetry result reaches by a different route: the column has no skew to exploit
+   because the missing information is missing, not hidden in a tail.
+
+7. **Where a low percentile *does* move the answer, it moves it for the wrong reason.**
+   Ewald's min-bin underpredicts by 70–90 cm where "high ground, a moderate to steep
+   slope, and low ground over a short horizontal distance" meet; Duchan et al. (2026) found
+   narrow concave ditch geometry beat canopy height as the dominant error predictor; Clark
+   preferred kriging specifically because it smooths "spurious understory heights" and
+   "downed trunks." On a bluffland, a low percentile is a **terrain-form** operator far
+   more than a **cover** operator — which is precisely the failure mode our per-cell
+   anti-correlation between width and need describes quantitatively.
+
+8. **The one method in the literature that varies the ground statistic by vegetation is a
+   class switch, not a percentile shift.** Cobby et al. (2001) "tailor[ed] the
+   ground-retrieval algorithm to short and tall vegetation classes" — and its worst number
+   in this whole review (RMSE 3.99 m under leaf-on deciduous forest on 10–15° slopes) is a
+   warning rather than an endorsement. Hopkinson's endorsement of that approach is likewise
+   an endorsement of **class-dependent handling**, i.e. a translation per class, not of a
+   shifted quantile.
+
+### What to carry into the manuscript instead
+
+9. **Frame the correction as a cover-dependent translation, and cite the lineage for
+   that.** The published offset-calibration family is the right ancestry: Hladik & Alber
+   (2012) per-class correction factors (mean error 0.10 ± 0.12 → −0.01 ± 0.09 m);
+   Buffington et al. (2016) LEAN with NDVI as a continuous cover covariate (RMSE 0.072 m,
+   40–75 % improvement); Medeiros et al. (2015) class offsets; Reutebuch et al. (2003)
+   subtracting the open-clearcut mean as "the system bias" — the direct forest precedent
+   for our use of stable open ground. All are translations. None is an order statistic.
+
+10. **Report the closed percentile route as a result, not a dead end silently dropped.**
+    It is a clean negative with a mechanism: symmetric columns, width-proportional
+    sensitivity, and a per-cell anti-correlation between width and need. Read together with
+    Clark's residual +0.68–1.10 m and Ewald's "the pulse never reaches the ground," it
+    generalises into a statement worth making in print: **order-statistic gridding
+    compensates vegetation shift only to the extent that ground returns exist in the tail;
+    where they do not, only an external, cover-dependent translation can help.** No source
+    I found states this explicitly, and several skirt it.
+
+11. **The statistic-choice literature still matters — for comparability, not correction.**
+    Clark's RMSE ranged 2.29–5.09 m across local-minima scales on one point cloud at one
+    site: the construction rule can move the answer more than cover does. That is the
+    argument for our discipline of reducing **both epochs by an identical rule**, which
+    remains the most defensible methodological claim we have. Viedma (2022) is the only
+    paper treating the recipe (filter × interpolator × resolution) as something to fix
+    identically across epochs — and reports CSF as her worst-performing filter, which is
+    worth engaging since we use CSF for 2008.
+
+12. **The clearest open contribution is unchanged and is now sharper.** DeLong et al.
+    (2022) worked the same MN DNR data family with the same leaf-on/leaf-off epoch mismatch
+    and carried **no vegetation term at all** in their error budget. Nobody quantifies
+    leaf-state bias as a term in a DoD error budget. We can — as a cover-dependent
+    translation, with the percentile alternative tested and ruled out.
+
+13. **Transferability caveats attach to numbers, not studies.** Marsh, tropical and
+    boreal-wetland magnitudes should not be imported — Simpson says it best about his own
+    work: "these are not correction factors." But their *structures* — cover-dependence,
+    class-switched retrieval, scale sensitivity, terrain-form failure modes, and the
+    "pulse never reaches the ground" limit — transfer directly, and are why those studies
+    are in the body of this review rather than an appendix.
 
 ## Gaps / not found
 
-Stated plainly, because these are the load-bearing absences.
+1. **No peer-reviewed comparison of per-cell order statistics (min / low percentile / median /
+   mean) for a bare-earth forest DTM.** What exists compares *interpolation algorithms* (Boreggio
+   2018; Montealegre 2015) or compares *scales* of a fixed minimum operator (Clark 2004; Ewald 2013).
+   The statistic itself is never the treatment. Probed from five phrasings.
 
-1. **No peer-reviewed comparison of per-cell order statistics (min / low percentile /
-   median / mean) for a bare-earth forest DTM.** Every "gridding comparison" I found —
-   Boreggio et al. (2018), Montealegre et al. (2015), and the interpolation literature
-   generally — compares *interpolation algorithms*, not order statistics. This is a real
-   hole, not a search failure; I probed it from four different phrasings.
+2. **No use of a percentile above the median for ground elevation, anywhere.** High percentiles
+   appear only for canopy/crop *surface* models. Medeiros' quartile *offset* is the nearest relative.
+   *Do not read this as an opening:* we tested it and the column is symmetric at every cover level,
+   so a shifted percentile has nothing to work with (commit 5335359).
 
-2. **No use of a percentile above the median for ground elevation, anywhere.** High
-   percentiles (p90, p95) appear only for canopy/crop *surface* models, where they replace
-   the maximum for robustness to point density — the opposite problem. Medeiros et al.
-   (2015)'s quartile-based *offset* is the nearest relative and is not the same construct.
+3. **No study fixes cell size and tunes the percentile.** All tuning precedent is in scale/window,
+   conflating the quantile with the support. Same caveat as (2) — the decoupled version is a cleaner
+   experiment than anything published, and we ran it, and it came back negative. That negative, with
+   its mechanism, is itself the publishable item.
 
-3. **No study fixes cell size and tunes the percentile.** The tuning precedent (§3.1) is
-   entirely in cell size / search radius, which conflates the quantile with the resolution.
+4. **No epoch-matching study adjusts the ground statistic.** The two that exist (DeLong 2022;
+   Viedma 2022) fit spatial correction surfaces after gridding. Cobby (2001) switches the rule by
+   vegetation class but within a single epoch.
 
-4. **Minimum-bin gridding has never been evaluated outside coastal wetland.** All primary
-   sources (Schmid 2011, Wang 2009) and the only substantial evaluation (Ewald 2013) are
-   marsh. I found no upland, forest, or sloping-terrain evaluation.
+5. **Nobody quantifies leaf-state bias as a term in a DoD error budget** — including DeLong et al.
+   (2022), who had a spring/autumn epoch pair over Minnesota forest. Arguably the clearest opening
+   for our contribution.
 
-5. **No epoch-matching study adjusts the ground statistic.** The two methods that exist
-   (DeLong et al. 2022; Viedma 2022) both fit a spatial correction surface after gridding.
+6. **Very few DTM accuracy studies in temperate deciduous forest.** Simpson et al. say so
+   themselves: "very few studies have formally assessed how vertical vegetation structure can affect
+   DTM accuracy in broadleaf forests." Their Table 1 has two temperate-deciduous rows against six
+   temperate-conifer rows. Su & Bork (2006) and Simpson et al. (2017) are the only close analogues
+   in this review, and both are small.
 
-6. **Nobody quantifies leaf-state bias as a term in a DoD error budget.** DeLong et al.
-   (2022) had a spring/autumn epoch pair over Minnesota forest and did not include one.
-   This is arguably the single clearest opening for our contribution.
+7. **Near-nadir-worst error on slopes remains essentially undescribed.** Su & Bork observed it and
+   discounted it as outlier-driven; their abstract concludes sampling angle "had little impact." I
+   found no other treatment. Still likely novel.
 
-7. **Very few DTM accuracy studies in temperate deciduous forest at all.** Simpson et al.
-   (2017) say so themselves: "very few studies have assessed how accurately LiDAR can
-   measure surface topography under forest canopies… showing there are very few DTM
-   accuracy reports in temperate deciduous forest environments" and "very few studies have
-   formally assessed how vertical vegetation structure can affect DTM accuracy in
-   broadleaf forests." Their Table 1 has exactly two temperate-deciduous rows against six
-   temperate-conifer rows.
-
-8. **Near-nadir-worst error on slopes is not described in this literature.** Su & Bork
-   (2006) observed it and discounted it as outlier-driven. I found no other treatment. This
-   remains, as previously assessed in this project, an open and likely novel result.
+8. **Cover is rarely quantified continuously.** Most studies use categorical classes (Reutebuch's
+   four thinning treatments; Hopkinson's DU classes; Hladik's ten species classes). Continuous,
+   data-derived cover appears in Salleh (non-ground return fraction), Buffington (NDVI), Simpson
+   (Pgap) and Duchan (forest height + ground reflection density) — four papers. A regression of
+   signed shift on continuous cover, in temperate deciduous forest, is not in the literature I found.
 
 ### Sources I could not verify
 
-| Source | Why | What NOT to claim from it |
+| Source | Why | What NOT to claim |
 |---|---|---|
-| Hodgson et al. (2003) *RSE* 84:295–308 | Abstract withheld by publisher; null on Crossref, OpenAlex, Semantic Scholar; ScienceDirect 403 | The "1.22 m RMSE, temperate deciduous and conifer" figure — it comes only via Simpson et al.'s Table 1 |
-| Kraus & Pfeifer (1998) *ISPRS JPRS* 53:193–203 | No full text or verbatim abstract obtainable | Any specific number; the ±10 cm figure is quoted here only via Kraus & Rieger (1999) |
-| Buffington et al. (2016) — "118 points" calibration figure | Appeared in a search summary only; not found in any verbatim source text | The 118-point number |
-| Aryal et al. (2017) *PFG* 85:243–255, "Impact of Slope, Aspect, and Habitat-Type on LiDAR-Derived DTMs in a Near Natural, Heterogeneous Temperate Forest" | Springer paywall + IdP redirect; abstract elided on all aggregators | Anything. This looks highly relevant (temperate forest, slope × aspect × habitat) and is worth obtaining through the library — flagged as the top follow-up |
-| Su & Bork (2006), the "23 times" and "(10°)" figures in §2.3 | `<`/`>` glyphs systematically absent from the PDF text layer (zero occurrences in 10 pages) | Quote them only after checking the printed page; the missing `>` is near-certain, "23 times" appears literal |
-| Stereńczak & Kozak (2011) page range 374–384 | From a listing, not the article | Page numbers only; volume/issue/DOI are verified |
+| **Cobby et al. (2001)** *ISPRS JPRS* 56(2):121–138 | Abstract null on OpenAlex; full text not obtained | Anything beyond Clark et al.'s description. **Highest-value acquisition on this list** — it is the one study that makes the ground statistic a function of vegetation class |
+| Hodgson et al. (2003) *RSE* 84:295–308 | Abstract withheld; null on Crossref, OpenAlex, Semantic Scholar; ScienceDirect 403 | Either attribution of the 1.22 / 1.53 m figures — Clark and Simpson **disagree** on which cover class each belongs to |
+| Kraus & Pfeifer (1998) *ISPRS JPRS* 53:193–203 | No full text or verbatim abstract | Any specific number; the ±10 cm figure comes only via Kraus & Rieger (1999) |
+| Töyrä et al. (2003) | Hopkinson cites a 2003 work; OpenAlex returns a 2001 *RSE* paper by the same authors with no abstract | Do not assume the 2001 record is the source of the +0.07/+0.15 m figures |
+| Buffington et al. (2016) "118 points" | Search summary only; not in any verbatim source | The 118-point number |
+| Aryal et al. (2017) *PFG* 85:243–255 | Springer paywall + IdP redirect; abstract elided everywhere | Anything. Highly relevant (temperate forest, slope × aspect × habitat) |
+| Su & Bork (2006) "23 times" and "(10°)" | `<`/`>` glyphs systematically absent from the PDF text layer (zero in 10 pages) | Quote only after checking the printed page; the missing `>` is near-certain, "23 times" appears literal |
+| Stereńczak & Kozak (2011) pages 374–384 | From a listing, not the article | Page numbers only |
 
-### Suggested next acquisitions (library access)
+### Suggested next acquisitions (library access), in priority order
 
-1. Aryal, Latifi, Heurich & Hahn (2017), *PFG* 85(4):243–255, doi:10.1007/s41064-017-0023-2 — temperate forest, slope × aspect × habitat, the nearest unexamined match to our covariates.
-2. Hodgson, Jensen, Schmidt, Schill & Davis (2003), *RSE* 84(2):295–308 — the leaf-on temperate deciduous+conifer benchmark everyone cites.
-3. Kraus & Pfeifer (1998), *ISPRS JPRS* 53(4):193–203 — for the asymmetric weight function in its original form, which is the theoretical justification for a sub-median statistic.
-4. Schmid, Hadley & Wijekoon (2011), *JCR* 27(6A):116–132 — full text, for the actual min-bin implementation details and per-species cell-size optima.
+1. **Cobby, Mason & Davenport (2001)**, *ISPRS JPRS* 56(2):121–138, doi:10.1016/S0924-2716(01)00039-9 — vegetation-class-dependent ground retrieval in leaf-on deciduous forest. The direct methodological ancestor.
+2. **Hodgson, Jensen, Schmidt, Schill & Davis (2003)**, *RSE* 84(2):295–308 — resolve the conflicting attributions and get the leaf-on temperate deciduous numbers first-hand.
+3. **Aryal, Latifi, Heurich & Hahn (2017)**, *PFG* 85(4):243–255, doi:10.1007/s41064-017-0023-2 — temperate forest, slope × aspect × habitat.
+4. **Kraus & Pfeifer (1998)**, *ISPRS JPRS* 53(4):193–203 — the asymmetric weight function in original form; the theoretical justification for a sub-median statistic.
+5. **Schmid, Hadley & Wijekoon (2011)**, *JCR* 27(6A):116–132 — min-bin implementation details and per-species cell-size optima.
+6. **Töyrä, Pietroniro & Hopkinson (2003)** — locate the correct record.
 
 ---
 
@@ -965,23 +1183,29 @@ Peer-reviewed journal articles unless marked otherwise.
 
 - Boreggio, M., Bernard, M., & Gregoretti, C. (2018). Evaluating the Differences of Gridding Techniques for Digital Elevation Models Generation and Their Influence on the Modeling of Stony Debris Flows Routing: A Case Study From Rovina di Cancia Basin (North-Eastern Italian Alps). *Frontiers in Earth Science*, 6, 89. doi:10.3389/feart.2018.00089 — **[ABSTRACT + body]**
 - Buffington, K.J., Dugger, B.D., Thorne, K.M., & Takekawa, J.Y. (2016). Statistical correction of lidar-derived digital elevation models with multispectral airborne imagery in tidal marshes. *Remote Sensing of Environment*, 186, 616–625. doi:10.1016/j.rse.2016.09.020 — **[ABSTRACT, via NOAA NCCOS record]**
+- Clark, M.L., Clark, D.B., & Roberts, D.A. (2004). Small-footprint lidar estimation of sub-canopy elevation and tree height in a tropical rain forest landscape. *Remote Sensing of Environment*, 91(1), 68–89. doi:10.1016/j.rse.2004.02.008 — **[FULL TEXT]**
+- Cobby, D.M., Mason, D.C., & Davenport, I.J. (2001). Image processing of airborne scanning laser altimetry data for improved river flood modelling. *ISPRS Journal of Photogrammetry and Remote Sensing*, 56(2), 121–138. doi:10.1016/S0924-2716(01)00039-9 — **[NOT VERIFIED; described SECONDARY via Clark et al. 2004]**
 - DeLong, S.B., Hammer, M.N., Engle, Z.T., Richard, E.M., Breckenridge, A.J., Gran, K.B., Jennings, C.E., & Jalobeanu, A. (2022). Regional-Scale Landscape Response to an Extreme Precipitation Event From Repeat Lidar and Object-Based Image Analysis. *Earth and Space Science*, 9(12), e2022EA002420. doi:10.1029/2022EA002420 — **[ABSTRACT + body]**
-- Evans, J.S., & Hudak, A.T. (2007). A Multiscale Curvature Algorithm for Classifying Discrete Return LiDAR in Forested Environments. *IEEE Transactions on Geoscience and Remote Sensing*, 45(4), 1029–1038. doi:10.1109/TGRS.2006.890412 — **[ABSTRACT]** (context only; classifier, not gridding)
+- Duchan, M., Mráz, V., Tichá, A., Jankovský, M., & Zlatuška, K. (2026). The Influence of Forest Cover on the Accuracy of Aerial Laser Scanning-Derived Digital Elevation Models for Detecting Drainage Ditches in Forests in the Czech Republic. *Forests*, 17(2), 162. doi:10.3390/f17020162 — **[FULL TEXT]**
+- Evans, J.S., & Hudak, A.T. (2007). A Multiscale Curvature Algorithm for Classifying Discrete Return LiDAR in Forested Environments. *IEEE Transactions on Geoscience and Remote Sensing*, 45(4), 1029–1038. doi:10.1109/TGRS.2006.890412 — **[ABSTRACT]** (classifier context)
 - Ewald, M.J. (2013). *Where's the Ground Surface? Elevation Bias in LIDAR-derived Digital Elevation Models Due to Dense Vegetation in Oregon Tidal Marshes.* **MS thesis (not peer-reviewed)**, Oregon State University. <https://ir.library.oregonstate.edu/downloads/1n79h8198> — **[FULL TEXT]**
 - Fradette, M.-S., Leboeuf, A., Riopel, M., & Bégin, J. (2019). Method to Reduce the Bias on Digital Terrain Model and Canopy Height Model from LiDAR Data. *Remote Sensing*, 11(7), 863. doi:10.3390/rs11070863 — **[ABSTRACT]**
 - Hladik, C., & Alber, M. (2012). Accuracy assessment and correction of a LIDAR-derived salt marsh digital elevation model. *Remote Sensing of Environment*, 121, 224–235. doi:10.1016/j.rse.2012.01.018 — **[ABSTRACT]**
-- Hodgson, M.E., & Bresnahan, P. (2004). Accuracy of Airborne Lidar-Derived Elevation: Empirical Assessment and Error Budget. *Photogrammetric Engineering and Remote Sensing*, 70(3), 331–339. doi:10.14358/PERS.70.3.331 — **[ABSTRACT]**
-- Hodgson, M.E., Jensen, J.R., Schmidt, L., Schill, S., & Davis, B. (2003). An evaluation of LIDAR- and IFSAR-derived digital elevation models in leaf-on conditions with USGS Level 1 and Level 2 DEMs. *Remote Sensing of Environment*, 84(2), 295–308. doi:10.1016/S0034-4257(02)00114-1 — **[NOT VERIFIED]**
+- Hodgson, M.E., & Bresnahan, P. (2004). Accuracy of Airborne Lidar-Derived Elevation: Empirical Assessment and Error Budget. *Photogrammetric Engineering and Remote Sensing*, 70(3), 331–339. doi:10.14358/PERS.70.3.331 — **[ABSTRACT]**; signed-error range **[SECONDARY via Hopkinson et al. 2005]**
+- Hodgson, M.E., Jensen, J.R., Schmidt, L., Schill, S., & Davis, B. (2003). An evaluation of LIDAR- and IFSAR-derived digital elevation models in leaf-on conditions with USGS Level 1 and Level 2 DEMs. *Remote Sensing of Environment*, 84(2), 295–308. doi:10.1016/S0034-4257(02)00114-1 — **[NOT VERIFIED; conflicting SECONDARY descriptions]**
+- Hopkinson, C., Chasmer, L., Sass, G.Z., Creed, I.F., Sitar, M., Kalbfleisch, W., & Treitz, P. (2005). Vegetation class dependent errors in lidar ground elevation and canopy height estimates in a boreal wetland environment. *Canadian Journal of Remote Sensing*, 31(2), 191–206. doi:10.5589/m05-007 — **[ABSTRACT]**; conference version (ISPRS Archives XXXVI-8/W2, **not peer-reviewed**) — **[FULL TEXT]**
 - Kraus, K., & Pfeifer, N. (1998). Determination of terrain models in wooded areas with airborne laser scanner data. *ISPRS Journal of Photogrammetry and Remote Sensing*, 53(4), 193–203. doi:10.1016/S0924-2716(98)00009-4 — **[NOT VERIFIED]**
 - Kraus, K., & Rieger, W. (1999). Processing of laser scanning data for wooded areas. In D. Fritsch & R. Spiller (Eds.), *Photogrammetric Week '99*, 221–231. Wichmann, Heidelberg. **Conference proceedings, not peer-reviewed.** <https://phowo.ifp.uni-stuttgart.de/publications/phowo99/kraus.pdf> — **[FULL TEXT]**
 - Medeiros, S., Hagen, S., Weishampel, J., & Angelo, J. (2015). Adjusting Lidar-Derived Digital Terrain Models in Coastal Marshes Based on Estimated Aboveground Biomass Density. *Remote Sensing*, 7(4), 3507–3525. doi:10.3390/rs70403507 — **[ABSTRACT]**
 - Montealegre, A.L., Lamelas, M.T., & de la Riva, J. (2015). Interpolation Routines Assessment in ALS-Derived Digital Elevation Models for Forestry Applications. *Remote Sensing*, 7(7), 8631–8654. doi:10.3390/rs70708631 — **[ABSTRACT]**
 - Reutebuch, S.E., McGaughey, R.J., Andersen, H.-E., & Carson, W.W. (2003). Accuracy of a high-resolution lidar terrain model under a conifer forest canopy. *Canadian Journal of Remote Sensing*, 29(5), 527–535. doi:10.5589/m03-022 — **[FULL TEXT]**
+- Salleh, M.R.M., Ismail, Z., & Abdul Rahman, M.Z. (2015). Accuracy Assessment of Lidar-Derived Digital Terrain Model (DTM) with Different Slope and Canopy Cover in Tropical Forest Region. *ISPRS Annals of the Photogrammetry, Remote Sensing and Spatial Information Sciences*, II-2/W2, 183–189. **Conference annals; full-paper double-blind peer-reviewed per the paper itself.** doi:10.5194/isprsannals-II-2-W2-183-2015 — **[FULL TEXT]**
 - Schmid, K.A., Hadley, B.C., & Wijekoon, N. (2011). Vertical Accuracy and Use of Topographic LIDAR Data in Coastal Marshes. *Journal of Coastal Research*, 27(6A), 116–132. doi:10.2112/JCOASTRES-D-10-00188.1 — **[ABSTRACT]**
 - Simpson, J.E., Smith, T.E.L., & Wooster, M.J. (2017). Assessment of Errors Caused by Forest Vegetation Structure in Airborne LiDAR-Derived DTMs. *Remote Sensing*, 9(11), 1101. doi:10.3390/rs9111101 — **[FULL TEXT]**
 - Stereńczak, K., & Kozak, J. (2011). Evaluation of digital terrain models generated in forest conditions from airborne laser scanning data acquired in two seasons. *Scandinavian Journal of Forest Research*, 26(4), 374–384. doi:10.1080/02827581.2011.570781 — **[ABSTRACT]**
 - Su, J., & Bork, E. (2006). Influence of Vegetation, Slope, and Lidar Sampling Angle on DEM Accuracy. *Photogrammetric Engineering and Remote Sensing*, 72(11), 1265–1274. doi:10.14358/PERS.72.11.1265 — **[FULL TEXT]**
 - Tinkham, W.T., Smith, A.M.S., Hoffman, C., Hudak, A.T., Falkowski, M.J., Swanson, M.E., & Gessler, P.E. (2012). Investigating the influence of LiDAR ground surface errors on the utility of derived forest inventories. *Canadian Journal of Forest Research*, 42(3), 413–422. doi:10.1139/x11-193 — **[ABSTRACT]**
+- Töyrä, J., Pietroniro, A., & Martz, L.W. (2001). Multisensor Hydrologic Assessment of a Freshwater Wetland. *Remote Sensing of Environment*, 75(2), 162–173. doi:10.1016/S0034-4257(00)00164-4 — **[NOT VERIFIED]**; the +0.07/+0.15 m figures are **[SECONDARY via Hopkinson et al. 2005]** and are attributed there to a 2003 Töyrä work
 - U.S. Geological Survey. *Lidar Base Specification 2025 rev. A* — Digital Elevation Model Surface Treatments. **Agency standard, not peer-reviewed.** <https://www.usgs.gov/ngp-standards-and-specifications/lidar-base-specification-digital-elevation-model-surface> — **[partially verified]**
 - Viedma, O. (2022). Applying a Robust Empirical Method for Comparing Repeated LiDAR Data with Different Point Density. *Forests*, 13(3), 380. doi:10.3390/f13030380 — **[FULL TEXT]**
 - Wang, C., Menenti, M., Stoll, M.P., Feola, A., Belluco, E., & Marani, M. (2009). Separation of Ground and Low Vegetation Signatures in LiDAR Measurements of Salt-Marsh Environments. *IEEE Transactions on Geoscience and Remote Sensing*, 47(7), 2014–2023. doi:10.1109/TGRS.2008.2010490 — **[ABSTRACT]**
