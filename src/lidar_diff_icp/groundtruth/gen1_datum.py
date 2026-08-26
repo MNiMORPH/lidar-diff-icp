@@ -855,3 +855,238 @@ def measure_sites(sites, resolution: TileResolution, *, on_missing: str = "skip"
                 skipped.append((s.point_id, resolution.per_mark.get(s.point_id),
                                 f"{type(exc).__name__}: {exc}"))
     return [m for _, m in sorted(done, key=lambda t: t[0])], skipped
+
+
+# ---------------------------------------------------------------------- the estimate
+
+MODES = ("per_line", "common_datum")
+
+
+@dataclass(frozen=True)
+class LineGroup:
+    """One flight line's marks, and their mean tie."""
+
+    line: int
+    n: int
+    mean_mm: float
+    sd_mm: float
+    point_ids: tuple
+
+    @property
+    def se_mm(self) -> float:
+        return self.sd_mm / math.sqrt(self.n) if self.n > 1 else float("nan")
+
+
+@dataclass
+class Gen1DatumEstimate:
+    """gen1's datum at a site, with an error bar that respects the line clustering.
+
+    ``value_mm`` is the constant to ADD to gen1. ``se_of`` states, in words, what
+    ``se_mm`` is the standard error OF -- print them together or neither.
+    """
+
+    value_mm: float
+    se_mm: float
+    se_of: str
+    mode: str
+    groups: list                       # [LineGroup]
+    n_marks: int
+    anova_F: float
+    anova_p: float
+    anova_df: tuple
+    icc: float
+    mean_over_marks_mm: float
+    se_over_marks_mm: float
+    design_effect: float
+    line_residual_mm: dict = field(default_factory=dict)   # common_datum only
+    excluded: list = field(default_factory=list)           # [(point_id, reason)]
+    swath_constant_source: str = ""
+    convention: str = ("constant to ADD to gen1 (raw, no geoid conversion, no "
+                       "cross-epoch term) to place it on the 2008 surveyed control; "
+                       "positive = gen1 reads low")
+    params: list = field(default_factory=list)
+    notes: list = field(default_factory=list)
+
+    @property
+    def n_lines(self) -> int:
+        return len(self.groups)
+
+    @staticmethod
+    def table_columns() -> dict:
+        return {
+            "line": "flight line, from the ground returns' point_source_id at each mark",
+            "n": "marks assigned to that line, count",
+            "mean_mm": "mean tie over that line's marks, mm",
+            "sd_mm": "sd of the ties within that line, mm (nan for n = 1)",
+            "se_mm": "sd_mm / sqrt(n), mm; the within-line SE, not the datum's",
+            "resid_mm": ("common_datum only: the line's mean minus the datum value, mm -- "
+                         "how far the swath network's constant for this line sits from "
+                         "ground truth"),
+            "marks": "the mark ids in that line group",
+        }
+
+    def table_rows(self) -> list:
+        rows = []
+        for g in self.groups:
+            resid = self.line_residual_mm.get(g.line)
+            rows.append([g.line, g.n, f"{g.mean_mm:+.1f}",
+                         "--" if not np.isfinite(g.sd_mm) else f"{g.sd_mm:.1f}",
+                         "--" if not np.isfinite(g.se_mm) else f"{g.se_mm:.1f}",
+                         "--" if resid is None else f"{resid:+.1f}",
+                         ", ".join(g.point_ids[:3]) + (" ..." if len(g.point_ids) > 3 else "")])
+        return rows
+
+    def summary(self) -> str:
+        return (f"gen1 datum, mode={self.mode}: {self.value_mm:+.1f} +/- {self.se_mm:.1f} mm "
+                f"({self.n_marks} marks on {self.n_lines} flight lines)\n"
+                f"  SE is: {self.se_of}\n"
+                f"  sign : {self.convention}\n"
+                f"  lines differ: one-way ANOVA F = {self.anova_F:.2f}, p = {self.anova_p:.3g} "
+                f"(df {self.anova_df[0]}, {self.anova_df[1]}), ICC = {self.icc:.3f}\n"
+                f"  if marks were independent (they are NOT): "
+                f"{self.mean_over_marks_mm:+.1f} +/- {self.se_over_marks_mm:.1f} mm, "
+                f"design effect {self.design_effect:.2f}x")
+
+    def to_dict(self) -> dict:
+        return dict(
+            value_mm=self.value_mm, se_mm=self.se_mm, se_of=self.se_of, mode=self.mode,
+            sign_convention=self.convention, n_marks=self.n_marks, n_lines=self.n_lines,
+            anova_F=self.anova_F, anova_p=self.anova_p, anova_df=list(self.anova_df),
+            icc=self.icc, mean_over_marks_mm=self.mean_over_marks_mm,
+            se_over_marks_mm=self.se_over_marks_mm, design_effect=self.design_effect,
+            line_groups=[dict(line=g.line, n=g.n, mean_mm=g.mean_mm, sd_mm=g.sd_mm,
+                              point_ids=list(g.point_ids)) for g in self.groups],
+            line_residual_mm={str(k): v for k, v in self.line_residual_mm.items()},
+            excluded=[list(e) for e in self.excluded],
+            swath_constant_source=self.swath_constant_source,
+            notes=list(self.notes),
+        )
+
+
+def _oneway_anova(groups):
+    """F, p and dof for a one-way ANOVA over groups of at least one value each.
+
+    Groups of size 1 contribute to the between-group sum of squares and nothing to the
+    within-group one, which is what a singleton group genuinely tells you. Returns nan
+    when there is no within-group variation to test against.
+    """
+    from scipy import stats
+
+    vals = [np.asarray(g, float) for g in groups if len(g)]
+    k = len(vals)
+    n = sum(v.size for v in vals)
+    if k < 2 or n <= k:
+        return float("nan"), float("nan"), (k - 1, n - k), float("nan")
+    grand = np.concatenate(vals).mean()
+    ssb = sum(v.size * (v.mean() - grand) ** 2 for v in vals)
+    ssw = sum(((v - v.mean()) ** 2).sum() for v in vals)
+    df1, df2 = k - 1, n - k
+    msb, msw = ssb / df1, ssw / df2
+    F = msb / msw if msw > 0 else float("inf")
+    p = float(stats.f.sf(F, df1, df2)) if np.isfinite(F) else 0.0
+    # ICC from the one-way random-effects decomposition, with the unequal-size n0.
+    n0 = (n - sum(v.size ** 2 for v in vals) / n) / (k - 1)
+    var_b = max((msb - msw) / n0, 0.0)
+    icc = var_b / (var_b + msw) if (var_b + msw) > 0 else float("nan")
+    return float(F), p, (df1, df2), float(icc)
+
+
+def combine_datum(measurements, *, mode: str, swath_constants_source: str = "",
+                  notes=()) -> Gen1DatumEstimate:
+    """Combine per-mark ties into one datum constant, respecting the line clustering.
+
+    ``mode="per_line"``      the marks must have been measured with **no** swath
+                             constants applied. Each line's constant is unknown, so the
+                             line mean is the observation and the datum is the mean over
+                             lines.
+    ``mode="common_datum"``  the marks must have been measured **with** swath constants,
+                             so every mark is already in one frame. The datum is still
+                             averaged line-first (the residual scatter is still organised
+                             by line), and ``line_residual_mm`` reports each line's mean
+                             minus the datum -- an external test of the swath network.
+
+    The mode is CHECKED against how the measurements were made and raises on a mismatch:
+    it must not be possible to label a per-line average as a common-frame one.
+
+    Nothing is filtered. Marks that could not be placed in the common frame (no constant
+    for their line) are moved to ``excluded`` with that reason and counted there, because
+    a mark that the frame cannot hold is a reported result, not a silent omission.
+    """
+    if mode not in MODES:
+        raise ValueError(f"mode must be one of {MODES}, not {mode!r}")
+    meas = list(measurements)
+    if not meas:
+        raise ValueError("combine_datum needs at least one measurement")
+
+    excluded, used = [], []
+    for m in meas:
+        applied = bool(m.swath_constant_source)
+        if mode == "common_datum" and not applied:
+            excluded.append((m.point_id, "no swath constant for line "
+                             f"{m.line_id}: cannot be placed in the common frame"))
+            continue
+        if mode == "per_line" and applied:
+            raise ValueError(
+                f"{m.point_id} was measured with swath constants applied "
+                f"({m.swath_constant_source}) but mode='per_line' says they are unknown. "
+                "Re-measure without swath_constants, or combine with mode='common_datum'.")
+        if m.line_id is None:
+            excluded.append((m.point_id, "no ground returns at the mark: no line and no tie"))
+            continue
+        if not np.isfinite(m.tie_mm):
+            excluded.append((m.point_id, "tie is not finite at the report radius"))
+            continue
+        used.append(m)
+    if not used:
+        raise ValueError("no measurement survived: " + "; ".join(f"{p}: {r}" for p, r in excluded))
+
+    by_line = {}
+    for m in used:
+        by_line.setdefault(m.line_id, []).append(m)
+    groups = []
+    for lid in sorted(by_line):
+        v = np.array([m.tie_mm for m in by_line[lid]], float)
+        groups.append(LineGroup(line=lid, n=v.size, mean_mm=float(v.mean()),
+                                sd_mm=float(v.std(ddof=1)) if v.size > 1 else float("nan"),
+                                point_ids=tuple(m.point_id for m in by_line[lid])))
+
+    line_means = np.array([g.mean_mm for g in groups], float)
+    k = line_means.size
+    value = float(line_means.mean())
+    se = float(line_means.std(ddof=1) / math.sqrt(k)) if k > 1 else float("nan")
+    all_ties = np.array([m.tie_mm for m in used], float)
+    mean_marks = float(all_ties.mean())
+    se_marks = (float(all_ties.std(ddof=1) / math.sqrt(all_ties.size))
+                if all_ties.size > 1 else float("nan"))
+    F, p, dof, icc = _oneway_anova([[m.tie_mm for m in by_line[l]] for l in sorted(by_line)])
+    deff = se / se_marks if (np.isfinite(se) and np.isfinite(se_marks) and se_marks > 0) \
+        else float("nan")
+
+    resid = {}
+    if mode == "common_datum":
+        resid = {g.line: g.mean_mm - value for g in groups}
+
+    se_of = ("SE of the mean over flight lines of the within-line mean tie: "
+             f"sd of the {k} line means divided by sqrt({k}). The flight line, not the "
+             "mark, is the unit of replication, because marks under one line share that "
+             "swath's unknown constant")
+    params = [
+        Param("mode", mode, "repo",
+              "per_line = each line's swath constant unknown; common_datum = the "
+              "align_swaths constants applied so every mark is in one frame"),
+        Param("unit_of_replication", "flight line", "repo",
+              "ties within a line share that swath's constant, so marks are not "
+              "independent; the ANOVA over line groups is reported with the estimate"),
+        Param("swath_constants_source", swath_constants_source or "none", "repo",
+              swath_constants_source or "mode=per_line applies none"),
+    ]
+    out = Gen1DatumEstimate(
+        value_mm=value, se_mm=se, se_of=se_of, mode=mode, groups=groups,
+        n_marks=len(used), anova_F=F, anova_p=p, anova_df=dof, icc=icc,
+        mean_over_marks_mm=mean_marks, se_over_marks_mm=se_marks, design_effect=deff,
+        line_residual_mm=resid, excluded=excluded,
+        swath_constant_source=swath_constants_source, params=params, notes=list(notes))
+    if k == 1:
+        out.notes.append("one flight line only: the SE over lines is undefined; the datum "
+                         "and that line's constant are not separable from these marks")
+    return out

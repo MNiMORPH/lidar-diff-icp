@@ -1,11 +1,15 @@
 """gen1's datum from its own 2008 control -- against data whose answer is known.
 
-Two of these are regression tests in the strict sense: each was shown to FAIL with the
+Three of these are regression tests in the strict sense: each was shown to FAIL with the
 code under test removed, and the failure recorded in ``analysis/GEN1_DATUM_MODULE.md`` §7.
 
 * ``test_line_assignment_comes_from_the_returns_not_the_centreline`` -- build a mark that
   sits closest to line A's fitted centreline while every ground return under it belongs
   to line B. Assigning by centreline gives A; the module must give B.
+* ``test_the_clustered_se_does_not_shrink_when_marks_are_added_to_one_line`` -- adding
+  marks to a line that is already represented must not shrink the datum's SE, because
+  they share that swath's constant. The per-mark SE does shrink, and is returned beside
+  it so the difference is visible.
 * ``test_duplicate_rows_are_merged_so_one_mark_is_weighted_once`` -- the bundled CSV
   publishes 41 rows twice (marks on county lines appear in both counties' reports).
 """
@@ -368,3 +372,138 @@ def test_swath_constants_are_read_from_a_corrections_json(tmp_path):
     (tmp_path / "empty.json").write_text("{}")
     with pytest.raises(KeyError):
         G.swath_constants_from_corrections(tmp_path / "empty.json")
+
+
+# ------------------------------------------------------------------- the combination
+
+def _measurements(spec, **kw):
+    """spec: [(id, tie_mm, line)] -> measurements whose ties are exactly those."""
+    return [_flat_site_measure(pid, t / 1000.0, line, e=100.0 * k, **kw)
+            for k, (pid, t, line) in enumerate(spec)]
+
+
+def test_per_line_averages_within_line_then_over_lines():
+    m = _measurements([("a", 0.0, 136), ("b", 100.0, 136), ("c", 200.0, 137)])
+    est = G.combine_datum(m, mode="per_line")
+    assert est.n_marks == 3 and est.n_lines == 2
+    assert [g.line for g in est.groups] == [136, 137]
+    assert est.groups[0].mean_mm == pytest.approx(50.0, abs=1e-3)
+    assert est.value_mm == pytest.approx(125.0, abs=1e-3)            # (50 + 200) / 2
+    assert est.mean_over_marks_mm == pytest.approx(100.0, abs=1e-3)  # the naive answer
+    assert est.value_mm != pytest.approx(est.mean_over_marks_mm)
+
+
+def test_the_se_says_what_it_is_the_se_of():
+    m = _measurements([("a", 0.0, 136), ("b", 100.0, 137), ("c", 200.0, 138)])
+    est = G.combine_datum(m, mode="per_line")
+    assert est.se_of.startswith("SE of the mean over flight lines of the within-line mean tie")
+    assert "unit of replication" in est.se_of or "unit of replication" in \
+        {p.name: p.value for p in est.params}.get("unit_of_replication", "flight line")
+    line_means = np.array([0.0, 100.0, 200.0])
+    assert est.se_mm == pytest.approx(line_means.std(ddof=1) / np.sqrt(3), abs=1e-3)
+    assert "flight line, not the\nmark" in est.se_of.replace("  ", " ") or \
+        "flight line, not the" in est.se_of
+
+
+def test_the_clustered_se_does_not_shrink_when_marks_are_added_to_one_line():
+    """REGRESSION, proven to fail if the marks are pooled as if independent.
+
+    Four marks on two lines; then eight marks on the same two lines, each duplicated.
+    The extra marks carry NO new information about the datum -- they share their swath's
+    constant -- so the SE over lines must not move. The per-mark SE does shrink, and the
+    design effect records by how much.
+    """
+    few = _measurements([("a", 0.0, 136), ("b", 40.0, 136),
+                         ("c", 200.0, 137), ("d", 240.0, 137)])
+    many = _measurements([("a", 0.0, 136), ("b", 40.0, 136), ("e", 0.0, 136), ("f", 40.0, 136),
+                          ("c", 200.0, 137), ("d", 240.0, 137), ("g", 200.0, 137),
+                          ("h", 240.0, 137)])
+    e1 = G.combine_datum(few, mode="per_line")
+    e2 = G.combine_datum(many, mode="per_line")
+    assert e1.value_mm == pytest.approx(e2.value_mm, abs=1e-6)
+    assert e1.se_mm == pytest.approx(e2.se_mm, abs=1e-6)
+    assert e2.se_over_marks_mm < e1.se_over_marks_mm
+    assert e2.n_marks == 8 and e2.n_lines == 2
+
+
+def test_the_anova_reports_that_the_scatter_is_organised_by_line():
+    tight = _measurements([("a", 0.0, 136), ("b", 2.0, 136),
+                           ("c", 300.0, 137), ("d", 302.0, 137)])
+    est = G.combine_datum(tight, mode="per_line")
+    assert est.anova_F > 100.0 and est.anova_p < 1e-3
+    assert est.anova_df == (1, 2)
+    assert est.icc > 0.9
+    mixed = _measurements([("a", 0.0, 136), ("b", 300.0, 136),
+                           ("c", 2.0, 137), ("d", 302.0, 137)])
+    assert G.combine_datum(mixed, mode="per_line").anova_F < 1.0
+
+
+def test_one_line_only_cannot_separate_the_datum_from_that_swaths_constant():
+    est = G.combine_datum(_measurements([("a", 0.0, 136), ("b", 100.0, 136)]),
+                          mode="per_line")
+    assert est.n_lines == 1
+    assert not np.isfinite(est.se_mm)
+    assert any("not separable" in s for s in est.notes)
+
+
+def test_common_datum_needs_the_constants_and_returns_the_line_residuals():
+    const = {136: (0.0, 0.0, 0.0), 137: (0.0, 0.0, -0.100)}
+    m = _measurements([("a", 0.0, 136), ("c", 0.0, 137)],
+                      swath_constants=const, swath_constants_source="test corrections.json")
+    est = G.combine_datum(m, mode="common_datum", swath_constants_source="test corrections.json")
+    assert est.mode == "common_datum"
+    assert est.groups[0].mean_mm == pytest.approx(0.0, abs=1e-3)
+    assert est.groups[1].mean_mm == pytest.approx(100.0, abs=1e-3)
+    assert est.value_mm == pytest.approx(50.0, abs=1e-3)
+    assert est.line_residual_mm[136] == pytest.approx(-50.0, abs=1e-3)
+    assert est.line_residual_mm[137] == pytest.approx(+50.0, abs=1e-3)
+    assert est.swath_constant_source == "test corrections.json"
+
+
+def test_the_mode_is_checked_against_how_the_marks_were_measured():
+    plain = _measurements([("a", 0.0, 136), ("c", 0.0, 137)])
+    shifted = _measurements([("a", 0.0, 136), ("c", 0.0, 137)],
+                            swath_constants={136: (0, 0, 0), 137: (0, 0, -0.1)},
+                            swath_constants_source="test")
+    with pytest.raises(ValueError, match="mode='per_line'"):
+        G.combine_datum(shifted, mode="per_line")
+    with pytest.raises(ValueError, match="no measurement survived"):
+        G.combine_datum(plain, mode="common_datum")     # none is in the common frame
+
+
+def test_a_mark_the_common_frame_cannot_hold_is_excluded_with_its_reason():
+    const = {136: (0.0, 0.0, 0.0)}
+    m = _measurements([("a", 0.0, 136), ("z", 0.0, 999)],
+                      swath_constants=const, swath_constants_source="test")
+    est = G.combine_datum(m, mode="common_datum", swath_constants_source="test")
+    assert est.n_marks == 1
+    assert [p for p, _ in est.excluded] == ["z"]
+    assert "no swath constant for line 999" in est.excluded[0][1]
+
+
+def test_an_unknown_mode_is_refused():
+    with pytest.raises(ValueError, match="mode must be one of"):
+        G.combine_datum(_measurements([("a", 0.0, 136)]), mode="whatever")
+
+
+def test_the_estimate_serialises_with_its_convention_and_its_se_of():
+    est = G.combine_datum(_measurements([("a", 0.0, 136), ("b", 100.0, 137)]),
+                          mode="per_line")
+    d = est.to_dict()
+    assert d["sign_convention"].startswith("constant to ADD to gen1")
+    assert d["se_of"] == est.se_of
+    assert d["mode"] == "per_line"
+    assert [g["line"] for g in d["line_groups"]] == [136, 137]
+    json.dumps(d)                                   # must be serialisable
+    assert "SE is:" in est.summary() and "ANOVA" in est.summary()
+
+
+def test_every_returned_number_carries_a_definition():
+    cols = G.MarkMeasurement.table_columns()
+    for key in ("tie_mm", "sigma_mm", "line", "n_lines", "slope_deg", "relief_mm",
+                "fit_rms_mm", "radius_spread_mm"):
+        assert key in cols and len(cols[key].split()) >= 3
+    est = G.combine_datum(_measurements([("a", 0.0, 136), ("b", 100.0, 137)]),
+                          mode="per_line")
+    assert set(est.table_columns()) >= {"line", "n", "mean_mm", "resid_mm"}
+    assert len(est.table_rows()) == 2
