@@ -322,13 +322,15 @@ class LocalTie:
             "ovl_km2": "that overlap's area, km^2",
             "nmad1_mm": "robust scatter left in the overlap after the tie, mm",
             "dtan_lo": "smallest across-track coordinate tan(scan_ref)-tan(scan_src) in "
-                       "the window -- the intercept tie is read at dtan = 0",
-            "dtan_hi": "largest one",
+                       "the window, dimensionless; the intercept tie is read at dtan = 0",
+            "dtan_hi": "largest across-track coordinate in the window, dimensionless "
+                       "(a difference of tangents)",
             "c_mm_tan": "across-track slope fitted alongside the intercept, mm per unit "
                         "tangent (coreg.across_track_tie's second return)",
-            "extrap": "YES when dtan = 0 lies OUTSIDE [dtan_lo, dtan_hi], i.e. the "
-                      "intercept tie is an extrapolation in this window",
-            "degenerate": "YES when the N&K fit used zero cells (dz is then coreg's 0.0)",
+            "extrap": "YES/blank flag: YES when dtan = 0 lies OUTSIDE [dtan_lo, "
+                      "dtan_hi], i.e. the intercept tie is an extrapolation here",
+            "degenerate": "YES/blank flag: YES when the Nuth & Kaeaeb fit used zero "
+                          "cells, in which case dz is coreg's abandoned-fit 0.0 m",
         }
 
 

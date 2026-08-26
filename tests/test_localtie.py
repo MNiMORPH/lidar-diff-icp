@@ -308,7 +308,10 @@ def test_the_nearest_overlap_point_is_in_the_overlap_and_is_the_nearest(pair_til
     assert 60.0 <= op.easting <= 100.0                     # inside the pair's overlap
     assert op.distance_m == pytest.approx(np.hypot(op.easting - 0.0,
                                                    op.northing - 100.0), rel=1e-9)
-    assert op.easting == pytest.approx(61.0, abs=2.0)      # the closest edge of it
+    assert op.easting == pytest.approx(61.0, abs=2.0)      # the closest EDGE of it
+    # and the strip's own centre is reported beside it, because an edge window samples
+    # the across-track term one-sidedly
+    assert op.median_easting == pytest.approx(80.0, abs=3.0)
     assert op.n_overlap_cells > 0
 
 
