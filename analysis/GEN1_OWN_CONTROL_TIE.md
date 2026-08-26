@@ -52,7 +52,8 @@ parameter I chose is flagged `MINE` in the run banner and its effect is measured
 
 7. **The bias adjustment is real, applied, and its value is published nowhere.** Metadata
    process step 8 states it; none of the eight validation reports, the two data READMEs or
-   the dataset metadata gives a number. The request to ask for it is drafted in §9.
+   the dataset metadata gives a number. **gen2 carries the same unpublished constant**
+   (`analysis/LIDAR_DOCUMENTATION_MINE.md` §1.2). The request is drafted in §9.
 
 ---
 
@@ -506,6 +507,17 @@ likely to hold the number.
 **This is the one quantity in this whole investigation that no amount of our own
 processing can recover**, because it was applied to the delivered points before we ever
 saw them.
+
+**And gen2 has the same unknown, found independently while this was being written.**
+`analysis/LIDAR_DOCUMENTATION_MINE.md` §1.2 quotes the 2021 Lidar Mapping Report p. 15:
+*"Based on the statistical analysis, the lidar data was then adjusted to reduce the
+vertical bias when compared to the survey ground control of higher accuracy."* Its value
+is not published either. Two unpublished constants, one on each side of the DoD, is a
+sharper statement of §7's verdict than anything measured here: the absolute level of
+*neither* epoch is recoverable from the delivered data. That document also establishes
+that the 143 LCPs **calibrated** gen2 while the NVA/VVA checkpoints were held out, so an
+LCP tie is not independent of gen2's own calibration -- which is a further reason the
+2008 control, held out from nothing we use, is the cleaner reference.
 
 ### Draft request, ready to send
 
