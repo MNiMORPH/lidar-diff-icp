@@ -594,6 +594,17 @@ difference at Elba), and I have not checked our anchor's sign convention against
 this one. **Reconciling them is a task, not a result.** It is, however, the most
 interesting thing this search turned up.
 
+> **RESOLVED 2026-08-26 – see `analysis/GEN1_OWN_CONTROL_TIE.md`.** The `Error` column is
+> `Control Z − Surface Z`, pinned by arithmetic on 1 022 of 1 022 rows, which is the
+> *same* sign family as `tie = surveyed − z_lidar`; and the geoid cancels out of the
+> anchor's tie, so no sign flip and no GEOID03/GEOID18 step separates the two numbers.
+> Read from our own point cloud with the anchor's own estimator, the well-sited open 2008
+> marks give −19.4 ± 7.9 mm (`L1O101`) and −37.8 ± 4.8 mm (`L1O59`). Anchor minus the
+> open-mark median is +51.3 mm, 1.29 × the anchor's own σ_total. The pooled −22.4 mm
+> intercept above is **not** a pooling artefact: on open cover alone it is −27.3 ± 12.0 mm.
+> The six remaining reports have been fetched; the full 1 004-point set is bundled at
+> `src/lidar_diff_icp/groundtruth/data/mn_dnr_2008_control_semn.csv`.
+
 **Still not public, and worth requesting:**
 1. The **"Lidar Accuracy Assessment Report"** – listed in the metadata's Final
    Deliverables as *"One paper copy"*, so plausibly never digitised.
@@ -844,14 +855,15 @@ Having read them, in order of what now limits the answer:
 
 ### 7.5 What to do next, in order
 
-1. **Today, no downloads.** Run the project's slope-normal estimator plus the
+1. ~~**Today, no downloads.** Run the project's slope-normal estimator plus the
    proper geoid handling at: **L1O101** (1.34 km, open, spread 0.110 m),
    **LCP 1079** (2.18 km, both epochs on disk), and the other two in-grid
    control points. Compare against the existing +22.7 ± 39.7 mm and reconcile
-   the sign conventions – §5 flags a possible sign tension that must be resolved
-   before anything else is believed.
-2. **Fetch the six remaining validation reports** (~4 MB) and parse them with
-   the §5 recipe.
+   the sign conventions~~ – **DONE 2026-08-26**, all 16 in-tile 2008 control
+   points measured: `analysis/GEN1_OWN_CONTROL_TIE.md`.
+2. ~~**Fetch the six remaining validation reports** (~4 MB) and parse them with
+   the §5 recipe.~~ – **DONE**, 3 557 501 bytes; 1 004 points bundled as
+   `mn_dnr_2008_control_semn.csv` by `analysis/groundtruth/parse_mndnr_2008_control.py`.
 3. **Measure the §7.1 screening statistics** for every candidate that falls in a
    local tile, and choose the threshold from that distribution.
 4. **Send the §5.2 email.**
