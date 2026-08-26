@@ -15,6 +15,11 @@ Selecting WITHIN a cell is the point: all four look at the same ground with the 
 change and the same datum, so the four curves differ only by beam geometry. A cell needs
 several returns for the picks to be distinct, hence --min-n.
 
+No minimum bin count. Every slope bin holding at least one cell is drawn, with its robust
+standard error, so a sparse bin shows as an uncertain point rather than as a gap; with a
+scan-spread requirement the forest stratum is only a couple of thousand cells and a
+minimum-count rule silently deletes most of it.
+
 Defaults to the REGISTRATION-CORRECTED offset (d_mm_corr): the raw d_mm carries per-swath
 misalignment, which is itself a between-flight-line effect and therefore contaminates
 exactly this comparison -- the four picks often come from different flight lines.
@@ -50,7 +55,6 @@ if A.ridge: TAG += "_ridge"
 
 DCOL = "d_mm_corr" if A.offset == "corr" else "d_mm"
 SLOPE_EDGES = np.arange(0, 46, A.bin)
-MIN_BIN = 100
 
 df = pd.read_parquet(f"{A.tile}/beam_offset_table.parquet",
                      columns=["cell", DCOL, "slope", "canopy_cover", "scan_angle",
@@ -105,16 +109,25 @@ for k, i in SEL.items():
 
 
 def curve(idx, sub=None):
-    """(centres, medians, counts) of offset vs slope for a selection, optional cover mask."""
+    """(centres, medians, SEs, counts) of offset vs slope for a selection, optional cover mask.
+
+    Every slope bin holding at least one cell is returned -- there is no minimum count.
+    A sparse bin is reported with its (large) robust standard error and its n, so it can
+    be judged, rather than deleted so that the curve looks smooth.
+    """
     s, v = slope[idx], d[idx]
     if sub is not None:
         m = sub[idx]; s, v = s[m], v[m]
-    c, med, nn = [], [], []
+    c, med, sem, nn = [], [], [], []
     for lo, hi in zip(SLOPE_EDGES[:-1], SLOPE_EDGES[1:]):
         m = (s >= lo) & (s < hi)
-        if m.sum() >= MIN_BIN:
-            c.append(0.5*(lo+hi)); med.append(np.median(v[m])); nn.append(int(m.sum()))
-    return np.array(c), np.array(med), np.array(nn)
+        if not m.sum():
+            continue
+        vv = v[m]
+        sd = 1.4826 * np.median(np.abs(vv - np.median(vv)))
+        c.append(0.5*(lo+hi)); med.append(np.median(vv))
+        sem.append(1.2533 * sd / np.sqrt(m.sum())); nn.append(int(m.sum()))
+    return np.array(c), np.array(med), np.array(sem), np.array(nn)
 
 
 STRATA = [("all returns", None), ("open (cc<0.10)", np.isfinite(cover) & (cover < 0.10)),
@@ -123,13 +136,15 @@ for sname, smask in STRATA:
     print(f"\nmedian offset (mm) vs slope -- {sname}")
     rows = {k: curve(i, smask) for k, i in SEL.items()}
     cs = sorted({c for k in rows for c in rows[k][0]})
-    print("   slope  " + "".join(f"{k:>20s}" for k in SEL))
+    print("   slope  " + "".join(f"{k:>21s}" for k in SEL)
+          + "        [median ± robust SE (n)]")
     for c in cs:
         line = f"   {c:5.1f}  "
         for k in SEL:
-            cc_, mm_, nn_ = rows[k]
+            cc_, mm_, ss_, nn_ = rows[k]
             j = np.where(cc_ == c)[0]
-            line += (f"{mm_[j[0]]:+9.1f}({nn_[j[0]]:>6,})" if j.size else f"{'--':>20s}")
+            line += (f"{mm_[j[0]]:+8.1f}±{ss_[j[0]]:<5.0f}({nn_[j[0]]:>5,})"
+                     if j.size else f"{'--':>21s}")
         print(line)
 
 fig, ax = plt.subplots(2, 2, figsize=(15, 10), dpi=130)
@@ -140,7 +155,7 @@ fig.colorbar(hb, ax=a0, label="log10 count")
 bc, bm = [], []
 for lo, hi in zip(np.arange(0, 45, 1.0), np.arange(1, 46, 1.0)):
     m = (slope >= lo) & (slope < hi)
-    if m.sum() >= 50: bc.append(0.5*(lo+hi)); bm.append(np.median(d[m]))
+    if m.sum(): bc.append(0.5*(lo+hi)); bm.append(np.median(d[m]))
 a0.plot(bc, bm, "o-", color="crimson", ms=3.5, lw=1.3, label="binned median (all returns)")
 a0.axhline(0, color="k", lw=.6); a0.set_xlim(0, 45); a0.set_ylim(-300, 300)
 a0.set_xlabel("surface slope (deg)"); a0.set_ylabel("offset d (mm) = gen1 − gen2   (+ = ground lower in 2021)")
@@ -148,9 +163,10 @@ a0.set_title("ALL returns: per-beam offset vs slope"); a0.legend(fontsize=8)
 
 for axi, (sname, smask) in zip((ax[0, 1], ax[1, 0], ax[1, 1]), STRATA):
     for k, i in SEL.items():
-        c, m, nn = curve(i, smask)
+        c, m, sem, nn = curve(i, smask)
         if c.size:
-            axi.plot(c, m, "o-", ms=4, lw=1.5, color=COLORS[k], label=f"{k} (n={nn.sum():,})")
+            axi.errorbar(c, m, yerr=sem, fmt="o-", ms=4, lw=1.5, elinewidth=0.9,
+                         capsize=2, color=COLORS[k], label=f"{k} (n={nn.sum():,})")
     axi.axhline(0, color="k", lw=.6); axi.set_xlim(0, 45)
     axi.set_xlabel("surface slope (deg)"); axi.set_ylabel("median offset d (mm)   [gen1 − gen2; + = lower in 2021]")
     axi.set_title(f"best beam per cell, by geometry — {sname}")
