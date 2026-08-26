@@ -47,7 +47,8 @@ def _opt(d, name):
 
 
 def reference_cells(tile_dir, *, cells=None, curv_max=0.015, slope_max=12.0,
-                    gross_change_mm=500.0, clearcut_drop=0.30, require_ridge=True):
+                    gross_change_mm=500.0, clearcut_drop=0.30, require_ridge=True,
+                    exclude_valley=True):
     """Boolean mask of stable reference cells, plus a report of what each cut removed.
 
     ``cells`` is an optional array of flat cell indices (e.g. the near-ground cube's
@@ -88,6 +89,31 @@ def reference_cells(tile_dir, *, cells=None, curv_max=0.015, slope_max=12.0,
     bluff = _opt(tile_dir, "blufftop_margin_mask.npy")
     if bluff is not None:
         cut("blufftop retreat margin", ~bluff.astype(bool).ravel()[idx])
+
+    # Valley floor. Ridge-ness, curvature and slope do NOT exclude flat valley-bottom
+    # ground, so terraces and floodplain enter the "divide" population and dominate it:
+    # a 19% valley limb produced an easting gradient of -84.8 mm/km against +3.5 on the
+    # upland (analysis/STABLE_POINT_TILT_AUDIT.md), and a 27%-floodplain flat-slope bin
+    # produced a spurious +7.9 mm rise. Excluded by default for anything divide-based.
+    # Two cuts, neither with an invented number: the crude floodplain mask, and the
+    # ANTIMODE of this tile's own elevation histogram, computed here, which separates the
+    # upland plateau from the valley terraces.
+    if exclude_valley:
+        fld = _opt(tile_dir, "floodplain_mask.npy")
+        if fld is not None:
+            cut("floodplain mask", ~fld.astype(bool).ravel()[idx])
+        zf = _opt(tile_dir, "z_after.npy")
+        if zf is not None:
+            z = zf.ravel()[idx]
+            zc = z[m & np.isfinite(z)]
+            if zc.size > 100:
+                h, e = np.histogram(zc, bins=60)
+                lo, hi = int(np.argmax(h[:30])), 30 + int(np.argmax(h[30:]))
+                if hi > lo + 2:                      # bimodal: cut at the antimode
+                    anti = lo + int(np.argmin(h[lo:hi]))
+                    zthr = 0.5 * (e[anti] + e[anti + 1])
+                    cut(f"below elevation antimode {zthr:.1f} m",
+                        ~(np.isfinite(z) & (z < zthr)))
 
     dod = _opt(tile_dir, "dod.npy")
     if dod is not None and gross_change_mm is not None:
