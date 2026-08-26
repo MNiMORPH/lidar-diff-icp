@@ -20,10 +20,18 @@ Optional --curv-max restricts to near-planar cells (|curv_laplacian| <= T) to su
 hillslope-diffusion / convex-concave real change; the figure form is identical, only the
 point subset changes (output filename and title carry the threshold). No fitting is imposed
 beyond robust bin statistics and simple correlations.
+
+No minimum bin count anywhere: every non-empty bin of every curve is printed and plotted,
+with a cluster-robust (spatial-block) error bar. The extreme end of an angle axis is thin
+and carries the largest medians, so a curve that stopped short of it -- as these did, at
+incidence/slope >= 36-39 deg and |scan| >= 16 deg -- ended before its own data with nothing
+on the figure saying so.
 """
-import argparse, numpy as np, pandas as pd
+import argparse, json, os, numpy as np, pandas as pd
 import matplotlib; matplotlib.use("Agg"); import matplotlib.pyplot as plt
 from scipy.stats import spearmanr
+
+from lidar_diff_icp import binstats as bs
 
 XCFG = {  # values: how to derive the x axis from the table; hdr: table header; fname: file/label token
     "incidence":  dict(values=lambda df: df.incidence,          edges=np.arange(0, 48, 3),
@@ -35,8 +43,6 @@ XCFG = {  # values: how to derive the x axis from the table; hdr: table header; 
     "slope":      dict(values=lambda df: df.slope,              edges=np.arange(0, 48, 3),
                        label="surface slope (deg)",              short="slope", hdr="slope(deg)", xlim=(0, 45)),
 }
-MIN_N = 300                              # drop bins below this (matches prior slope analysis)
-
 ap = argparse.ArgumentParser()
 ap.add_argument("--tile", default="data/derived/elba_fulldensity")
 ap.add_argument("--x", default="incidence", choices=list(XCFG))
@@ -50,6 +56,10 @@ ap.add_argument("--cover-bands", action="store_true",
 ap.add_argument("--offset", default="raw", choices=("raw", "corr"),
                 help="raw = d_mm as measured (pre-registration); corr = d_mm_corr, with the "
                      "geoid, lateral tie, per-swath alignment and along-track drift applied")
+ap.add_argument("--block-m", type=float, default=50.0,
+                help="spatial block size (m) for the cluster-robust error bars: returns in "
+                     "one woodlot or swath stripe are not independent, so the error bar "
+                     "counts blocks, not returns")
 ap.add_argument("--boresight", type=float, default=None,
                 help="subtract this roll (mm/deg) * scan_angle from d_mm before analysis, and "
                      "recompute the within-cell residual -- to show the boresight asymmetry removed")
@@ -81,37 +91,61 @@ if A.ridge:                                       # divides only: zero contribut
     lab += "; RIDGELINES"; suffix += "_ridge"
 df["_x"] = cfg["values"](df).to_numpy(float)
 xv = df["_x"].to_numpy(float); d = df.d_mm.to_numpy(float)
+# spatial blocks for the cluster-robust error bars (see binned())
+_meta = next(json.load(open(f"{A.tile}/{fn}")) for fn in
+             ("meta.json", "corrections_geoid.json", "corrections.json")
+             if os.path.exists(f"{A.tile}/{fn}"))
+_res = float(_meta.get("res") or _meta.get("res_m"))
+_nx = int(_meta.get("nx") or round((_meta["bounds"][2] - _meta["bounds"][0]) / _res))
+blk = bs.block_ids(df.cell.to_numpy(), nx=_nx, res=_res, block_m=A.block_m)
 print(f"{len(df):,} returns  [x = {A.x}; {lab}]\n")
 
 def nmad(x): return 1.4826 * np.median(np.abs(x - np.median(x)))
 
-def binned(xa, ya, edges=EDGES, min_n=MIN_N):
-    """robust median + NMAD + n per bin; returns (centers, med, nmad, n)."""
-    c, m, s, k = [], [], [], []
+def binned(xa, ya, ba, edges=EDGES):
+    """robust median + NMAD + cluster-robust SE + n per bin.
+
+    EVERY non-empty bin is returned. There is no minimum count: the sparse extreme of an
+    angle axis is exactly where the largest offsets live, and dropping it makes a curve
+    stop before its data with nothing on the figure saying so. A thin bin instead shows a
+    wide error bar. The SE is the robust spread of the per-BLOCK medians over sqrt(number
+    of blocks) -- returns inside one woodlot or one swath stripe are not independent, so an
+    SE that counts returns is several times too small; a bin spanning fewer than two blocks
+    falls back to the return-counting SE, which is then a lower bound.
+
+    Returns (centers, med, nmad, se, n).
+    """
+    c, m, s, e, k = [], [], [], [], []
     for i in range(len(edges) - 1):
         b = (xa >= edges[i]) & (xa < edges[i + 1]) & np.isfinite(ya)
-        if b.sum() < min_n: continue
-        c.append((edges[i] + edges[i + 1]) / 2); m.append(np.median(ya[b]))
-        s.append(nmad(ya[b])); k.append(int(b.sum()))
-    return np.array(c), np.array(m), np.array(s), k
+        n = int(b.sum())
+        if not n: continue
+        v = ya[b]
+        se_ret = 1.2533 * nmad(v) / np.sqrt(n)
+        bmed = pd.Series(v).groupby(ba[b]).median().to_numpy()
+        se_blk = 1.2533 * nmad(bmed) / np.sqrt(bmed.size) if bmed.size >= 2 else np.nan
+        if not np.isfinite(se_blk) or se_blk <= 0: se_blk = se_ret
+        c.append((edges[i] + edges[i + 1]) / 2); m.append(np.median(v))
+        s.append(nmad(v)); e.append(se_blk); k.append(n)
+    return np.array(c), np.array(m), np.array(s), np.array(e), k
 
-def table(title, xa, ya):
-    c, m, s, k = binned(xa, ya)
+def table(title, xa, ya, ba):
+    c, m, s, e, k = binned(xa, ya, ba)
     print(title)
-    print(f"  {cfg['hdr']:>10s} {'median':>9s} {'NMAD':>8s} {'n':>12s}")
-    for a, mm, ss, nn in zip(c, m, s, k):
-        print(f"  {a:10.0f} {mm:+9.1f} {ss:8.1f} {nn:12,d}")
+    print(f"  {cfg['hdr']:>10s} {'median':>9s} {'blockSE':>8s} {'NMAD':>8s} {'n':>12s}")
+    for a, mm, ss, ee, nn in zip(c, m, s, e, k):
+        print(f"  {a:10.0f} {mm:+9.1f} {ee:8.1f} {ss:8.1f} {nn:12,d}")
     fin = np.isfinite(ya)
     pr = np.corrcoef(xa[fin], ya[fin])[0, 1]; sp = spearmanr(xa[fin], ya[fin]).statistic
     print(f"  corr(offset, {XNAME}): Pearson {pr:+.3f}  Spearman {sp:+.3f}\n")
-    return c, m, s
+    return c, m, e
 
 # ---------------------------------------------------------------- 1. PRIMARY
-c, m, s = table(f"1. PRIMARY  d_mm vs {XNAME} (all in-grid returns):", xv, d)
+c, m, e = table(f"1. PRIMARY  d_mm vs {XNAME} (all in-grid returns):", xv, d, blk)
 
 # ---------------------------------------------------------------- 2. CLEAN (within-cell)
 dr = df.d_resid_mm.to_numpy(float)
-table(f"2. CLEAN  within-cell residual d_resid_mm vs {XNAME} (per-cell effects removed):", xv, dr)
+table(f"2. CLEAN  within-cell residual d_resid_mm vs {XNAME} (per-cell effects removed):", xv, dr, blk)
 # overlap-powered slope: regress residual on within-cell x-deviation, weighting by how much
 # x actually varies in the cell (within-cell x spread). Cells with ~0 spread carry ~0 info.
 cxm = df.groupby("cell")["_x"].transform("mean").to_numpy(float)
@@ -133,16 +167,16 @@ if A.cover_bands:
     print(f"3. STRATIFY by canopy-cover band (percent forest fraction):")
     for lo, hi in zip(COVER_EDGES[:-1], COVER_EDGES[1:]):
         bm = np.isfinite(cc) & (cc >= lo) & (cc < hi)
-        if bm.sum() < 500:
-            print(f"   -- cover {100*lo:.0f}-{100*hi:.0f}%: n={bm.sum():,} (sparse, skipped)"); continue
-        cb, mb, sb = table(f"   -- cover {100*lo:.0f}-{100*min(hi,1.0):.0f}% (n={bm.sum():,}):",
-                           xv[bm], d[bm])
-        bands.append((lo, min(hi, 1.0), cb, mb, int(bm.sum())))
+        if not bm.sum():
+            print(f"   -- cover {100*lo:.0f}-{100*hi:.0f}%: no returns in this band"); continue
+        cb, mb, eb = table(f"   -- cover {100*lo:.0f}-{100*min(hi,1.0):.0f}% (n={bm.sum():,}):",
+                           xv[bm], d[bm], blk[bm])
+        bands.append((lo, min(hi, 1.0), cb, mb, eb, int(bm.sum())))
 else:
     print(f"3. STRATIFY by canopy cover (PROVISIONAL: open cc<0.10 n={open_m.sum():,}, "
           f"forest cc>0.50 n={for_m.sum():,}; threshold calibration is an open item):")
-    co, mo, so = table("   -- OPEN (cc<0.10):", xv[open_m], d[open_m])
-    cf, mf, sf = table("   -- FOREST (cc>0.50):", xv[for_m], d[for_m])
+    co, mo, eo = table("   -- OPEN (cc<0.10):", xv[open_m], d[open_m], blk[open_m])
+    cf, mf, ef = table("   -- FOREST (cc>0.50):", xv[for_m], d[for_m], blk[for_m])
 
 # ---------------------------------------------------------------- 4. CHECK scatter vs x-spread
 per_cell = df.groupby("cell").agg(x_std=("_x", "std"), std_d=("d_mm", "std")).dropna()
@@ -153,7 +187,7 @@ print(f"  {XNAME+' std(deg)':>16s} {'median cell_std_d(mm)':>22s} {'n cells':>10
 xs = per_cell.x_std.to_numpy(); ys = per_cell.std_d.to_numpy()
 for i in range(len(sp_edges) - 1):
     b = (xs >= sp_edges[i]) & (xs < sp_edges[i + 1])
-    if b.sum() < 50: continue
+    if not b.sum(): continue
     print(f"  {sp_edges[i]:6.1f}-{sp_edges[i+1]:<6.1f}  {np.median(ys[b]):18.1f} {b.sum():12,d}")
 print(f"  corr(cell scatter, {XNAME} spread): Spearman {spearmanr(xs, ys).statistic:+.3f}\n")
 
@@ -161,7 +195,9 @@ print(f"  corr(cell scatter, {XNAME} spread): Spearman {spearmanr(xs, ys).statis
 fig, ax = plt.subplots(1, 2, figsize=(14, 6))
 view = np.isfinite(d) & (np.abs(d) <= 300)
 hb = ax[0].hexbin(xv[view], d[view], gridsize=60, bins="log", cmap="viridis", mincnt=1)
-ax[0].plot(c, m, "w-", lw=2.5); ax[0].plot(c, m, "C3o-", lw=1.5, label="binned median")
+ax[0].plot(c, m, "w-", lw=2.5)
+ax[0].errorbar(c, m, yerr=e, fmt="o-", color="C3", lw=1.5, ms=4, elinewidth=1.1, capsize=2,
+               ecolor="C3", label="binned median ± block SE")
 ax[0].axhline(0, color="k", lw=.6); ax[0].set_xlim(*XLIM); ax[0].set_ylim(-300, 300)
 ax[0].set_xlabel(cfg["label"]); ax[0].set_ylabel("offset d (mm) = gen1 − gen2   (+ = ground lower in 2021)")
 ax[0].set_title(f"PRIMARY: per-beam offset vs {XNAME} (all returns)")
@@ -169,22 +205,24 @@ ax[0].legend(loc="upper right"); fig.colorbar(hb, ax=ax[0], label="log10 count")
 if A.cover_bands:
     ax[1].plot(c, m, "k-", lw=2.2, alpha=.55, label="all returns", zorder=1)
     cmap = plt.get_cmap("viridis")
-    for i, (lo, hi, cb, mb, nb) in enumerate(bands):
+    for i, (lo, hi, cb, mb, eb, nb) in enumerate(bands):
         if not len(cb): continue
         col = cmap(0.08 + 0.84 * i / max(len(bands) - 1, 1))
-        ax[1].plot(cb, mb, "o-", ms=4, lw=1.6, color=col,
-                   label=f"{100*lo:.0f}\u2013{100*hi:.0f}% cover (n={nb:,})")
+        ax[1].errorbar(cb, mb, yerr=eb, fmt="o-", ms=4, lw=1.6, elinewidth=0.9, capsize=2,
+                       color=col, label=f"{100*lo:.0f}\u2013{100*hi:.0f}% cover (n={nb:,})")
     ttl = f"median offset vs {XNAME}, by forest fraction"
 else:
-    ax[1].plot(c, m, "C0o-", label="all returns")
-    if len(co): ax[1].plot(co, mo, "C2s-", label="open (cc<0.10)")
-    if len(cf): ax[1].plot(cf, mf, "C1^-", label="forest (cc>0.50)")
+    ax[1].errorbar(c, m, yerr=e, fmt="o-", color="C0", ms=4, elinewidth=0.9, capsize=2,
+                   label="all returns")
+    if len(co): ax[1].errorbar(co, mo, yerr=eo, fmt="s-", color="C2", ms=4, elinewidth=0.9,
+                               capsize=2, label="open (cc<0.10)")
+    if len(cf): ax[1].errorbar(cf, mf, yerr=ef, fmt="^-", color="C1", ms=4, elinewidth=0.9,
+                               capsize=2, label="forest (cc>0.50)")
     ttl = f"median offset vs {XNAME}, by canopy cover"
 ax[1].axhline(0, color="k", lw=.6); ax[1].set_xlim(*XLIM)
 ax[1].set_xlabel(cfg["label"]); ax[1].set_ylabel("median offset d (mm)   [gen1 − gen2; + = lower in 2021]")
 ax[1].set_title(ttl); ax[1].legend(fontsize=8); ax[1].grid(alpha=.3)
-import os as _os
-_tile = _os.path.basename(A.tile.rstrip("/"))                       # tag figures by tile
+_tile = os.path.basename(A.tile.rstrip("/"))                        # tag figures by tile
 _tt = "" if _tile == "elba_fulldensity" else f"_{_tile}"
 if A.bin is not None: suffix += f"_bin{A.bin:g}"   # bin width changes the curve: keep it in the name
 if A.cover_bands: suffix += "_cbands"
