@@ -11,11 +11,13 @@ Two practical wrinkles this module handles:
    chunk-table format that current PDAL reads the *header* of but cannot
    decompress ("Invalid version ... in LAZ chunk table"). laspy reads it fine, so
    we first rewrite the cloud to an uncompressed LAS that PDAL can read.
-2. **PDAL's own CSF defaults.** ``rigidness=3``, ``threshold=0.5``, ``hdiff=0.3``,
-   ``resolution=1``. Earlier versions of this module shipped a looser tuning
-   (rigidness 1, threshold 1.5, hdiff 0.5) chosen for steep-cell coverage on sparse
-   2008 data; it retained sub-ground returns and biased the gen1 ground low under
-   canopy, so we are back on stock.
+2. **PDAL's defaults everywhere except rigidness.** PDAL ``filters.csf`` ships
+   ``rigidness=3``, ``threshold=0.5``, ``hdiff=0.3``, ``resolution=1``,
+   ``step=0.65``, ``smooth=true``. We take all of those except **rigidness=1**:
+   PDAL's 3 is the hard cloth documented for FLAT terrain, and this is dissected
+   bluffland. (An earlier version of this module also ran ``threshold=1.5``, which
+   retained sub-ground returns and biased the gen1 ground low under canopy; that
+   is gone.)
 """
 from __future__ import annotations
 
@@ -48,7 +50,7 @@ def find_pdal(pdal=None):
 
 
 def classify_ground_csf(in_path, out_path=None, *, pdal=None, resolution=1.0,
-                        rigidness=3, threshold=0.5, hdiff=0.3, smooth=True,
+                        rigidness=1, threshold=0.5, hdiff=0.3, smooth=True,
                         iterations=500, elm=True, outlier=False):
     """Classify ground with PDAL CSF; return a path to a LAS of ground points.
 
