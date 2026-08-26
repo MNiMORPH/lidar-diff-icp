@@ -33,6 +33,7 @@ import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from scipy import stats as _st
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
@@ -158,8 +159,12 @@ def fit_report(meds, ns):
     p_full, p_red = 3, 2
     if n > p_full and ssr_b > 0:
         F = ((ssr_t1 - ssr_b) / (p_full - p_red)) / (ssr_b / (n - p_full))
+        df1, df2 = p_full - p_red, n - p_full
+        F_p = float(_st.f.sf(F, df1, df2))
+        F_crit = float(_st.f.isf(0.05, df1, df2))
     else:
-        F = np.nan
+        F = F_p = F_crit = np.nan
+        df1 = df2 = 0
 
     # knee model: constant plateau below 27 deg + a ramp in (slope-27) above,
     # i.e. flat then switch-on. Tests the "plateau to ~24 then knee at 27" shape
@@ -174,6 +179,7 @@ def fit_report(meds, ns):
         tan1_int=ct1[0], tan1_slope=ct1[1], tan1_r2=r2t1,
         lin_int=cs1[0], lin_slope=cs1[1], lin_r2=r2s1,
         step_int=cb[0], step_tan=cb[1], step_amp=cb[2], step_r2=r2b, step_F=F,
+        step_p=F_p, step_Fcrit=F_crit, step_df1=df1, step_df2=df2,
         knee_plateau=ck[0], knee_ramp=ck[1], knee_r2=r2k,
         n=n,
     )
@@ -351,14 +357,18 @@ def main():
     o.append(f"| knee: flat + ramp>27 | r = {fit['knee_plateau']:+.1f} + "
              f"{fit['knee_ramp']:.2f}*(slope-27)+ | {fit['knee_r2']:.3f} |")
     o.append(f"| tan-law + step@27 | tan + {fit['step_amp']:+.1f} mm step "
-             f"(F={fit['step_F']:.2f}) | {fit['step_r2']:.3f} |")
+             f"(F={fit['step_F']:.2f}, p={fit['step_p']:.3f}) | "
+             f"{fit['step_r2']:.3f} |")
     o.append("")
     # Data-honest verdict logic. Compare the four smooth/knee models by R^2.
     r2s = {"tan (+int)": fit["tan1_r2"], "linear": fit["lin_r2"],
            "knee@27": fit["knee_r2"], "tan+step@27": fit["step_r2"]}
     best = max(r2s, key=r2s.get)
     tan_best = fit["tan1_r2"] >= max(fit["lin_r2"], fit["knee_r2"])
-    step_helps = fit["step_r2"] > fit["tan1_r2"] + 0.05
+    # Significance, not a raw R^2 increment: adding a parameter can only raise
+    # R^2. The step earns belief only if the F-test clears its own 5% critical
+    # value on the bins actually fitted.
+    step_sig = bool(np.isfinite(fit["step_p"]) and fit["step_p"] < 0.05)
     o.append("**Verdict.** The near-nadir curve is NEITHER a clean smooth tan-law "
              "NOR a clean flat-then-step. It is roughly flat at about -15 mm from "
              "3-15 deg, RECOVERS toward 0 (-6 to -10 mm) at 18-24 deg, then drops "
@@ -367,30 +377,46 @@ def main():
              f"best single smooth/knee fit is **{best}** (R^2={r2s[best]:.3f}); "
              f"the origin tan-law is a poor description (R^2={fit['tan0_r2']:.3f}).")
     o.append("")
-    if step_helps:
-        o.append(f"Adding a step at 27 deg to the tan-law lifts R^2 from "
-                 f"{fit['tan1_r2']:.3f} to {fit['step_r2']:.3f} (step "
-                 f"{fit['step_amp']:+.1f} mm, F={fit['step_F']:.2f}). So the "
-                 "'27 deg switch-on' does NOT dissolve into the tan-law: there is "
-                 "a real additional steepening near 27 deg on top of any smooth "
-                 "trend. The literature's warning (a smooth tan-curve crossing the "
-                 "detection floor) is only PARTLY right -- the tan-law alone does "
-                 "not reproduce the observed knee, and the recovery-then-drop "
-                 "across 18-30 deg is not a monotone tan shape at all.")
-    else:
-        o.append(f"Adding a step at 27 deg to the tan-law does not materially "
-                 f"improve the fit (R^2 {fit['tan1_r2']:.3f} -> "
-                 f"{fit['step_r2']:.3f}, F={fit['step_F']:.2f}); within this "
-                 "resolution the 27 deg onset is not separable from the smooth "
-                 "trend.")
+    o.append(f"Adding a step at 27 deg to the tan-law lifts R^2 from "
+             f"{fit['tan1_r2']:.3f} to {fit['step_r2']:.3f} (step "
+             f"{fit['step_amp']:+.1f} mm), but adding a parameter always lifts "
+             f"R^2. The test that matters is the F-test: F={fit['step_F']:.2f} "
+             f"on ({fit['step_df1']:d},{fit['step_df2']:d}) df, "
+             f"p={fit['step_p']:.3f}, against a 5% critical value of "
+             f"{fit['step_Fcrit']:.2f}.")
     o.append("")
-    o.append("Honest reading: the *headline* is the sharp deepening of the "
-             "near-nadir low from about -10/-20 mm below ~24 deg to about -40 mm "
-             "above ~27 deg -- a knee, superimposed on a shallow, non-monotone "
-             "trend, not a clean tan-law. Calling it purely 'tan-law, no "
-             "threshold' would misstate the data; so would calling it a pure step "
-             "from a flat baseline (the baseline is already ~-15 mm and dips/"
-             "recovers before the knee).")
+    if step_sig:
+        o.append("The step CLEARS its critical value, so at this bin resolution "
+                 "the 27 deg steepening is not reducible to the smooth trend.")
+    else:
+        o.append("**The step does NOT clear its critical value, so the 27 deg "
+                 "switch-on is UNRESOLVED by this test.** What survives is the "
+                 f"step AMPLITUDE ({fit['step_amp']:+.1f} mm); what is absent "
+                 "is evidence that a break is needed at all. These medians are "
+                 "consistent with a ~20 mm deepening near 27 deg and equally "
+                 f"consistent with no break -- {fit['n']:d} bins cannot "
+                 "separate the two.")
+    o.append("")
+    o.append("_Correction to the record (2026-08-26)._ This fit previously "
+             "excluded the two bins above 35 deg (`FIT_MAX_SLOPE = 35`, plus an "
+             "unexposed `n >= 200`). On `elba_fulldensity` that truncation "
+             "reported R^2 = 0.800 and F = 10.85, written up here and in the "
+             "project memory as '27 deg switch-on is REAL ... NOT a tan-curve "
+             "artifact'. The significance was an artefact of the truncation: "
+             "untruncated the same fit gives R^2 = 0.267, F = 2.49, p = 0.146. "
+             "The step AMPLITUDE was not an artefact -- -22.2 mm truncated vs "
+             "-22.1 mm untruncated -- so the size of the effect stands and only "
+             "the evidence for its being a discrete break falls away. "
+             "(`FRAME_2026-08-26.md` had already retired the knee on independent "
+             "grounds -- per-swath misalignment -- so this changes the record, "
+             "not the current science.)")
+    o.append("")
+    o.append("Honest reading: the binned medians do deepen from about -10/-20 mm "
+             "below ~24 deg to about -40 mm at 27-35 deg, on top of a shallow, "
+             "non-monotone trend that no clean tan-law reproduces. Whether that "
+             "deepening is a genuine break or the steep end of a smooth curve is "
+             "NOT decided here. Calling it purely 'tan-law, no threshold' would "
+             "misstate the data; calling it an established knee overstates them.")
     o.append("")
 
     # oblique contrast
@@ -415,8 +441,10 @@ def main():
     o.append("## 4. Land-cover split at matched slope (near-nadir)")
     o.append("")
     o.append("Forest = canopy_cover > 0.5 cells; open = canopy_cover < 0.2 cells "
-             "(gen2-derived SPATIAL selector). Expect open to run out of cells on "
-             "steep ground (steep open ridgeline cells are near-absent in this tile).")
+             "(gen2-derived SPATIAL selector). Open thins with slope but does "
+             "not run out: it is still tens of thousands of returns per bin "
+             "well past 12 deg (see the counts in the table). Read every bin "
+             "against its own n.")
     o.append("")
     o.append("### 4a. canopy_cover selector")
     o.append("")
@@ -443,41 +471,41 @@ def main():
         o.append(f"| {lab} | {fs} | {os_} | {d} |")
     o.append("")
 
-    # where does the open comparison die + matched-slope verdict.
-    # Require a RELIABLE open n (>=2000) to trust a matched-slope median: the
-    # steep open cc<0.2 bins have n~30-3000 and swing +8 -> -150 mm (noise).
-    OPEN_RELIABLE = 2000
-    reliable = [(SLOPE_LABELS[i], m_for[i], m_open[i], n_open[i])
-                for i in range(len(SLOPE_LABELS))
-                if n_for[i] >= MIN_N and n_open[i] >= OPEN_RELIABLE]
+    # Matched-slope forest vs open. EVERY bin where both classes have at least
+    # one return is listed, with its counts, and no minimum-n cut: the reader
+    # judges reliability from n, which is printed, not from a hidden threshold.
+    matched = [(SLOPE_LABELS[i], m_for[i], m_open[i], n_for[i], n_open[i])
+               for i in range(len(SLOPE_LABELS))
+               if np.isfinite(m_for[i]) and np.isfinite(m_open[i])]
     o.append("**Matched-slope forest vs open (near-nadir):**")
     o.append("")
-    o.append(f"Open (cc<0.2) is only well-populated (n>={OPEN_RELIABLE:,}) on "
-             "GENTLE ground; steep open ridgeline/hillslope cells are near-absent "
-             "in this tile, so above ~12 deg the 'open' median rests on n~30-3000 "
-             "and swings wildly (+8 -> -150 mm) -- noise, not a matched-slope "
-             "comparison. The pfs_open mask (4b) empties out at high slope. "
-             "So the matched-slope canopy test can only be made where both are "
-             "reliably populated:")
+    n_open_tot = int(n_open.sum())
+    o.append("Both classes are listed in every slope bin that has returns in "
+             "each, with the counts alongside; no bin is suppressed for being "
+             "sparse. Open (cc<0.2) does thin with slope -- from "
+             f"n={n_open[0]:,} at 0-3 deg to n={n_open[-1]:,} above 40 deg out "
+             f"of {n_open_tot:,} near-nadir open returns -- so the steepest "
+             "open medians carry the widest uncertainty and should be read "
+             "against their n, not taken as equal to the dense low-slope ones:")
     o.append("")
-    for lab, mf, mo2, no in reliable:
+    for lab, mf, mo2, nf, no in matched:
         rel = "ABOVE (less low than)" if mf > mo2 else "BELOW (lower than)"
-        o.append(f"- slope {lab}: forest {mf:+.1f} mm vs open {mo2:+.1f} mm "
-                 f"(open n={no:,}) -- forest sits {rel} open by {mf-mo2:+.1f} mm")
+        o.append(f"- slope {lab}: forest {mf:+.1f} mm (n={nf:,}) vs open "
+                 f"{mo2:+.1f} mm (n={no:,}) -- forest sits {rel} open by "
+                 f"{mf-mo2:+.1f} mm")
     o.append("")
-    # summarise the reliable band
-    diffs = [mf - mo2 for _, mf, mo2, _ in reliable]
+    diffs = [mf - mo2 for _, mf, mo2, _, _ in matched]
     if diffs:
         md = float(np.median(diffs))
-        o.append(f"In the reliably-populated band (~0-12 deg), forest reads "
-                 f"{'LOWER' if md < 0 else 'HIGHER'} than open at matched slope by "
-                 f"a median {md:+.1f} mm -- a canopy/forest-floor term ON TOP of "
-                 "slope. This is the disentangling result: even at NEAR-NADIR and "
-                 "MATCHED SLOPE, forest ground reads lower than open ground, so "
-                 "the near-nadir low is not slope alone. The steep band where the "
-                 "gen1 low is largest (>27 deg) is ENTIRELY forest here (no steep "
-                 "open control), so slope and canopy cannot be separated there in "
-                 "this tile.")
+        o.append(f"Across all {len(matched):d} matched bins "
+                 f"({matched[0][0]} to {matched[-1][0]} deg), forest reads "
+                 f"{'LOWER' if md < 0 else 'HIGHER'} than open at matched slope "
+                 f"by a median {md:+.1f} mm -- a canopy/forest-floor term ON TOP "
+                 "of slope. This is the disentangling result: even at NEAR-NADIR "
+                 "and MATCHED SLOPE, forest ground reads lower than open ground, "
+                 "so the near-nadir low is not slope alone. The bin-to-bin "
+                 "difference is noisy and changes sign in places, so read the "
+                 "median across bins rather than any single bin.")
     o.append("")
 
     o.append("## Caveats")
@@ -508,11 +536,13 @@ def main():
     print(f"\ntan-law origin R^2={fit['tan0_r2']:.3f} "
           f"(slope {fit['tan0_slope']:.1f} mm/tan); "
           f"linear-in-slope R^2={fit['lin_r2']:.3f}; "
-          f"step@27 amp={fit['step_amp']:+.1f} mm F={fit['step_F']:.2f}")
-    print("\nForest vs open (near-nadir) where open reliably populated (n>=2000):")
-    for lab, mf, mo2, no in reliable:
+          f"step@27 amp={fit['step_amp']:+.1f} mm R^2={fit['step_r2']:.3f} "
+          f"F={fit['step_F']:.2f} p={fit['step_p']:.3f} "
+          f"(F_crit={fit['step_Fcrit']:.2f}, n_bins={fit['n']:d})")
+    print("\nForest vs open (near-nadir), every bin populated in both:")
+    for lab, mf, mo2, nf, no in matched:
         print(f"  {lab:>6s}: forest {mf:+.1f}  open {mo2:+.1f}  "
-              f"diff {mf-mo2:+.1f}  (open n={no:,})")
+              f"diff {mf-mo2:+.1f}  (forest n={nf:,}, open n={no:,})")
 
 
 if __name__ == "__main__":

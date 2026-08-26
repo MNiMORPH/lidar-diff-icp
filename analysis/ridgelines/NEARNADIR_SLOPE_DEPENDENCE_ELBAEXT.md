@@ -74,13 +74,17 @@ Fits of near-nadir median r vs slope (weighted by sqrt(n); ALL 13 populated slop
 | tan-law (+intercept) | r = -17.2 + 16.7 * tan(slope) | 0.140 |
 | linear in slope | r = -17.4 + 0.33 * slope | 0.139 |
 | knee: flat + ramp>27 | r = -13.8 + 0.19*(slope-27)+ | -0.016 |
-| tan-law + step@27 | tan + -19.8 mm step (F=4.72) | 0.416 |
+| tan-law + step@27 | tan + -19.8 mm step (F=4.72, p=0.055) | 0.416 |
 
 **Verdict.** The near-nadir curve is NEITHER a clean smooth tan-law NOR a clean flat-then-step. It is roughly flat at about -15 mm from 3-15 deg, RECOVERS toward 0 (-6 to -10 mm) at 18-24 deg, then drops sharply to about -40 to -44 mm at 27-35 deg. Over the full 0-45 deg range the best single smooth/knee fit is **tan+step@27** (R^2=0.416); the origin tan-law is a poor description (R^2=-0.902).
 
-Adding a step at 27 deg to the tan-law lifts R^2 from 0.140 to 0.416 (step -19.8 mm, F=4.72). So the '27 deg switch-on' does NOT dissolve into the tan-law: there is a real additional steepening near 27 deg on top of any smooth trend. The literature's warning (a smooth tan-curve crossing the detection floor) is only PARTLY right -- the tan-law alone does not reproduce the observed knee, and the recovery-then-drop across 18-30 deg is not a monotone tan shape at all.
+Adding a step at 27 deg to the tan-law lifts R^2 from 0.140 to 0.416 (step -19.8 mm), but adding a parameter always lifts R^2. The test that matters is the F-test: F=4.72 on (1,10) df, p=0.055, against a 5% critical value of 4.96.
 
-Honest reading: the *headline* is the sharp deepening of the near-nadir low from about -10/-20 mm below ~24 deg to about -40 mm above ~27 deg -- a knee, superimposed on a shallow, non-monotone trend, not a clean tan-law. Calling it purely 'tan-law, no threshold' would misstate the data; so would calling it a pure step from a flat baseline (the baseline is already ~-15 mm and dips/recovers before the knee).
+**The step does NOT clear its critical value, so the 27 deg switch-on is UNRESOLVED by this test.** What survives is the step AMPLITUDE (-19.8 mm); what is absent is evidence that a break is needed at all. These medians are consistent with a ~20 mm deepening near 27 deg and equally consistent with no break -- 13 bins cannot separate the two.
+
+_Correction to the record (2026-08-26)._ This fit previously excluded the two bins above 35 deg (`FIT_MAX_SLOPE = 35`, plus an unexposed `n >= 200`). On `elba_fulldensity` that truncation reported R^2 = 0.800 and F = 10.85, written up here and in the project memory as '27 deg switch-on is REAL ... NOT a tan-curve artifact'. The significance was an artefact of the truncation: untruncated the same fit gives R^2 = 0.267, F = 2.49, p = 0.146. The step AMPLITUDE was not an artefact -- -22.2 mm truncated vs -22.1 mm untruncated -- so the size of the effect stands and only the evidence for its being a discrete break falls away. (`FRAME_2026-08-26.md` had already retired the knee on independent grounds -- per-swath misalignment -- so this changes the record, not the current science.)
+
+Honest reading: the binned medians do deepen from about -10/-20 mm below ~24 deg to about -40 mm at 27-35 deg, on top of a shallow, non-monotone trend that no clean tan-law reproduces. Whether that deepening is a genuine break or the steep end of a smooth curve is NOT decided here. Calling it purely 'tan-law, no threshold' would misstate the data; calling it an established knee overstates them.
 
 ## 3. Near-nadir vs oblique contrast
 
@@ -120,7 +124,7 @@ Oblique |SA|>10 deg median r vs slope:
 
 ## 4. Land-cover split at matched slope (near-nadir)
 
-Forest = canopy_cover > 0.5 cells; open = canopy_cover < 0.2 cells (gen2-derived SPATIAL selector). Expect open to run out of cells on steep ground (steep open ridgeline cells are near-absent in this tile).
+Forest = canopy_cover > 0.5 cells; open = canopy_cover < 0.2 cells (gen2-derived SPATIAL selector). Open thins with slope but does not run out: it is still tens of thousands of returns per bin well past 12 deg (see the counts in the table). Read every bin against its own n.
 
 ### 4a. canopy_cover selector
 
@@ -160,22 +164,23 @@ Forest = canopy_cover > 0.5 cells; open = canopy_cover < 0.2 cells (gen2-derived
 
 **Matched-slope forest vs open (near-nadir):**
 
-Open (cc<0.2) is only well-populated (n>=2,000) on GENTLE ground; steep open ridgeline/hillslope cells are near-absent in this tile, so above ~12 deg the 'open' median rests on n~30-3000 and swings wildly (+8 -> -150 mm) -- noise, not a matched-slope comparison. The pfs_open mask (4b) empties out at high slope. So the matched-slope canopy test can only be made where both are reliably populated:
+Both classes are listed in every slope bin that has returns in each, with the counts alongside; no bin is suppressed for being sparse. Open (cc<0.2) does thin with slope -- from n=954,822 at 0-3 deg to n=1,028 above 40 deg out of 2,998,796 near-nadir open returns -- so the steepest open medians carry the widest uncertainty and should be read against their n, not taken as equal to the dense low-slope ones:
 
-- slope 0-3: forest -55.7 mm vs open -9.6 mm (open n=954,822) -- forest sits BELOW (lower than) open by -46.1 mm
-- slope 3-6: forest -61.5 mm vs open -25.9 mm (open n=897,055) -- forest sits BELOW (lower than) open by -35.6 mm
-- slope 6-9: forest -58.6 mm vs open -20.4 mm (open n=531,267) -- forest sits BELOW (lower than) open by -38.2 mm
-- slope 9-12: forest -42.1 mm vs open -16.4 mm (open n=195,981) -- forest sits BELOW (lower than) open by -25.6 mm
-- slope 12-15: forest -9.8 mm vs open -5.0 mm (open n=97,425) -- forest sits BELOW (lower than) open by -4.7 mm
-- slope 15-18: forest +40.7 mm vs open +7.9 mm (open n=67,491) -- forest sits ABOVE (less low than) open by +32.8 mm
-- slope 18-21: forest -3.7 mm vs open +13.5 mm (open n=60,492) -- forest sits BELOW (lower than) open by -17.3 mm
-- slope 21-24: forest -19.8 mm vs open +19.8 mm (open n=63,182) -- forest sits BELOW (lower than) open by -39.6 mm
-- slope 24-27: forest -40.8 mm vs open +3.7 mm (open n=56,164) -- forest sits BELOW (lower than) open by -44.5 mm
-- slope 27-30: forest -91.5 mm vs open -3.2 mm (open n=41,454) -- forest sits BELOW (lower than) open by -88.3 mm
-- slope 30-35: forest +8.9 mm vs open -18.7 mm (open n=28,146) -- forest sits ABOVE (less low than) open by +27.6 mm
-- slope 35-40: forest +150.7 mm vs open -75.7 mm (open n=4,289) -- forest sits ABOVE (less low than) open by +226.4 mm
+- slope 0-3: forest -55.7 mm (n=1,890) vs open -9.6 mm (n=954,822) -- forest sits BELOW (lower than) open by -46.1 mm
+- slope 3-6: forest -61.5 mm (n=4,060) vs open -25.9 mm (n=897,055) -- forest sits BELOW (lower than) open by -35.6 mm
+- slope 6-9: forest -58.6 mm (n=5,054) vs open -20.4 mm (n=531,267) -- forest sits BELOW (lower than) open by -38.2 mm
+- slope 9-12: forest -42.1 mm (n=3,363) vs open -16.4 mm (n=195,981) -- forest sits BELOW (lower than) open by -25.6 mm
+- slope 12-15: forest -9.8 mm (n=1,339) vs open -5.0 mm (n=97,425) -- forest sits BELOW (lower than) open by -4.7 mm
+- slope 15-18: forest +40.7 mm (n=700) vs open +7.9 mm (n=67,491) -- forest sits ABOVE (less low than) open by +32.8 mm
+- slope 18-21: forest -3.7 mm (n=604) vs open +13.5 mm (n=60,492) -- forest sits BELOW (lower than) open by -17.3 mm
+- slope 21-24: forest -19.8 mm (n=658) vs open +19.8 mm (n=63,182) -- forest sits BELOW (lower than) open by -39.6 mm
+- slope 24-27: forest -40.8 mm (n=1,151) vs open +3.7 mm (n=56,164) -- forest sits BELOW (lower than) open by -44.5 mm
+- slope 27-30: forest -91.5 mm (n=1,899) vs open -3.2 mm (n=41,454) -- forest sits BELOW (lower than) open by -88.3 mm
+- slope 30-35: forest +8.9 mm (n=2,792) vs open -18.7 mm (n=28,146) -- forest sits ABOVE (less low than) open by +27.6 mm
+- slope 35-40: forest +150.7 mm (n=681) vs open -75.7 mm (n=4,289) -- forest sits ABOVE (less low than) open by +226.4 mm
+- slope >40: forest +703.6 mm (n=1,100) vs open -300.6 mm (n=1,028) -- forest sits ABOVE (less low than) open by +1004.2 mm
 
-In the reliably-populated band (~0-12 deg), forest reads LOWER than open at matched slope by a median -30.6 mm -- a canopy/forest-floor term ON TOP of slope. This is the disentangling result: even at NEAR-NADIR and MATCHED SLOPE, forest ground reads lower than open ground, so the near-nadir low is not slope alone. The steep band where the gen1 low is largest (>27 deg) is ENTIRELY forest here (no steep open control), so slope and canopy cannot be separated there in this tile.
+Across all 13 matched bins (0-3 to >40 deg), forest reads LOWER than open at matched slope by a median -25.6 mm -- a canopy/forest-floor term ON TOP of slope. This is the disentangling result: even at NEAR-NADIR and MATCHED SLOPE, forest ground reads lower than open ground, so the near-nadir low is not slope alone. The bin-to-bin difference is noisy and changes sign in places, so read the median across bins rather than any single bin.
 
 ## Caveats
 
