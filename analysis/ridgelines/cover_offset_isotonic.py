@@ -103,7 +103,10 @@ hb = a0x.hexbin(x, np.clip(y, -400, 400), gridsize=(70, 45), bins="log", cmap="G
 fig.colorbar(hb, ax=a0x, label="log10 cells", pad=0.01)
 lowe = bs.quantile_edges(x[x <= 0.45], 10, first_edge=0.02)
 edges = np.unique(np.concatenate([lowe[lowe <= 0.45], [0.45, 0.55, 0.65, 0.75, 0.85, 1.0]]))
-ck = bs.binned_stats(x, y, edges, block=blk, min_n=5)
+# min_n=1 is binned_stats' definitional floor: no bin is dropped for being sparse. A
+# min_n of 5 removed exactly one bin, cover 0.85-1.00 -- the largest offset on the plot --
+# from a figure whose whole point is the high-cover end.
+ck = bs.binned_stats(x, y, edges, block=blk, min_n=1)
 a0x.errorbar(ck.x, ck.y, yerr=ck.se, xerr=[ck.x-ck.lo, ck.hi-ck.x], fmt="o", ms=5, capsize=2,
              color="C3", lw=1.3, zorder=6, label="binned medians ± block SE (bars = bin span)")
 xs = np.linspace(0, x.max(), 600)
@@ -112,15 +115,22 @@ a0x.fill_between(GRID, curve-se, curve+se, color="C2", alpha=.25, zorder=5)
 a0x.plot(xs, a0 + b0*xs, "--", lw=1.4, color="C0", zorder=4,
          label=f"straight line {a0:+.0f}{b0:+.0f}·cover")
 a0x.axhline(0, color="k", lw=.7)
-a0x.set_ylim(-400, 400); a0x.set_xlim(0, x.max()*1.01)
+# The axis must reach every binned point that is drawn, error bar included -- restoring
+# the sparse high-cover bin and then cropping it off the axis would hide it just as
+# effectively as the min_n did. The hexbin density itself is still clipped at +/-400.
+_ylo = min(-400.0, float((ck.y - ck.se).min()) * 1.03)
+_yhi = max(400.0, float((ck.y + ck.se).max()) * 1.03)
+a0x.set_ylim(_ylo, _yhi); a0x.set_xlim(0, x.max()*1.01)
 a0x.set_ylabel("offset d (mm)   [gen1 − gen2; + = lower in 2021]")
 a0x.set_title(f"offset vs cover, every cell shown — {TILE}\n"
-              f"divides, |Laplacian|≤{A.curv_max:g}, incidence<{A.inc_max:g}°, {len(y):,} cells",
+              f"divides, |Laplacian|≤{A.curv_max:g}, incidence<{A.inc_max:g}°, {len(y):,} cells\n"
+              f"(density shading clipped at ±400 mm; the binned points are not)",
               fontsize=10)
 a0x.legend(fontsize=8, loc="lower left"); a0x.grid(alpha=.3)
 for lo_, hi_, n_ in zip(ck.lo, ck.hi, ck.n):
     if lo_ >= 0.45:
-        a0x.annotate(f"n={n_}", (0.5*(lo_+hi_), -370), ha="center", fontsize=6.5, color="C3")
+        a0x.annotate(f"n={n_}", (0.5*(lo_+hi_), _ylo + 0.03*(_yhi-_ylo)),
+                     ha="center", fontsize=6.5, color="C3")
 ax[1].bar(0.5*(ck.lo+ck.hi), ck.n, width=(ck.hi-ck.lo)*0.9, color="0.6")
 ax[1].set_yscale("log"); ax[1].set_ylabel("cells per bin"); ax[1].set_xlabel("canopy cover (fraction)")
 ax[1].grid(alpha=.3)
