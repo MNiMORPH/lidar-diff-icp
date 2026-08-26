@@ -57,19 +57,21 @@ def copy_all_dims(src, out_hdr, mask):
 def core_mask(gx, gy, i, j, nx, ny, cx0, cx1, cy0, cy1):
     """Which of a halo tile's points belong to tile (i, j)'s CORE.
 
-    Half-open [cx0, cx1) x [cy0, cy1), widened to swallow the outer domain edges so
-    the NX*NY cores partition the domain exactly once -- no seam gap, no double count.
+    Half-open [cx0, cx1) x [cy0, cy1), with the OUTER domain edges opened to +-inf so a
+    point sitting exactly on x.max()/y.max() (or a hair outside, from float round-trips
+    through the LAS scale) still lands in the edge tile. The NX*NY cores then partition
+    the cloud exactly once -- no seam gap, no double count.
+
+    The edge opening must widen this tile's own BOUNDS, not OR in a whole half-plane:
+    ``core |= (gx >= cx1)`` for every i == nx-1 tile claims points at any northing, so
+    every tile in the last column claims the x.max() point and ``tests/test_csf_tiled.py``
+    sees it three times in a 3x3. That was the rule before 2026-08-26.
     """
-    core = (gx >= cx0) & (gx < cx1) & (gy >= cy0) & (gy < cy1)
-    if i == 0:
-        core |= (gx < cx0)
-    if i == nx - 1:
-        core |= (gx >= cx1)
-    if j == 0:
-        core |= (gy < cy0)
-    if j == ny - 1:
-        core |= (gy >= cy1)
-    return core
+    lo_x = -np.inf if i == 0 else cx0
+    hi_x = np.inf if i == nx - 1 else cx1
+    lo_y = -np.inf if j == 0 else cy0
+    hi_y = np.inf if j == ny - 1 else cy1
+    return (gx >= lo_x) & (gx < hi_x) & (gy >= lo_y) & (gy < hi_y)
 
 
 def run(src, out, nx, ny, overlap, tmpdir="data/derived/_csf_tiles_tmp"):
