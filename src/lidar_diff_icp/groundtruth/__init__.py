@@ -38,8 +38,21 @@ from .checkpoints import (
     list_bundled,
 )
 from .provenance import Param, declare
+from .tie import (
+    GroundReturns,
+    RadiusEstimate,
+    TieEstimate,
+    csf_ground_near,
+    estimate_tie,
+    geoid_shift_for,
+    ground_elevation_at,
+    radius_ladder,
+    vendor_ground_near,
+)
 __all__ = [
     "Checkpoint", "CheckpointSet", "UnknownDatumError", "load_bundled",
     "read_3dep_va_shapefile", "list_bundled",
     "Param", "declare",
+    "GroundReturns", "RadiusEstimate", "TieEstimate", "csf_ground_near", "estimate_tie",
+    "geoid_shift_for", "ground_elevation_at", "radius_ladder", "vendor_ground_near",
 ]
