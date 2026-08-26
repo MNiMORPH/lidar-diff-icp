@@ -4,39 +4,40 @@ Why this is not a one-liner
 ---------------------------
 The obvious estimator -- fit a plane to the ground returns within R of the mark and read
 it at the mark -- is **strongly radius-dependent** on real checkpoints. Measured on gen1
-at 3DEP checkpoint 2210 (line 128, 201 class-2 returns within 10 m), lidar minus
-surveyed:
+at 3DEP checkpoint 2210 (line 128, CSF ground, no datum terms), lidar minus surveyed in
+mm, with the RMS of the surface fit beneath:
 
-===========  ========  ========  ========  ========  ========
-R (m)             2         5        10        15        20
-plane          -109      -200      -589      -977     -1169
-plane RMS         39       132       543       776       824
-===========  ========  ========  ========  ========  ========
+======================  =====  =====  =====  =====  =====  =====  =====
+R (m)                     2.5    5.0    7.5   10.0   15.0   20.0   25.0
+order 1 (a plane)        -130   -190   -261   -385   -994  -1297  -1379
+    its fit RMS            45    133    329    553    777    827    825
+**order 2 (the fix)**   **-75**  **-85**  **-86**  **-81**   -284   -684   -964
+    its fit RMS            19     42    102    196    392    492    527
+======================  =====  =====  =====  =====  =====  =====  =====
 
-(mm.) A number that moves by a metre depending on an unstated radius is not a
-measurement.
+A number that moves by a metre depending on an unstated radius is not a measurement.
+(``analysis/ELBAEXT2_SCOPE.md`` §4 reports the same walk from a plane fit on the vendor
+class-2 ground: -200 mm at R=5, -589 at R=10, -1169 at R=20, plane residual 543 mm.)
 
 **The cause is curvature, not noise.** The mark sits on a local topographic high -- a
 road crown/shoulder, with the ground falling away within 10 m; the surveyed 349.288 m
 sits at the p95 of gen1 returns inside 5 m. A least-squares *plane* has no curvature
-term, so over a convex patch of curvature k its value at the centre is pulled low by
-~k*R^2/4: quadratic in R, which is exactly the shape of the row above (-109, -200, -589,
--1169 against R^2 = 4, 25, 100, 400).
+term, so over a patch of curvature k its value at the centre is displaced by ~k*R^2/2:
+quadratic in R, which is the shape of the first row.
 
 **The fix is the one this codebase already made for the same reason.**
 :func:`lidar_diff_icp.pipeline.difference_dem` carries a ``ground="poly2"`` estimator
 whose docstring says it plainly: a windowed 2nd-order polynomial read at its constant
 term is "curvature-UNBIASED, unlike the per-cell median (which carries the cell's
-curvature) or a plane (which has no curvature term)". Using order 2 here, on the same
-data:
+curvature) or a plane (which has no curvature term)". At order 2 the estimate is flat to
+**11 mm from R = 2.5 to 10 m** -- a 4x range of window -- and then breaks down at 15 m
+where the patch leaves a quadratic's reach. It says so as it goes: the fit RMS runs
+19 -> 42 -> 102 -> 196 -> 392 mm.
 
-===========  ========  ========  ========  ========  ========
-R (m)           2.5         5       7.5        10        15
-order 2         -75       -85       -86       -81      -284
-===========  ========  ========  ========  ========  ========
-
-Flat to ~11 mm across a 4x range of radius, then breaking down at 15 m where the patch
-leaves a quadratic's reach (and says so: the fit RMS goes 19 -> 43 -> 101 -> 183 -> 385 mm).
+The estimator is NOT a curve-fitting improvement dressed up as physics. Order 2 is the
+order the pipeline already reads its ground at; nothing is tuned per checkpoint, and the
+order is an argument, so ``surface_order=1`` reproduces the pathology on demand (which is
+how the regression test bites).
 
 What the estimator is
 ---------------------
