@@ -24,7 +24,11 @@ ap = argparse.ArgumentParser()
 ap.add_argument("--tile", default="data/derived/elba_fulldensity")
 ap.add_argument("--curv-max", type=float, default=0.015, help="|Laplacian| cut (near-planar cells)")
 ap.add_argument("--ridge", action="store_true", help="restrict to ridge_mask cells (divides: no overland flow)")
-ap.add_argument("--min-n", type=int, default=3, help="minimum returns per cell for a cell median")
+ap.add_argument("--min-n", type=int, default=1,
+                help="minimum returns per cell for a cell median. 1 is the definitional "
+                     "floor. Raising it re-selects toward OPEN, LOW-ANGLE ground -- the "
+                     "cells it drops are 14x enriched in canopy cover and sit at 30 deg "
+                     "median slope against 7 deg for those it keeps")
 ap.add_argument("--min-cells", type=int, default=1,
                 help="cells needed before a grid box is reported. 1 is the definitional "
                      "floor (a median needs a sample). Raising it blanks boxes the terrain "
