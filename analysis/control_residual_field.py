@@ -315,7 +315,7 @@ def main():
                                     f"{name},{est},{ml:.0f},{nl},{npair},{sd},"
                                     f"{L:.1f},{G:.2f},{C}")
                             if keep_emp is None:
-                                keep_emp = (cen, gam, cnt, mod)
+                                keep_emp = (cen, gam, cnt, mod, (nl, npair, sd))
                 fitted[(name, est, ml)] = keep_emp
                 table_rows.append([
                     name, est, fmt(ml, 0), fmt(np.median(nug), 0), fmt(np.median(sil), 0),
@@ -329,13 +329,15 @@ def main():
         f.write("\n".join(vgm_rows_csv) + "\n")
     print(f"\n  full empirical variogram sweep ({len(vgm_rows_csv)-1} bins) written to {a.vgm_csv}")
 
+    _nl, _np, _sd = fitted[(VARIANTS[0][0], estimators[0], max_lags[0])][4]
     print("\n## 5b  The empirical variogram itself, at the widest and narrowest swept "
-          f"max_lag, n_lags={n_lags_grid[-1]}, n_pairs={n_pairs_grid[-1]}, seed={seeds[0]}, "
-          f"estimator={estimators[0]}\n")
+          f"max_lag, estimator={estimators[0]}, n_lags={_nl}, n_pairs={_np}, seed={_sd} "
+          "(the settings of the stored fit, read back from it, not asserted)\n")
     emp_rows = []
     for name, _, _ in VARIANTS:
         for ml in (min(max_lags), max(max_lags)):
-            cen, gam, cnt, mod = fitted[(name, estimators[0], ml)]
+            cen, gam, cnt, mod, _cfg = fitted[(name, estimators[0], ml)]
+            assert _cfg == (_nl, _np, _sd)
             for L, G, C in zip(cen, gam, cnt):
                 emp_rows.append([name, fmt(ml, 0), fmt(L, 0), fmt(G, 0), int(C)])
     R.table(["variant", "max_lag_m", "lag_m", "gamma_mm2", "pairs"], emp_rows)
@@ -365,7 +367,9 @@ def main():
              "sd_field_mm"], cls_rows)
 
     # ------------------------------------------------------------------ §6 LOO check
-    print("\n## 6  The leave-one-out shortcut, checked against a full refit\n")
+    print(f"\n## 6  The leave-one-out shortcut, checked against a full refit "
+          f"(model fitted at max_lag={max_lags[0]:.0f}, n_lags={n_lags_grid[0]}, "
+          f"n_pairs={n_pairs_grid[0]}, estimator={estimators[0]}, seed={seeds[0]})\n")
     vrows = []
     for name, covers, vgm_on in VARIANTS:
         m = RF.stratify(cr, covers)
@@ -485,7 +489,9 @@ def main():
     print("  made on the vendor residual before it applies to our surface.\n")
 
     # ------------------------------------------------------------------ §10 selection bias
-    print("\n## 10  Where the selected marks sit relative to their own local field\n")
+    print(f"\n## 10  Where the selected marks sit relative to their own local field "
+          f"(field fitted at max_lag={max_lags[0]:.0f}, n_lags={n_lags_grid[-1]}, "
+          f"n_pairs={n_pairs_grid[-1]}, estimator={estimators[0]}, seed={seeds[0]})\n")
     sb_rows = []
     for name, covers, vgm_on in VARIANTS:
         m = RF.stratify(cr, covers)
@@ -555,6 +561,11 @@ def main():
     R.done(headline=f"control residual field kriged to {a.site_name}")
 
 
+def fitted_lags(fitted, est):
+    """The swept max_lag values present in the fitted dict for one estimator."""
+    return sorted({k[2] for k in fitted if k[1] == est})
+
+
 def make_figure(a, cr, site, fitted, table_rows, max_lags, estimators, sets, id_to_i):
     import matplotlib
     matplotlib.use("Agg")
@@ -566,16 +577,22 @@ def make_figure(a, cr, site, fitted, table_rows, max_lags, estimators, sets, id_
     INK2 = "#52514e"
     GRID = "#e3e2de"
 
-    fig = plt.figure(figsize=(13.0, 8.6), facecolor=SURF)
-    gs = fig.add_gridspec(2, 3, hspace=0.34, wspace=0.26)
+    fig = plt.figure(figsize=(13.0, 9.0), facecolor=SURF)
+    gs = fig.add_gridspec(2, 3, hspace=0.36, wspace=0.26, top=0.90)
 
     est = estimators[0]
+    nl, npair, sd = fitted[(VARIANTS[0][0], est, min(fitted_lags(fitted, est)))][4]
+    fig.suptitle(
+        f"2008 MnDNR control residual as a field, kriged to {a.site_name}   |   "
+        f"empirical variogram: estimator={est}, n_lags={nl}, n_pairs={npair:,}, seed={sd}"
+        f"   |   curves = one fit per swept max lag",
+        color=INK2, fontsize=9.5, x=0.012, ha="left", y=0.975)
     for k, (name, _, _) in enumerate(VARIANTS):
         ax = fig.add_subplot(gs[0, k])
         ax.set_facecolor(SURF)
         col = SERIES_COLOR[name]
         for j, ml in enumerate(max_lags):
-            cen, gam, cnt, mod = fitted[(name, est, ml)]
+            cen, gam, cnt, mod, _cfg = fitted[(name, est, ml)]
             alpha = 0.30 + 0.65 * j / max(len(max_lags) - 1, 1)
             ax.plot(cen / 1000.0, gam / 1000.0, "o", ms=3.5, color=col, alpha=alpha,
                     mec="none", zorder=2)
