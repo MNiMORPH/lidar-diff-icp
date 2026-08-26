@@ -215,9 +215,9 @@ class TieEstimate:
                 r.note for r in self.curve if r.note)
         return (self.radius_spread_mm <= tolerance_mm), why
 
+    #: The radii that set ``sigma_mm``; filled in by :func:`estimate_tie`.
     def _pipeline_radii(self):
-        return [r.radius_m for r in self.curve if r.ok and r.radius_m <= self.report_radius_m
-                * 4.0 / 3.0]
+        return getattr(self, "_scale_radii", [])
 
     def table_rows(self):
         """Rows for the radius curve, matching :meth:`table_columns`."""
@@ -412,6 +412,7 @@ def geoid_shift_for(checkpoint, *, box_m=500.0, before_geoid="us_noaa_geoid03_co
 def estimate_tie(checkpoint, ground: GroundReturns, *, line=None, res=5.0,
                  radii=None, report_radius=None, surface_order=2, quantile=0.50,
                  swath_shift_m=(0.0, 0.0, 0.0), geoid_shift_m=None,
+                 scale_radii=(0.5, 2.0),
                  geoid_before="us_noaa_geoid03_conus.tif", crs="EPSG:26915") -> TieEstimate:
     """Tie one checkpoint to a lidar cloud, over a ladder of radii.
 
@@ -424,6 +425,12 @@ def estimate_tie(checkpoint, ground: GroundReturns, *, line=None, res=5.0,
                     alignment that brings ``line`` into the reference swath's frame.
     ``geoid_shift_m`` added to gen1 z. ``None`` computes it from the PROJ grids for this
                     checkpoint's geoid model (:func:`geoid_shift_for`).
+    ``scale_radii``  the (lo, hi) MULTIPLES OF ``res`` over which the reported
+                    uncertainty is taken -- the window sizes the pipeline's own ground
+                    estimators work at: ``res/2`` is the cell half-width the slope-normal
+                    read uses, ``2*res`` is one cell beyond ``_poly2_ground``'s 3x3
+                    window. This selects which part of the ladder sets ``sigma_mm``; it
+                    NEVER removes a radius, and the full ladder is always in ``.curve``.
 
     Everything that could bias the answer is returned in ``.params`` with its origin, so
     a caller can declare it into a ``trust.provenance.Run`` without retyping it.
@@ -466,7 +473,8 @@ def estimate_tie(checkpoint, ground: GroundReturns, *, line=None, res=5.0,
     # actually work at, res/2 (cell half-width) through 2*res. The spread ACROSS those
     # is the honest uncertainty; the tail radii are kept in the curve to show the
     # local fit breaking down, not to widen the error bar.
-    scale = [r for r in good if 0.5 * res <= r.radius_m <= 2.0 * res]
+    lo, hi = (float(scale_radii[0]) * res, float(scale_radii[1]) * res)
+    scale = [r for r in good if lo <= r.radius_m <= hi]
     ties_scale = [tie_at(r) for r in scale]
     ties_all = [tie_at(r) for r in good]
     spread = (max(ties_scale) - min(ties_scale)) if len(ties_scale) > 1 else np.nan
@@ -483,6 +491,10 @@ def estimate_tie(checkpoint, ground: GroundReturns, *, line=None, res=5.0,
         Param("ground_quantile", quantile, "repo", _SRC_Q),
         Param("surface_order", surface_order, "repo", _SRC_ORDER),
         Param("report_radius_m", report_radius, "repo", _SRC_WINDOW),
+        Param("uncertainty_radii_m", (lo, hi), "repo",
+              "the window sizes the pipeline's own ground estimators work at (res/2 = the "
+              "slope-normal cell half-width, 2*res = one cell beyond _poly2_ground's 3x3 "
+              "window); it selects which radii set sigma and removes none of them"),
         Param("radius_ladder_m", list(radii), "repo",
               "multiples of res: res/2 (cell half-width) .. 5*res, so the local fit's "
               "breakdown is shown rather than cropped"),
@@ -502,7 +514,7 @@ def estimate_tie(checkpoint, ground: GroundReturns, *, line=None, res=5.0,
     if cp.point_type.upper() == "VVA":
         notes.append("VVA checkpoint (under vegetation): the published 3DEP spread for this "
                      "class is 27 cm at the 95th percentile, against 3.5 cm RMSE for NVA")
-    return TieEstimate(
+    out = TieEstimate(
         point_id=cp.point_id, point_type=cp.point_type, line=line, curve=curve,
         report_radius_m=report_radius, z_lidar_raw_m=z_raw,
         swath_shift_m=tuple(float(v) for v in swath_shift_m), geoid_shift_m=geoid_shift_m,
@@ -510,3 +522,5 @@ def estimate_tie(checkpoint, ground: GroundReturns, *, line=None, res=5.0,
         radius_spread_all_mm=spread_all, fit_se_mm=se,
         sigma_mm=(0.5 * spread if np.isfinite(spread) else np.nan),
         params=params, notes=notes)
+    out._scale_radii = [r.radius_m for r in scale]
+    return out

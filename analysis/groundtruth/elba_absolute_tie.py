@@ -65,6 +65,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--ground", choices=("csf", "vendor"), default="csf",
                     help="ground source for the tie (repo default: csf)")
+    ap.add_argument("--cover-radius", type=float, default=10.0,
+                    help="radius within which a flight line counts as covering a mark, m")
     ap.add_argument("--csf-halfwidth", type=float, default=300.0,
                     help="half-width of the crop CSF is run on, m")
     ap.add_argument("--east", dest="east", action="store_true", default=True)
@@ -95,6 +97,10 @@ def main():
     R.param("verdict_tolerance_mm", GEN1_WINONA_RMSE_MM, src="repo", why=TOL_SOURCE)
     R.param("ground_source", A.ground, src="repo",
             why="data/derived/elbaext/corrections_geoid.json ground_source = csf")
+    R.param("covering_line_radius_m", A.cover_radius, src="repo",
+            why="ELBAEXT2_SCOPE.md section 2 counts covering returns within 10 m of each "
+                "mark (173-201 class-2 returns there); it only decides which lines are "
+                "candidate chain sources, not which returns enter the tie")
     R.param("csf_crop_halfwidth_m", A.csf_halfwidth, src="MINE",
             why="CSF is run on a crop, not a tile, to keep it seconds instead of minutes; "
                 "300 m gives a 600 m box (~350k gen1 points) so the cloth is not dominated "
@@ -198,8 +204,8 @@ def main():
         cov = K.covering_lines(K.build_inventory([tile], cache_dir=CACHE,
                                                  inventory_json=os.path.join(
                                                      CACHE, "cp_inventory.json")),
-                               cp.easting, cp.northing, 10.0)
-        print(f"  covering lines within 10 m: " +
+                               cp.easting, cp.northing, A.cover_radius)
+        print(f"  covering lines within {A.cover_radius:g} m: " +
               ", ".join(f"{k} ({v} returns)" for k, v in cov.items()))
         paths = K.plan_path(graph, inv, source_lines=list(cov), target_lines=target_lines)
         if not paths:
