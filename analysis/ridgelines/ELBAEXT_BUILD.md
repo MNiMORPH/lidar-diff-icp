@@ -66,7 +66,7 @@ over the full ~4.6×4.35 km footprint. The machine had only ~18 GB free (swap ex
 and elbaext at ~4× the original elba point count/area exceeded it. The original elba
 tile (7.7M pts) fit; elbaext did not. No cache was written on failure (no corruption).
 
-**Fix — tiled CSF into the cache** (`analysis/slope_bias/elbaext_csf_tiled.py`): CSF is
+**Fix — tiled CSF into the cache** (`analysis/slope_bias/csf_tiled.py`): CSF is
 spatially local (cloth relaxes on a 1 m grid, edge reach a few cells), so the gen1 cloud
 was classified in a **2×2 grid (~4.3–5.0M pts/tile) with a 150 m overlap halo**, keeping
 each tile's CORE (verified to partition every point exactly once) and concatenating the
@@ -149,7 +149,7 @@ plus `stable.npy` and `meta.json`.)
 
 - `analysis/slope_bias/elbaext_regrid.py` — the regrid driver (mirrors
   `fulldensity_regrid.py`; the differences are documented inline).
-- `analysis/slope_bias/elbaext_csf_tiled.py` — tiled CSF that fills the gen1 ground cache.
+- `analysis/slope_bias/csf_tiled.py` — tiled CSF that fills the gen1 ground cache.
 - `analysis/slope_bias/elbaext_extract_gen2_ground.py` — extracts the gen2 class-2 ground.
 
 ## Input artifacts
