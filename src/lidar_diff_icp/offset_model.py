@@ -172,13 +172,15 @@ def surface_centres(slope_edges, cover_edges):
     return np.meshgrid(s, c, indexing="ij")
 
 
-def matched_band_effects(held, varied, value, edges, min_n=200):
+def matched_band_effects(held, varied, value, edges, min_n=2):
     """Fit ``value`` on ``varied`` inside each band of ``held``: the covariance control.
 
     Holding one predictor inside a narrow band and regressing on the other removes the
     confounding by construction, with no functional form imposed on the held variable.
     Returns a list of ``(lo, hi, n, d value/d varied, varied_min, varied_max)``; the
-    gradient is NaN for bands with fewer than ``min_n`` samples.
+    gradient is NaN for bands with fewer than ``min_n`` samples. ``min_n`` defaults to 2,
+    the definitional floor for a two-parameter line fit -- the count is returned alongside
+    every gradient, so a sparse band is judged by its n rather than deleted for being one.
     """
     held = np.asarray(held, float); varied = np.asarray(varied, float)
     value = np.asarray(value, float); edges = np.asarray(edges, float)
@@ -186,7 +188,7 @@ def matched_band_effects(held, varied, value, edges, min_n=200):
     for lo, hi in zip(edges[:-1], edges[1:]):
         m = (held >= lo) & (held < hi)
         n = int(m.sum())
-        if n < min_n:
+        if n < max(2, min_n):
             rows.append((float(lo), float(hi), n, float("nan"), float("nan"), float("nan")))
             continue
         b = _lstsq(np.column_stack([np.ones(n), varied[m]]), value[m])
