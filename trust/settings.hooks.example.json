@@ -1,0 +1,59 @@
+{
+  "_comment": [
+    "MERGE the `hooks` and `env` blocks below into .claude/settings.json (or",
+    "settings.local.json) BY HAND. This file is inert where it sits.",
+    "",
+    "Adoption tiers -- set TRUST_LEVEL:",
+    "  core   N1 N2 P S  'is this number real'   measured 4% of replies blocked",
+    "  normal + I V      'and is it legible'     measured 14%",
+    "  strict + N3       'and is it labelled'    requires trust/provenance.py adoption first",
+    "  off    disables everything",
+    "",
+    "TRUST_OFF=1 in the shell environment also disables everything. That switch is",
+    "Andy's; the assistant has no in-band override, deliberately.",
+    "",
+    "Interpreter: `python3` is used below because both hooks are stdlib-only.",
+    "Timeout 20s is ample -- measured 0.93s on a 113 MB transcript."
+  ],
+  "env": {
+    "TRUST_LEVEL": "core"
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/trust/hooks/stop_gate.py\"",
+            "timeout": 20,
+            "statusMessage": "trust gate"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/trust/hooks/stop_gate.py\"",
+            "timeout": 20,
+            "statusMessage": "trust gate (subagent)"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/trust/hooks/banner_gate.py\"",
+            "timeout": 20
+          }
+        ]
+      }
+    ]
+  }
+}

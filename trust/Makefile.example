@@ -1,0 +1,36 @@
+# trust/Makefile.example -- OPTIONAL, tier 4, and deliberately narrow.
+#
+# Snakemake/make as a repo-wide requirement is REJECTED (see TRUST_SYSTEM.md): it would
+# mean restructuring ~60 ad-hoc analysis scripts, and it would NOT have caught any of the
+# failures under review -- the vendor/CSF substitution happened INSIDE a script that
+# legitimately reads both files, which no dependency graph can see.
+#
+# What make does earn: answers that get re-derived. An answer file whose prerequisites
+# are declared cannot be silently regenerated from a stale input, and `make -n` says what
+# is out of date without running anything. Use it ONLY for answers that have been
+# re-derived at least twice. Copy to the repo root as `Makefile` if adopted.
+
+PY      := ./lidar-icp/bin/python
+TILE    := data/derived/elba_fulldensity
+ANSWERS := analysis/answers
+
+# Every answer target: prerequisites are the ACTUAL files the script reads, which the
+# run ledger already records -- so `make` and trust/provenance.py stay consistent.
+$(ANSWERS)/gen2_csf_vs_vendor.md: analysis/ridgelines/gen2_csf_compare.py \
+                                  $(TILE)/z_after.npy \
+                                  $(TILE)/canopy_cover_pfs.npy \
+                                  data/csf_cache/elba_gen2_patch.las
+	@mkdir -p $(@D)
+	env -u PROJ_DATA -u GDAL_DATA $(PY) $< --tile $(TILE) | tee $@.stdout
+	@echo "stdout captured to $@.stdout -- paste it into the Measurement section of $@"
+
+# Which answers are stale, without running anything:
+.PHONY: stale
+stale:
+	@$(MAKE) -n --always-make --dry-run 2>/dev/null | grep -E '^\S+\.py' || echo "nothing to rebuild"
+
+# Which recorded runs read a file that has since changed on disk (this is the check that
+# actually replaces make for the other ~60 scripts):
+.PHONY: check-ledgers
+check-ledgers:
+	@$(PY) trust/check_ledgers.py
