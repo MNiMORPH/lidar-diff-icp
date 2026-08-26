@@ -1,9 +1,13 @@
 """gen1's datum from its own 2008 control -- against data whose answer is known.
 
-``test_duplicate_rows_are_merged_so_one_mark_is_weighted_once`` is a regression test in
-the strict sense: it was shown to FAIL with the merge removed, and the failure is
-recorded in ``analysis/GEN1_DATUM_MODULE.md`` §7. The bundled CSV publishes 41 rows
-twice, because a mark on a county line appears in both counties' validation reports.
+Two of these are regression tests in the strict sense: each was shown to FAIL with the
+code under test removed, and the failure recorded in ``analysis/GEN1_DATUM_MODULE.md`` §7.
+
+* ``test_line_assignment_comes_from_the_returns_not_the_centreline`` -- build a mark that
+  sits closest to line A's fitted centreline while every ground return under it belongs
+  to line B. Assigning by centreline gives A; the module must give B.
+* ``test_duplicate_rows_are_merged_so_one_mark_is_weighted_once`` -- the bundled CSV
+  publishes 41 rows twice (marks on county lines appear in both counties' reports).
 """
 import json
 
@@ -128,6 +132,14 @@ def test_a_different_vertical_datum_is_refused_too():
         G.assert_no_geoid_conversion([_mark("A", 0, 0, 1.0, vdatum="NGVD29")])
 
 
+def test_the_assertion_runs_inside_a_measurement():
+    x, y = _disc()
+    g = _returns(x, y, 100.0, 7)
+    with pytest.raises(G.DatumMismatchError):
+        G.measure_site(_site("A", 0, 0, 100.0, geoid="GEOID18"), "fake.laz",
+                       ground_loader=_loader(g))
+
+
 def test_the_bundled_control_is_all_on_gen1s_own_geoid():
     cs = G.load_control()
     assert G.assert_no_geoid_conversion(list(cs)).startswith("no geoid conversion")
@@ -195,3 +207,164 @@ def test_tiles_are_reported_as_on_disk_or_to_fetch_and_never_fetched(tmp_path, m
     assert res.path_for("AWAY") is None
     assert res.per_mark == {"HERE": "4342-29-64", "AWAY": "9999-99-99"}
     assert set(res.table_columns()) >= {"tile", "on_disk", "n_marks"}
+
+
+def test_a_missing_tile_is_skipped_with_its_reason_or_raises(tmp_path, monkeypatch):
+    import lidar_diff_icp.tiles as tiles
+    monkeypatch.setattr(tiles, "find_tile", lambda e, n, **kw: "9999-99-99")
+    res = G.resolve_tiles([_site("AWAY", 1.0, 0.0, 1.0)], [tmp_path])
+    meas, skipped = G.measure_sites([_site("AWAY", 1.0, 0.0, 1.0)], res)
+    assert meas == []
+    assert skipped == [("AWAY", "9999-99-99", "tile not on disk")]
+    with pytest.raises(FileNotFoundError, match="never downloads"):
+        G.measure_sites([_site("AWAY", 1.0, 0.0, 1.0)], res, on_missing="raise")
+
+
+# -------------------------------------------------- flight lines FROM THE RETURNS
+
+def test_line_assignment_comes_from_the_returns_not_the_centreline():
+    """REGRESSION, proven to fail without the returns-based assignment.
+
+    The mark sits 100 m from line 136's fitted track and 900 m from line 137's, so a
+    centreline assignment calls it 136. Every ground return under it carries
+    ``point_source_id`` 137 -- the acquisition's own record of which sortie lit the
+    ground. The module must say 137.
+    """
+    e, n = 100.0, 500.0
+    tracks = {136: ((0.0, 0.0), (0.0, 10_000.0)), 137: ((1000.0, 0.0), (1000.0, 10_000.0))}
+    nearest_track = min(tracks, key=lambda k: G._point_segment_distance(
+        e, n, *tracks[k][0], *tracks[k][1]))
+    assert nearest_track == 136                       # what the centreline rule would say
+
+    x, y = _disc(cx=e, cy=n)
+    got = G.assign_line_from_returns(_returns(x, y, 100.0, 137), e, n, 7.5)
+    assert got.dominant == 137
+    assert got.n_lines == 1
+    assert not got.mixed
+    assert got.dominant_fraction == pytest.approx(1.0)
+
+
+def test_a_mark_lit_by_two_lines_is_flagged_and_counted_not_dropped():
+    x, y = _disc(n=2000)
+    lines = np.where(x < 0, 136, 137)
+    a = G.assign_line_from_returns(_returns(x, y, 100.0, lines), 0.0, 0.0, 7.5)
+    assert a.mixed and a.n_lines == 2
+    assert set(a.counts) == {136, 137}
+    assert a.n == sum(a.counts.values())
+    assert 0.0 < a.dominant_fraction < 1.0
+
+    m = G.measure_site(_site("MIX", 0.0, 0.0, 100.0), "fake.laz",
+                       ground_loader=_loader(_returns(x, y, 100.0, lines)))
+    assert m.line.mixed
+    assert any("flight lines at the mark" in s for s in m.notes)
+    assert set(m.per_line_tie_mm) == {136, 137}
+
+
+def test_an_empty_window_gives_no_line_rather_than_a_guess():
+    a = G.assign_line_from_returns(_returns([1000.0], [1000.0], [1.0], 5), 0.0, 0.0, 7.5)
+    assert a.dominant is None and a.counts == {} and a.n_lines == 0
+
+
+def test_the_assignment_radius_is_the_report_radius_of_the_estimator():
+    x, y = _disc(cx=0.0, cy=0.0, r=30.0)
+    lines = np.where(np.hypot(x, y) < 7.5, 137, 999)   # 999 only outside the report radius
+    m = G.measure_site(_site("R", 0.0, 0.0, 100.0), "fake.laz",
+                       ground_loader=_loader(_returns(x, y, 100.0, lines)), res=5.0)
+    assert m.line.radius_m == pytest.approx(7.5)
+    assert m.line.dominant == 137 and not m.line.mixed
+
+
+# ------------------------------------------------------------- measurement + screen
+
+def test_a_known_offset_is_recovered_with_no_geoid_and_no_lateral_term():
+    m = _flat_site_measure("A", 0.123, 137)
+    assert m.tie_mm == pytest.approx(123.0, abs=1e-3)
+    assert m.swath_shift_m == (0.0, 0.0, 0.0)
+    p = {q.name: q for q in m.params}
+    assert p["geoid_shift_m"].value == 0.0
+    assert p["lateral_shift_m"].value is None
+    assert "no place in gen1 vs its own control" in p["lateral_shift_m"].why
+
+
+def test_the_screen_reports_the_statistics_and_applies_no_cut():
+    x, y = _disc()
+    z = 100.0 + 0.10 * x - 0.05 * y                 # a 10%/5% plane, no relief beyond it
+    m = G.measure_site(_site("S", 0.0, 0.0, 100.0), "fake.laz",
+                       ground_loader=_loader(_returns(x, y, z, 137)))
+    s = m.screen
+    assert s.n > 0
+    assert s.slope_deg == pytest.approx(np.degrees(np.arctan(np.hypot(0.10, 0.05))), abs=1e-6)
+    assert s.fit_rms_mm == pytest.approx(0.0, abs=1e-6)
+    assert s.radius_spread_mm == pytest.approx(0.0, abs=1e-6)
+    assert s.relief_mm > 0
+    assert set(G.SitingScreen.table_columns()) == {
+        "n", "slope_deg", "relief_mm", "fit_rms_mm", "radius_spread_mm"}
+
+
+def test_the_crop_half_width_is_derived_and_cannot_truncate_the_ladder():
+    m = _flat_site_measure("A", 0.010, 137)
+    p = {q.name: q for q in m.params}
+    assert p["crop_half_width_m"].value == pytest.approx(25.0)      # 5 * res
+    assert "DERIVED" in p["crop_half_width_m"].why
+    x, y = _disc()
+    with pytest.raises(ValueError, match="smaller than the largest fitting radius"):
+        G.measure_site(_site("A", 0.0, 0.0, 100.0), "fake.laz",
+                       ground_loader=_loader(_returns(x, y, 100.0, 137)),
+                       crop_half_width_m=10.0)
+
+
+def test_a_bigger_crop_changes_nothing_for_a_vendor_class_read():
+    """The derived half-width is the smallest square holding every fitting window, so a
+    larger one cannot move the answer -- which is why it is derived and not chosen."""
+    x, y = _disc(r=200.0, n=20000)
+    g = _returns(x, y, 100.0 + 0.03 * x, 137)
+    a = G.measure_site(_site("A", 0.0, 0.0, 100.0), "f.laz", ground_loader=_loader(g))
+    b = G.measure_site(_site("A", 0.0, 0.0, 100.0), "f.laz", ground_loader=_loader(g),
+                       crop_half_width_m=300.0)
+    assert a.tie_mm == pytest.approx(b.tie_mm, abs=1e-9)
+
+
+def test_the_swath_constant_moves_the_tie_by_its_dz_and_is_recorded():
+    plain = _flat_site_measure("A", 0.0, 137)
+    shifted = _flat_site_measure("A", 0.0, 137,
+                                 swath_constants={137: (0.0, 0.0, -0.020)},
+                                 swath_constants_source="test corrections.json")
+    assert plain.tie_mm == pytest.approx(0.0, abs=1e-6)
+    assert shifted.tie_mm == pytest.approx(20.0, abs=1e-3)
+    assert shifted.swath_constant_source == "test corrections.json"
+
+
+def test_a_line_with_no_constant_is_flagged_not_dropped():
+    m = _flat_site_measure("A", 0.0, 999, swath_constants={137: (0.0, 0.0, -0.02)},
+                           swath_constants_source="test")
+    assert m.swath_constant_source == ""
+    assert any("no swath constant for line 999" in s for s in m.notes)
+
+
+def test_the_gen2_lateral_shift_is_opt_in_and_recorded_when_taken():
+    x, y = _disc()
+    g = _returns(x, y, 100.0 + 0.10 * x, 137)         # 10% east slope: a shift moves z
+    off = G.measure_site(_site("A", 0.0, 0.0, 100.0), "f.laz", ground_loader=_loader(g))
+    on = G.measure_site(_site("A", 0.0, 0.0, 100.0), "f.laz", ground_loader=_loader(g),
+                        lateral_shift_m=(-0.75, -0.19))
+    assert off.tie_mm != pytest.approx(on.tie_mm)
+    # the returns move 0.75 m west, so the surface read at the mark climbs 0.10*0.75 m
+    # and the tie (surveyed - lidar) falls by that much
+    assert on.tie_mm - off.tie_mm == pytest.approx(-0.10 * 0.75 * 1000.0, rel=1e-6)
+    p = {q.name: q for q in on.params}
+    assert p["lateral_shift_m"].value == (-0.75, -0.19)
+    assert p["lateral_shift_m"].src == "andy"
+    assert any("cross-epoch term" in s for s in on.notes)
+
+
+def test_swath_constants_are_read_from_a_corrections_json(tmp_path):
+    p = tmp_path / "corrections.json"
+    p.write_text(json.dumps({"per_swath_internal_alignment_dxdydz_m":
+                             {"135": [0, 0, 0], "136": [0.32, -0.08, -0.018]},
+                             "swath_tie": "intercept", "ground_source": "csf", "res_m": 5.0}))
+    const, src = G.swath_constants_from_corrections(p)
+    assert const == {135: (0.0, 0.0, 0.0), 136: (0.32, -0.08, -0.018)}
+    assert "swath_tie='intercept'" in src and str(p) in src
+    (tmp_path / "empty.json").write_text("{}")
+    with pytest.raises(KeyError):
+        G.swath_constants_from_corrections(tmp_path / "empty.json")
