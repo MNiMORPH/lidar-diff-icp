@@ -74,6 +74,28 @@ def surface_gradients(z, res):
     return gx, gy, np.sqrt(gx ** 2 + gy ** 2 + 1.0)
 
 
+def read_corrections(tile_dir):
+    """The tile's corrections sidecar, by the project-wide precedence.
+
+    ``corrections_geoid.json`` wins over ``corrections.json`` where both exist: a tile
+    rebuilt onto the geoid-only datum writes the former and LEAVES the older
+    ``reference_plane`` product in place beside it (elbaext carries both). Reading
+    ``corrections.json`` by name therefore silently picks the obsolete datum on exactly
+    the tiles that have been brought up to date -- which is the bug this exists to stop.
+
+    Precedence is by FILENAME, matching :func:`read_cross_epoch_datum` and the rest of the
+    codebase. That is a convention, not a check on content; if a tile ever writes a
+    non-geoid datum to the ``_geoid`` name this picks the wrong one. Callers that care
+    should assert on ``cross_epoch_datum["method"]``.
+    """
+    for fn in _CORRECTION_FILES:
+        p = os.path.join(tile_dir, fn)
+        if os.path.exists(p):
+            return json.load(open(p))
+    raise FileNotFoundError(
+        f"no corrections file in {tile_dir} (looked for {', '.join(_CORRECTION_FILES)})")
+
+
 def read_cross_epoch_datum(tile_dir):
     """The tile's ``cross_epoch_datum`` block (geoid const/tilt/centroid + lateral shift).
 
