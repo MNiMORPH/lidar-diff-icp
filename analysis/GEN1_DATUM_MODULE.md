@@ -8,6 +8,10 @@
 **Supersedes as method, not as result:** the throwaway `screen_marks.py` in the session
 scratchpad, which measured 43 marks with the line taken from distance to a fitted
 centreline
+**Written in parallel with:** `analysis/GEN1_DATUM_MORE_MARKS.md` and
+`analysis/groundtruth/gen1_more_marks_{tie,report}.py`, which do the same measurement as
+scripts inside lines 133-138. The two agree where they overlap (§4, §7); folding those
+scripts onto this module is an open item, not done here.
 
 Every number below is pasted from a command run while writing this file. Where a number
 from another document could not be re-derived it is marked `UNVERIFIED` and its source
@@ -191,6 +195,28 @@ statistic cannot tell a real grouping from a tidy one. What matters is the 37.0 
 in the estimate, and that the 9 relabelled marks are, on the acquisition's own record,
 under different aircraft passes than the label said.
 
+### Where the centreline proxy actually fails, and where it does not
+
+The mechanism is the **track set**, not the geometry. The candidate list held only
+15 tracks – `[128, 131, 132, 133, 134, 135, 136, 137, 138, 140, 142, 143, 144, 145, 149]`
+– so a mark 6.7 km from every one of them was still handed the nearest. **All 9
+disagreements have a returns-line outside that set** (124, 127, 150, 151, 153, 156, 1542),
+verified:
+
+```
+track set the candidate list knew: [128, 131, 132, 133, 134, 135, 136, 137, 138, 140, 142, 143, 144, 145, 149]
+disagreements whose RETURNS-line is outside that track set: 9 of 9
+```
+
+`analysis/GEN1_DATUM_MORE_MARKS.md` §3, written in parallel with this, establishes the
+complementary half and it is worth stating here: within a **complete** local track set the
+proxy is not merely close, it coincides, because the vendor cuts the bare-earth ground
+class at a **seam on the perpendicular bisector between adjacent lines** – exactly the
+partition "nearest centreline" computes. So the returns-based assignment is not a
+correction to a sloppy proxy at short range; it is what makes the proxy safe to abandon
+when the track set is partial, which is every site the statewide workflow has not already
+fitted tracks for.
+
 ---
 
 ## 5. Negative result: the siting screen does not help
@@ -295,11 +321,21 @@ was`. Ledgers are in `.trust/runs/`.
 
 ### What I could NOT verify
 
-* **`F = 8.63` over 43 marks.** `FRAME_2026-08-26-PM.md` and the task brief both carry it.
-  Recomputing a one-way ANOVA on the scratchpad `screen_results.csv` – the 43 `ok` rows,
-  grouped by its own `line` column – gives **`F=5.9404 p=3.233e-05 df=(14, 28)`**. I could
-  not reproduce 8.63 from that file and do not know what set or grouping produced it.
-  `UNVERIFIED: F = 8.63, source FRAME_2026-08-26-PM.md "ANOVA over all 43 screened marks".`
+* **`F = 8.63` over 43 marks – resolved, and it is not over 43 marks.** A one-way ANOVA on
+  the scratchpad `screen_results.csv` using all 43 `ok` rows and all 15 line groups gives
+  **`F=5.9404 p=3.233e-05 df=(14, 28)`**. Dropping the five singleton lines reproduces the
+  published figure exactly:
+
+  ```
+  singleton lines dropped: k=10 n=38 F=8.6291 p=4.61e-06 df=(9, 28)
+  ```
+
+  (`analysis/GEN1_DATUM_MORE_MARKS.md` §5 reached the same reading independently; I
+  re-derived the number rather than relaying it.) So `FRAME_2026-08-26-PM.md`'s "ANOVA
+  over all 43 screened marks: F = 8.63" is **38 marks on 10 lines**, and the discarded
+  singletons are what raises F from 5.94 to 8.63. `combine_datum` keeps singleton groups:
+  a line with one mark contributes to the between-group sum of squares and nothing to the
+  within-group one, which is what a singleton genuinely tells you.
 * **`+53.6 ± 13.0 mm` on 18 open/urban marks.** My nearest equivalent – open and urban
   only, 20 km, elbaext frame – is **+53.7 ± 27.2 mm on 7 marks over 4 lines**. The value
   agrees to 0.1 mm and the SE does not, because it is the SE of a different statistic (SE
