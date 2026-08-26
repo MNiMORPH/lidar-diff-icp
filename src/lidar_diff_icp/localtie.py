@@ -60,6 +60,27 @@ into ``line_ref``'s frame at that window. Walking a chain outward from the refer
 ``offset[b] = offset[a] + dz``; :attr:`LocalChain.dz_total_m` is what to add to the
 source line's z to reach the target line's frame **at the mark**.
 
+The question this module exists to answer, in code
+--------------------------------------------------
+"For a mark at ``(E, N)`` on line ``L``, what constant puts it in line 137's frame **at
+this location**, and how well is that constant known?"::
+
+    cache = TileCache(cache_dir="data/derived/localtie_cache")
+    ch = chain_local(tiles, easting=E, northing=N, source_line=L, target_line=137,
+                     half_width_m=400.0, shape="square", res_m=2.0, tie="intercept",
+                     exclude=(5, 6, 9), cache=cache,
+                     ladder_half_widths_m=[100.0, 200.0, 400.0, 800.0, 1200.0])
+    ch.dz_total_mm            # add this to the mark's gen1 elevation
+    ch.dz_sigma_window_m      # the error to quote: per-link window-ladder spreads
+    ch.dz_sigma_formal_m      # coreg's own sigma -- measured to be ~30x too small
+    ch.max_solve_distance_m   # how far from the mark the farthest link had to be solved
+    compare_to_constants(ch, imported)   # against a constant fitted somewhere else
+
+``ladder_half_widths_m`` is optional and has no default; without it
+``dz_sigma_window_m`` is NaN and only the formal sigma is available, which
+``analysis/LOCAL_TIE_CHAINING.md`` measures to be optimistic by one to two orders of
+magnitude.
+
 A degenerate window is reported, not hidden
 -------------------------------------------
 ``coreg.nuth_kaab`` abandons its fit when fewer than 100 grid cells exceed its 3-degree
@@ -547,6 +568,10 @@ class OverlapPoint:
     northing: float
     distance_m: float        # from the target location to that overlap cell centre
     n_overlap_cells: int
+    median_easting: float    # centre of the pair's overlap in these tiles ...
+    median_northing: float   # ... which is NOT where the nearest cell is: on a N-S strip
+                             # the nearest cell to a point west of it sits on its west EDGE,
+                             # and an edge window samples the across-track term one-sidedly
     tiles: list
 
 
@@ -589,7 +614,9 @@ def nearest_overlap_point(tile_paths, line_a: int, line_b: int, *, easting, nort
     k = int(np.argmin(d))
     return OverlapPoint(line_a=int(line_a), line_b=int(line_b), easting=float(ex[k]),
                         northing=float(ny_[k]), distance_m=float(d[k]),
-                        n_overlap_cells=int(inter.size), tiles=used)
+                        n_overlap_cells=int(inter.size),
+                        median_easting=float(np.median(ex)),
+                        median_northing=float(np.median(ny_)), tiles=used)
 
 
 @dataclass
