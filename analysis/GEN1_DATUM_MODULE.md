@@ -208,14 +208,22 @@ track set the candidate list knew: [128, 131, 132, 133, 134, 135, 136, 137, 138,
 disagreements whose RETURNS-line is outside that track set: 9 of 9
 ```
 
-`analysis/GEN1_DATUM_MORE_MARKS.md` §3, written in parallel with this, establishes the
-complementary half and it is worth stating here: within a **complete** local track set the
-proxy is not merely close, it coincides, because the vendor cuts the bare-earth ground
-class at a **seam on the perpendicular bisector between adjacent lines** – exactly the
-partition "nearest centreline" computes. So the returns-based assignment is not a
-correction to a sloppy proxy at short range; it is what makes the proxy safe to abandon
-when the track set is partial, which is every site the statewide workflow has not already
-fitted tracks for.
+The complementary half, measured here: the vendor's class-2 ground at a mark is almost
+never shared between lines.
+
+```
+marks whose class-2 ground inside the report radius carries EXACTLY ONE point_source_id: 55 of 56
+the one exception: [('L2T-6114 Wabasha RTK', {'124': 4, '125': 87})]
+```
+
+So within a complete local track set a centreline partition and the returns agree by
+construction, and the returns-based assignment is not a correction to a sloppy proxy at
+short range – it is what makes the proxy safe to abandon when the track set is partial,
+which is every site the statewide workflow has not already fitted tracks for.
+`analysis/GEN1_DATUM_MORE_MARKS.md` §1 and §3 give the mechanism behind that single-line
+coverage (an explicit overlap class, cutting the ground class at a seam on the
+perpendicular bisector) with the swath and spacing measurements behind it. **That is that
+document's result and I have not re-derived it**; the 55-of-56 line above is mine.
 
 ---
 
