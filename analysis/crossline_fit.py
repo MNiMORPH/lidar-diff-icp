@@ -198,6 +198,38 @@ def joint_network(clm, nx, res, block_m, ref_line=None):
                 cond=cond, cells=int(len(u)), L=L)
 
 
+def cross_only_solve(pair_groups):
+    """Solve the ``c_s`` from the CROSS pairs ONLY, so the N-S pair sums stay out of sample.
+
+    ``pair_groups`` is ``{(a, b): rows}`` for the pairs that involve the cross line. Each
+    row contributes ``D = k_pair + c_A*tan_A - c_B*tan_B``: one intercept per pair, one
+    coefficient per line, shared across pairs through the cross line. Nothing the N-S
+    overlaps measure enters, so ``(c_A + c_B)/2`` for an N-S pair becomes a PREDICTION the
+    N-S overlap can then falsify. Cluster-robust on the 50 m blocks, pooled over pairs.
+    """
+    lines = sorted({s_ for k in pair_groups for s_ in k})
+    li = {s_: i for i, s_ in enumerate(lines)}
+    pairs = sorted(pair_groups)
+    L, P = len(lines), len(pairs)
+    Xs, ys, bs_ = [], [], []
+    for pi, key in enumerate(pairs):
+        g = pair_groups[key]
+        a, b_ = key
+        X = np.zeros((len(g), L + P))
+        X[:, li[a]] = g.ta.to_numpy()
+        X[:, li[b_]] = -g.tb.to_numpy()
+        X[:, L + pi] = 1.0
+        Xs.append(X)
+        ys.append(g.D.to_numpy())
+        bs_.append(g.blk.to_numpy())
+    X = np.vstack(Xs)
+    y = np.concatenate(ys)
+    blk = np.concatenate(bs_)
+    beta, V, r2, n, G = ols_cluster(X, y, blk)
+    return dict(lines=lines, c=beta[:L], c_se=np.sqrt(np.diag(V))[:L], V=V[:L, :L],
+                r2=r2, n=n, G=G, li=li)
+
+
 def cross_pair_rows(clm, nx, res, block_m):
     """One row per (cell, unordered line pair), the same construction as
     ``swath_across_track_test.pair_rows`` but on the tangent this script already carries."""
@@ -556,11 +588,19 @@ def main():
 
     # ---------------------------- 6. redundancy: does the per-line model reproduce the sums?
     print("\n## 6. Redundancy -- the first real test the model has ever had\n")
-    print("  A per-line coefficient set is only meaningful if it reproduces the pair sums\n"
-          "  measured directly on the N-S overlaps. The joint solve USES this tile's own N-S\n"
-          "  overlaps, so its same-tile rows are in-sample residuals of an overdetermined fit\n"
-          "  (5 coefficients against 9 informative combinations); the elba and elbaext rows\n"
-          "  are a different region entirely and are out of sample.\n")
+    print("  Two kinds of row, and the difference matters. The joint solve of Sec 5 USES the\n"
+          "  same tile's N-S overlaps as data, so its same-tile rows are in-sample residuals\n"
+          "  of an overdetermined fit (5 coefficients against 9 informative combinations),\n"
+          "  not predictions. The CROSS-ONLY solve below uses the three cross pairs and\n"
+          "  nothing else, so every N-S pair sum it predicts is genuinely out of sample.\n")
+    X = cross_only_solve({k: g for k, (fi, g) in fits.items() if CROSS_PSID in k})
+    print(f"  cross-only solve: {X['n']:,} cell-pairs over {X['G']:,} blocks, r2 = {X['r2']:.4f}")
+    R.table(["line", "c_own", "c_own_se", "source"],
+            [[int(ln), f"{X['c'][i]:+.1f}", f"{X['c_se'][i]:.1f}",
+              "cross pairs ONLY -- no N-S overlap used"]
+             for i, ln in enumerate(X["lines"])])
+    print()
+
     rows = []
     Vc = J["V"][:J["L"], :J["L"]]
     li = {int(ln): i for i, ln in enumerate(J["lines"])}
@@ -569,6 +609,14 @@ def main():
         v = np.zeros(len(c)); v[idx[a]] += 0.5; v[idx[b_]] += 0.5
         return float(v @ c), float(np.sqrt(v @ V @ v))
 
+    for (a, b_), (fi, g) in sorted(fits.items()):
+        if CROSS_PSID in (a, b_) or a not in X["li"] or b_ not in X["li"]:
+            continue
+        pr, pse = _sum(X["c"], X["V"], X["li"], a, b_)
+        obs, ose = fi["c_pair"], fi["c_pair_se"]
+        rows.append(["4342-28-64, cross-only solve", f"{a}-{b_}", f"{pr:+.1f}", f"{obs:+.1f}",
+                     f"{pr - obs:+.1f}", f"{(pr - obs) / np.sqrt(pse ** 2 + ose ** 2):+.2f}",
+                     "OUT OF SAMPLE: no N-S overlap entered the prediction, same tile/cells"])
     for (a, b_), (fi, g) in sorted(fits.items()):
         if CROSS_PSID in (a, b_) or a not in li or b_ not in li:
             continue
