@@ -262,3 +262,78 @@ def test_align_swaths_reference_is_a_gauge_not_an_observation():
         levels.append(pinned[sw[0]][2] - free[sw[0]][2])
     # and the gauge really is doing something: the absolute level moves between choices
     assert max(levels) - min(levels) > 1e-3
+
+
+def _across_track_pair(x_lo, x_hi, *, k_true=-0.030, c_pair=0.130, h=2500.0,
+                       spacing=900.0, seed=1):
+    """Two overlapping N-S flight lines whose between-line difference has a known
+    across-track ramp, sampled over the easting window ``[x_lo, x_hi]``.
+
+    Built the way the delivered data are: the lines are flown there-and-back, so the
+    body-fixed scan angle runs the opposite way on line B, and a ground point at easting
+    ``x`` is seen at ``tan A = (x - x_A)/h`` and ``tan B = (x_B - x)/h``. Their SUM is
+    then the fixed ``spacing/h`` and only the DIFFERENCE varies across the sidelap, which
+    is the geometry measured at Elba (``analysis/SWATH_ACROSS_TRACK_TEST.md`` section 0).
+
+    Line B carries a true constant offset ``k_true`` plus a per-line across-track error,
+    split so that the pair coefficient is ``c_pair`` metres per unit tangent. The tie a
+    tile should recover is ``k_true``, at ``tan A = tan B`` -- the middle of the sidelap.
+    """
+    from lidar_diff_icp.io import PointCloud
+    rng = np.random.default_rng(seed)
+    x_a, x_b = 0.0, spacing                       # the two nadir tracks
+    xs, ys, zs, ps, sa = [], [], [], [], []
+    for line, (x_track, sign) in enumerate(((x_a, +1.0), (x_b, -1.0))):
+        x = rng.uniform(x_lo, x_hi, 200000)
+        y = rng.uniform(0.0, 400.0, x.size)
+        tan = sign * (x - x_track) / h            # +1: (x-x_A)/h   -1: (x_B-x)/h
+        # the same curved ground under both lines (varied aspect, so Nuth & Kaeaeb runs
+        # normally and the horizontal solution is identical for the two tie modes).
+        # Each line then carries its OWN across-track error c*tan(own scan angle); with
+        # both lines given the same c the pair coefficient (c_A + c_B)/2 is c_pair.
+        z = (8.0 * np.sin(x / 40.0) + 6.0 * np.cos(y / 55.0) + 0.02 * x
+             + (k_true if line == 1 else 0.0)
+             + c_pair * tan)
+        xs.append(x); ys.append(y); zs.append(z)
+        ps.append(np.full(x.size, line + 1))
+        sa.append(np.degrees(np.arctan(tan)))
+    x = np.concatenate(xs); y = np.concatenate(ys); z = np.concatenate(zs)
+    return PointCloud(x=x, y=y, z=z, point_source_id=np.concatenate(ps).astype(np.int32),
+                      classification=np.full(x.size, 2, np.uint8),
+                      gps_time=np.zeros(x.size), scan_angle=np.concatenate(sa),
+                      crs="EPSG:26915")
+
+
+def test_swath_tie_intercept_is_extent_invariant():
+    """The pairwise tie must not depend on which part of the sidelap the tile covers.
+
+    ``tie="overlap_median"`` -- the shipped estimator -- averages the between-line
+    difference over whatever the extent samples, so where that difference has an
+    across-track ramp the tie moves with the extent. That is the named mechanism behind
+    the elba/elbaext tiles disagreeing by 8.0/9.8/17.4 mm about the same flight lines.
+    ``tie="intercept"`` estimates the tie at across-track position zero instead, which is
+    a fixed geometric place, and must return the same number on both extents and the
+    right one.
+
+    Bites: with ``tie="intercept"`` replaced by the default the last two assertions fail
+    by ~29 mm, the size of the ramp across the two windows.
+    """
+    k_true, c_pair, h, spacing = -0.030, 0.130, 2500.0, 900.0
+    west = _across_track_pair(150.0, 500.0, k_true=k_true, c_pair=c_pair, h=h, spacing=spacing)
+    wide = _across_track_pair(150.0, 900.0, k_true=k_true, c_pair=c_pair, h=h, spacing=spacing)
+
+    med_w = coreg.coregister_swaths(west, 1, 2, res=2.0).dz
+    med_d = coreg.coregister_swaths(wide, 1, 2, res=2.0).dz
+    int_w = coreg.coregister_swaths(west, 1, 2, res=2.0, tie="intercept").dz
+    int_d = coreg.coregister_swaths(wide, 1, 2, res=2.0, tie="intercept").dz
+
+    # the shipped tie moves with the extent, by c * (mean dtan_1 - mean dtan_2)
+    dtan = lambda lo, hi: ((lo + hi) - (0.0 + spacing)) / h   # mean of tanA - tanB
+    predicted = c_pair * (dtan(150.0, 500.0) - dtan(150.0, 900.0))
+    assert abs(med_w - med_d) > 0.020, "the extent-dependence this test is about is absent"
+    assert med_w - med_d == pytest.approx(predicted, abs=0.004)
+
+    # the intercept tie does not, and it recovers the true constant
+    assert int_w == pytest.approx(int_d, abs=0.002)
+    assert int_w == pytest.approx(-k_true, abs=0.003)
+    assert int_d == pytest.approx(-k_true, abs=0.003)
