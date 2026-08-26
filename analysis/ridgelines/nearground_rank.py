@@ -11,6 +11,10 @@ This script measures the rank of each epoch's own ground inside its own column, 
 fitting anywhere:
 
   * gen2: h = 0 in the cube IS gen2's gridded ground, so F2(0) is the rank directly.
+Cells are the STABLE reference population (`lidar_diff_icp.refcells`): divides, low
+concavity, gentle slope, no buildings, not clear-cut, no gross change -- every criterion
+independent of the vertical offset being measured.
+
   * gen1: gen1's ground sits at h = -reg, where reg is the per-cell registration
     correction (geoid + lateral + swath + drift) aggregated from beam_offset_table.parquet
     -- established independently of anything in this analysis.
@@ -19,8 +23,17 @@ F1 - F2 should then reproduce the fitted q1 - q2 without fitting it.
 
     ./lidar-icp/bin/python analysis/ridgelines/nearground_rank.py
 """
+import argparse
+
 import numpy as np
 import pyarrow.parquet as pq
+
+from lidar_diff_icp.refcells import reference_cells
+
+ap = argparse.ArgumentParser()
+ap.add_argument("--slope-max", type=float, default=12.0)
+ap.add_argument("--gross-change-mm", type=float, default=500.0)
+ARGS = ap.parse_args()
 
 STRATA = [("open   <0.05", -0.01, 0.05), ("light .05-.20", 0.05, 0.20),
           ("mid   .20-.35", 0.20, 0.35), ("dense  >0.35", 0.35, 1.01)]
@@ -61,13 +74,16 @@ for tile in ("elba_fulldensity", "elbaext"):
         lo = np.clip(k + a, 1, NZ); hi = np.clip(k + b, 1, NZ)
         return (C[idx, hi - 1] - C[idx, lo - 1]) / np.maximum(n, 1)
 
-    ok = (n1 > 0) & (n2 > 0) & np.isfinite(reg) & np.isfinite(cover)
+    stable, srep = reference_cells(D, cells=cells, curv_max=float(A["curv_max"]),
+                                   slope_max=ARGS.slope_max,
+                                   gross_change_mm=ARGS.gross_change_mm)
+    ok = stable & (n1 > 0) & (n2 > 0) & np.isfinite(reg) & np.isfinite(cover)
     F1 = F(C1, n1, k1); F2 = F(C2, n2, k2)
     up1 = band(C1, n1, k1, 5, NZ); up2 = band(C2, n2, k2, 5, NZ)      # above ground + 0.10 m
     hi1 = band(C1, n1, k1, 25, NZ); hi2 = band(C2, n2, k2, 25, NZ)    # above ground + 0.50 m
     lo1 = band(C1, n1, k1, -5, 0); lo2 = band(C2, n2, k2, -5, 0)      # 0.10 m just below ground
 
-    print(f"\n=== {tile}  ({cells.size:,} divide cells, {n1.sum()/1e6:.1f}M gen1 + "
+    print(f"\n=== {tile}  ({ok.sum():,} stable reference cells of {cells.size:,}, {n1.sum()/1e6:.1f}M gen1 + "
           f"{n2.sum()/1e6:.1f}M gen2 returns; median reg {np.nanmedian(reg)*1000:+.1f} mm) ===")
     print("rank of EACH EPOCH'S OWN ground inside its OWN near-ground column (medians over cells)")
     print(f"{'stratum':14s} {'cells':>7s} | {'F1':>5s} {'F2':>5s} {'F1-F2':>6s} |"

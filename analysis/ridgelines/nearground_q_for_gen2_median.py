@@ -26,9 +26,12 @@ import numpy as np
 import pyarrow.parquet as pq
 
 from lidar_diff_icp.binstats import block_ids
+from lidar_diff_icp.refcells import reference_cells
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--slope-max", type=float, default=12.0, help="cell slope cut, deg")
+ap.add_argument("--gross-change-mm", type=float, default=500.0,
+                help="gross-change guard; lowering it toward the LoD is CIRCULAR (see refcells)")
 ap.add_argument("--block-m", type=float, default=50.0)
 A = ap.parse_args()
 
@@ -76,20 +79,21 @@ for tile in ("elba_fulldensity", "elbaext"):
     dz = float(A_["dz"]); zlo = float(A_["zlo"]); curv_max = float(A_["curv_max"])
     zf = np.load(f"{D}/z_after.npy"); NX = zf.shape[1]
     cover = np.load(f"{D}/canopy_cover_pfs.npy").ravel()[cells]
-    slope = np.load(f"{D}/slope.npy").ravel()[cells]
     reg = per_cell_reg_mm(tile, zf.size)[cells]
 
     C1 = np.cumsum(H1, 1).astype(np.float32); C2 = np.cumsum(H2, 1).astype(np.float32)
     n1 = C1[:, -1:]; n2 = C2[:, -1:]
     Q1 = quantiles(C1, n1, zlo, dz)
     P50 = quantiles(C2, n2, zlo, dz)[np.searchsorted(QS, 0.50)]        # gen2 column median
-    keep = (n1[:, 0] > 0) & (n2[:, 0] > 0) & np.isfinite(reg) & np.isfinite(cover) \
-        & np.isfinite(slope) & (slope < A.slope_max)
+    stable, rep = reference_cells(D, cells=cells, curv_max=curv_max, slope_max=A.slope_max,
+                                  gross_change_mm=A.gross_change_mm)
+    keep = stable & (n1[:, 0] > 0) & (n2[:, 0] > 0) & np.isfinite(reg) & np.isfinite(cover)
     blk = block_ids(cells, NX, 5.0, A.block_m)
 
     print(f"\n=== {tile}: gen1 quantile that reproduces gen2 ===")
-    print(f"ridgeline cells, |curv_laplacian| <= {curv_max}, slope < {A.slope_max:g} deg, "
-          f"{keep.sum():,} of {cells.size:,} cells")
+    print(f"stable reference cells: {keep.sum():,} of {cells.size:,} in the cube")
+    print("  " + "  ".join(f"{k}: -{v:,}" if k not in ("start", "kept") else f"{k}: {v:,}"
+                           for k, v in rep.items()))
     for tgt_name, T in (("p50(gen2) column median", P50), ("z_after (gen2 gridded ground)",
                                                            np.zeros(cells.size, np.float32))):
         print(f"\n  target = {tgt_name}")
