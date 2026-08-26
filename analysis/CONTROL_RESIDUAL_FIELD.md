@@ -629,6 +629,17 @@ moment one of them acquires a default.
   `GEN1_OWN_CONTROL_TIE.md` §5 already reported.
 * **Anything at all about gen2.** No cross-epoch term enters here.
 
+**One tool deliberately not used.** `lidar_diff_icp.variogram.detection_limit()` was
+named in the brief alongside `empirical_variogram` and `fit_spherical`. It is not called
+here, and the omission is deliberate rather than an oversight: it returns
+`sigma_mean = sqrt(nugget/n_pix + sill/n_eff)`, the uncertainty of a **mean over an
+area** with `n_eff = area / (pi * range^2)`. That is an SE of a mean — the very quantity
+this exercise exists to replace with a prediction variance at a point. It is the right
+function for the mass-balance envelope it was written for and the wrong one for "what is
+the value at Elba". If a tile-averaged rather than point value is wanted, that is a
+different question and `detection_limit()` with the fitted `VariogramModel` answers it
+directly.
+
 ## 14. Reproducing
 
 ```
