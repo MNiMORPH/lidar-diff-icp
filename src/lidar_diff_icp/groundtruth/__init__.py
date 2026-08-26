@@ -49,10 +49,26 @@ from .tie import (
     radius_ladder,
     vendor_ground_near,
 )
+from .chain import (
+    ChainPath,
+    ChainSolution,
+    Link,
+    SwathInventory,
+    build_inventory,
+    compare_paths,
+    covering_lines,
+    overlap_graph,
+    plan_path,
+    solve_chain,
+    solve_link,
+)
 __all__ = [
     "Checkpoint", "CheckpointSet", "UnknownDatumError", "load_bundled",
     "read_3dep_va_shapefile", "list_bundled",
     "Param", "declare",
     "GroundReturns", "RadiusEstimate", "TieEstimate", "csf_ground_near", "estimate_tie",
     "geoid_shift_for", "ground_elevation_at", "radius_ladder", "vendor_ground_near",
+    "ChainPath", "ChainSolution", "Link", "SwathInventory", "build_inventory",
+    "compare_paths", "covering_lines", "overlap_graph", "plan_path", "solve_chain",
+    "solve_link",
 ]
