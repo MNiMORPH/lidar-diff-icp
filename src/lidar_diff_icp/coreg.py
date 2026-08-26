@@ -19,7 +19,7 @@ Conventions: grids are row-major with row index increasing **north** (origin
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import numpy as np
 from scipy.ndimage import map_coordinates
@@ -425,7 +425,8 @@ def fit_along_track_drift(gps_time, change_on_stable, is_stable, swath, *,
     return drift, curves
 
 
-def align_swaths(pc, res: float = 2.0, exclude=(5, 6, 9), ref=None):
+def align_swaths(pc, res: float = 2.0, exclude=(5, 6, 9), ref=None,
+                 tie: str = "overlap_median"):
     """Free-network least-squares alignment of every swath into one frame.
 
     Runs Nuth & Kaeaeb on each overlapping swath pair, then solves for a
@@ -439,6 +440,17 @@ def align_swaths(pc, res: float = 2.0, exclude=(5, 6, 9), ref=None):
     reference (all others measured relative to it). Either way the group's
     absolute offset from another epoch must be tied separately.
 
+    The gauge does not change any *difference* between swaths, but it does set the level
+    the whole group sits at, so it decides which line's own vertical solution the tile's
+    absolute DoD level inherits -- and two tiles gauged on different lines are not on a
+    common level. Pin a line the tile samples on BOTH sides of nadir; a line whose nadir
+    track falls outside the tile is seen only obliquely, and its constant and its
+    across-track slope are then nearly collinear (correlation 0.989/0.991 at Elba,
+    ``analysis/SWATH_ACROSS_TRACK_TEST.md`` section 5).
+
+    ``tie`` is passed through to :func:`coregister_swaths`: ``"overlap_median"`` (default,
+    shipped behaviour) or ``"intercept"``, the extent-invariant across-track intercept.
+
     Returns ``(corrections, edges, misclosure)`` where ``corrections`` maps
     swath id -> (Dx, Dy, Dz) m, ``edges`` lists the pairwise observations, and
     ``misclosure`` is the per-edge residual (~0 for a tree/chain; nonzero only
@@ -450,7 +462,7 @@ def align_swaths(pc, res: float = 2.0, exclude=(5, 6, 9), ref=None):
     edges = []
     for a, b in combinations(swaths, 2):
         try:
-            c = coregister_swaths(pc, a, b, res, exclude)
+            c = coregister_swaths(pc, a, b, res, exclude, tie=tie)
         except ValueError:
             continue
         # Drop NON-FINITE observations. A non-adjacent pair whose gridded extents
@@ -522,11 +534,77 @@ def estimate_boresight_roll(pc, res: float = 5.0, exclude=(5, 6, 9)):
                               np.asarray(pc.scan_angle, float)[g], pc.z[g] * 1000.0)
 
 
+def _lad(X: np.ndarray, y: np.ndarray, iters: int = 200, tol: float = 1e-9) -> np.ndarray:
+    """Least absolute deviations by IRLS from the OLS start. Deterministic.
+
+    Same construction as ``analysis/ridgelines/cover_offset_regression.lad`` and
+    ``analysis/stable_point_tilt_audit.lad``; lifted here so the library can use it.
+
+    LAD is the *median regression*: with a design matrix of one intercept column it
+    converges on the median of ``y``, so a LAD fit that includes an across-track slope
+    NESTS the plain overlap median the Nuth & Kaeaeb tie already uses. That nesting is
+    what makes the two ties comparable -- the only difference is the slope term.
+    """
+    X = np.asarray(X, float)
+    y = np.asarray(y, float)
+    beta = np.linalg.lstsq(X, y, rcond=None)[0]
+    for _ in range(iters):
+        w = np.sqrt(1.0 / np.maximum(np.abs(y - X @ beta), 1e-6))
+        nb = np.linalg.lstsq(X * w[:, None], y * w, rcond=None)[0]
+        if np.max(np.abs(nb - beta)) < tol:
+            return nb
+        beta = nb
+    return beta
+
+
+def across_track_tie(dh: np.ndarray, dtan: np.ndarray):
+    """Vertical tie between two overlapping flight lines, at across-track position zero.
+
+    ``dh`` is the per-cell height difference ``z_ref - z_src`` over the pair's overlap and
+    ``dtan`` is ``tan(scan_ref) - tan(scan_src)`` in the same cells -- the across-track
+    coordinate of the cell in the two lines' shared body frame, which is zero at the
+    middle of the sidelap where both lines see the ground at the same angle.
+
+    The existing tie is ``median(dh)``, which is ``k + c * mean(dtan)`` whenever the
+    between-line difference has an across-track slope ``c``: it therefore depends on
+    WHICH PART of the overlap the tile happens to cover, and two tiles of different
+    extent get different ties for the same pair of flight lines. Measured at Elba:
+    ``c = +80.0 +- 5.7`` mm per unit tangent pooled, per-pair +34.5 to +192.7, homogeneity
+    across pairs rejected at p = 6e-64 (``analysis/SWATH_ACROSS_TRACK_TEST.md``).
+
+    Returning the fitted INTERCEPT at ``dtan = 0`` instead removes that dependence: the
+    estimand is a stated geometric position rather than an average over the sampled range.
+    The fit is LAD (median regression) so that it reduces exactly to the current tie when
+    ``c`` is zero.
+
+    Returns ``(k, c, n)``: tie in the units of ``dh``, across-track slope per unit
+    tangent, and the number of finite cells used.
+    """
+    m = np.isfinite(dh) & np.isfinite(dtan)
+    n = int(m.sum())
+    if n < 3 or np.ptp(dtan[m]) <= 0:
+        return float("nan"), float("nan"), n
+    beta = _lad(np.c_[np.ones(n), dtan[m]], dh[m])
+    return float(beta[0]), float(beta[1]), n
+
+
 def coregister_swaths(pc, swath_ref: int, swath_src: int, res: float = 2.0,
-                      exclude=(5, 6, 9)) -> Coreg:
+                      exclude=(5, 6, 9), tie: str = "overlap_median") -> Coreg:
     """Nuth & Kaeaeb co-registration of ``swath_src`` onto ``swath_ref`` over
-    their overlap, using density-robust per-cell median-Z surfaces."""
+    their overlap, using density-robust per-cell median-Z surfaces.
+
+    ``tie`` selects how the VERTICAL offset is reduced from the overlap; the horizontal
+    solution is untouched either way (the Nuth & Kaeaeb aspect fit removes the median of
+    ``dh`` before fitting, so it does not see the vertical constant):
+
+    * ``"overlap_median"`` (default, the shipped behaviour) -- ``nuth_kaab``'s own
+      ``median(z_ref - z_src)`` over whatever part of the overlap the cloud covers.
+    * ``"intercept"`` -- :func:`across_track_tie`, the LAD intercept at across-track
+      position zero, which does not depend on the extent sampled.
+    """
     from .swathdiff import _median_grid
+    if tie not in ("overlap_median", "intercept"):
+        raise ValueError(f"tie={tie!r} must be 'overlap_median' or 'intercept'")
     terr = ~np.isin(pc.classification, exclude)
     ma = terr & (pc.point_source_id == swath_ref)
     mb = terr & (pc.point_source_id == swath_src)
@@ -538,4 +616,21 @@ def coregister_swaths(pc, swath_ref: int, swath_src: int, res: float = 2.0,
     nx = int(np.ceil((x1 - x0) / res)); ny = int(np.ceil((y1 - y0) / res))
     z_ref = _median_grid(x[ma], y[ma], z[ma], res, x0, y0, nx, ny)
     z_src = _median_grid(x[mb], y[mb], z[mb], res, x0, y0, nx, ny)
-    return nuth_kaab(z_ref, z_src, res)
+    c = nuth_kaab(z_ref, z_src, res)
+    if tie == "overlap_median":
+        return c
+    # Re-estimate ONLY the vertical offset, at the converged horizontal shift, as the
+    # across-track intercept. tan(scan) is gridded and shifted by the same machinery as z
+    # so the two are read in the same cells.
+    sa = np.asarray(pc.scan_angle, float)
+    t_ref = _median_grid(x[ma], y[ma], np.tan(np.radians(sa[ma])), res, x0, y0, nx, ny)
+    t_src = _median_grid(x[mb], y[mb], np.tan(np.radians(sa[mb])), res, x0, y0, nx, ny)
+    z_sh = _shift_grid(z_src, c.dx, c.dy, res)
+    t_sh = _shift_grid(t_src, c.dx, c.dy, res)
+    k, _c, _n = across_track_tie(z_ref - z_sh, t_ref - t_sh)
+    if not np.isfinite(k):
+        return c
+    # ``n`` is left as the horizontal fit's count ON PURPOSE: align_swaths uses it as the
+    # network least-squares weight, and holding it fixed makes the two tie modes differ in
+    # ONE thing, the vertical estimator, rather than in the weighting as well.
+    return replace(c, dz=k)

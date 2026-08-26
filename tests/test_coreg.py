@@ -184,7 +184,7 @@ def test_align_swaths_ignores_nan_edge(monkeypatch):
     fake = {(1, 2): mk(-0.02, 1000), (2, 3): mk(-0.03, 1000),
             (1, 3): mk(np.nan, 0)}                  # the poisoning empty-overlap edge
     monkeypatch.setattr(coreg, "coregister_swaths",
-                        lambda pc, a, b, res, exclude: fake[(a, b)])
+                        lambda pc, a, b, res, exclude, tie="overlap_median": fake[(a, b)])
     ps = np.array([1, 1, 2, 2, 3, 3])
     pc = io.PointCloud(np.zeros(6), np.zeros(6), np.zeros(6), ps,
                        np.zeros(6), np.zeros(6), np.zeros(6, int), io.MN_GEN1_CRS)
