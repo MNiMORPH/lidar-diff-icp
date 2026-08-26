@@ -364,7 +364,7 @@ organised by canopy cover and, more weakly, by drainage area:
             cover 0.60-1.01    1079  0.3624
 
 Open ground (cover < 0.05) sits at 0.1265 against the 0.1538 null; the densest canopy sits
-at 0.3624, **2.9× the null rate**. *Hypothesis, not a measurement:* a residual canopy term
+at 0.3624 — **2.36× the null rate, 2.86× the open-ground residual**. *Hypothesis, not a measurement:* a residual canopy term
 survives the `q2` correction at high cover. It is not tested here.
 
 ---
