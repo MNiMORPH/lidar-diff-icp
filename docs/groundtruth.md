@@ -1,12 +1,14 @@
 # Pinning gen1's vertical datum to surveyed ground control
 
 **Module:** `src/lidar_diff_icp/groundtruth/`
-**Runnable examples:** `analysis/groundtruth/elba_absolute_tie.py` (the gen1 ties),
+**Runnable examples:** `analysis/groundtruth/gen1_datum_at_site.py` (gen1 against its
+OWN 2008 control, at any MN site), `analysis/groundtruth/elba_absolute_tie.py` (the gen1 ties),
 `analysis/groundtruth/gen2_checkpoint_tie.py` (gen2 against the same marks, no chain),
 `analysis/groundtruth/elba_datum_constant.py` (one constant, its budget, the product),
 `analysis/groundtruth/reference_swath_bias.py` (is the reference swath biasing anything?)
-**Tests:** `tests/test_groundtruth_{checkpoints,tie,chain,datum}.py`
-**Report:** `analysis/ABSOLUTE_BASIS_ELBA.md`
+**Tests:** `tests/test_groundtruth_{checkpoints,tie,chain,datum,gen1_datum}.py`
+**Reports:** `analysis/ABSOLUTE_BASIS_ELBA.md` (the 2021-checkpoint route),
+`analysis/GEN1_DATUM_MODULE.md` (the 2008-own-control route)
 
 ---
 
@@ -207,6 +209,83 @@ the disagreement between routes and puts the formal σ beside it for contrast.
 
 ---
 
+## 5a. Part 4 — the second route: gen1 against its OWN 2008 control (`gen1_datum.py`)
+
+Everything above reaches gen1's datum through **2021** 3DEP checkpoints: a geoid
+conversion, a chain of swath links, and an extrapolated lateral shift, each carrying its
+own error. There is a second route with none of those terms, and it is the one to reach
+for first at a new site.
+
+The 2008 acquisition was validated against surveyed control that MnGeo publishes in its
+county validation reports. That control is on the **same vertical datum and the same
+geoid model as the raw gen1 cloud** — NAVD88(GEOID03) — so nothing has to be converted;
+it lies **under gen1's own flight lines**, so nothing has to be chained; and gen2 is not
+in the comparison at all, so no cross-epoch lateral shift belongs in it.
+`groundtruth/data/mn_dnr_2008_control_semn.csv` bundles 1 004 transcribed rows covering
+gen1's eight-county footprint.
+
+### The five things it does, and the four it refuses
+
+| | |
+|---|---|
+| `load_control` | 1 004 rows → **963 physical marks**. A mark on a county line is printed in *both* counties' reports, so 41 rows are duplicates; they are merged on exact equality of (easting, northing, elevation) and every id spelling and source report is kept on the merged mark. |
+| `discover_near_point` / `discover_near_lines` | marks within a radius of a site, or within a half-width of a set of tracks. **Neither has a default** — how far a datum may be assumed constant is a statement about the site. |
+| `resolve_tiles` | names the MnGeo tile each mark falls in and splits them into on-disk and to-be-fetched. **It never downloads.** |
+| `assign_line_from_returns` | assigns each mark to a flight line by the `point_source_id` of the ground returns at it. |
+| `measure_site` → `combine_datum` | the tie from the committed `tie.estimate_tie`, plus the siting screen, combined with the flight line as the unit of replication. |
+
+It refuses to convert a geoid (`assert_no_geoid_conversion` raises, and returns the
+sentence a run should print), to apply a gen2-derived term unless asked
+(`lateral_shift_m=None` by default), to download, and to cut anything: every screen
+statistic is returned and no threshold exists in the module.
+
+### The flight line comes from the RETURNS, and it matters
+
+Line spacing in this acquisition is ~1 km and the nadir tracks were fitted at one
+latitude, so assigning a mark to a line by distance to a centreline mislabels marks
+exactly as the search widens. Measured on 31 marks around Elba that both methods cover,
+the two assignments agree on **22 of 31 (71%)** — **9 of 9 within 10 km, 8 of 12 at
+10–15 km, 5 of 10 at 15–25 km** — and the mislabels move the per-line datum estimate on
+those same ties from **−44.8 mm to −7.8 mm, a 37.0 mm swing from labelling alone**
+(`analysis/GEN1_DATUM_MODULE.md` §4).
+
+### The SE is the SE of something, and it says so
+
+Marks under one flight line share that swath's unknown constant, so they are **not**
+independent. `combine_datum` therefore averages within line and then over lines, and
+`se_of` carries the sentence naming the statistic:
+
+> SE of the mean over flight lines of the within-line mean tie: sd of the *k* line means
+> divided by sqrt(*k*). The flight line, not the mark, is the unit of replication.
+
+The one-way ANOVA over line groups, the ICC, the per-mark ("independence assumed") SE and
+the design effect all come back beside it. Over 56 marks within 20 km of Elba the lines
+differ at **F = 3.37, p = 0.000952** (df 26, 29), and pooling the marks would understate
+the SE by a factor of **1.42**.
+
+### Two modes, and the mode is checked
+
+* `mode="per_line"` — each line's swath constant is unknown, treated as an independent
+  draw. This is the mode for a fresh site with no `corrections.json` yet.
+* `mode="common_datum"` — the per-swath constants from a tile's `corrections.json`
+  (`per_swath_internal_alignment_dxdydz_m`, solved by `coreg.align_swaths`) are applied
+  to the returns *before* the estimate, so every mark sits in one frame. The **per-line
+  residuals** are returned, because they are an external test of an overlap-derived swath
+  network — which has no internal redundancy to test itself. A mark whose line has no
+  constant is moved to `excluded` **with its reason**, never dropped silently.
+
+`combine_datum` checks the mode against how the measurements were actually made and
+raises on a mismatch: a per-line average must not be labellable as a common-frame one.
+
+### Sign convention
+
+Unchanged: `tie = surveyed − z_lidar`, the constant to **ADD to gen1**, positive means
+gen1 reads low. Here it is the raw cloud with **no** geoid term and **no** cross-epoch
+term, so it is not the same quantity as §2's `tie_mm`, which is already geoid-shifted and
+in the reference swath's frame.
+
+---
+
 ## 6. What the example run produced
 
 `analysis/groundtruth/elba_absolute_tie.py`, seven gen1 tiles already on disk, nothing
@@ -290,12 +369,28 @@ chains do not contradict each other", not as the accuracy of the tie.
 * **Two independent paths, not three.** A third would turn a "they agree" into a
   distribution. 2099 (line 130, same western chain, 9 km north) would add one for two more
   tiles, but it would inherit the same along-track problem as 2024.
+* **`gen1_datum` does not chain, and therefore stops at the marks' own lines.** In
+  `common_datum` mode a mark can only be used if its flight line has a constant in the
+  `corrections.json` being tested; within 20 km of Elba that is 14 of 56 marks. Reaching
+  the rest needs `chain.py`, which brings its own per-link error back into a route whose
+  whole appeal is having none.
+* **`gen1_datum` does not screen, on purpose.** The radius-spread screen was measured not
+  to reduce site-to-site scatter (§5a and `analysis/GEN1_DATUM_MODULE.md` §5), so the
+  module returns the statistics and cuts nothing.
 
 ---
 
 ## 8. Reproducing
 
 ```bash
+# the 2008-own-control route: no geoid term, no chain, no gen2, no download
+./lidar-icp/bin/python analysis/groundtruth/gen1_datum_at_site.py \
+    --easting 579705.72 --northing 4883677.71 --radius-km 20 \
+    --tiles data/before --mode per_line
+./lidar-icp/bin/python analysis/groundtruth/gen1_datum_at_site.py \
+    --easting 579705.72 --northing 4883677.71 --radius-km 20 --tiles data/before \
+    --mode common_datum --corrections data/derived/elbaext/corrections_geoid.json
+
 env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python \
     analysis/groundtruth/elba_absolute_tie.py            # west + east, csf ground
 env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python \
