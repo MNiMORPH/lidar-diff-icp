@@ -138,12 +138,15 @@ def fit_offset_model(slope, cover, value, *, weights=None, interaction=True):
                        weighted=weights is not None)
 
 
-def median_surface(slope, cover, value, slope_edges, cover_edges, min_cells=30):
+def median_surface(slope, cover, value, slope_edges, cover_edges, min_cells=1):
     """Bin ``value`` on the (slope, cover) grid; return ``(grid, counts)``.
 
-    ``grid`` holds the median of ``value`` per box and is NaN wherever fewer than
-    ``min_cells`` samples fall in the box -- those are combinations the terrain does not
-    supply, and NaN is the honest answer there rather than an extrapolated number.
+    ``grid`` holds the median of ``value`` per box and is NaN only where the box is EMPTY.
+    ``min_cells`` defaults to 1, the definitional floor: a median needs one sample. Raise it
+    and boxes the terrain does supply are blanked as if it did not -- on the Elba tiles a
+    default of 30 blanked five boxes holding 7 to 28 cells each, which were then described
+    as "combinations the terrain does not supply". They were not; they were filtered. The
+    ``counts`` array is returned so a sparse box can be judged by its n instead.
     """
     slope = np.asarray(slope, float); cover = np.asarray(cover, float)
     value = np.asarray(value, float)
@@ -157,7 +160,7 @@ def median_surface(slope, cover, value, slope_edges, cover_edges, min_cells=30):
         for j in range(nc):
             m = mi & (ci == j)
             counts[i, j] = int(m.sum())
-            if counts[i, j] >= min_cells:
+            if counts[i, j] >= max(1, min_cells):
                 grid[i, j] = float(np.median(value[m]))
     return grid, counts
 
