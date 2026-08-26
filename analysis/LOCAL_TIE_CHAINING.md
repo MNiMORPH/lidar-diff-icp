@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-26
 **Code:** `src/lidar_diff_icp/localtie.py` (the module), `analysis/local_tie_chaining.py` (the run)
-**Tests:** `tests/test_localtie.py` — 23 pass; the regression test is proven to bite three ways (§8)
+**Tests:** `tests/test_localtie.py` – 23 pass; the regression test is proven to bite three ways (§8)
 **Run:**
 
     env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/local_tie_chaining.py --section all
@@ -23,12 +23,12 @@ everything under `src/lidar_diff_icp/groundtruth/` are **imported, not modified*
 
 **The vertical tie between two gen1 flight lines is local, the same way the across-track
 coefficient is local.** On pair 136-137, tied in a 400 m-half-width window once per tile over
-90 km of track, the tie runs **−57.1 to +28.8 mm, sd 28.3 mm** — while the same estimator, at
+90 km of track, the tie runs **-57.1 to +28.8 mm, sd 28.3 mm** – while the same estimator, at
 the same window size, tied at nine windows a few hundred metres apart inside **one** tile,
 scatters by only **6.0 mm**. The variance ratio is **F = 22.18 on (5, 8) d.f., p = 0.0002**.
 
-**`coreg`'s own uncertainty on that tie is 0.4 mm.** It is not wrong — it is the standard error
-of a median over ~80 000 cells — it is simply not an estimate of the quantity anyone cares
+**`coreg`'s own uncertainty on that tie is 0.4 mm.** It is not wrong – it is the standard error
+of a median over ~80 000 cells – it is simply not an estimate of the quantity anyone cares
 about. The honest error bar is how far the number moves when the window moves or changes size:
 on that pair, **28.3 mm between places and 29.5 mm between window sizes**, against the 0.4 mm
 `coreg` prints beside it.
@@ -69,7 +69,7 @@ ch = localtie.chain_local(tiles, easting=E, northing=N, source_line=L, target_li
                           ladder_half_widths_m=[100., 200., 400., 800., 1200.])
 ch.dz_total_mm            # add this to the mark's gen1 elevation
 ch.dz_sigma_window_m      # the error to quote (per-link ladder spreads, in quadrature)
-ch.dz_sigma_formal_m      # coreg's own sigma — measured below to be ~30x too small
+ch.dz_sigma_formal_m      # coreg's own sigma – measured below to be ~30x too small
 ch.max_solve_distance_m   # how far from the mark the farthest link had to be solved
 ```
 
@@ -83,9 +83,9 @@ holds that open by requiring `TypeError` when one is omitted.
 ## 2. Design decisions, and why
 
 **Reuse `groundtruth/chain.py` for the graph and the route; do not reuse its point cloud.**
-`chain.plan_path` already does the right thing — the along-swath (zero-link) case first, then
+`chain.plan_path` already does the right thing – the along-swath (zero-link) case first, then
 breadth-first over the *measured* overlap graph, minimising link count because each link adds
-error — and it is called, not copied. `inventory_from_cache` fills `chain.SwathInventory` from
+error – and it is called, not copied. `inventory_from_cache` fills `chain.SwathInventory` from
 arrays this module has already read, so `chain.overlap_graph` and `chain.plan_path` run without
 decompressing anything twice.
 
@@ -94,21 +94,21 @@ decompressing anything twice.
 `coreg.across_track_tie` returns NaN and `coregister_swaths` silently falls back to the median
 tie. A chain built on `chain.py`'s cache therefore *cannot* use the pipeline's own tie mode and
 would not say so. `localtie` carries its own reader, which keeps every class and the scan angle,
-read through `groundtruth.tie.scan_angle_deg` — which raises rather than returning zeros when
+read through `groundtruth.tie.scan_angle_deg` – which raises rather than returning zeros when
 the dimension is absent. This is a fork of the *cache format*, not of the estimator.
 
 **A degenerate window is reported, not hidden.** `coreg.nuth_kaab` abandons its fit when fewer
 than 100 grid cells clear its 3° slope floor, and in that branch returns **`dz = 0.0` exactly**
-with `n = 0` — not NaN, not the overlap median. On a whole tile that branch never fires; on a
+with `n = 0` – not NaN, not the overlap median. On a whole tile that branch never fires; on a
 small window over flat ground it fires easily, and a silent 0.0 mm tie is the worst failure
 available to a module whose job is small windows. Every `LocalTie` therefore carries
-`degenerate` and, beside it, `dz_overlap_median_m` — an independent read of the same overlap by
+`degenerate` and, beside it, `dz_overlap_median_m` – an independent read of the same overlap by
 `swathdiff.swath_difference`. Nothing is dropped on that basis.
 
 **The window is centred where a link *can* be solved, and the displacement is an output.** A
 chain from a mark's line to a target line moves sideways across the flight direction, so the far
 links cannot be solved at the mark. `nearest_overlap_point` finds the closest cell of the pair's
-overlap and `LocalChain` reports `solve_distance_m` per link — the distance over which that
+overlap and `LocalChain` reports `solve_distance_m` per link – the distance over which that
 link's tie is being assumed constant. That is precisely the quantity that went unstated when
 Elba's constants were applied 62.9 km away.
 
@@ -126,9 +126,9 @@ so their disagreement *is* the extent-dependence. Regauged onto line 135, which 
 
 | line | links | disagree_mm | per_link_mm |
 |---|---|---|---|
-| 136 | 1 | −8.0 | −8.0 |
-| 137 | 2 | −9.8 | −6.9 |
-| 138 | 3 | −17.4 | −10.0 |
+| 136 | 1 | -8.0 | -8.0 |
+| 137 | 2 | -9.8 | -6.9 |
+| 138 | 3 | -17.4 | -10.0 |
 
     RMS disagreement           = 12.42 mm
     RMS per link               = 8.42 mm
@@ -141,16 +141,16 @@ so their disagreement *is* the extent-dependence. Regauged onto line 135, which 
 ## 4. Window size is a first-class output, and it dominates
 
 Three pairs, tied at the Elba centroid, over a factor-of-12 ladder of window half-widths. `sig`
-is `coreg`'s own 1σ; `spread` is max − min over the ladder.
+is `coreg`'s own 1σ; `spread` is max - min over the ladder.
 
 | pair | tie mode | 100 m | 200 m | 400 m | 800 m | 1200 m | spread | `coreg` σ range |
 |---|---|---|---|---|---|---|---|---|
-| 135-136 | overlap_median | +7.2 | −6.5 | −19.2 | −25.1 | −24.6 | **32.2** | 0.4–4.2 |
-| 135-136 | intercept | +10.1 | −21.0 | −19.3 | −22.3 | −22.5 | **32.6** | 0.4–4.2 |
-| 136-137 | overlap_median | −35.3 | −27.0 | −9.6 | −5.8 | −9.1 | **29.5** | 0.4–1.6 |
-| 136-137 | intercept | +1.3 | −12.5 | +3.9 | −1.5 | −7.1 | **16.4** | 0.4–1.6 |
-| 137-138 | overlap_median | −6.9 | −46.7 | −33.0 | −25.2 | −21.1 | **39.8** | 0.5–3.8 |
-| 137-138 | intercept | +71.7 | −66.8 | −17.8 | −22.7 | −17.8 | **138.5** | 0.5–3.8 |
+| 135-136 | overlap_median | +7.2 | -6.5 | -19.2 | -25.1 | -24.6 | **32.2** | 0.4–4.2 |
+| 135-136 | intercept | +10.1 | -21.0 | -19.3 | -22.3 | -22.5 | **32.6** | 0.4–4.2 |
+| 136-137 | overlap_median | -35.3 | -27.0 | -9.6 | -5.8 | -9.1 | **29.5** | 0.4–1.6 |
+| 136-137 | intercept | +1.3 | -12.5 | +3.9 | -1.5 | -7.1 | **16.4** | 0.4–1.6 |
+| 137-138 | overlap_median | -6.9 | -46.7 | -33.0 | -25.2 | -21.1 | **39.8** | 0.5–3.8 |
+| 137-138 | intercept | +71.7 | -66.8 | -17.8 | -22.7 | -17.8 | **138.5** | 0.5–3.8 |
 
 (mm; the sign convention is `LocalTie`'s: add `dz` to the **src** line to reach the **ref**
 line's frame.)
@@ -163,10 +163,10 @@ itself moves 16 to 140 mm across the ladder. This is the same shape of result as
 spread over it as the headline uncertainty.
 
 **(b) The intercept tie is unstable on small windows, and the module says why.** At half-widths
-100 and 200 m, **every pair is flagged `extrap`** — the sampled across-track coordinate
-`dtan = tan(scan_ref) − tan(scan_src)` does not reach zero, so the intercept is read outside the
+100 and 200 m, **every pair is flagged `extrap`** – the sampled across-track coordinate
+`dtan = tan(scan_ref) - tan(scan_src)` does not reach zero, so the intercept is read outside the
 data. On 137-138 at 100 m the window spans `dtan` +0.162 to +0.253 and the intercept is
-**+71.7 mm** against −17.8 mm at 1200 m. That is not a tie, it is a lever arm. Where `dtan = 0`
+**+71.7 mm** against -17.8 mm at 1200 m. That is not a tie, it is a lever arm. Where `dtan = 0`
 *is* sampled (400 m and up), the intercept is the better-behaved of the two on 136-137
 (spread 16.4 against 29.5) and is no worse on the others.
 
@@ -187,17 +187,17 @@ along-track distance from the elbaext centroid.
 
 | tile | d_elba_km | dz_med_mm | σ_med | dz_int_mm | dz_plain_mm | c (mm/tan) | ovl cells |
 |---|---|---|---|---|---|---|---|
-| 4342-21-64 | +28.0 | **−57.1** | 0.4 | −59.0 | −60.0 | +197 | 95 056 |
-| 4342-28-64 | +3.7 | −16.3 | 0.6 | −19.2 | −5.0 | +247 | 80 177 |
-| 4342-29-64 | +0.3 | −4.6 | 0.4 | +0.8 | +0.0 | +191 | 83 958 |
-| 4342-30-64 | −3.2 | −9.8 | 0.6 | −12.5 | −20.0 | +295 | 84 747 |
-| 5142-14-64 | −58.7 | **+28.8** | 0.3 | +27.6 | +25.0 | +96 | 75 896 |
-| 5142-15-64 | −62.2 | +4.3 | 0.4 | +3.3 | +10.0 | +63 | 73 393 |
+| 4342-21-64 | +28.0 | **-57.1** | 0.4 | -59.0 | -60.0 | +197 | 95 056 |
+| 4342-28-64 | +3.7 | -16.3 | 0.6 | -19.2 | -5.0 | +247 | 80 177 |
+| 4342-29-64 | +0.3 | -4.6 | 0.4 | +0.8 | +0.0 | +191 | 83 958 |
+| 4342-30-64 | -3.2 | -9.8 | 0.6 | -12.5 | -20.0 | +295 | 84 747 |
+| 5142-14-64 | -58.7 | **+28.8** | 0.3 | +27.6 | +25.0 | +96 | 75 896 |
+| 5142-15-64 | -62.2 | +4.3 | 0.4 | +3.3 | +10.0 | +63 | 73 393 |
 
     overlap_median  n=6  mean    -9.1  sd   28.3  range   -57.1 to   +28.8  (mean formal sigma 0.4 mm)
     intercept       n=6  mean    -9.8  sd   29.0  range   -59.0 to   +27.6  (mean formal sigma 0.4 mm)
 
-**Pair 135-136, column-63 tiles** — reported with a warning attached. What these tiles hold is
+**Pair 135-136, column-63 tiles** – reported with a warning attached. What these tiles hold is
 the *western sliver* of the 135-136 sidelap, not the sidelap: **28 422 to 37 582** overlap cells
 per window against 73 393 to 95 056 for 136-137, and `extrap` is flagged in 8 of the 9 windows.
 (A separate `point_source_id` scan of the tiles on disk agrees: line 136 contributes 250 711 to
@@ -216,10 +216,10 @@ same window sizes, nine and seven windows inside **one** tile:
 
 | half_width_m | tie_mode | n_windows | mean_mm | sd_mm | min_mm | max_mm | span_km |
 |---|---|---|---|---|---|---|---|
-| 400 | overlap_median | 9 | −12.0 | **6.0** | −20.9 | −4.4 | 2.4 |
-| 400 | intercept | 9 | −13.7 | **10.7** | −26.0 | +1.1 | 2.4 |
-| 800 | overlap_median | 7 | −9.3 | **2.5** | −12.7 | −5.8 | 1.8 |
-| 800 | intercept | 7 | −7.9 | **5.1** | −17.0 | −1.9 | 1.8 |
+| 400 | overlap_median | 9 | -12.0 | **6.0** | -20.9 | -4.4 | 2.4 |
+| 400 | intercept | 9 | -13.7 | **10.7** | -26.0 | +1.1 | 2.4 |
+| 800 | overlap_median | 7 | -9.3 | **2.5** | -12.7 | -5.8 | 1.8 |
+| 800 | intercept | 7 | -7.9 | **5.1** | -17.0 | -1.9 | 1.8 |
 
 Short-range scatter **shrinks with window size** (6.0 → 2.5 mm), which is what estimator noise
 does. The long-range scatter does not go away.
@@ -231,7 +231,7 @@ does. The long-range scatter does not go away.
 
 **The tie depends on where along the line it is measured, and the dependence is far larger than
 the estimator's own repeatability.** The correlation between the separation of two samples and
-the absolute difference of their ties is +0.564 over all 15 pairs — positive, as a spatially
+the absolute difference of their ties is +0.564 over all 15 pairs – positive, as a spatially
 structured quantity requires, but on 15 non-independent pairs it is a description, not a test.
 The F ratio is the test.
 
@@ -251,34 +251,34 @@ The choice moves the answer by ~2 mm against a 28 mm effect. It is not load-bear
 
 Each of the 23 MnDNR-2008 control marks inside the lines 133-138 corridor, on the tiles on disk.
 `local_mm` is what `chain_local` measures **at the mark**; `imported_mm` is the same constant
-implied by `data/derived/elbaext/corrections_geoid.json` (`dz[line] − dz[137]`, so the gauge
+implied by `data/derived/elbaext/corrections_geoid.json` (`dz[line] - dz[137]`, so the gauge
 cancels); `sig_window_mm` is the per-link window-ladder spread in quadrature.
 
 |                  mark |  d_elba_km | line |                path | local_mm | σ_formal | σ_window | imported_mm | diff_mm |
 |---|---|---|---|---|---|---|---|---|
-|                 L2T51 |      −0.7 |  134 |     134-135-136-137 |    +43.4 |      1.0 |    121.9 |       +40.4 |    +3.0 |
-|                L1O101 |      −1.5 |  137 |                 137 |     +0.0 |      0.0 |      0.0 |        +0.0 |    +0.0 |
-|                L5U171 |      −2.1 |  137 |                 137 |     +0.0 |      0.0 |      0.0 |        +0.0 |    +0.0 |
-|                L3B143 |      −2.4 |  133 | 133-134-135-136-137 |    −18.4 |      1.2 |    121.7 |       +18.4 |   −36.8 |
+|                 L2T51 |      -0.7 |  134 |     134-135-136-137 |    +43.4 |      1.0 |    121.9 |       +40.4 |    +3.0 |
+|                L1O101 |      -1.5 |  137 |                 137 |     +0.0 |      0.0 |      0.0 |        +0.0 |    +0.0 |
+|                L5U171 |      -2.1 |  137 |                 137 |     +0.0 |      0.0 |      0.0 |        +0.0 |    +0.0 |
+|                L3B143 |      -2.4 |  133 | 133-134-135-136-137 |    -18.4 |      1.2 |    121.7 |       +18.4 |   -36.8 |
 |                 L2T54 |      +3.8 |  136 |             136-137 |    +12.4 |      0.6 |     28.1 |        +8.6 |    +3.8 |
-|                L2T98 |      +6.1 |  134 |                   — |        — |        — |        — |           — | line 137 absent from this tile |
-|                L5U172 |      +7.9 |  134 |                   — |        — |        — |        — |           — | line 137 absent from this tile |
-|  L1O-6123 Wabasha RTK |     +14.3 |  133 |                   — |        — |        — |        — |           — | line 137 absent from this tile |
-|  L2T-6100 Wabasha RTK |     +14.4 |  135 |                   — |        — |        — |        — |           — | line 137 absent from this tile |
-|  L1O-6196 Wabasha RTK |     +24.5 |  134 |                   — |        — |        — |        — |           — | line 137 absent from this tile |
-|  L3B-6190 Wabasha RTK |     +27.4 |  135 |         135-136-137 |    +18.3 |      1.1 |     58.1 |       +24.6 |    −6.3 |
-|  L1O-6189 Wabasha RTK |     +27.7 |  135 |         135-136-137 |    +17.9 |      1.1 |     78.3 |       +24.6 |    −6.7 |
+|                L2T98 |      +6.1 |  134 |                   – |        – |        – |        – |           – | line 137 absent from this tile |
+|                L5U172 |      +7.9 |  134 |                   – |        – |        – |        – |           – | line 137 absent from this tile |
+|  L1O-6123 Wabasha RTK |     +14.3 |  133 |                   – |        – |        – |        – |           – | line 137 absent from this tile |
+|  L2T-6100 Wabasha RTK |     +14.4 |  135 |                   – |        – |        – |        – |           – | line 137 absent from this tile |
+|  L1O-6196 Wabasha RTK |     +24.5 |  134 |                   – |        – |        – |        – |           – | line 137 absent from this tile |
+|  L3B-6190 Wabasha RTK |     +27.4 |  135 |         135-136-137 |    +18.3 |      1.1 |     58.1 |       +24.6 |    -6.3 |
+|  L1O-6189 Wabasha RTK |     +27.7 |  135 |         135-136-137 |    +17.9 |      1.1 |     78.3 |       +24.6 |    -6.7 |
 |  L1O-6182 Wabasha RTK |     +27.7 |  137 |                 137 |     +0.0 |      0.0 |      0.0 |        +0.0 |    +0.0 |
 |  L2T-6183 Wabasha RTK |     +28.6 |  136 |             136-137 |    +78.9 |      0.7 |     21.6 |        +8.6 | **+70.3** |
 |  L3B-6181 Wabasha RTK |     +29.5 |  134 |     134-135-136-137 |    +81.9 |      1.0 |     39.1 |       +40.4 |   +41.5 |
 |  L5U-6188 Wabasha RTK |     +29.6 |  136 |             136-137 |    +71.1 |      0.7 |     23.9 |        +8.6 | **+62.5** |
-|  L5U-6187 Wabasha RTK |     +30.8 |  135 |                   — |        — |        — |        — |           — | line 137 absent from this tile |
-| L5U-2122 Fillmore VRS |     −60.4 |  137 |                 137 |     +0.0 |      0.0 |      0.0 |        +0.0 |    +0.0 |
-| L4F-2123 Fillmore VRS |     −60.9 |  137 |                 137 |     +0.0 |      0.0 |      0.0 |        +0.0 |    +0.0 |
-| L5U-2119 Fillmore VRS |     −61.5 |  138 |             138-137 |    +44.2 |      0.7 |     23.9 |        −4.2 |   +48.4 |
-| L5U-2120 Fillmore VRS |     −61.7 |  138 |             138-137 |    +52.5 |      0.6 |     16.7 |        −4.2 |   +56.7 |
-| L5U-2121 Fillmore VRS |     −62.5 |  138 |             138-137 |    +35.6 |      0.5 |     10.3 |        −4.2 |   +39.8 |
-| L1O-2124 Fillmore VRS |     −62.6 |  133 |       133-10011-137 |     −8.4 |      0.6 |    117.6 |       +18.4 |   −26.8 |
+|  L5U-6187 Wabasha RTK |     +30.8 |  135 |                   – |        – |        – |        – |           – | line 137 absent from this tile |
+| L5U-2122 Fillmore VRS |     -60.4 |  137 |                 137 |     +0.0 |      0.0 |      0.0 |        +0.0 |    +0.0 |
+| L4F-2123 Fillmore VRS |     -60.9 |  137 |                 137 |     +0.0 |      0.0 |      0.0 |        +0.0 |    +0.0 |
+| L5U-2119 Fillmore VRS |     -61.5 |  138 |             138-137 |    +44.2 |      0.7 |     23.9 |        -4.2 |   +48.4 |
+| L5U-2120 Fillmore VRS |     -61.7 |  138 |             138-137 |    +52.5 |      0.6 |     16.7 |        -4.2 |   +56.7 |
+| L5U-2121 Fillmore VRS |     -62.5 |  138 |             138-137 |    +35.6 |      0.5 |     10.3 |        -4.2 |   +39.8 |
+| L1O-2124 Fillmore VRS |     -62.6 |  133 |       133-10011-137 |     -8.4 |      0.6 |    117.6 |       +18.4 |   -26.8 |
 
     all marks with a route                               n=17  mean   +14.7  sd   31.9  RMS   34.2 mm
     of those, ALREADY on line 137 (zero links)           n= 5  mean    +0.0  sd    0.0  RMS    0.0 mm
@@ -289,14 +289,14 @@ cancels); `sig_window_mm` is the per-link window-ladder spread in quadrature.
 **The zero-link rows are a check, not a result.** Five marks sit under line 137 itself;
 `plan_path`'s along-swath-first rule returns a zero-link chain, both constants are 0 by
 construction, and they agree exactly. That the machinery gets the trivial case trivially right
-is worth one line and no more — and it is why the summary is stratified by link count rather
+is worth one line and no more – and it is why the summary is stratified by link count rather
 than pooled.
 
 **The single-link rows carry the argument.** The imported constant for a 136 → 137 transfer is
 `+8.6 mm` at every mark, because it is one number. Measured locally it is `+12.4` at 3.8 km and
-`+78.9` / `+71.1` at 28.6 / 29.6 km. For 138 → 137 the imported constant is `−4.2 mm`
+`+78.9` / `+71.1` at 28.6 / 29.6 km. For 138 → 137 the imported constant is `-4.2 mm`
 everywhere; measured at the three Fillmore marks 61–63 km south it is `+44.2`, `+52.5`, `+35.6`.
-Note that this is **one** near mark against five far ones — the *pattern* rests on n = 1 at the
+Note that this is **one** near mark against five far ones – the *pattern* rests on n = 1 at the
 near end, and the evidence that the tie moves with distance is §5, not this column.
 
 **The long chains say so themselves.** The four- and five-link paths at Elba carry
@@ -308,7 +308,7 @@ reached about propagating coefficients down a chain ("numerically useless after 
 `133-10011-137`: two links through flight line **10011**, a cross line in the 5142-14/15 tiles,
 instead of four links along 134-135-136. That is `chain.plan_path` minimising link count over
 the *measured* overlap graph, and it is the first time this project has chained through a cross
-line. Its `σ_window` is 117.6 mm, so it is not yet a useful route — but it was found.
+line. Its `σ_window` is 117.6 mm, so it is not yet a useful route – but it was found.
 
 ---
 
@@ -325,7 +325,7 @@ all are printed by the provenance banner with `src="MINE"`.
 | `centre` | strip **and** tile | ±2 mm on a 28 mm effect (§5 sensitivity table). Both are run |
 | `repeat_step_m` | 300 | sets the sampling of the short-range control in §5, not a cut. Neighbouring 400 m windows overlap at this spacing |
 | `repeat_half_widths_m` | 400, 800 | the comparison that shows short-range scatter shrinking with window (6.0 → 2.5 mm) while long-range scatter does not |
-| `mark_radius_m` | 25 | **it changes the answer for 3 of 12 marks.** Re-running `chain.covering_lines` at 10/25/50/100 m: `L4F-2123` reads line 138 at 10 m and 137 at 25 m and above; `L5U-2120` and `L5U-2121` read 138 except at 50 m. All three are Fillmore marks lying in the 137/138 sidelap, where "the mark's line" is genuinely ambiguous. It selects **which line** a mark is attributed to, never which marks are used — every mark is printed |
+| `mark_radius_m` | 25 | **it changes the answer for 3 of 12 marks.** Re-running `chain.covering_lines` at 10/25/50/100 m: `L4F-2123` reads line 138 at 10 m and 137 at 25 m and above; `L5U-2120` and `L5U-2121` read 138 except at 50 m. All three are Fillmore marks lying in the 137/138 sidelap, where "the mark's line" is genuinely ambiguous. It selects **which line** a mark is attributed to, never which marks are used – every mark is printed |
 | `target_line` | 137 | the frame the marks are carried into; `--target-line` changes it |
 
 `res_m = 2.0` and `exclude = (5, 6, 9)` are declared `repo`, not `MINE`: they are
@@ -336,14 +336,14 @@ no CSF run happens anywhere in this work.
 
 ## 8. What was verified, and how
 
-- **8.42 mm per link** — recomputed from `data/derived/elba/corrections.json` and
+- **8.42 mm per link** – recomputed from `data/derived/elba/corrections.json` and
   `data/derived/elbaext/corrections.json` (§3), not quoted.
 - **The module reproduces `coreg`'s own intercept.** `LocalTie.k_check_m` is computed by this
   module's mirror of `coregister_swaths`'s intercept branch;
   `test_the_across_track_diagnostic_reproduces_coreg_own_intercept` pins it to the `dz` that
   function returns, so the mirror cannot drift unnoticed.
 - **The window is the size asked for**, in both shapes, and **carries the scan angle in
-  degrees** — the field `chain.py` zeroes.
+  degrees** – the field `chain.py` zeroes.
 - **The tie follows a spatially varying offset**: a synthetic line whose offset ramps 0 → 100 mm
   from south to north is read as 15 mm in the south window and 85 mm in the north one.
 - **The ladder grows when the offset varies across the window** and not when it is constant.
@@ -360,7 +360,7 @@ no CSF run happens anywhere in this work.
 
   Restored: `23 passed`.
 - **The synthetic writer flies adjacent lines in opposite directions**, because otherwise `dtan`
-  never reaches zero and `tie="intercept"` is an extrapolation — which is how the first draft of
+  never reaches zero and `tie="intercept"` is an extrapolation – which is how the first draft of
   the test read a **2.24 m** tie for a 40 mm offset. That bug in my own fixture is what led to
   the `extrapolated` flag, and thence to the explanation of §4(b).
 
@@ -370,10 +370,10 @@ no CSF run happens anywhere in this work.
 
 **Whether a local constant is more ACCURATE than Elba's.** This work shows the two disagree by
 tens of millimetres and that the disagreement is not estimator noise. It does **not** show which
-is closer to the truth, because nothing here has an external vertical reference — every number
+is closer to the truth, because nothing here has an external vertical reference – every number
 is a gen1-to-gen1 between-line difference. The experiment that would settle it is: read each
 surveyed mark's lidar elevation with `groundtruth.tie.estimate_tie`, and compare the
-between-line scatter of (lidar − surveyed) when the imported constants are applied against when
+between-line scatter of (lidar - surveyed) when the imported constants are applied against when
 the local ones are. **I did not run it, deliberately.** That estimator is being re-run right now
 by the agent that owns `src/lidar_diff_icp/groundtruth/` and `analysis/GEN1_DATUM_MORE_MARKS.md`,
 and a second, separately-driven copy of the same mark ties would manufacture exactly the
