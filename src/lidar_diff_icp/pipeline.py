@@ -386,7 +386,7 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
                    ground_source="csf", after_ground="class2", csf_pdal=None,
                    csf_cache=None, robust_stable=True, before_crs=io.MN_GEN1_CRS,
                    geoid_datum=None, correct_boresight=False,
-                   boresight_roll_mm_per_deg=None):
+                   boresight_roll_mm_per_deg=None, swath_tie="intercept"):
     """Corrected bare-earth DEM of Difference (after - before).
 
     ``before_laz``  : first-generation (gen1) MN lidar tile (retains point_source_id + gps_time).
@@ -410,6 +410,18 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
                       ``geoid_datum`` is supplied). No plane is fitted to "stable"
                       surfaces; residual offsets are left for later analysis. The
                       reference_plane fit and the parabola tie were removed (git history).
+    ``swath_tie``   : how the VERTICAL offset of each flight-line pair is reduced from
+                      their overlap. "intercept" (default) is the LAD (median-regression)
+                      intercept at across-track position zero, i.e. at
+                      ``tan(scan_ref) = tan(scan_src)``. "overlap_median" is the older
+                      plain ``median(dh)``, which equals ``k + c*mean(dtan)`` whenever the
+                      between-line difference has an across-track slope ``c`` and is
+                      therefore EXTENT-DEPENDENT: two tiles covering different parts of
+                      the same sidelap get different constants for the same pair of lines.
+                      The LAD fit reduces exactly to the median when ``c = 0``. Recorded in
+                      ``corrections.json`` as ``swath_tie``; pass "overlap_median" to
+                      reproduce products built before 2026-08-26.
+                      See :func:`lidar_diff_icp.coreg.across_track_tie`.
     ``geoid_datum`` : optional ``(const_m, b, c)`` geoid shift to ADD to gen1 (const +
                       E/N tilt in m/km about the bounds centroid). Auto-computed from the
                       geoid grids when None (default).
@@ -667,7 +679,7 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
                           else coreg.estimate_boresight_roll(pc, res).b)
         z8 = z8 - boresight_used * sa8 / 1000.0      # mm/deg * deg -> mm -> m
         pc = io.PointCloud(x8, y8, z8, ps8, cl8, np.zeros_like(z8), sa8, before_crs)
-    corr, _, _ = coreg.align_swaths(pc, ref=int(ps8.min()))
+    corr, _, _ = coreg.align_swaths(pc, ref=int(ps8.min()), tie=swath_tie)
     xc, yc, zc = x8.copy(), y8.copy(), z8.copy()
     for s, (dx, dy, dz) in corr.items():
         m = ps8 == s; xc[m] += dx; yc[m] += dy; zc[m] += dz
@@ -788,6 +800,7 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
         "lod_method": lod_method,
         "boresight_roll_mm_per_deg": (round(float(boresight_used), 3)
                                       if boresight_used is not None else None),
+        "swath_tie": swath_tie,
         "per_swath_internal_alignment_dxdydz_m":
             {str(k): [round(float(v), 4) for v in val] for k, val in corr.items()},
         "cross_epoch_datum": tie_info,
