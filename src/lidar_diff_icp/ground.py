@@ -11,12 +11,29 @@ Two practical wrinkles this module handles:
    chunk-table format that current PDAL reads the *header* of but cannot
    decompress ("Invalid version ... in LAZ chunk table"). laspy reads it fine, so
    we first rewrite the cloud to an uncompressed LAS that PDAL can read.
-2. **Tuned for sparse 2008 data on steep, wooded terrain.** The defaults
-   (rigidness=1, resolution=1.0 m, threshold=1.5, hdiff=0.5) retain ~96% of 5 m
-   cells including ~94% of steep (>=20 deg) cells, while still removing ~12% of
-   points (canopy/structure/blunders). Coarser cloth (>=1.5 m) or tighter
-   thresholds delete the steep wooded hillslopes -- do not loosen these without
-   re-checking steep-cell coverage.
+2. **We DEPART FROM PDAL's DEFAULTS -- read this before using the output.**
+   PDAL's ``filters.csf`` defaults are ``rigidness=3``, ``threshold=0.5``,
+   ``hdiff=0.3``, ``resolution=1``. This module's defaults are ``rigidness=1``,
+   ``threshold=1.5``, ``hdiff=0.5``, ``resolution=1.0`` -- i.e. the SOFTEST cloth,
+   a classification distance 3x looser, and a looser height difference. All three
+   departures push the same way: keep more points and follow lower ones.
+
+   They were chosen for sparse 2008 data on steep, wooded terrain, where they
+   retain ~96% of 5 m cells including ~94% of steep (>=20 deg) cells while still
+   removing ~12% of points (canopy/structure/blunders). A coarser cloth (>=1.5 m)
+   or tighter thresholds delete steep wooded hillslopes -- do not change these
+   without re-checking steep-cell coverage.
+
+   **Known consequence.** At ``threshold=1.5`` against a near-ground return column
+   whose IQR is 69 mm (open) to 159 mm (dense canopy), the threshold is ~10 IQRs
+   out and filters essentially nothing: 96.5% of gen1 returns in a -1..+2 m window
+   are retained as ground. The per-cell median then does all the work, and it is
+   computed over a population that still contains sub-ground returns (25% of gen1's
+   window lies >0.1 m below its own ground, vs 10% for gen2). Since nothing
+   scatters from below the ground, those are error, and retaining them biases the
+   gen1 ground LOW -- more so under canopy, where the column is ~2x wider. This
+   parameter choice therefore propagates to every tile processed with this module.
+   See analysis/ridgelines/FRAME_2026-08-26.md.
 """
 from __future__ import annotations
 
