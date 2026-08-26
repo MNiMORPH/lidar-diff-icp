@@ -62,6 +62,10 @@ def main():
     R.column("Ft_mm", "the same difference predicted by each tile's own fitted F(t), mm")
     R.column("Fk_mm", "the same difference predicted by each tile's own fit linear in swath id, mm")
     R.column("model", "which model the row summarises")
+    R.column("sw135", "elbaext minus elba for swath 135, mm (zero by the shared re-reference)")
+    R.column("sw136", "elbaext minus elba for swath 136, re-referenced to swath 135, mm")
+    R.column("sw137", "elbaext minus elba for swath 137, re-referenced to swath 135, mm")
+    R.column("sw138", "elbaext minus elba for swath 138, re-referenced to swath 135, mm")
     R.column("rms_mm", "RMS over the shared swaths, mm")
     R.column("pair", "consecutive pair of swaths in time order")
     R.column("gap_h", "elapsed time between consecutive swath midpoints, hours")
@@ -123,14 +127,21 @@ def main():
     ce = json.load(open("data/derived/elba/corrections.json"))["per_swath_internal_alignment_dxdydz_m"]
     cx = json.load(open("data/derived/elbaext/corrections.json"))["per_swath_internal_alignment_dxdydz_m"]
     shared = sorted(set(ce) & set(cx), key=int)
-    obs_d = {s: 1e3 * ((cx[s][2] - cx["135"][2]) - (ce[s][2] - ce["135"][2])) for s in shared}
     free = [s for s in shared if s != "135"]
-    print(f"\n  The same four flight lines, aligned twice from two different gen1 extents")
-    print(f"  (elba 2.5x3.5 km single tile; elbaext 4.45x4.05 km merge), re-referenced to")
-    print(f"  swath 135, differ by " + ", ".join(f"{obs_d[s]:+.1f}" for s in free) + " mm"
-          f"  (RMS {np.sqrt(np.mean([obs_d[s]**2 for s in free])):.1f} mm).")
+    print("\n  The same four flight lines, aligned twice from two different gen1 extents")
+    print("  (elba 2.5x3.5 km single tile; elbaext 4.45x4.05 km merge), re-referenced to")
+    print("  swath 135. All three axes, in mm:\n")
+    rows = []
+    axd = {}
+    for ax, j in (("dx (m)", 0), ("dy (m)", 1), ("dz (mm)", 2)):
+        axd[ax] = {s: 1e3 * ((cx[s][j] - cx["135"][j]) - (ce[s][j] - ce["135"][j])) for s in shared}
+        rows.append([ax] + [fmt(axd[ax][s], 1) for s in shared]
+                    + [fmt(np.sqrt(np.mean([axd[ax][s] ** 2 for s in free])), 1)])
+    R.table(["axis"] + [f"sw{s}" for s in shared] + ["rms_mm"], rows)
+    obs_d = axd["dz (mm)"]
     print("  That is this estimator's own repeatability under a change of extent, and it is")
-    print("  the number any residual in section 1 has to be judged against.")
+    print("  the number any residual in section 1 has to be judged against. dx -- the axis")
+    print("  carrying the metre-scale offsets -- repeats best of the three.")
 
     # -------------------------------------------------------------- 4. does F(t) resolve it?
     print("\n### 4. does F(t) make the two Elba tiles agree about the same swaths?\n")
