@@ -55,7 +55,6 @@ SA_NADIR = 5.0     # primary near-nadir: |scan_angle| < 5 deg
 SA_NADIR_WIDE = 10.0   # robustness: |scan_angle| < 10 deg
 SA_OBLIQUE = 10.0  # oblique contrast: |scan_angle| > 10 deg
 
-MIN_N = 30         # min returns to report a bin median
 
 
 def nmad(x):
@@ -98,7 +97,7 @@ def bin_curve(res, sl, sel):
         s0, s1 = SLOPE_EDGES[i], SLOPE_EDGES[i + 1]
         m = sel & (sl >= s0) & (sl < s1)
         x = res[m]
-        if x.size >= MIN_N:
+        if x.size > 0:   # a median needs >=1 point; that is the only cut
             meds.append(float(np.median(x)))
             nmads.append(float(nmad(x)))
         else:
@@ -192,7 +191,7 @@ def incidence_track(D, sel):
     for i in range(len(SLOPE_LABELS)):
         s0, s1 = SLOPE_EDGES[i], SLOPE_EDGES[i + 1]
         m = sel & (sl >= s0) & (sl < s1)
-        if m.sum() >= MIN_N:
+        if m.sum() > 0:
             rows.append((SLOPE_LABELS[i], slope_center(i),
                          float(np.median(inc[m])), int(m.sum())))
     return rows
@@ -233,8 +232,8 @@ def make_figure(D, path):
     ax.plot(cen, m_obl, "-s", color="C3", ms=5, lw=1.6,
             label=f"oblique |SA|>10 (n={n_obl.sum():,})")
     # forest/open near-nadir where populated
-    gf = n_for >= MIN_N
-    go = n_open >= MIN_N
+    gf = n_for > 0
+    go = n_open > 0
     ax.plot(cen[gf], m_for[gf], "-^", color="C2", ms=6, lw=1.6,
             label=f"near-nadir FOREST (cc>0.5, n={n_for.sum():,})")
     ax.plot(cen[go], m_open[go], "-v", color="C1", ms=6, lw=1.6,
