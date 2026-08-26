@@ -150,6 +150,54 @@ def gen1_cellline_ground(las_path, res, sn_smooth_cells, ground_q, *, grid=None)
     return clm.reset_index(), nx, X0, Y0, int(len(df))
 
 
+def joint_network(clm, nx, res, block_m, ref_line=None):
+    """Solve every line's own ``a_s`` and ``c_s`` AT ONCE, with per-cell fixed effects.
+
+    The pairwise fits answer one pair at a time on that pair's own overlap, so a
+    disagreement between two of them could always be the two different regions rather than
+    the model. This estimator removes that escape: it fits
+
+        g(cell, line) = mu_cell + a_line + c_line * tan(scan)
+
+    to every (cell, line) ground estimate on the tile at once. ``mu_cell`` absorbs terrain,
+    cover, and any spatially varying field exactly as differencing within a cell does -- it
+    IS differencing within a cell (Frisch-Waugh), generalised from two lines to all of them
+    -- so the ``c_s`` are estimated on ONE shared population. Cells covered by a single line
+    are dropped: they demean to zero and carry no information about any difference.
+
+    The ``a_s`` are identified only up to a constant (they trade against ``mu_cell``), so one
+    line's constant is dropped as the gauge; the ``c_s`` are not affected by that choice.
+    """
+    keep_cells = clm.groupby("cell").point_source_id.transform("size") >= 2
+    d = clm[keep_cells]
+    lines = sorted(d.point_source_id.unique())
+    L = len(lines)
+    ix = {s: i for i, s in enumerate(lines)}
+    r = d.point_source_id.map(ix).to_numpy()
+    n = len(d)
+    ref = ix[ref_line] if ref_line in ix else 0
+    keep_col = [j for j in range(L) if j != ref]
+    X = np.zeros((n, L + len(keep_col)))
+    X[np.arange(n), r] = d.tan.to_numpy()                    # per-line c_s
+    for k, j in enumerate(keep_col):                         # per-line a_s, gauge dropped
+        X[r == j, L + k] = 1.0
+    y = d.med_corr.to_numpy()
+    cell = d.cell.to_numpy()
+    # within-cell demean (Frisch-Waugh): identical to fitting mu_cell explicitly
+    u, inv = np.unique(cell, return_inverse=True)
+    cnt = np.bincount(inv).astype(float)
+    y = y - np.bincount(inv, y)[inv] / cnt[inv]
+    for j in range(X.shape[1]):
+        X[:, j] -= np.bincount(inv, X[:, j])[inv] / cnt[inv]
+    blk = bs.block_ids(cell, nx=nx, res=res, block_m=block_m)
+    beta, V, r2, nn, G = ols_cluster(X, y, blk)
+    se = np.sqrt(np.diag(V))
+    Xs = X / np.maximum(np.linalg.norm(X, axis=0), 1e-30)
+    cond = float(np.linalg.cond(Xs))
+    return dict(lines=lines, c=beta[:L], c_se=se[:L], V=V, r2=r2, n=nn, G=G,
+                cond=cond, cells=int(len(u)), L=L)
+
+
 def cross_pair_rows(clm, nx, res, block_m):
     """One row per (cell, unordered line pair), the same construction as
     ``swath_across_track_test.pair_rows`` but on the tangent this script already carries."""
@@ -178,10 +226,17 @@ def fit_pair(g, *, controls=False):
     X2 = np.c_[np.ones(len(g)), g.dtan.to_numpy()]
     b2, V2, r2_2, _, _ = ols_cluster(X2, y, blk)
     X = np.c_[X2, g.stan.to_numpy()]
-    if controls:                       # cell position, linear + quadratic, both axes, km
+    if controls:
+        # QUADRATIC position terms only. Within a flight line the ground coordinate and
+        # the scan angle are the same variable (x = x_track + h*tan th, r2 = 0.95-0.997,
+        # SWATH_ACROSS_TRACK_TEST Sec 10), so on a cross pair tan_A is linear in EASTING
+        # and tan_B is linear in NORTHING: adding LINEAR position controls would be exactly
+        # collinear with the two coefficients being estimated and would delete the signal
+        # rather than control anything. The quadratic terms are not collinear with them,
+        # and they are what a curved residual field would land on.
         u = (g.cx.to_numpy() - g.cx.mean()) / 1000.0
         v = (g.cy.to_numpy() - g.cy.mean()) / 1000.0
-        X = np.c_[X, u, u ** 2, v, v ** 2]
+        X = np.c_[X, u ** 2, v ** 2, u * v]
     beta, V, r2, n, G = ols_cluster(X, y, blk)
     se = np.sqrt(np.diag(V))
     XtXi = np.linalg.pinv(X.T @ X)
@@ -287,6 +342,10 @@ def main():
         ("observed", "the pair sum measured directly on that N-S overlap, mm per unit tangent"),
         ("resid", "predicted - observed, mm per unit tangent: the redundancy residual"),
         ("resid_sig", "resid divided by the quadrature sum of the two standard errors"),
+        ("r_tA_E", "correlation of line A's per-cell tan(scan) with cell EASTING"),
+        ("r_tA_N", "correlation of line A's per-cell tan(scan) with cell NORTHING"),
+        ("r_tB_E", "correlation of line B's per-cell tan(scan) with cell EASTING"),
+        ("r_tB_N", "correlation of line B's per-cell tan(scan) with cell NORTHING"),
         ("kind_check", "whether the row is a genuine redundancy check, i.e. whether both "
                        "lines' coefficients were measured on the cross line rather than "
                        "propagated from this very pair sum"),
@@ -427,9 +486,13 @@ def main():
         rows.append([f"{a}-{b_}", "CROSS" if CROSS_PSID in (a, b_) else "N-S/N-S",
                      len(g), f"{len(g) * A.res ** 2 / 1e4:.1f}", fi["G"],
                      f"{np.corrcoef(g.ta, g.tb)[0, 1]:+.3f}", f"{g.stan.std():.4f}",
-                     f"{g.dtan.std():.4f}", f"{fi['se_ratio']:.2f}"])
+                     f"{g.dtan.std():.4f}", f"{fi['se_ratio']:.2f}",
+                     f"{np.corrcoef(g.ta, g.cx)[0, 1]:+.2f}",
+                     f"{np.corrcoef(g.ta, g.cy)[0, 1]:+.2f}",
+                     f"{np.corrcoef(g.tb, g.cx)[0, 1]:+.2f}",
+                     f"{np.corrcoef(g.tb, g.cy)[0, 1]:+.2f}"])
     R.table(["pair", "kind", "cells", "area_ha", "blocks", "corr_AB", "sd_sum", "sd_dif",
-             "se_ratio"], rows)
+             "se_ratio", "r_tA_E", "r_tA_N", "r_tB_E", "r_tB_N"], rows)
 
     print("\n### 3a. two-parameter fit -- the quantity the N-S overlaps measure\n")
     rows = [[f"{a}-{b_}", "CROSS" if CROSS_PSID in (a, b_) else "N-S/N-S",
@@ -474,58 +537,87 @@ def main():
                      f"inverse-variance mean of the 3 (chi2={chi2:.2f}, dof=2)"])
     R.table(["line", "c_own", "c_own_se", "source"], rows)
 
-    # ----------------------------------------------- 5. the network
-    print("\n## 5. Solving the N-S network, and its redundancy residuals\n")
-    if ns_meas and own:
-        # propagate: chain DOWN from the lowest measured line using the pair sums
-        chain = {k: v for k, v in own.items()}
-        chain_se = {k: v[1] for k, v in own.items()}
-        prop_rows = [[ln, f"{c:+.1f}", f"{s:.1f}", src] for ln, (c, s, src) in sorted(own.items())]
-        # average the two tiles' measurement of each pair sum, inverse-variance
+    # --------------------------------- 5. the joint within-cell solve (all lines at once)
+    print("\n## 5. The joint within-cell solve: every line's c_s on ONE shared population\n")
+    print("  The pairwise fits of Sec 3-4 each use their own pair's own overlap, so any\n"
+          "  disagreement between two of them could be the two REGIONS rather than the model.\n"
+          "  This fit removes that escape: g(cell,line) = mu_cell + a_line + c_line*tan, every\n"
+          "  (cell, line) estimate on the tile at once, cell fixed effects absorbing terrain,\n"
+          "  cover and any spatial field exactly as differencing within a cell does.\n")
+    J = joint_network(clm[clm.n >= A.min_cell_line], nx, A.res, A.block_m, ref_line=137)
+    print(f"  {J['n']:,} (cell, line) rows on {J['cells']:,} multiply-covered cells, "
+          f"{J['G']:,} blocks, within-cell r2 = {J['r2']:.4f}, "
+          f"design condition number {J['cond']:.1f}\n")
+    jc = {int(ln): (float(J["c"][i]), float(J["c_se"][i]))
+          for i, ln in enumerate(J["lines"])}
+    R.table(["line", "c_own", "c_own_se", "source"],
+            [[ln, f"{c:+.1f}", f"{se:.1f}", "joint within-cell solve, all 5 lines"]
+             for ln, (c, se) in sorted(jc.items())])
+
+    # ---------------------------- 6. redundancy: does the per-line model reproduce the sums?
+    print("\n## 6. Redundancy -- the first real test the model has ever had\n")
+    print("  A per-line coefficient set is only meaningful if it reproduces the pair sums\n"
+          "  measured directly on the N-S overlaps. The joint solve USES this tile's own N-S\n"
+          "  overlaps, so its same-tile rows are in-sample residuals of an overdetermined fit\n"
+          "  (5 coefficients against 9 informative combinations); the elba and elbaext rows\n"
+          "  are a different region entirely and are out of sample.\n")
+    rows = []
+    Vc = J["V"][:J["L"], :J["L"]]
+    li = {int(ln): i for i, ln in enumerate(J["lines"])}
+
+    def _sum(c, V, idx, a, b_):
+        v = np.zeros(len(c)); v[idx[a]] += 0.5; v[idx[b_]] += 0.5
+        return float(v @ c), float(np.sqrt(v @ V @ v))
+
+    for (a, b_), (fi, g) in sorted(fits.items()):
+        if CROSS_PSID in (a, b_) or a not in li or b_ not in li:
+            continue
+        pr, pse = _sum(J["c"], Vc, li, a, b_)
+        obs, ose = fi["c_pair"], fi["c_pair_se"]
+        rows.append(["4342-28-64, joint solve", f"{a}-{b_}", f"{pr:+.1f}", f"{obs:+.1f}",
+                     f"{pr - obs:+.1f}", f"{(pr - obs) / np.sqrt(pse ** 2 + ose ** 2):+.2f}",
+                     "in-sample residual of the overdetermined joint fit, not a prediction"])
+    for (tile, a, b_), (obs, ose) in sorted(ns_meas.items()):
+        if a not in li or b_ not in li:
+            continue
+        pr, pse = _sum(J["c"], Vc, li, a, b_)
+        rows.append([tile + ", joint solve", f"{a}-{b_}", f"{pr:+.1f}", f"{obs:+.1f}",
+                     f"{pr - obs:+.1f}", f"{(pr - obs) / np.sqrt(pse ** 2 + ose ** 2):+.2f}",
+                     "OUT OF SAMPLE, and 2.6-3.5 km SOUTH: also tests c_s along track"])
+    R.table(["tile", "pair", "predicted", "observed", "resid", "resid_sig", "kind_check"], rows)
+
+    # ------------------------------------ 7. propagate down the chain to 135, 134, 133
+    print("\n## 7. Propagating the chain to lines 135, 134 and 133\n")
+    if ns_meas:
+        chain = {ln: c for ln, (c, se) in jc.items() if ln != CROSS_PSID}
+        chain_se = {ln: se for ln, (c, se) in jc.items() if ln != CROSS_PSID}
+        prop_rows = [[ln, f"{chain[ln]:+.1f}", f"{chain_se[ln]:.1f}",
+                      "joint within-cell solve on the cross tile"] for ln in sorted(chain)]
         sums = {}
         for (tile, a, b_), (c, se) in ns_meas.items():
             sums.setdefault((a, b_), []).append((c, se))
         summ = {k: (float(sum(c / s ** 2 for c, s in v) / sum(1 / s ** 2 for c, s in v)),
                     float(np.sqrt(1.0 / sum(1 / s ** 2 for c, s in v))))
                 for k, v in sums.items()}
-        lo = min(own)
-        cur = lo
+        cur = min(chain)
         while (cur - 1, cur) in summ:
             P, Pse = summ[(cur - 1, cur)]
-            c_prev = 2 * P - chain[cur]
-            se_prev = float(np.sqrt((2 * Pse) ** 2 + chain_se[cur] ** 2))
-            chain[cur - 1] = c_prev
-            chain_se[cur - 1] = se_prev
-            prop_rows.append([cur - 1, f"{c_prev:+.1f}", f"{se_prev:.1f}",
-                              f"2*(pair {cur-1}-{cur} sum {P:+.1f}) - c_{cur}"])
+            chain[cur - 1] = 2 * P - chain[cur]
+            chain_se[cur - 1] = float(np.sqrt((2 * Pse) ** 2 + chain_se[cur] ** 2))
+            prop_rows.append([cur - 1, f"{chain[cur-1]:+.1f}", f"{chain_se[cur-1]:.1f}",
+                              f"2*(elba+elbaext pair {cur-1}-{cur} sum {P:+.1f}) - c_{cur}"])
             cur -= 1
         R.table(["line", "c_own", "c_own_se", "source"], prop_rows)
 
-        print("\n### 5a. Redundancy: pair sums the cross line did NOT use\n")
-        rows = []
-        for (tile, a, b_), (c, se) in sorted(ns_meas.items()):
-            if a not in chain or b_ not in chain:
-                continue
-            if a in own and b_ in own:
-                kind = "both lines measured on the cross line -- a TRUE check"
-            elif (a in own) or (b_ in own):
-                kind = "one line propagated -- not independent"
-            else:
-                kind = "both propagated -- identity, not a check"
-            pred = 0.5 * (chain[a] + chain[b_])
-            pse = 0.5 * float(np.sqrt(chain_se[a] ** 2 + chain_se[b_] ** 2))
-            rows.append([tile, f"{a}-{b_}", f"{pred:+.1f}", f"{c:+.1f}", f"{pred - c:+.1f}",
-                         f"{(pred - c) / np.sqrt(pse ** 2 + se ** 2):+.2f}", kind])
-        R.table(["tile", "pair", "predicted", "observed", "resid", "resid_sig", "kind_check"],
-                rows)
-
-    # ----------------------------------------------- 6. sensitivities
-    print("\n## 6. Sensitivity of every reported coefficient\n")
+    # ----------------------------------------------- 8. sensitivities
+    print("\n## 8. Sensitivity of every reported coefficient\n")
+    print("  Each variant re-runs BOTH the pairwise cross fits and the joint solve, and\n"
+          "  reports how far each line's coefficient moves from the headline run.\n")
     base = {ln: own[ln][0] for ln in own}
     base_cross = float(np.mean([c for c, _, _ in cross_est])) if cross_est else float("nan")
     rows = []
     for lab, mcl, ctl in [("min_cell_line=3", 3, False), ("min_cell_line=5", 5, False),
-                          ("position controls (E,N linear+quadratic)", A.min_cell_line, True)]:
+                          ("quadratic position controls (E2,N2,EN)", A.min_cell_line, True)]:
         v = run_variant(mcl, ctl)
         vo, vc = {}, []
         for (a, b_), (fi, g) in v.items():
@@ -534,19 +626,27 @@ def main():
             ns = a if b_ == CROSS_PSID else b_
             vo[ns] = fi["c_A"] if a == ns else fi["c_B"]
             vc.append(fi["c_A"] if a == CROSS_PSID else fi["c_B"])
-        rows.append([lab] + [f"{vo.get(ln, float('nan')) - base.get(ln, float('nan')):+.1f}"
-                             for ln in (136, 137, 138)]
+        rows.append(["pairwise: " + lab]
+                    + [f"{vo.get(ln, float('nan')) - base.get(ln, float('nan')):+.1f}"
+                       for ln in (136, 137, 138)]
                     + [f"{np.mean(vc) - base_cross:+.1f}"])
+    for lab, mcl in [("min_cell_line=3", 3), ("min_cell_line=5", 5)]:
+        Jv = joint_network(clm[clm.n >= mcl], nx, A.res, A.block_m, ref_line=137)
+        jv = {int(ln): float(Jv["c"][i]) for i, ln in enumerate(Jv["lines"])}
+        rows.append(["joint: " + lab]
+                    + [f"{jv.get(ln, float('nan')) - jc[ln][0]:+.1f}" for ln in (136, 137, 138)]
+                    + [f"{jv.get(CROSS_PSID, float('nan')) - jc[CROSS_PSID][0]:+.1f}"])
     R.table(["variant", "d_c136", "d_c137", "d_c138", "d_c10010"], rows)
 
-    print("\n## 7. What this run does NOT determine\n")
+    print("\n## 9. What this run does NOT determine\n")
     print("  The GLOBAL CROSS-TRACK TILT of the gen1 mosaic is untouched by any of this.\n"
           "  SWATH_DEGENERACY_BREAKING Sec 1 shows the null direction of the overlap network\n"
           "  is e(x) = g*(x - x0), a tilt that is IDENTICAL for both lines at a shared ground\n"
           "  point and therefore cancels in EVERY between-line difference -- N-S, non-adjacent\n"
           "  or crossing -- to 0.000e+00 mm. Every coefficient above is a between-line\n"
-          "  difference. The tilt needs an absolute external reference (ground control); it is\n"
-          "  NOT resolved here and the problem is NOT closed.")
+          "  difference, and the joint solve's cell fixed effects remove exactly the same\n"
+          "  thing. The tilt needs an absolute external reference (ground control); it is NOT\n"
+          "  resolved here and the problem is NOT closed.\n")
     R.done(headline="per-line across-track coefficients from the cross line, and the network")
 
 
