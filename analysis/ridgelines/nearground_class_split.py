@@ -84,6 +84,10 @@ with laspy.open(A.gen2) as f:
         np.add.at(Hn, (cid[sub][m][~gg], zi[m][~gg]), 1)
 print(f"gen2 window: {Hg.sum():,} class-2 + {Hn.sum():,} other returns", flush=True)
 
+np.savez_compressed(f"{A.tile}/nearground_gen2_class_split.npz",
+                    cells=cells, edges=edges, Hg=Hg, Hn=Hn,
+                    zlo=zlo, dz=dz)
+print(f"saved {A.tile}/nearground_gen2_class_split.npz", flush=True)
 cover = np.load(f"{A.tile}/canopy_cover_pfs.npy").ravel()[cells]
 stable, _ = reference_cells(A.tile, cells=cells, slope_max=90.0)
 Cg = np.cumsum(Hg, 1).astype(float); Cn = np.cumsum(Hn, 1).astype(float)
