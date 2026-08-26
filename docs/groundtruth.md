@@ -1,8 +1,12 @@
 # Pinning gen1's vertical datum to surveyed ground control
 
 **Module:** `src/lidar_diff_icp/groundtruth/`
-**Runnable example:** `analysis/groundtruth/elba_absolute_tie.py`
-**Tests:** `tests/test_groundtruth_{checkpoints,tie,chain}.py`
+**Runnable examples:** `analysis/groundtruth/elba_absolute_tie.py` (the gen1 ties),
+`analysis/groundtruth/gen2_checkpoint_tie.py` (gen2 against the same marks, no chain),
+`analysis/groundtruth/elba_datum_constant.py` (one constant, its budget, the product),
+`analysis/groundtruth/reference_swath_bias.py` (is the reference swath biasing anything?)
+**Tests:** `tests/test_groundtruth_{checkpoints,tie,chain,datum}.py`
+**Report:** `analysis/ABSOLUTE_BASIS_ELBA.md`
 
 ---
 
@@ -150,6 +154,19 @@ inform anything.
 
 ---
 
+## 4a. Part 2b – combining ties (`datum.py`)
+
+Two ties that agree to 7.5 mm, both with sigmas larger than that, are a **consistency
+check**. Averaging them and quoting `sigma/sqrt(2)` would turn the check into a claim,
+because the two ties share one extrapolated lateral shift, one alignment estimator, one
+ground source and one un-applied drift term.
+
+`combine_ties` therefore takes `BudgetTerm`s that each carry a `kind`: `"random"` averages
+down with the marks, `"common"` enters the total at full size no matter how many marks are
+added, and `"unmodelled"` is a bound reported beside the total and never folded into it. A
+term with no `source` is refused, so an unattributed error number cannot enter a budget.
+The uncertainty is a **table**, not a single plus-or-minus.
+
 ## 5. Part 3 — the swath chain (`chain.py`)
 
 ### Search order is minimum work, and it is code, not a comment
@@ -254,8 +271,17 @@ chains do not contradict each other", not as the accuracy of the tie.
   grid, and gen2 was deliberately not fetched at the checkpoints. Every tie is therefore
   valid at the along-track position of the mark, and carries ~16 mm/km of unmodelled drift
   in transferring that to Elba. This is the single largest known gap.
-* **No gen2 cross-check at the marks.** Whether the *2021* surface hits its own
-  checkpoints is untested here; six 200 m boxes (~24 MB) would settle it.
+* **gen2 at the marks: now done, and it moved the budget.**
+  `analysis/groundtruth/gen2_checkpoint_tie.py` reads gen2 against all six marks with no
+  chain, no geoid and no lateral term, from six full-density 400 m boxes. gen2 is not
+  systematically low (median +17.2 mm over four NVA marks), but those four span **103 mm**
+  and give **40.8 mm RMS** on the cleanest case the method has. That scatter is a property
+  of the marks, it applies equally to gen1, and it is the largest single term in the datum
+  budget. See `analysis/ABSOLUTE_BASIS_ELBA.md` §3.
+* **The datum constant itself, and its budget:** `analysis/ABSOLUTE_BASIS_ELBA.md`.
+  The two ties below combine to **+22.7 mm** to be added to gen1, with sigma_total
+  **39.7 mm** and a 42.6 mm unmodelled bound held outside it, via
+  :mod:`lidar_diff_icp.groundtruth.datum`, which keeps common-mode terms at full size.
 * **The lateral term is extrapolated.** The elbaext Nuth & Kääb shift (−0.750, −0.189 m)
   is applied to put gen1 in the checkpoints' horizontal frame, but it was measured against
   gen2 at Elba, 7–16 km away. Its effect on each tie is reported (−7 to +43 mm), so the
