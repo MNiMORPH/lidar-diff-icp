@@ -286,6 +286,71 @@ in the reference swath's frame.
 
 ---
 
+## 5b. Part 5 — the same control read as a FIELD (`residual_field.py`)
+
+§5a combines per-mark ties into a scalar and reports `sd/sqrt(n)` over the marks (or over
+the flight lines). That answers *"how well do we know the average over those marks"*. It
+does not answer *"what is the value **here**"*, and the two differ whenever the residual
+varies in space — which the 2008 control says it does: the sample mean of the vendor's
+own published residual near Elba moves from −18.7 mm within 10 km to −85.7 mm within
+50 km while its own SE never exceeds 12.9 mm.
+
+`residual_field.py` models the vendor's `dnr_error_m` (`Control Z − Surface Z`, 963
+de-duplicated marks) as a spatial field and kriges it to a coordinate:
+
+```python
+from lidar_diff_icp.groundtruth import residual_field as RF
+
+cr    = RF.load_residuals()                       # 1004 rows -> 963 marks
+m     = RF.stratify(cr, ("L1O",))                 # the covers are the CALLER's choice
+model, centers, gamma, counts = RF.fit_field(     # nothing here has a default
+    cr.easting[m], cr.northing[m], cr.resid_mm[m],
+    max_lag_m=60_000, n_lags=30, n_pairs=800_000, estimator="dowd", seed=0)
+r = RF.krige(cr.easting[m], cr.northing[m], cr.resid_mm[m], model, easting, northing)
+r.value_mm, r.sd_field_mm, r.sd_new_mark_mm
+```
+
+### Two prediction sds, and why both are returned
+
+`KrigeResult` carries two standard deviations because they are different quantities and
+using the wrong one is the mistake this module exists to prevent:
+
+* `sd_field_mm` — the error of predicting **the spatially correlated component of the
+  field** at that coordinate, nugget filtered out. This is the uncertainty of the
+  *systematic* offset of the delivered surface there.
+* `sd_new_mark_mm` — the error of predicting **what one new control mark placed there
+  would read**, nugget included. Larger than the first by exactly the nugget.
+
+Neither is an SE of a mean. `sd/sqrt(n)` does not appear anywhere in this module.
+
+### Cover is a drift term, not a pooling decision
+
+Vegetated classes read high by construction, so a pooled field mixes a sensor effect with
+a spatial one. `cover_design()` builds a full-rank drift basis (constant + one indicator
+per class after the first) for universal kriging, and the caller states which class to
+predict *as*. The alternative — restricting to open marks — is just a different call to
+`stratify()`. The module reports; it does not choose.
+
+### Cross-validation is built in, and the shortcut is checked
+
+`loo_errors()` returns exact leave-one-out kriging errors from a single inverse of the
+augmented system rather than n refits, and `verify_loo_shortcut()` re-derives them by
+genuine refitting at caller-supplied indices. `block_cv()` does spatially blocked
+cross-validation with the variogram re-estimated inside every training fold, and
+`constant_null_errors()` gives the same folds' single-global-constant null so a skill
+score means something.
+
+### It invents no cut
+
+No radius, lag count, pair count, bin width, block size, minimum `n` or search
+neighbourhood has a default anywhere in the module.
+`tests/test_groundtruth_residual_field.py::test_every_tunable_is_required` fails if one
+acquires a default. The driver `analysis/control_residual_field.py` sweeps the nuisance
+ones and prints every point of the sweep; the result is written up in
+`analysis/CONTROL_RESIDUAL_FIELD.md`.
+
+---
+
 ## 6. What the example run produced
 
 `analysis/groundtruth/elba_absolute_tie.py`, seven gen1 tiles already on disk, nothing
