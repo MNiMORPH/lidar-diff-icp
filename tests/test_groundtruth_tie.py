@@ -190,3 +190,63 @@ def test_params_carry_their_origin():
     assert names["surface_order"].value == 2
     assert all(p.src in ("andy", "repo", "MINE") for p in t.params)
     assert all(p.why for p in t.params)
+
+
+# ------------------------------------------------------------------ scan angle reading
+
+def _write_las(path, point_format, n=50):
+    laspy = pytest.importorskip("laspy")
+    hdr = laspy.LasHeader(point_format=point_format,
+                          version="1.2" if point_format <= 5 else "1.4")
+    hdr.offsets = np.zeros(3); hdr.scales = np.full(3, 0.001)
+    las = laspy.LasData(hdr)
+    las.x = np.linspace(0, 10, n); las.y = np.zeros(n); las.z = np.zeros(n)
+    if point_format <= 5:
+        las.scan_angle_rank = np.full(n, 3, np.int8)
+    else:
+        las.scan_angle = np.full(n, int(round(3.0 / 0.006)), np.int16)
+    las.classification = np.full(n, 2, np.uint8)
+    las.write(str(path))
+    return las
+
+
+def test_scan_angle_is_read_from_both_point_format_families(tmp_path):
+    """PDAL rewrites a format-1 crop as format 7, where the field is `scan_angle` in
+    0.006 deg units. Reading only `scan_angle_rank` returned a silent 0 -- 'every beam at
+    nadir' -- which is the bug this test pins."""
+    laspy = pytest.importorskip("laspy")
+    for pf in (1, 7):
+        p = tmp_path / f"pf{pf}.las"
+        _write_las(p, pf)
+        sa = T.scan_angle_deg(laspy.read(str(p)))
+        assert np.allclose(sa, 3.0, atol=0.01), pf
+
+
+def test_missing_scan_angle_raises_rather_than_returning_zero():
+    class NoScan:
+        point_format = type("PF", (), {"dimension_names": ["X", "Y", "Z"]})()
+    with pytest.raises(ValueError, match="no scan angle"):
+        T.scan_angle_deg(NoScan())
+
+
+def test_vendor_loader_carries_the_real_scan_angle(tmp_path):
+    p = tmp_path / "v.las"
+    _write_las(p, 1, n=400)
+    g = T.vendor_ground_near(p, 5.0, 0.0, 50.0)
+    assert len(g) == 400
+    assert np.allclose(g.scan_angle, 3.0)
+
+
+# --------------------------------------------------------------- radius-median companion
+
+def test_tie_median_is_the_median_over_the_pipeline_scale_radii():
+    x, y, z = _local_high()
+    t = T.estimate_tie(_cp(100.0), _returns(x, y, z), line=1, geoid_shift_m=0.0,
+                       surface_order=1)
+    scale = [r for r in t.curve if r.ok and 2.5 <= r.radius_m <= 10.0]
+    want = np.median([1000.0 * (100.0 - r.z_lidar_m) for r in scale])
+    assert t.tie_median_mm == pytest.approx(want, abs=1e-9)
+    # on a surface the estimator handles, the two agree exactly
+    t2 = T.estimate_tie(_cp(100.0), _returns(x, y, z), line=1, geoid_shift_m=0.0,
+                        surface_order=2)
+    assert t2.tie_median_mm == pytest.approx(t2.tie_mm, abs=1e-6)

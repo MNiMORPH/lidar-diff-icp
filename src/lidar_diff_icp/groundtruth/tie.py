@@ -90,6 +90,23 @@ _SRC_WINDOW = ("pipeline._poly2_ground reads its constant term over a 3x3 cell w
 _SRC_GROUND = "data/derived/elbaext/corrections.json ground_source = csf"
 
 
+def scan_angle_deg(las) -> np.ndarray:
+    """Scan angle in DEGREES from a laspy object, both LAS point-format families.
+
+    Point formats <= 5 carry ``scan_angle_rank`` in integer degrees (0 = nadir); 6+
+    carry ``scan_angle`` in 0.006-degree units. This is the same two-branch read as
+    ``analysis/ridgelines/gen1_save_angles_slope.py``. It RAISES when neither dimension
+    is present rather than returning zeros: PDAL rewrites a point-format-1 crop as
+    format 7, and a silent zero here would print "all beams at nadir" for a swath edge.
+    """
+    dims = set(las.point_format.dimension_names)
+    if "scan_angle" in dims:
+        return np.asarray(las.scan_angle).astype(float) * 0.006
+    if "scan_angle_rank" in dims:
+        return np.asarray(las.scan_angle_rank).astype(float)
+    raise ValueError(f"no scan angle dimension in {sorted(dims)}")
+
+
 @dataclass
 class GroundReturns:
     """Ground-classified returns near one point, plus how they were classified."""
@@ -148,7 +165,12 @@ class TieEstimate:
 
     ``tie_mm`` is the constant to **ADD to gen1** (already in the reference-swath frame
     and already geoid-shifted to the checkpoint's geoid model) to place it on the
-    surveyed datum: ``tie = surveyed - z_lidar_corrected``.
+    surveyed datum: ``tie = surveyed - z_lidar_corrected``, read at ``report_radius_m``.
+
+    ``tie_median_mm`` is the same quantity taken as the median over the pipeline-scale
+    radii. It is a robustness companion, not a competing answer: where the two differ by
+    more than ``sigma_mm`` the radius curve is wobbling and the curve, not either number,
+    is the result.
     """
 
     point_id: str
@@ -161,6 +183,7 @@ class TieEstimate:
     geoid_shift_m: float          # added to gen1 z (N_gen1 - N_checkpoint)
     surveyed_m: float
     tie_mm: float
+    tie_median_mm: float          # median of the tie over the pipeline-scale radii
     radius_spread_mm: float       # max-min of tie over the pipeline-scale radii
     radius_spread_all_mm: float   # ... and over the whole ladder
     fit_se_mm: float              # fit_rms/sqrt(n) at report_radius -- OPTIMISTIC, see docs
@@ -206,7 +229,7 @@ class TieEstimate:
             rows.append([f"{r.radius_m:.1f}", r.n, f"{tie:+.1f}", f"{r.fit_rms_mm:.0f}",
                          f"{r.median_resid_mm:+.1f}", f"{r.slope_deg:.1f}",
                          f"{r.relief_mm/1000:.2f}", r.n_lines,
-                         f"{r.scan_p05:+.0f}/{r.scan_p50:+.0f}/{r.scan_p95:+.0f}"])
+                         f"{r.scan_p05:.0f}/{r.scan_p50:.0f}/{r.scan_p95:.0f}"])
         return rows
 
     @staticmethod
@@ -222,7 +245,7 @@ class TieEstimate:
             "slope_deg": "|grad S| at the checkpoint, degrees",
             "relief_m": "p95 - p05 of return elevations inside the radius, m",
             "n_lines": "distinct flight lines contributing returns inside the radius, count",
-            "scan_deg": "scan angle p05/p50/p95 of those returns, degrees (0 = nadir)",
+            "scan_deg": "|scan angle| p05/p50/p95 of those returns, degrees (0 = nadir)",
         }
 
 
@@ -301,9 +324,7 @@ def vendor_ground_near(tile_path, easting, northing, half_width, *, ground_class
     n_in = int(m.sum())
     cl = np.asarray(f.classification)[m]
     g = cl == ground_class
-    sa = (np.asarray(f.scan_angle_rank, float)[m][g]
-          if "scan_angle_rank" in set(f.point_format.dimension_names)
-          else np.zeros(int(g.sum())))
+    sa = scan_angle_deg(f)[m][g]
     return GroundReturns(x[m][g], y[m][g], np.asarray(f.z)[m][g], sa,
                          np.asarray(f.point_source_id)[m][g],
                          source=f"vendor_class{ground_class}",
@@ -349,10 +370,8 @@ def csf_ground_near(tile_path, easting, northing, half_width, *, pdal=None, cach
         if not (cache_dir and os.path.exists(out)):
             classify_ground_csf(crop, out, pdal=pdal, **csf_kwargs)
         g = laspy.read(out)
-        dims = set(g.point_format.dimension_names)
-        sa = (np.asarray(g.scan_angle_rank, float) if "scan_angle_rank" in dims
-              else np.zeros(len(g.x)))
-        return GroundReturns(np.asarray(g.x), np.asarray(g.y), np.asarray(g.z), sa,
+        return GroundReturns(np.asarray(g.x), np.asarray(g.y), np.asarray(g.z),
+                             scan_angle_deg(g),
                              np.asarray(g.point_source_id), source="csf",
                              origin=str(tile_path), n_input=n_in)
     finally:
@@ -427,7 +446,7 @@ def estimate_tie(checkpoint, ground: GroundReturns, *, line=None, res=5.0,
                                        surface_order=surface_order, quantile=quantile)
         sel = np.hypot(g.x - cp.easting, g.y - cp.northing) <= R
         zs = g.z[sel]
-        sa = g.scan_angle[sel]
+        sa = np.abs(g.scan_angle[sel])
         relief = 1000.0 * float(np.percentile(zs, 95) - np.percentile(zs, 5)) if zs.size else np.nan
         p05, p50, p95 = ((float(np.percentile(sa, 5)), float(np.percentile(sa, 50)),
                           float(np.percentile(sa, 95))) if sa.size else (np.nan,) * 3)
@@ -452,6 +471,7 @@ def estimate_tie(checkpoint, ground: GroundReturns, *, line=None, res=5.0,
     spread = (max(ties_scale) - min(ties_scale)) if len(ties_scale) > 1 else np.nan
     spread_all = (max(ties_all) - min(ties_all)) if len(ties_all) > 1 else np.nan
 
+    tie_median = float(np.median(ties_scale)) if ties_scale else np.nan
     rep = next((r for r in curve if r.radius_m == report_radius), None)
     z_raw = rep.z_lidar_m if (rep and rep.ok) else np.nan
     tie = 1000.0 * (surveyed - (z_raw + geoid_shift_m))
@@ -485,7 +505,7 @@ def estimate_tie(checkpoint, ground: GroundReturns, *, line=None, res=5.0,
         point_id=cp.point_id, point_type=cp.point_type, line=line, curve=curve,
         report_radius_m=report_radius, z_lidar_raw_m=z_raw,
         swath_shift_m=tuple(float(v) for v in swath_shift_m), geoid_shift_m=geoid_shift_m,
-        surveyed_m=surveyed, tie_mm=tie, radius_spread_mm=spread,
+        surveyed_m=surveyed, tie_mm=tie, tie_median_mm=tie_median, radius_spread_mm=spread,
         radius_spread_all_mm=spread_all, fit_se_mm=se,
         sigma_mm=(0.5 * spread if np.isfinite(spread) else np.nan),
         params=params, notes=notes)
