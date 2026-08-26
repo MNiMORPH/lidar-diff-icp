@@ -17,6 +17,13 @@ linear in angle, tan (a lateral/footprint displacement projected onto a slope), 
 sec-1 = 1/cos(theta)-1 (a path-length or penetration term). Selected by AIC on n-weighted
 binned medians with robust standard errors.
 
+No incidence truncation. Every populated bin out to the largest observed incidence is
+reported and fitted, with its own robust error bar; the sparse tail beyond ~35 deg is the
+rare regime and carries the largest deltas, so deleting it changes the fitted shape (it
+manufactures a turnover near 28 deg). The tail is also the highest-cover part of the range
+-- corr(incidence, cover) is about +0.9 -- which is a reason to plot the cover alongside,
+as the figure does, not a reason to remove the bins.
+
 CAVEAT carried from the figures: the axis is incidence + delta with delta an unknown nadir
 offset, so the angle origin is not guaranteed to be true nadir.
 
@@ -33,9 +40,11 @@ ap.add_argument("--offset", default="corr", choices=("raw", "corr"))
 ap.add_argument("--ref-max", type=float, default=5.0, help="incidence band declared correct (deg)")
 ap.add_argument("--curv-max", type=float, default=0.015)
 ap.add_argument("--no-ridge", action="store_true", help="drop the divide restriction")
-ap.add_argument("--inc-max", type=float, default=35.0, help="drop the sparse high-incidence tail")
 ap.add_argument("--bin", type=float, default=2.0)
-ap.add_argument("--min-n", type=int, default=500)
+ap.add_argument("--min-n", type=int, default=1,
+                help="returns needed to report a bin. 1 is the definitional floor -- a "
+                     "median needs one point. Raising it DELETES the sparse high-incidence "
+                     "bins, which carry the largest deltas; do not.")
 A = ap.parse_args()
 TILE = os.path.basename(A.tile.rstrip("/"))
 TAG = ("" if TILE == "elba_fulldensity" else f"_{TILE}") + ("_noridge" if A.no_ridge else "")
@@ -65,7 +74,10 @@ print(f"\nANCHOR  incidence < {A.ref_max:g} deg: median d = {REF:+.2f} ± {REF_S
       f"(n={ref_m.sum():,}, median cover {np.nanmedian(cov[ref_m]):.2f})")
 print(f"        -> declared to be zero change; everything below is measured RELATIVE to it")
 
-edges = np.arange(0, A.inc_max + A.bin, A.bin)
+# Bin to the largest incidence actually observed. There is no upper truncation: the
+# high-incidence tail is sparse but it holds the largest deltas, so it is shown with its
+# (large) error bars rather than deleted.
+edges = np.arange(0, np.ceil(th.max() / A.bin) * A.bin + A.bin, A.bin)
 x, y, se, nn, cb = [], [], [], [], []
 print(f"\n{'incidence':>12s} {'delta d (mm)':>13s} {'robust SE':>10s} {'med cover':>10s} {'n':>10s}")
 for lo, hi in zip(edges[:-1], edges[1:]):
@@ -74,7 +86,13 @@ for lo, hi in zip(edges[:-1], edges[1:]):
         print(f"{lo:5.0f}-{hi:<6.0f} {'--':>13s} {'':>10s} {'':>10s} {m.sum():>10,}"); continue
     v = d[m]
     x.append(th[m].mean()); y.append(np.median(v) - REF)
-    se.append(np.hypot(1.2533*nmad(v)/np.sqrt(m.sum()), REF_SE))
+    # Robust SE of the bin median. A bin of one point (or of identical points) has a
+    # degenerate NMAD of 0, which would give it infinite weight; fall back to the pooled
+    # spread in that case so a sparse bin is uncertain rather than authoritative.
+    s_bin = 1.2533 * nmad(v) / np.sqrt(m.sum())
+    if not np.isfinite(s_bin) or s_bin <= 0:
+        s_bin = 1.2533 * nmad(d) / np.sqrt(m.sum())
+    se.append(np.hypot(s_bin, REF_SE))
     nn.append(int(m.sum())); cb.append(float(np.nanmedian(cov[m])))
     print(f"{lo:5.0f}-{hi:<6.0f} {y[-1]:>13.1f} {se[-1]:>10.2f} {cb[-1]:>10.2f} {m.sum():>10,}")
 x, y, se, nn, cb = map(np.array, (x, y, se, nn, cb))
@@ -123,25 +141,48 @@ for lo, hi in ((0, .05), (.05, .20), (.20, .35), (.35, 1.01)):
         row += f"{np.median(d[mm])-r0:>+9.1f}" if mm.sum() >= 300 else f"{'--':>9s}"
     print(row)
 
-fig, ax = plt.subplots(figsize=(8.6, 5.6), dpi=130)
-ax.errorbar(x, y, yerr=se, fmt="o", ms=5, capsize=3, color="C0",
-            label=f"binned median − anchor (n={sel.sum():,})", zorder=3)
-tt = np.linspace(0, A.inc_max, 200)
+# Two panels on the SAME points: the left spans every populated bin so the sparse
+# high-incidence tail is visible with its (large) error bars; the right zooms on the
+# densely-sampled region so the model comparison stays readable. Nothing is cut from
+# either -- the zoom is a viewport, not a filter, and its x-limit is stated on the axis.
+ZOOM_MAX = 36.0
+fig, (axf, ax) = plt.subplots(1, 2, figsize=(13.2, 5.6), dpi=130)
+tt_full = np.linspace(0, x.max(), 400)
+tt = np.linspace(0, ZOOM_MAX, 200)
+fits = {}
 for nm, dsg in MODELS.items():
     X = dsg(x); rw = np.sqrt(w)[:, None]
-    bb, *_ = np.linalg.lstsq(X*rw, y*np.sqrt(w), rcond=None)
-    ax.plot(tt, dsg(tt) @ bb, "-" if nm == name else "--", lw=2.0 if nm == name else 0.9,
-            alpha=1.0 if nm == name else .5,
-            label=nm.split()[0] + (" (selected)" if nm == name else ""))
-ax.axhline(0, color="k", lw=.7)
-ax.axvspan(0, A.ref_max, color="0.85", zorder=0)
-ax.text(A.ref_max/2, ax.get_ylim()[1]*0.95, "anchor", ha="center", va="top", fontsize=8, color="0.35")
-ax.set_xlabel("incidence + δ (deg; δ = unknown nadir offset)")
-ax.set_ylabel("apparent elevation change vs near-nadir (mm)")
-ax.set_title(f"elevation change vs beam incidence — {TILE}\n"
-             f"anchored on incidence < {A.ref_max:g}°, "
-             f"{'divides, ' if not A.no_ridge else ''}|Laplacian|≤{A.curv_max:g}, all covers", fontsize=10)
-ax.legend(fontsize=8); ax.grid(alpha=.3)
+    fits[nm], *_ = np.linalg.lstsq(X*rw, y*np.sqrt(w), rcond=None)
+
+for a, tgrid, ttl in ((axf, tt_full, f"ALL {len(x)} populated bins, to {x.max():.0f}°"),
+                      (ax, tt, f"detail: 0–{ZOOM_MAX:g}° (same points, no bins removed)")):
+    a.errorbar(x, y, yerr=se, fmt="o", ms=5, capsize=3, color="C0",
+               label=f"binned median − anchor (n={sel.sum():,})", zorder=3)
+    for nm, dsg in MODELS.items():
+        a.plot(tgrid, dsg(tgrid) @ fits[nm], "-" if nm == name else "--",
+               lw=2.0 if nm == name else 0.9, alpha=1.0 if nm == name else .5,
+               label=nm.split()[0] + (" (selected)" if nm == name else ""))
+    a.axhline(0, color="k", lw=.7)
+    a.axvspan(0, A.ref_max, color="0.85", zorder=0)
+    a.set_xlabel("incidence + δ (deg; δ = unknown nadir offset)")
+    a.set_title(ttl, fontsize=9)
+    a.grid(alpha=.3)
+axf.set_ylabel("apparent elevation change vs near-nadir (mm)")
+axf.legend(fontsize=8)
+ax.set_xlim(-1, ZOOM_MAX)
+_in = x <= ZOOM_MAX
+ax.set_ylim(min(0, (y[_in]-se[_in]).min()) - 5, (y[_in]+se[_in]).max() + 5)
+# the confound the tail rides on: median canopy cover per bin, same x
+axc = ax.twinx()
+axc.plot(x, cb, ":", color="C3", lw=1.4, label="median canopy cover")
+axc.set_ylabel("median canopy cover in bin", color="C3", fontsize=9)
+axc.tick_params(axis="y", labelcolor="C3", labelsize=8)
+axc.legend(fontsize=8, loc="lower right")
+fig.suptitle(f"elevation change vs beam incidence — {TILE}   "
+             f"[anchor incidence < {A.ref_max:g}°, "
+             f"{'divides, ' if not A.no_ridge else ''}|Laplacian|≤{A.curv_max:g}, all covers; "
+             f"corr(incidence, cover) = {np.corrcoef(x, cb)[0,1]:+.2f}]", fontsize=10)
+fig.tight_layout(rect=(0, 0, 1, 0.95))
 out = f"figures/refdatum/incidence_correction{TAG}.png"
 fig.savefig(out, bbox_inches="tight"); plt.close(fig)
 print(f"\nwrote {out}")
