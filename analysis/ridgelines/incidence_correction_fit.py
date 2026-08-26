@@ -129,17 +129,23 @@ for t in (5, 10, 15, 20, 25, 30, 35):
 # --- is the SHAPE cover-independent, or is the curve partly the canopy effect? ---
 print(f"\n  SHAPE BY COVER BAND (each anchored on its OWN incidence<{A.ref_max:g} median):")
 print(f"   {'cover band':>14s} {'n':>10s}" + "".join(f"{t:>8d}°" for t in (10, 15, 20, 25, 30)))
+print(f"   {'':>14s} {'':>10s}   (n of each anchor and cell printed beneath the deltas)")
 for lo, hi in ((0, .05), (.05, .20), (.20, .35), (.35, 1.01)):
     bm = np.isfinite(cov) & (cov >= lo) & (cov < hi)
     r = bm & (th < A.ref_max)
-    if r.sum() < 500 or bm.sum() < 20000:
-        print(f"   {100*lo:5.0f}-{100*hi:<5.0f}% {bm.sum():>10,}   (sparse)"); continue
-    r0 = float(np.median(d[bm & r]))
+    if r.sum() == 0:          # definitional: the band needs an anchor to be measured from
+        print(f"   {100*lo:5.0f}-{100*hi:<5.0f}% {bm.sum():>10,}   "
+              f"(no return below {A.ref_max:g} deg to anchor on)"); continue
+    r0 = float(np.median(d[r]))
     row = f"   {100*lo:5.0f}-{100*min(hi,1.0):<5.0f}% {bm.sum():>10,}"
+    cnt = f"   {'anchor n=' + format(int(r.sum()), ',') :>14s} {'':>10s}"
     for t in (10, 15, 20, 25, 30):
         mm = bm & (th >= t-2) & (th < t+2)
-        row += f"{np.median(d[mm])-r0:>+9.1f}" if mm.sum() >= 300 else f"{'--':>9s}"
-    print(row)
+        # every cell with at least one return is reported, with its n underneath;
+        # a sparse cell is read against its count, not deleted for being sparse
+        row += f"{np.median(d[mm])-r0:>+9.1f}" if mm.sum() else f"{'--':>9s}"
+        cnt += f"{mm.sum():>9,}"
+    print(row); print(cnt)
 
 # Two panels on the SAME points: the left spans every populated bin so the sparse
 # high-incidence tail is visible with its (large) error bars; the right zooms on the
