@@ -213,7 +213,10 @@ class KrigeResult:
         component of the field at this location**, with the nugget treated as
         uncorrelated noise and filtered out. This is the smaller of the two and is the
         uncertainty of the systematic offset of the delivered surface at the target, as
-        distinct from what any single mark there would read.
+        distinct from what any single mark there would read. At a target that coincides
+        exactly with a datum, kriging is an exact interpolator, ``sd_new_mark_mm`` goes to
+        zero and this quantity is clamped there too; that case does not arise when
+        predicting at an unsampled site or under leave-one-out.
     n_marks, sum_weights_pos
         Marks entering the system, and the sum of the positive kriging weights (a
         readable measure of how local the prediction is).
