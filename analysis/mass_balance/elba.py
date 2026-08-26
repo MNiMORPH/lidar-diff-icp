@@ -1,20 +1,34 @@
 """Run the routed sediment-continuity budget on Elba; save V_acc + sigma; quantify
-the down-network bias and the NW / hilltop-deposition concern."""
-import time, numpy as np
+the down-network bias and the NW / hilltop-deposition concern.
+
+Paths are options so the same budget can be run on an alternative DoD/LoD pair
+(e.g. a cover-corrected DoD) on the same grid; the defaults are unchanged.
+"""
+import argparse, time, numpy as np
 import matplotlib; matplotlib.use("Agg"); import matplotlib.pyplot as plt
 from catchment_dod_balance import dinf_proportions, mass_balance, weighted_accumulation
 from lidar_diff_icp.viz import hillshade
 
+ap = argparse.ArgumentParser(description=__doc__)
+ap.add_argument("--dod", default="data/derived/elba_fulldensity/dod.npy")
+ap.add_argument("--lod", default="data/derived/elba_fulldensity/lod.npy")
+ap.add_argument("--dem", default="data/derived/elba_fulldensity/z_after.npy")
+ap.add_argument("--out-prefix", default="data/derived/elba_fulldensity/V_acc",
+                help="writes <prefix>.npy and <prefix>_sigma.npy")
+ap.add_argument("--fig", default="figures/elba_fulldensity_massbalance.png")
+args = ap.parse_args()
+
 X0,Y0,X1,Y1=577492.8,4882737.6,580032.8,4886237.6; res=5.0; area=res*res
-dod=np.load("data/derived/elba/dod.npy"); lod=np.load("data/derived/elba/lod.npy"); dem=np.load("data/derived/elba/z_after.npy")
+dod=np.load(args.dod); lod=np.load(args.lod); dem=np.load(args.dem)
+print(f"DoD {args.dod} | LoD {args.lod} | DEM {args.dem}",flush=True)
 ny,nx=dod.shape; perror=np.maximum(lod/1.96,1e-6)
 print(f"grid {ny}x{nx} = {ny*nx} cells; finite DoD {np.isfinite(dod).sum()}",flush=True)
 
 t=time.time(); props,valid=dinf_proportions(dem,breach=True); print(f"routing (breach+Dinf): {time.time()-t:.1f}s, valid {int(valid.sum())}",flush=True)
 t=time.time(); out=mass_balance(dod,perror,props,valid,res); print(f"mass_balance: {time.time()-t:.1f}s",flush=True)
 V=out["V_acc"]; sig=out["sigma_Vacc"]; contam=out["contaminated"]; surplus=out["surplus"]
-np.save("data/derived/elba/V_acc.npy",V); np.save("data/derived/elba/V_acc_sigma.npy",sig)
-print("saved data/derived/elba/V_acc.npy , V_acc_sigma.npy",flush=True)
+np.save(args.out_prefix+".npy",V); np.save(args.out_prefix+"_sigma.npy",sig)
+print(f"saved {args.out_prefix}.npy , {args.out_prefix}_sigma.npy",flush=True)
 
 vb=valid & np.isfinite(dod)
 evaluable=vb & ~contam
@@ -52,4 +66,4 @@ yy,xx=np.where(surplus); ax[1].scatter(X0+(xx+.5)*res,Y0+(yy+.5)*res,s=3,c='blue
 yy,xx=np.where(contam); ax[1].scatter(X0+(xx+.5)*res,Y0+(yy+.5)*res,s=1,c='0.6',marker='s',alpha=.3,label='contaminated (excluded)')
 ax[1].legend(loc='upper left'); ax[1].set_title("unphysical-deposition flag & excluded cells")
 for a in ax: a.set_xlabel("Easting")
-fig.savefig("figures/elba_massbalance.png",dpi=110,bbox_inches='tight'); print("\nwrote figures/elba_massbalance.png",flush=True)
+fig.savefig(args.fig,dpi=110,bbox_inches='tight'); print(f"\nwrote {args.fig}",flush=True)
