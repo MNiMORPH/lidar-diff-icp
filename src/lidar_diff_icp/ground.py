@@ -11,13 +11,12 @@ Two practical wrinkles this module handles:
    chunk-table format that current PDAL reads the *header* of but cannot
    decompress ("Invalid version ... in LAZ chunk table"). laspy reads it fine, so
    we first rewrite the cloud to an uncompressed LAS that PDAL can read.
-2. **PDAL's defaults everywhere except rigidness.** PDAL ``filters.csf`` ships
-   ``rigidness=3``, ``threshold=0.5``, ``hdiff=0.3``, ``resolution=1``,
-   ``step=0.65``, ``smooth=true``. We take all of those except **rigidness=1**:
-   PDAL's 3 is the hard cloth documented for FLAT terrain, and this is dissected
-   bluffland. (An earlier version of this module also ran ``threshold=1.5``, which
-   retained sub-ground returns and biased the gen1 ground low under canopy; that
-   is gone.)
+2. **We override exactly one CSF parameter: ``rigidness=1``.** PDAL ships 3, the
+   hard cloth documented for FLAT terrain; this is dissected bluffland. Every other
+   parameter is left unset and therefore comes from PDAL itself, so we inherit its
+   defaults rather than holding stale copies of them. (An earlier version of this
+   module also ran ``threshold=1.5``, which retained sub-ground returns and biased
+   the gen1 ground low under canopy; that is gone.)
 """
 from __future__ import annotations
 
@@ -49,9 +48,9 @@ def find_pdal(pdal=None):
         "The conda 'lidar-icp' env has it (e.g. ~/anaconda3/envs/lidar-icp/bin/pdal).")
 
 
-def classify_ground_csf(in_path, out_path=None, *, pdal=None, resolution=1.0,
-                        rigidness=1, threshold=0.5, hdiff=0.3, smooth=True,
-                        iterations=500, elm=True, outlier=False):
+def classify_ground_csf(in_path, out_path=None, *, pdal=None, resolution=None,
+                        rigidness=1, threshold=None, hdiff=None, smooth=None,
+                        iterations=None, elm=True, outlier=False):
     """Classify ground with PDAL CSF; return a path to a LAS of ground points.
 
     Rewrites ``in_path`` to uncompressed LAS via laspy first (old-LAZ
@@ -85,10 +84,16 @@ def classify_ground_csf(in_path, out_path=None, *, pdal=None, resolution=1.0,
         stages.append({"type": "filters.outlier"})
     if elm or outlier:                                # drop noise before ground filter
         stages.append({"type": "filters.expression", "expression": "Classification != 7"})
+    # Send ONLY what we mean to override; anything left None is omitted so PDAL
+    # supplies its own default and keeps tracking it if PDAL ever changes it.
+    csf = {"type": "filters.csf"}
+    for k, v in (("resolution", resolution), ("rigidness", rigidness),
+                 ("threshold", threshold), ("hdiff", hdiff), ("smooth", smooth),
+                 ("iterations", iterations)):
+        if v is not None:
+            csf[k] = v
     stages += [
-        {"type": "filters.csf", "resolution": resolution, "rigidness": rigidness,
-         "threshold": threshold, "hdiff": hdiff, "smooth": smooth,
-         "iterations": iterations},
+        csf,
         {"type": "filters.expression", "expression": "Classification == 2"},
         {"type": "writers.las", "filename": out_path},
     ]
