@@ -19,6 +19,12 @@ This package supplies that tie from surveyed checkpoints, in three separable par
     slope-normal ground read (:func:`lidar_diff_icp.pipeline.difference_dem`,
     ``ground="slope_normal"``) generalised from a cell centre to an arbitrary point.
 
+``datum``
+    Combine independent ties into ONE constant with an uncertainty budget that keeps
+    common-mode error at full size: a term shared by every tie (the extrapolated lateral
+    shift, the alignment estimator's repeatability) does not average down with the number
+    of marks, and an unmodelled gap is reported beside the total rather than inside it.
+
 ``chain``
     Flight lines that cover a checkpoint are usually not the lines that cover the study
     area. Overlapping swaths chain, so a tie measured on one line propagates. The solver
@@ -37,6 +43,7 @@ from .checkpoints import (
     read_3dep_va_shapefile,
     list_bundled,
 )
+from .datum import BudgetTerm, DatumConstant, combine_ties
 from .provenance import Param, declare
 from .tie import (
     GroundReturns,
@@ -66,6 +73,7 @@ from .chain import (
 __all__ = [
     "Checkpoint", "CheckpointSet", "UnknownDatumError", "load_bundled",
     "read_3dep_va_shapefile", "list_bundled",
+    "BudgetTerm", "DatumConstant", "combine_ties",
     "Param", "declare",
     "GroundReturns", "RadiusEstimate", "TieEstimate", "csf_ground_near", "estimate_tie",
     "geoid_shift_for", "ground_elevation_at", "radius_ladder", "scan_angle_deg",
