@@ -45,7 +45,7 @@ by `c·(mean dtan₁ − mean dtan₂)` — asserted against that closed form, n
 "they differ". The intercept tie returns the same number on both, and the injected
 constant. **Shown to fail without the fix:** with `across_track_tie`'s result discarded so
 the intercept path falls back to the median, the two extents disagree by **21.4 mm** and
-the last two assertions fail. 155 tests pass with the fix in place.
+the last two assertions fail. The full test suite passes with the fix in place.
 
 The estimand argument is the same one: `median(dh)` estimates `k + c·E[dtan | extent]`,
 which is a function of the extent; the intercept estimates `k`, which is not.
