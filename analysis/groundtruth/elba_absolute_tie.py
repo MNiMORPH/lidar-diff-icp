@@ -71,6 +71,9 @@ def main():
                     help="half-width of the crop CSF is run on, m")
     ap.add_argument("--east", dest="east", action="store_true", default=True)
     ap.add_argument("--no-east", dest="east", action="store_false")
+    ap.add_argument("--json", default=None,
+                    help="also write every per-checkpoint result to this JSON, so a "
+                         "downstream step consumes the artifact instead of a transcription")
     ap.add_argument("--cross-check-ground", action="store_true", default=True,
                     help="also read the tie with the other ground source, to show the "
                          "choice does not move it")
@@ -285,6 +288,10 @@ def main():
             print(f"  ground-source check: {other} gives {e2.tie_mm:+.1f} mm "
                   f"({e2.tie_mm - est.tie_mm:+.1f} mm from {A.ground})")
         results.append(dict(cp=cp, tie=est, sol=sol, drift_mm=abs(dN) * drift_scale,
+                            lateral_mm=est.tie_mm - no_lat.tie_mm,
+                            other_ground_mm=(e2.tie_mm - est.tie_mm
+                                             if A.cross_check_ground else None),
+                            path=list(p.nodes),
                             chain_mm=dz_chain * 1000.0,
                             chain_sig=sig_chain * 1000.0, geoid_mm=geoid * 1000.0,
                             line=far, links=p.n_links, ok=ok, dN=dN, reason=""))
@@ -360,6 +367,44 @@ def main():
         print("  because a chain has no internal redundancy and its formal sigma "
               f"({np.hypot(*[r['chain_sig'] for r in results if r['tie'] is not None][:2]):.1f} "
               "mm scale) cannot see accumulated error.")
+    if A.json:
+        os.makedirs(os.path.dirname(A.json) or ".", exist_ok=True)
+        rec = dict(
+            produced_by="analysis/groundtruth/elba_absolute_tie.py",
+            ground_source=A.ground,
+            reference_frame=f"elbaext swath {ref_line} (corrections_geoid.json gauge)",
+            sign_convention=("tie_mm = surveyed - z_lidar_corrected: the constant to ADD "
+                             "to gen1, already in the reference-swath frame and already "
+                             "geoid-shifted to the checkpoint's geoid model"),
+            elbaext_lateral_shift_m=list(lat),
+            drift_median_mm_per_km=drift_scale,
+            drift_per_swath=[dict(swath=r[0], p2p_mm=float(r[1]), span_km=float(r[2]),
+                                  mm_per_km=float(r[3])) for r in drows],
+            checkpoints=[])
+        for r in results:
+            cp = r["cp"]
+            if r["tie"] is None:
+                rec["checkpoints"].append(dict(point_id=cp.point_id,
+                                               point_type=cp.point_type,
+                                               attempted=False, reason=r["reason"]))
+                continue
+            e = r["tie"]
+            rec["checkpoints"].append(dict(
+                point_id=cp.point_id, point_type=cp.point_type, attempted=True,
+                line=int(r["line"]), links=int(r["links"]), path=r["path"],
+                n_report=e.n_report, report_radius_m=e.report_radius_m,
+                tie_mm=e.tie_mm, sigma_mm=e.sigma_mm, tie_median_mm=e.tie_median_mm,
+                radius_spread_mm=e.radius_spread_mm,
+                radius_spread_all_mm=e.radius_spread_all_mm,
+                fit_se_mm=e.fit_se_mm, chain_mm=r["chain_mm"],
+                chain_sigma_mm=r["chain_sig"], geoid_mm=r["geoid_mm"],
+                lateral_effect_mm=r["lateral_mm"],
+                other_ground_delta_mm=r["other_ground_mm"],
+                dN_from_band_km=r["dN"], unmodelled_drift_mm=r["drift_mm"],
+                usable=bool(r["ok"])))
+        with open(A.json, "w") as f:
+            json.dump(rec, f, indent=2)
+        print(f"\n  wrote {A.json}")
     R.done(headline=(f"gen1 tie at Elba from {len(ties)} control point(s): "
                      + ", ".join(f"{r['cp'].point_id}={r['tie'].tie_mm:+.0f}mm"
                                  for r in results if r["tie"] is not None)))

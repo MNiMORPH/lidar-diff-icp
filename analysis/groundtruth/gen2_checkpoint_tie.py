@@ -75,6 +75,9 @@ def main():
                          "pipeline.read_after_ground mode)")
     ap.add_argument("--half-width", type=float, default=200.0,
                     help="half-width of the fetched gen2 box, m")
+    ap.add_argument("--json", default=None,
+                    help="also write every per-checkpoint result to this JSON, so a "
+                         "downstream step consumes the artifact instead of a transcription")
     ap.add_argument("--cross-check-ground", action="store_true", default=True,
                     help="also read each tie with the other ground source")
     ap.add_argument("--no-cross-check-ground", dest="cross_check_ground",
@@ -163,6 +166,7 @@ def main():
         print(f"  radius spread {est.radius_spread_mm:.1f} mm over the pipeline-scale "
               f"radii, {est.radius_spread_all_mm:.1f} mm over the whole ladder")
         print(f"  usable: {ok} -- {why}")
+        other_delta = None
         if A.cross_check_ground:
             other = "csf" if A.ground == "class2" else "class2"
             ldr = T.csf_ground_near if other == "csf" else T.vendor_ground_near
@@ -171,11 +175,13 @@ def main():
                 g2 = ldr(path, cp.easting, cp.northing, A.half_width, **kw2)
                 e2 = T.estimate_tie(cp, g2, line=None, geoid_shift_m=0.0,
                                     swath_shift_m=(0.0, 0.0, 0.0))
+                other_delta = e2.tie_mm - est.tie_mm
                 print(f"  ground-source check: {other} gives {e2.tie_mm:+.1f} mm "
-                      f"({e2.tie_mm - est.tie_mm:+.1f} mm from {A.ground})")
+                      f"({other_delta:+.1f} mm from {A.ground})")
             except Exception as exc:                                  # reported, not hidden
                 print(f"  ground-source check ({other}) FAILED: {exc}")
-        results.append(dict(cp=cp, est=est, dens=dens, ok=ok, reason=""))
+        results.append(dict(cp=cp, est=est, dens=dens, ok=ok, reason="",
+                            other_ground_mm=other_delta))
 
     # -------------------------------------------------------------------- every mark
     print(f"\n{'=' * 78}\n== gen2 against every checkpoint, separately ==")
@@ -228,6 +234,39 @@ def main():
               "open-ground marks. Compare the leveled benchmark DG8385, which put the "
               "residual after the GEOID03->GEOID18 shift at +5 mm with a std of 11 mm "
               "(analysis/ridgelines/FLAGPOLE_ABSOLUTE_TEST.md).")
+    if A.json:
+        os.makedirs(os.path.dirname(A.json) or ".", exist_ok=True)
+        v_nva = [r["est"].tie_mm for r in nva]
+        rec = dict(
+            produced_by="analysis/groundtruth/gen2_checkpoint_tie.py",
+            ground_source=A.ground,
+            sign_convention=("tie_mm = surveyed - z_gen2: the constant to ADD to gen2. "
+                             "POSITIVE means gen2 sits LOW of the survey. No geoid, no "
+                             "chain and no lateral term are applied -- gen2 and the marks "
+                             "share NAVD88(GEOID18)."),
+            nva_rms_mm=float(np.sqrt(np.mean(np.square(v_nva)))) if v_nva else None,
+            nva_median_mm=float(np.median(v_nva)) if v_nva else None,
+            nva_spread_mm=float(max(v_nva) - min(v_nva)) if len(v_nva) > 1 else None,
+            n_nva=len(nva),
+            checkpoints=[])
+        for r in results:
+            cp = r["cp"]
+            if r["est"] is None:
+                rec["checkpoints"].append(dict(point_id=cp.point_id,
+                                               point_type=cp.point_type,
+                                               attempted=False, reason=r["reason"]))
+                continue
+            e = r["est"]
+            rec["checkpoints"].append(dict(
+                point_id=cp.point_id, point_type=cp.point_type, attempted=True,
+                n_report=e.n_report, report_radius_m=e.report_radius_m,
+                ground_density_per_m2=r["dens"], tie_mm=e.tie_mm, sigma_mm=e.sigma_mm,
+                tie_median_mm=e.tie_median_mm, radius_spread_mm=e.radius_spread_mm,
+                radius_spread_all_mm=e.radius_spread_all_mm, fit_se_mm=e.fit_se_mm,
+                other_ground_delta_mm=r["other_ground_mm"], usable=bool(r["ok"])))
+        with open(A.json, "w") as f:
+            json.dump(rec, f, indent=2)
+        print(f"\n  wrote {A.json}")
     R.done(headline=("gen2 vs its own checkpoints: " +
                      ", ".join(f"{r['cp'].point_id.split('_')[0]}="
                                f"{r['est'].tie_mm:+.0f}mm" for r in got)))
