@@ -31,6 +31,18 @@ _ap.add_argument("--binw", type=float, default=None,
                  help="uniform bin width in cover units (default: the quantile-ish edges)")
 _ap.add_argument("--minn", type=int, default=1,
                  help="minimum cells to keep a bin; 1 = keep everything (default)")
+# Per-cell sample-size requirements. Both are DEFINITIONAL at 1 and DISCRETIONARY above it:
+#   --min-gen1  a per-cell median of the gen1 offsets needs >=1 return  (definitional: 1)
+#   --min-gen2  a quantile of the gen2 near-ground histogram needs >=1 point (definitional: 1)
+# Anything higher is a quality judgement, and on this tile it is a biased one: the cells it
+# removes are canopy-enriched (median cover 0.35 against 0.19 for those kept), so raising
+# either re-selects the sample toward open ground -- the exact mechanism FRAME_2026-08-26
+# warns about. They were previously hardcoded at 5 and 10 with no way to see or change them,
+# and at values that did not even match percentile_float_fit.py's 3 and 5 on the same cells.
+_ap.add_argument("--min-gen1", type=int, default=1,
+                 help="gen1 returns needed per cell (1 = definitional: a median needs a point)")
+_ap.add_argument("--min-gen2", type=int, default=1,
+                 help="gen2 class-2 near-ground points needed per cell (1 = definitional)")
 ARGS = _ap.parse_args()
 
 exec(open("analysis/ridgelines/percentile_float_fit.py").read().split("D = A.tile")[0]
@@ -49,7 +61,12 @@ vs, off, n1 = ragged_sorted(ce, dc, N)
 sp = np.load(f"{D}/nearground_gen2_class_split.npz"); Hg = sp["Hg"]
 Cg = np.cumsum(Hg, 1).astype(float); ng = Cg[:, -1]
 stable, _ = reference_cells(D, cells=cells, slope_max=90.0)
-ok = stable & (n1[cells] >= 5) & (ng >= 10) & np.isfinite(cover)
+ok = (stable & (n1[cells] >= max(1, ARGS.min_gen1)) & (ng >= max(1, ARGS.min_gen2))
+      & np.isfinite(cover))
+print(f"cells: {ok.sum():,} of {stable.sum():,} stable "
+      f"(gen1 >= {max(1, ARGS.min_gen1)} returns, gen2 class-2 >= {max(1, ARGS.min_gen2)}; "
+      f"median cover of those kept {np.nanmedian(cover[ok]):.3f}, "
+      f"of those dropped {np.nanmedian(cover[stable & ~ok]):.3f})")
 sel = cells[ok]; cv = cover[ok]; Cs = Cg[ok]; ns = ng[ok]
 g1 = ragged_quantile(vs, off, n1, 0.50, sel); blk = block_ids(sel, NX, 5.0, 50.0)
 
