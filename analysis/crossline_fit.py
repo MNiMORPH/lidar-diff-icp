@@ -381,6 +381,15 @@ def main():
         ("kind_check", "whether the row is a genuine redundancy check, i.e. whether both "
                        "lines' coefficients were measured on the cross line rather than "
                        "propagated from this very pair sum"),
+        ("c_full", "the pair's coefficient over the whole tile, mm per unit tangent"),
+        ("c_band", "the same coefficient restricted to the cross line's own northing band -- "
+                   "the band is COMPUTED from the cross line's overlap cells, not chosen"),
+        ("c_band_se", "cluster-robust standard error of c_band, mm per unit tangent"),
+        ("c_at_mid", "the across-track coefficient at the pair's mean northing, mm/unit tan"),
+        ("dc_dY", "d(across-track coefficient)/d(northing), mm per unit tangent per km"),
+        ("dc_dY_se", "cluster-robust standard error of dc_dY"),
+        ("c_by_band", "the two-parameter coefficient in six EQUIPOPULATED northing bands, "
+                      "south to north, mm per unit tangent -- the same question with no model"),
         ("variant", "which sensitivity run produced the row"),
         ("d_c136", "change in c_136 from the headline run, mm per unit tangent"),
         ("d_c137", "change in c_137 from the headline run, mm per unit tangent"),
@@ -633,6 +642,64 @@ def main():
                      f"{pr - obs:+.1f}", f"{(pr - obs) / np.sqrt(pse ** 2 + ose ** 2):+.2f}",
                      "OUT OF SAMPLE, and 2.6-3.5 km SOUTH: also tests c_s along track"])
     R.table(["tile", "pair", "predicted", "observed", "resid", "resid_sig", "kind_check"], rows)
+
+    # ------ 6b. is the disagreement along-track structure? Restrict the N-S pairs to the
+    #            cross line's own northing band, where the prediction was made.
+    print("\n### 6b. The N-S pairs restricted to the cross line's own northing band\n")
+    print("  The cross line covers only the northern strip of the tile, so the cross-only\n"
+          "  prediction is made THERE while the N-S pair sums above are measured over the\n"
+          "  whole 3.5 km of tile. If c_s varies along track, restricting the N-S fits to the\n"
+          "  same band should move the observed sums toward the prediction. This asks it.\n")
+    cross_cy = np.concatenate([g.cy.to_numpy() for k, (fi, g) in fits.items()
+                               if CROSS_PSID in k])
+    y_lo, y_hi = float(cross_cy.min()), float(cross_cy.max())
+    print(f"  band = the cross line's OWN overlap northing span, computed from it: "
+          f"{y_lo:.0f} to {y_hi:.0f} m above the grid origin "
+          f"({y_hi - y_lo:.0f} m of the tile's {clm.cell.max() // nx * A.res:.0f} m)\n")
+    rows = []
+    for (a, b_), (fi, g) in sorted(fits.items()):
+        if CROSS_PSID in (a, b_):
+            continue
+        gg = g[(g.cy >= y_lo) & (g.cy <= y_hi)]
+        if len(gg) < 200:
+            continue
+        fb = fit_pair(gg)
+        if a in X["li"] and b_ in X["li"]:
+            pr, pse = _sum(X["c"], X["V"], X["li"], a, b_)
+        else:
+            pr, pse = float("nan"), float("nan")
+        rows.append([f"{a}-{b_}", "N-S/N-S", len(gg), f"{fi['c_pair']:+.1f}",
+                     f"{fb['c_pair']:+.1f}", f"{fb['c_pair_se']:.1f}", f"{pr:+.1f}",
+                     f"{pr - fb['c_pair']:+.1f}",
+                     f"{(pr - fb['c_pair']) / np.sqrt(pse ** 2 + fb['c_pair_se'] ** 2):+.2f}"])
+    R.table(["pair", "kind", "cells", "c_full", "c_band", "c_band_se", "predicted", "resid",
+             "resid_sig"], rows)
+
+    # ------ 6c. Is c_s a LINE constant at all? Measure its along-track gradient, no bins.
+    print("\n### 6c. Is the across-track coefficient a line constant along the track?\n")
+    print("  Sec 6b moves an N-S pair's coefficient by restricting it to a northing band, so\n"
+          "  ask the question without any band: add an interaction and fit\n"
+          "      D = k + kappa*Y + c*dtan + m*dtan*Y,   Y = (northing - mean)/1000, km\n"
+          "  so m = d(c)/d(along-track distance), mm per unit tangent per km. If m is zero the\n"
+          "  per-line model's premise holds; if it is not, c_s is not a property of the line.\n"
+          "  The six equipopulated bands beside it are the same question with the model\n"
+          "  removed -- six is swath_across_track_test.py's own binning of the raw medians.\n")
+    rows = []
+    for (a, b_), (fi, g) in sorted(fits.items()):
+        yy = (g.cy.to_numpy() - g.cy.mean()) / 1000.0
+        dt = g.dtan.to_numpy()
+        Xi = np.c_[np.ones(len(g)), yy, dt, dt * yy]
+        bi, Vi, r2i, _, _ = ols_cluster(Xi, g.D.to_numpy(), g.blk.to_numpy())
+        sei = np.sqrt(np.diag(Vi))
+        edges = bs.quantile_edges(g.cy.to_numpy(), 6)
+        cb = []
+        for lo, hi in zip(edges[:-1], edges[1:]):
+            gg = g[(g.cy >= lo) & (g.cy < hi)] if hi < edges[-1] else g[g.cy >= lo]
+            cb.append(f"{fit_pair(gg)['c_pair']:+.0f}" if len(gg) >= 200 else "  .")
+        rows.append([f"{a}-{b_}", "CROSS" if CROSS_PSID in (a, b_) else "N-S/N-S",
+                     f"{bi[2]:+.1f}", f"{bi[3]:+.1f}", f"{sei[3]:.1f}",
+                     f"{bi[3] / sei[3]:+.1f}", " ".join(cb)])
+    R.table(["pair", "kind", "c_at_mid", "dc_dY", "dc_dY_se", "t", "c_by_band"], rows)
 
     # ------------------------------------ 7. propagate down the chain to 135, 134, 133
     print("\n## 7. Propagating the chain to lines 135, 134 and 133\n")
