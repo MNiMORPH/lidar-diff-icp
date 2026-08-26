@@ -10,10 +10,29 @@ reference_plane product (non-destructive); z_after/slope are tie-independent (re
 """
 import json, numpy as np
 from lidar_diff_icp.pipeline import difference_dem
+from lidar_diff_icp import references, io
 BOUNDS = (575600.0, 4882200.0, 580050.0, 4886250.0); RES = 5.0
 BEFORE = "data/before/elbaext_gen1_merged.laz"
 AFTER  = "data/after/elbaext_3dep_fd_class2.laz"     # class2-extracted: loadable non-streaming
-G = (0.067, 0.00061, -0.00073)   # GEOID03->GEOID18 const_m, b(E), c(N) m/km -> ADD to gen1 (same as elba)
+# ONE shared vertical frame, DERIVED not hardcoded.
+#
+# geoid_difference() fits a PLANE over the bounds it is given, about that bounds' centroid.
+# The true GEOID03-GEOID18 field is curved (4.44 mm ptp over the shared area), so fitting it
+# separately on elba's and elbaext's different footprints yields two different linearisations:
+# measured, they disagree by 2.70 mm ptp over the shared area, which is larger than the
+# tile-to-tile swath-tie agreement we are trying to preserve. "Both auto-computed" is the
+# same METHOD but not the same FRAME, and it is the frame that has to match.
+#
+# So: fit ONCE on ELBA's bounds and re-express that same plane about elbaext's centroid --
+# algebraically identical to elba's datum (0.000 mm ptp difference), and the more accurate of
+# the two linearisations against the PROJ field (0.44 vs 0.84 mm RMS over the shared area).
+ELBA_BOUNDS = (577492.8, 4882737.6, 580032.8, 4886237.6)   # analysis/ridgelines/run_elba_dod.py
+_a, _b, _c = references.geoid_difference(ELBA_BOUNDS, io.MN_GEN1_CRS)
+_cx_e, _cy_e = 0.5 * (ELBA_BOUNDS[0] + ELBA_BOUNDS[2]), 0.5 * (ELBA_BOUNDS[1] + ELBA_BOUNDS[3])
+_cx_x, _cy_x = 0.5 * (BOUNDS[0] + BOUNDS[2]), 0.5 * (BOUNDS[1] + BOUNDS[3])
+G = (_a + _b * (_cx_x - _cx_e) / 1000.0 + _c * (_cy_x - _cy_e) / 1000.0, _b, _c)
+print(f"shared geoid plane (elba's, re-centred on elbaext): const {G[0]*1000:+.3f} mm, "
+      f"tilt ({G[1]*1000:+.3f},{G[2]*1000:+.3f}) mm/km")
 r = difference_dem(BEFORE, AFTER, BOUNDS, res=RES, ground="slope_normal", ground_source="csf",
     after_ground="class2", stream=False, robust_stable=True, csf_cache="data/csf_cache/elbaext.las",
     tie="reference", geoid_datum=G)
