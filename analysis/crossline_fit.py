@@ -150,7 +150,7 @@ def gen1_cellline_ground(las_path, res, sn_smooth_cells, ground_q, *, grid=None)
     return clm.reset_index(), nx, X0, Y0, int(len(df))
 
 
-def joint_network(clm, nx, res, block_m, ref_line=None):
+def joint_network(clm, nx, res, block_m, ref_line=None, even=False):
     """Solve every line's own ``a_s`` and ``c_s`` AT ONCE, with per-cell fixed effects.
 
     The pairwise fits answer one pair at a time on that pair's own overlap, so a
@@ -177,10 +177,13 @@ def joint_network(clm, nx, res, block_m, ref_line=None):
     n = len(d)
     ref = ix[ref_line] if ref_line in ix else 0
     keep_col = [j for j in range(L) if j != ref]
-    X = np.zeros((n, L + len(keep_col)))
-    X[np.arange(n), r] = d.tan.to_numpy()                    # per-line c_s
+    ncol = L + len(keep_col) + (L if even else 0)
+    X = np.zeros((n, ncol))
+    X[np.arange(n), r] = d.tan.to_numpy()                    # per-line c_s (ODD in scan angle)
     for k, j in enumerate(keep_col):                         # per-line a_s, gauge dropped
         X[r == j, L + k] = 1.0
+    if even:                                                 # per-line c2_s * tan^2 (EVEN)
+        X[np.arange(n), L + len(keep_col) + r] = d.tan.to_numpy() ** 2
     y = d.med_corr.to_numpy()
     cell = d.cell.to_numpy()
     # within-cell demean (Frisch-Waugh): identical to fitting mu_cell explicitly
@@ -194,8 +197,13 @@ def joint_network(clm, nx, res, block_m, ref_line=None):
     se = np.sqrt(np.diag(V))
     Xs = X / np.maximum(np.linalg.norm(X, axis=0), 1e-30)
     cond = float(np.linalg.cond(Xs))
-    return dict(lines=lines, c=beta[:L], c_se=se[:L], V=V, r2=r2, n=nn, G=G,
-                cond=cond, cells=int(len(u)), L=L)
+    out = dict(lines=lines, c=beta[:L], c_se=se[:L], V=V, r2=r2, n=nn, G=G,
+               cond=cond, cells=int(len(u)), L=L)
+    if even:
+        o = L + len(keep_col)
+        out["c2"] = beta[o:o + L]
+        out["c2_se"] = se[o:o + L]
+    return out
 
 
 def cross_only_solve(pair_groups):
@@ -385,6 +393,8 @@ def main():
         ("c_band", "the same coefficient restricted to the cross line's own northing band -- "
                    "the band is COMPUTED from the cross line's overlap cells, not chosen"),
         ("c_band_se", "cluster-robust standard error of c_band, mm per unit tangent"),
+        ("c2", "per-line coefficient on tan^2 (an EVEN across-track error), mm/unit tan^2"),
+        ("c2_se", "cluster-robust standard error of c2, mm per unit tan^2"),
         ("c_at_mid", "the across-track coefficient at the pair's mean northing, mm/unit tan"),
         ("dc_dY", "d(across-track coefficient)/d(northing), mm per unit tangent per km"),
         ("dc_dY_se", "cluster-robust standard error of dc_dY"),
@@ -674,6 +684,22 @@ def main():
                      f"{(pr - fb['c_pair']) / np.sqrt(pse ** 2 + fb['c_pair_se'] ** 2):+.2f}"])
     R.table(["pair", "kind", "cells", "c_full", "c_band", "c_band_se", "predicted", "resid",
              "resid_sig"], rows)
+
+    # ------ 6a2. The even/odd separation the N-S chain cannot make
+    print("\n### 6a. An EVEN scan error against an odd one -- separable only with a cross line\n")
+    print("  SWATH_ACROSS_TRACK_TEST Sec 0 records that inside an N-S pair an even error\n"
+          "  c2*tan^2 collapses onto the odd predictor, because tan^2_A - tan^2_B =\n"
+          "  (tan_A + tan_B)(tan_A - tan_B) and the first factor is pinned. The cross line's\n"
+          "  tangents are not pinned, so the two forms separate here for the first time.\n")
+    Je = joint_network(clm[clm.n >= A.min_cell_line], nx, A.res, A.block_m,
+                       ref_line=137, even=True)
+    print(f"  within-cell r2: odd only {J['r2']:.4f} -> odd + even {Je['r2']:.4f}, "
+          f"design condition number {Je['cond']:.1f}\n")
+    R.table(["line", "c_own", "c_own_se", "c2", "c2_se", "t"],
+            [[int(ln), f"{Je['c'][i]:+.1f}", f"{Je['c_se'][i]:.1f}",
+              f"{Je['c2'][i]:+.1f}", f"{Je['c2_se'][i]:.1f}",
+              f"{Je['c2'][i] / Je['c2_se'][i]:+.1f}"]
+             for i, ln in enumerate(Je["lines"])])
 
     # ------ 6c. Is c_s a LINE constant at all? Measure its along-track gradient, no bins.
     print("\n### 6c. Is the across-track coefficient a line constant along the track?\n")
