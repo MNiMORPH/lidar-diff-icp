@@ -114,18 +114,14 @@ def slope_center(i):
     return 0.5 * (s0 + s1)
 
 
-FIT_MAX_SLOPE = 35.0   # exclude the >35 deg bins: n small, NMAD ~300-550 mm,
-#                        sign flips (+58 mm at >40) -> noise-dominated extreme
-#                        geometry, not signal (see caveat).
-
-
 def fit_report(meds, ns):
     """Fit near-nadir median r vs tan(slope) and vs slope; report which fits
     better and whether a break at ~25-27 deg is needed beyond the smooth curve.
-    Fits are restricted to slope < FIT_MAX_SLOPE (noise-dominated extreme bins
-    excluded)."""
+    EVERY populated slope bin enters the fit -- there is no slope truncation and
+    no minimum-n cut. Sparse bins are not deleted; the sqrt(n) weighting already
+    gives them the influence their counts earn."""
     cen = np.array([slope_center(i) for i in range(len(SLOPE_LABELS))])
-    good = np.isfinite(meds) & (ns >= 200) & (cen < FIT_MAX_SLOPE)
+    good = np.isfinite(meds)   # a median needs >=1 point; nothing else is cut
     x_deg = cen[good]
     x_tan = np.tan(np.deg2rad(cen[good]))
     y = meds[good]
@@ -337,10 +333,12 @@ def main():
     # tan-law vs threshold
     o.append("## 2. Smooth tan-law vs discrete threshold")
     o.append("")
-    o.append(f"Fits of near-nadir median r vs slope (weighted by sqrt(n); bins "
-             f"with n>=200 and slope < {FIT_MAX_SLOPE:g} deg -- the >35 deg bins "
-             "are noise-dominated (NMAD ~300-550 mm, sign flips to +58 mm at "
-             ">40 deg) and are excluded from fitting):")
+    o.append(f"Fits of near-nadir median r vs slope (weighted by sqrt(n); "
+             f"ALL {fit['n']:d} populated slope bins enter the fit -- no slope "
+             "truncation, no minimum-n cut. The steep bins (35-40 deg, "
+             "n=14,647; >40 deg, n=3,623) are sparse and their NMAD is "
+             "~300-550 mm, so the sqrt(n) weighting already discounts them; "
+             "they are NOT deleted):")
     o.append("")
     o.append("| model | form | R^2 |")
     o.append("|---|---|---|")
@@ -364,7 +362,8 @@ def main():
     o.append("**Verdict.** The near-nadir curve is NEITHER a clean smooth tan-law "
              "NOR a clean flat-then-step. It is roughly flat at about -15 mm from "
              "3-15 deg, RECOVERS toward 0 (-6 to -10 mm) at 18-24 deg, then drops "
-             "sharply to about -40 to -44 mm at 27-35 deg. Over 0-35 deg the "
+             "sharply to about -40 to -44 mm at 27-35 deg. Over the full "
+             "0-45 deg range the "
              f"best single smooth/knee fit is **{best}** (R^2={r2s[best]:.3f}); "
              f"the origin tan-law is a poor description (R^2={fit['tan0_r2']:.3f}).")
     o.append("")

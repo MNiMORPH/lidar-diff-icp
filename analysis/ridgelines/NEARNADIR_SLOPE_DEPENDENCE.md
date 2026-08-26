@@ -66,19 +66,19 @@ Robustness: |SA|<10 deg (wider n at steep slope):
 
 ## 2. Smooth tan-law vs discrete threshold
 
-Fits of near-nadir median r vs slope (weighted by sqrt(n); bins with n>=200 and slope < 35 deg -- the >35 deg bins are noise-dominated (NMAD ~300-550 mm, sign flips to +58 mm at >40 deg) and are excluded from fitting):
+Fits of near-nadir median r vs slope (weighted by sqrt(n); ALL 13 populated slope bins enter the fit -- no slope truncation, no minimum-n cut. The steep bins (35-40 deg, n=14,647; >40 deg, n=3,623) are sparse and their NMAD is ~300-550 mm, so the sqrt(n) weighting already discounts them; they are NOT deleted):
 
 | model | form | R^2 |
 |---|---|---|
-| tan-law (origin) | r = -58.3 * tan(slope) | 0.468 |
-| tan-law (+intercept) | r = -5.3 + -44.7 * tan(slope) | 0.529 |
-| linear in slope | r = -5.0 + -0.84 * slope | 0.502 |
-| knee: flat + ramp>27 | r = -12.5 + -6.87*(slope-27)+ | 0.596 |
-| tan-law + step@27 | tan + -22.2 mm step (F=10.85) | 0.800 |
+| tan-law (origin) | r = -56.0 * tan(slope) | -0.065 |
+| tan-law (+intercept) | r = -5.8 + -41.3 * tan(slope) | 0.084 |
+| linear in slope | r = -5.4 + -0.80 * slope | 0.134 |
+| knee: flat + ramp>27 | r = -13.4 + -3.84*(slope-27)+ | -0.452 |
+| tan-law + step@27 | tan + -22.1 mm step (F=2.49) | 0.267 |
 
-**Verdict.** The near-nadir curve is NEITHER a clean smooth tan-law NOR a clean flat-then-step. It is roughly flat at about -15 mm from 3-15 deg, RECOVERS toward 0 (-6 to -10 mm) at 18-24 deg, then drops sharply to about -40 to -44 mm at 27-35 deg. Over 0-35 deg the best single smooth/knee fit is **tan+step@27** (R^2=0.800); the origin tan-law is a poor description (R^2=0.468).
+**Verdict.** The near-nadir curve is NEITHER a clean smooth tan-law NOR a clean flat-then-step. It is roughly flat at about -15 mm from 3-15 deg, RECOVERS toward 0 (-6 to -10 mm) at 18-24 deg, then drops sharply to about -40 to -44 mm at 27-35 deg. Over the full 0-45 deg range the best single smooth/knee fit is **tan+step@27** (R^2=0.267); the origin tan-law is a poor description (R^2=-0.065).
 
-Adding a step at 27 deg to the tan-law lifts R^2 from 0.529 to 0.800 (step -22.2 mm, F=10.85). So the '27 deg switch-on' does NOT dissolve into the tan-law: there is a real additional steepening near 27 deg on top of any smooth trend. The literature's warning (a smooth tan-curve crossing the detection floor) is only PARTLY right -- the tan-law alone does not reproduce the observed knee, and the recovery-then-drop across 18-30 deg is not a monotone tan shape at all.
+Adding a step at 27 deg to the tan-law lifts R^2 from 0.084 to 0.267 (step -22.1 mm, F=2.49). So the '27 deg switch-on' does NOT dissolve into the tan-law: there is a real additional steepening near 27 deg on top of any smooth trend. The literature's warning (a smooth tan-curve crossing the detection floor) is only PARTLY right -- the tan-law alone does not reproduce the observed knee, and the recovery-then-drop across 18-30 deg is not a monotone tan shape at all.
 
 Honest reading: the *headline* is the sharp deepening of the near-nadir low from about -10/-20 mm below ~24 deg to about -40 mm above ~27 deg -- a knee, superimposed on a shallow, non-monotone trend, not a clean tan-law. Calling it purely 'tan-law, no threshold' would misstate the data; so would calling it a pure step from a flat baseline (the baseline is already ~-15 mm and dips/recovers before the knee).
 
