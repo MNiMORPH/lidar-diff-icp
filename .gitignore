@@ -25,3 +25,6 @@ __pycache__/
 # py4dgeo writes this automatically
 py4dgeo.log
 data/las_local/
+
+# Routed-continuity intermediates: large, regenerable with --save
+analysis/mass_balance/out/*.npz

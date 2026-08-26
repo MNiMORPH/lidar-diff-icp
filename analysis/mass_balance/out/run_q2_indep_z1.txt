@@ -1,0 +1,203 @@
+/home/awickert/projects/lidar-diff-icp/lidar-icp/lib/python3.12/site-packages/pandas/core/arrays/masked.py:61: UserWarning: Pandas requires version '1.3.6' or newer of 'bottleneck' (version '1.3.5' currently installed).
+  from pandas.core import (
+== PROVENANCE v1 ==
+question : what uniform vertical raise of gen1 does routed sediment continuity demand, on the hillslopes only?
+run      : 2026-08-26T19:12:17+02:00   cwd=/home/awickert/projects/lidar-diff-icp
+argv     : analysis/mass_balance/datum_from_mass_balance.py --dod dod_cover_q2.npy --lod lod_cover_q2.npy --envelope independent --floodplain-mode routing --z 1.0 --n-boot 150 --null-real 60
+inputs   :
+  /home/awickert/projects/lidar-diff-icp/data/derived/elba_fulldensity/z_after.npy
+      2.7M  mtime 2026-08-21T11:53:20  sha1:d014cef67453
+      IS: DEM routed (gen2 ground surface, m)
+  /home/awickert/projects/lidar-diff-icp/data/derived/elba_fulldensity/dod_cover_q2.npy
+      2.7M  mtime 2026-08-26T17:39:28  sha1:91c7360d33bd
+      IS: DEM of Difference, gen2 - gen1, m (+ = rose)
+  /home/awickert/projects/lidar-diff-icp/data/derived/elba_fulldensity/lod_cover_q2.npy
+      2.7M  mtime 2026-08-26T18:51:04  sha1:88d8f7d0fc65
+      IS: level of detection, 1.96 sigma, m
+  /home/awickert/projects/lidar-diff-icp/data/derived/elba_fulldensity/floodplain_mask.npy
+      347.4K  mtime 2026-08-21T13:36:10  sha1:ab2e518432c7
+      IS: floodplain cells excluded from the hillslope budget (STANDING PROJECT RULE)
+  /home/awickert/projects/lidar-diff-icp/data/derived/elba_fulldensity/corrections.json
+      18.3K  mtime 2026-08-26T17:16:57  sha1:94343ea435f4
+      IS: pipeline metadata: res_m, stable_1sigma_m
+  /home/awickert/projects/lidar-diff-icp/data/derived/elba_fulldensity/canopy_cover_pfs.npy
+      2.7M  mtime 2026-08-23T23:55:32  sha1:369e75660f46
+      IS: gen2 canopy cover fraction (PyForestScan), for the residual-structure table
+params   :
+  res_m = 5.0  [repo default]
+  z = 1.0  [asked]
+      why: the edge of 1 sigma, asked for 2026-08-26; mass_balance ships 1.96
+  channel_area_m2 = 10000.0  [repo default]
+      why: catchment-dod-balance offmap default, as used in its own validation run
+  variogram_max_lag_m = 600.0  [repo default]
+      why: validate_site.py default
+  floodplain_mode = 'routing'  [repo default]
+      why: standing project rule: floodplain_mask cells out of hillslope mass balance
+  envelope = 'independent'  [repo default]
+      why: catchment-dod-balance README: independent is a documented LOWER BOUND
+  n_boot = 150  [** MINE, UNASKED **]
+      why: block-bootstrap replicates for the SE; raise it if the SE is not stable
+selections:
+  floodplain: keeps 136,361 of 355,600 (38.3%)
+      DEFINED AS: floodplain_mask.npy as shipped (TPI over an 800 m window < -2 m; analysis/ridgelines/convexity_dod_landcover.py)
+  routed: keeps 217,609 of 355,600 (61.2%)
+      DEFINED AS: D-infinity graph after breaching, floodplain cells REMOVED
+  variogram_cells: keeps 285,746 of 355,600 (80.4%)
+      DEFINED AS: |dod| <= lod (insignificant change), the validate_site.py selection
+  evaluable: keeps 214,562 of 217,609 (98.6%)
+      DEFINED AS: routed & finite V_acc & not off-map-contaminated & N_up > 0
+columns  :
+  f_flagged        fraction of evaluable cells still flagged as unphysical deposition (V_acc - V_in > z*sigma) after the raise, dimensionless
+  keep             1 - f_flagged; the balancing_offset 'keep' quantile that returns this delta
+  delta_mm         uniform raise of gen1 (mm) = quantile(S, keep); = -1000 * balancing_offset(keep)['offset']
+  se_mm            SE of delta_mm: SD over block-bootstrap replicates of the same quantile, blocks of side L (mm)
+  net_vol_m3       sum over KNOWN evaluable cells of (dod - delta)*area, m^3; negative = the hillslope exports sediment
+  L_m              side of the square spatial block resampled by the bootstrap, m
+  n_blocks         number of blocks holding at least one evaluable cell
+  band             drainage-area band of the evaluable cells, ha
+  n                count of evaluable cells in the band
+  median_S_mm      median over the band of S = the raise each cell demands, mm
+  f0               fraction of the band flagged at delta = 0, dimensionless
+  quantity         name of the reported scalar
+  value            its value, units given in the name
+WARNING  : mask 'evaluable' keeps 214,562/217,609 (98.6%)  <-- KEEPS >90%: this is not a restrictive selection. Do not call it a filtered population in prose.
+WARNING  : this run contains 1 parameter(s) the assistant chose unasked: n_boot
+== END PROVENANCE ==
+
+grid (700, 508)  res 5 m   routed 99.00% of cells (largest drainage 5.06 km^2)
+floodplain mask: 38.35% of the grid, mode=routing
+variogram on 80% insignificant-change cells: nugget sd 0.0445 m, sill sd 0.0379 m, range 502 m (total 0.0584 m; pipeline's stable_1sigma_m 0.0516)
+boundary: 4444 crossings, 45 off-map trunks; hillslope length 188 m
+evaluable 214,562 of 217,609 routed (98.60%); known DoD on 209,451 of them
+
+CHECK  sigma_Vacc invariant under a 50 mm uniform shift: max |change| 0.000e+00 m^3
+CHECK  V_acc shift equals -delta*area*N_up: max |residual| 3.638e-12 m^3
+CHECK  contaminated / known / N_up unchanged by the shift: True
+CHECK  balancing_offset(keep=0.99) = +109.997 mm vs quantile(S,0.99) = +110.143 mm; coverage 98.6%, binding cell (91, 475)
+
+CURVE  uniform raise of gen1 vs the fraction of evaluable hillslope cells left flagged
+       (delta = quantile(S, keep); the SE column uses L = 400 m blocks)
+  f_flagged    keep  delta_mm  se_mm   net_vol_m3
+  ---------  ------  --------  -----  -----------
+     0.0000  1.0000   +3054.0  239.6  -16,042,436
+     0.0005  0.9995    +900.1  212.3   -4,764,335
+     0.0010  0.9990    +499.2  160.0   -2,665,138
+     0.0025  0.9975    +216.5   42.6   -1,184,693
+     0.0050  0.9950    +142.3   17.5     -796,105
+     0.0100  0.9900    +110.1    9.7     -627,751
+     0.0250  0.9750     +71.5    7.6     -425,324
+     0.0500  0.9500     +46.7    5.4     -295,435
+     0.0750  0.9250     +34.3    4.9     -230,642
+     0.1000  0.9000     +24.6    5.2     -179,729
+     0.1500  0.8500     +10.7    4.3     -106,816
+     0.2000  0.8000      -0.1    4.5      -50,732
+     0.2500  0.7500      -8.9    4.2       -4,661
+     0.3000  0.7000     -17.0    4.4      +38,056
+     0.4000  0.6000     -32.0    3.9     +116,758
+     0.5000  0.5000     -46.7    4.1     +193,421
+
+WORST-CELL READING  delta at which the keep-quantile cell reaches +1.00 sigma
+       (= -balancing_offset(keep)['offset']; binding cell and coverage as the API reports them)
+    keep  delta_mm  delta_api_mm  se_mm  binding_cell  cover
+  ------  --------  ------------  -----  ------------  -----
+  1.0000   +3054.0       +3054.0  241.8     (73, 203)  0.986
+  0.9990    +499.2        +499.2  147.6    (219, 371)  0.986
+  0.9900    +110.1        +110.0   12.1     (91, 475)  0.986
+  0.9750     +71.5         +71.4    7.9    (643, 410)  0.986
+  0.9500     +46.7         +46.7    5.9    (534, 341)  0.986
+  0.9000     +24.6         +24.6    4.9     (100, 86)  0.986
+
+BLOCK SIZE  SE of delta_mm vs the side of the resampled block (spatial autocorrelation is what this is chasing)
+  L_m  se_f0025_mm  se_f005_mm  se_f010_mm  n_blocks
+  ---  -----------  ----------  ----------  --------
+   25          1.7         1.2         0.8      9812
+   50          2.7         2.3         1.5      2753
+  100          4.7         3.3         2.7       817
+  200          7.2         4.9         3.9       233
+  400          7.8         5.5         5.3        63
+  800          9.0         6.8         5.4        20
+
+BY DRAINAGE AREA  is the demand uniform down the network, or structured?
+         band       n  median_S_mm      f0
+  -----------  ------  -----------  ------
+    0.00-0.01  107281        -72.4  0.1049
+    0.01-0.04   64368        -30.4  0.2691
+    0.04-0.13   32184        -18.6  0.3420
+    0.13-0.78    8583        -20.1  0.3067
+  0.78-494.98    2146        -19.2  0.2954
+
+CHECK  cached flow graph vs weighted_accumulation: max |diff| 0.000e+00 cells
+
+NULL CALIBRATION  60 routed realisations of the fitted error model, no real deposition
+                                                       stat           val
+  ---------------------------------------------------------  ------------
+  flag rate produced by error alone, mean over realisations        0.1839
+                                   its SD over realisations        0.0200
+                   nominal one-sided rate implied by z=1.00        0.1587
+     delta at which the observed flag rate falls to it (mm)          +3.3
+                 +/- from the SD of the null flag rate (mm)  -0.8 .. +7.6
+          block-bootstrap SE of that quantile, L=400 m (mm)           3.9
+                 +/- from the SE of the mean null rate (mm)  +2.7 .. +3.8
+                            observed flag rate at delta = 0        0.1997
+
+SCENE-INTEGRATED, NULL-CALIBRATED  total excess deposition volume T = sum max(V_acc - z*sigma, 0)
+                                                        stat       val
+  ----------------------------------------------------------  --------
+                               T observed at delta = 0 (m^3)  +794,112
+  T from the error model alone, mean over realisations (m^3)  +234,313
+                              its SD over realisations (m^3)  +222,631
+                    delta at which T falls to that mean (mm)     +36.3
+                           at mean - 1 SD of the null T (mm)    +285.2
+                           at mean + 1 SD of the null T (mm)     +16.6
+
+RESIDUAL STRUCTURE at delta = +3.3 mm  (null rate 0.1839)
+                  stratum       n   f_res
+  -----------------------  ------  ------
+    drainage 0.00-0.01 ha  107281  0.0953
+    drainage 0.01-0.04 ha   64368  0.2487
+    drainage 0.04-0.13 ha   32184  0.3178
+    drainage 0.13-0.78 ha    8583  0.2856
+  drainage 0.78-494.98 ha    2146  0.2544
+          cover 0.00-0.05   86179  0.1623
+          cover 0.05-0.15   14547  0.1507
+          cover 0.15-0.35   78908  0.1957
+          cover 0.35-0.60   33849  0.2197
+          cover 0.60-1.01    1079  0.3772
+
+AGGREGATE CRITERION  the whole evaluated hillslope must not gain sediment: sum (dod - delta) * area <= 0
+                                            quantity    value
+  --------------------------------------------------  -------
+  mean DoD over evaluable+known hillslope cells (mm)    -9.74
+     delta that zeroes the hillslope net volume (mm)    -9.74
+             hillslope net volume at delta = 0 (m^3)  -51,014
+                                   cells in that sum  209,451
+
+SCENE-INTEGRATED, ALGEBRAIC  the whole hillslope budget against its own 1-sigma envelope
+                                                               quantity    value
+  ---------------------------------------------------------------------  -------
+  scene net volume, sum over evaluated hillslope cells of DoD*area, m^3  -51,014
+                                  its independent 1-sigma envelope, m^3    1,418
+                                                     N_eff used (cells)   209451
+                    delta putting the scene net volume at +1 sigma (mm)    -10.0
+                            the envelope's own share of that delta (mm)     +0.3
+                                  the mean-DoD share of that delta (mm)     -9.7
+
+   variogram sensitivity: refit, then carried through to the same delta
+            fit  nugget_sd_m  sill_sd_m  range_m  d_scene_mm
+  -------------  -----------  ---------  -------  ----------
+        as used       0.0445     0.0379      502       -24.5
+  max_lag 400 m       0.0404     0.0385      300       -18.7
+  max_lag 800 m       0.0455     0.0378      572       -26.5
+         seed 1       0.0398     0.0434      414       -23.7
+       2x pairs       0.0366     0.0454      365       -22.6
+
+            SE of that mean-DoD delta, by block side (mm)
+  L_m  mean_block_dod_mm  se_mean_mm  n_blocks
+  ---  -----------------  ----------  --------
+   25              -9.08        1.12      9722
+   50              -9.75        1.50      2742
+  100             -10.89        2.39       816
+  200              -9.07        3.69       233
+  400             -12.64        5.51        63
+  800             -17.22        9.26        20
+== END RUN ledger=.trust/runs/20260826T191356-1360760.json ==========
