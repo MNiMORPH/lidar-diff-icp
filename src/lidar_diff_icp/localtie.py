@@ -263,6 +263,12 @@ class LocalTie:
     nmad_after_m: float
     converged: bool
     degenerate: bool              # the N&K fit used ZERO cells; see the module docstring
+    dtan_min: float               # across-track coordinate actually sampled in this window
+    dtan_max: float
+    dtan_median: float
+    c_mm_per_tan: float           # the across-track slope fitted with the intercept
+    k_check_m: float              # across_track_tie's intercept: EQUALS dz_m when tie='intercept'
+    extrapolated: bool            # dtan = 0, where the intercept is read, is OUTSIDE the sample
     n_points_ref: int
     n_points_src: int
     tiles: list
@@ -277,6 +283,9 @@ class LocalTie:
                 f"{self.dz_overlap_median_m * 1000:+.1f}", self.n_nk_cells,
                 self.n_overlap_cells, f"{self.overlap_area_km2:.4f}",
                 f"{self.nmad_after_m * 1000:.0f}",
+                f"{self.dtan_min:+.3f}", f"{self.dtan_max:+.3f}",
+                f"{self.c_mm_per_tan:+.0f}",
+                "YES" if self.extrapolated else "",
                 "YES" if self.degenerate else ""]
 
     @staticmethod
@@ -291,8 +300,51 @@ class LocalTie:
             "ovl_cells": "cells where both lines have terrain returns in this window",
             "ovl_km2": "that overlap's area, km^2",
             "nmad1_mm": "robust scatter left in the overlap after the tie, mm",
+            "dtan_lo": "smallest across-track coordinate tan(scan_ref)-tan(scan_src) in "
+                       "the window -- the intercept tie is read at dtan = 0",
+            "dtan_hi": "largest one",
+            "c_mm_tan": "across-track slope fitted alongside the intercept, mm per unit "
+                        "tangent (coreg.across_track_tie's second return)",
+            "extrap": "YES when dtan = 0 lies OUTSIDE [dtan_lo, dtan_hi], i.e. the "
+                      "intercept tie is an extrapolation in this window",
             "degenerate": "YES when the N&K fit used zero cells (dz is then coreg's 0.0)",
         }
+
+
+def _across_track_diagnostics(pc, line_ref, line_src, res_m, exclude, dx, dy):
+    """The across-track coordinate this window actually samples, and the slope on it.
+
+    This MIRRORS the geometry of ``coreg.coregister_swaths``'s intercept branch -- same
+    overlap bbox, same grids, same shift, same estimator -- so that ``k_check`` reproduces
+    the tie that function returns in ``tie="intercept"`` mode. ``tests/test_localtie.py``
+    asserts that equality, which is what keeps the mirroring honest rather than assumed.
+
+    Its purpose is diagnostic: the intercept is read at ``dtan = 0``, and on a small
+    window near the edge of a sidelap the sampled ``dtan`` may not reach zero at all, so
+    the tie is an extrapolation. Nothing is corrected or dropped on that basis.
+    """
+    terr = ~np.isin(pc.classification, exclude)
+    ma = terr & (pc.point_source_id == line_ref)
+    mb = terr & (pc.point_source_id == line_src)
+    x, y = pc.x, pc.y
+    x0 = max(x[ma].min(), x[mb].min()); x1 = min(x[ma].max(), x[mb].max())
+    y0 = max(y[ma].min(), y[mb].min()); y1 = min(y[ma].max(), y[mb].max())
+    nx = int(np.ceil((x1 - x0) / res_m)); ny = int(np.ceil((y1 - y0) / res_m))
+    sa = np.asarray(pc.scan_angle, float)
+    t_ref = swathdiff._median_grid(x[ma], y[ma], np.tan(np.radians(sa[ma])),
+                                   res_m, x0, y0, nx, ny)
+    t_src = swathdiff._median_grid(x[mb], y[mb], np.tan(np.radians(sa[mb])),
+                                   res_m, x0, y0, nx, ny)
+    z_ref = swathdiff._median_grid(x[ma], y[ma], pc.z[ma], res_m, x0, y0, nx, ny)
+    z_src = swathdiff._median_grid(x[mb], y[mb], pc.z[mb], res_m, x0, y0, nx, ny)
+    dtan = t_ref - coreg._shift_grid(t_src, dx, dy, res_m)
+    dh = z_ref - coreg._shift_grid(z_src, dx, dy, res_m)
+    k, c, _n = coreg.across_track_tie(dh, dtan)
+    m = np.isfinite(dtan) & np.isfinite(dh)
+    if not m.any():
+        return float("nan"), float("nan"), float("nan"), float("nan"), float("nan"), False
+    lo = float(np.nanmin(dtan[m])); hi = float(np.nanmax(dtan[m]))
+    return lo, hi, float(np.nanmedian(dtan[m])), c * 1000.0, k, not (lo <= 0.0 <= hi)
 
 
 def local_pair_tie(window: Window, line_ref: int, line_src: int, *,
@@ -310,6 +362,8 @@ def local_pair_tie(window: Window, line_ref: int, line_src: int, *,
     exclude = tuple(exclude)
     c = coreg.coregister_swaths(pc, line_ref, line_src, res_m, exclude, tie=tie)
     sd = swathdiff.swath_difference(pc, line_ref, line_src, res_m, exclude)
+    lo, hi, mid, c_mm, k_chk, extrap = _across_track_diagnostics(
+        pc, line_ref, line_src, res_m, exclude, c.dx, c.dy)
     terr = ~np.isin(pc.classification, exclude)
     return LocalTie(
         line_ref=int(line_ref), line_src=int(line_src),
@@ -323,6 +377,8 @@ def local_pair_tie(window: Window, line_ref: int, line_src: int, *,
         overlap_area_km2=sd.n_cells * res_m * res_m / 1e6,
         nmad_before_m=float(c.nmad_before), nmad_after_m=float(c.nmad_after),
         converged=bool(c.converged), degenerate=(int(c.n) == 0),
+        dtan_min=lo, dtan_max=hi, dtan_median=mid, c_mm_per_tan=c_mm,
+        k_check_m=k_chk, extrapolated=bool(extrap),
         n_points_ref=int((terr & (pc.point_source_id == line_ref)).sum()),
         n_points_src=int((terr & (pc.point_source_id == line_src)).sum()),
         tiles=list(window.tiles))
@@ -403,7 +459,10 @@ def window_ladder(tile_paths, line_ref: int, line_src: int, *, easting, northing
                 dy_m=float("nan"), n_nk_cells=0, dz_overlap_median_m=float("nan"),
                 n_overlap_cells=0, nmad_overlap_m=float("nan"), overlap_area_km2=0.0,
                 nmad_before_m=float("nan"), nmad_after_m=float("nan"), converged=False,
-                degenerate=True, n_points_ref=0, n_points_src=0, tiles=[str(e)]))
+                degenerate=True, dtan_min=float("nan"), dtan_max=float("nan"),
+                dtan_median=float("nan"), c_mm_per_tan=float("nan"),
+                k_check_m=float("nan"), extrapolated=False,
+                n_points_ref=0, n_points_src=0, tiles=[str(e)]))
     return WindowLadder(ties=out, line_ref=int(line_ref), line_src=int(line_src),
                         easting=float(easting), northing=float(northing),
                         half_widths_m=[float(h) for h in half_widths_m])

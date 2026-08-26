@@ -161,6 +161,40 @@ def test_the_two_tie_modes_split_a_common_across_track_error(tmp_path):
     assert itc.dz_m == pytest.approx(-0.040, abs=0.012)
 
 
+def test_the_across_track_diagnostic_reproduces_coreg_own_intercept(tmp_path):
+    """``k_check_m`` is computed by this module's own mirror of ``coregister_swaths``'s
+    intercept branch. If the mirror drifts from the original, the two stop agreeing --
+    so pin them together here rather than assuming the mirroring holds."""
+    p = _write_tile(tmp_path / "chk.las",
+                    {10: (0.0, 100.0, 0.0, 200.0, 0.0),
+                     11: (60.0, 160.0, 0.0, 200.0, 0.040)},
+                    nadir={10: (50.0, +1), 11: (130.0, -1)}, tan_error_m=0.5)
+    kw = dict(easting=80.0, northing=100.0, half_width_m=95.0, shape="square",
+              res_m=2.0, exclude=EX)
+    itc = LT.pair_tie_at([p], 10, 11, tie="intercept", **kw)
+    assert itc.k_check_m == pytest.approx(itc.dz_m, abs=1e-12)
+    med = LT.pair_tie_at([p], 10, 11, tie="overlap_median", **kw)
+    assert med.k_check_m != pytest.approx(med.dz_m)        # a different estimator
+    assert itc.c_mm_per_tan == pytest.approx(500.0, rel=0.25)   # the 0.5 m/tan we wrote
+    assert not itc.extrapolated                            # dtan straddles zero here
+
+
+def test_a_window_that_does_not_reach_dtan_zero_is_flagged_as_extrapolated(tmp_path):
+    """The intercept tie is read at dtan = 0. A window cut near one edge of the sidelap
+    may not sample dtan = 0 at all, and then the 'extent-invariant' tie is an
+    extrapolation. It is reported, not corrected and not dropped."""
+    p = _write_tile(tmp_path / "edge.las",
+                    {10: (0.0, 100.0, 0.0, 200.0, 0.0),
+                     11: (60.0, 160.0, 0.0, 200.0, 0.040)},
+                    nadir={10: (50.0, +1), 11: (110.0, -1)})
+    edge = LT.pair_tie_at([p], 10, 11, easting=98.0, northing=100.0, half_width_m=12.0,
+                          shape="square", res_m=2.0, tie="intercept", exclude=EX)
+    assert edge.dtan_min > 0.0 and edge.extrapolated is True
+    mid = LT.pair_tie_at([p], 10, 11, easting=80.0, northing=100.0, half_width_m=12.0,
+                         shape="square", res_m=2.0, tie="intercept", exclude=EX)
+    assert mid.dtan_min < 0.0 < mid.dtan_max and mid.extrapolated is False
+
+
 def test_the_tie_is_local__two_windows_read_their_own_offset(tmp_path):
     """The module's whole purpose. Line 11 carries an offset that varies with northing;
     a tie measured in the south window must read the SOUTH value and one in the north
