@@ -131,3 +131,67 @@ def test_a_different_vertical_datum_is_refused_too():
 def test_the_bundled_control_is_all_on_gen1s_own_geoid():
     cs = G.load_control()
     assert G.assert_no_geoid_conversion(list(cs)).startswith("no geoid conversion")
+
+
+# ------------------------------------------------------------------------- discovery
+
+def test_the_search_radius_has_no_default():
+    cs = G.load_control()
+    with pytest.raises(TypeError):
+        G.discover_near_point(cs, 579705.72, 4883677.71)
+
+
+def test_marks_come_back_nearest_first_and_inside_the_radius():
+    cs = G.load_control()
+    e, n = 579705.72, 4883677.71                    # the Elba reference point
+    got = G.discover_near_point(cs, e, n, 10_000.0)
+    d = [s.distance_m for s in got]
+    assert d == sorted(d)
+    assert max(d) <= 10_000.0
+    assert all(np.hypot(s.mark.easting - e, s.mark.northing - n) == pytest.approx(s.distance_m)
+               for s in got)
+    assert len(G.discover_near_point(cs, e, n, 5_000.0)) < len(got)
+
+
+def test_a_line_search_measures_perpendicular_distance_to_the_track():
+    cs = G.ControlSet([_mark("ON", 100.0, 500.0, 1.0), _mark("OFF", 5000.0, 500.0, 1.0)],
+                      origin="test", n_rows=2)
+    lines = {137: ((0.0, 0.0), (0.0, 10_000.0))}    # a due-north track on easting 0
+    got = G.discover_near_lines(cs, lines, 730.0)
+    assert [s.point_id for s in got] == ["ON"]
+    assert got[0].distance_m == pytest.approx(100.0)
+    assert got[0].nearest_feature == "137"
+
+
+def test_a_line_search_uses_the_nearest_of_several_tracks():
+    cs = G.ControlSet([_mark("M", 900.0, 500.0, 1.0)], origin="test", n_rows=1)
+    lines = {136: ((0.0, 0.0), (0.0, 10_000.0)), 137: ((1000.0, 0.0), (1000.0, 10_000.0))}
+    got = G.discover_near_lines(cs, lines, 730.0)
+    assert got[0].nearest_feature == "137"
+    assert got[0].distance_m == pytest.approx(100.0)
+
+
+# ------------------------------------------------------------------ tile resolution
+
+def test_tiles_are_reported_as_on_disk_or_to_fetch_and_never_fetched(tmp_path, monkeypatch):
+    calls = []
+
+    def fake_find_tile(e, n, **kw):
+        calls.append((e, n))
+        return "4342-29-64" if e < 100 else "9999-99-99"
+
+    import lidar_diff_icp.tiles as tiles
+    monkeypatch.setattr(tiles, "find_tile", fake_find_tile)
+    monkeypatch.setattr(tiles, "download_tile",
+                        lambda *a, **k: pytest.fail("resolve_tiles must never download"))
+    (tmp_path / "4342-29-64.laz").write_bytes(b"x")
+
+    sites = [_site("HERE", 10.0, 0.0, 1.0), _site("AWAY", 1000.0, 0.0, 1.0)]
+    res = G.resolve_tiles(sites, [tmp_path])
+    assert len(calls) == 2
+    assert [n.tile for n in res.on_disk] == ["4342-29-64"]
+    assert [n.tile for n in res.to_fetch] == ["9999-99-99"]
+    assert res.path_for("HERE").endswith("4342-29-64.laz")
+    assert res.path_for("AWAY") is None
+    assert res.per_mark == {"HERE": "4342-29-64", "AWAY": "9999-99-99"}
+    assert set(res.table_columns()) >= {"tile", "on_disk", "n_marks"}

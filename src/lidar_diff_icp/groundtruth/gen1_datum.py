@@ -288,3 +288,177 @@ def assert_no_geoid_conversion(marks, *, lidar_vertical_datum: str = GEN1_VERTIC
               "experiment and must be requested explicitly with tie.geoid_shift_for.")
     return (f"no geoid conversion: all {len(marks)} marks and the lidar are on "
             f"{lidar_vertical_datum}({lidar_geoid_model}); checked, not assumed")
+
+
+# ------------------------------------------------------------------------- discovery
+
+@dataclass(frozen=True)
+class MarkSite:
+    """A control mark placed relative to whatever the search was about."""
+
+    mark: ControlMark
+    distance_m: float
+    relative_to: str            # "site (E, N)" or "flight line <id>"
+    nearest_feature: str = ""   # which line, when the search was over lines
+
+    @property
+    def checkpoint(self) -> Checkpoint:
+        return self.mark.checkpoint
+
+    @property
+    def point_id(self) -> str:
+        return self.mark.point_id
+
+
+def discover_near_point(control: ControlSet, easting: float, northing: float,
+                        radius_m: float) -> list:
+    """Marks within ``radius_m`` of a site, nearest first.
+
+    ``radius_m`` has no default: how far to reach for control is a decision about the
+    site (how far a datum may be assumed constant), not a property of the code.
+    """
+    radius_m = float(radius_m)
+    out = []
+    for m in control:
+        d = math.hypot(m.easting - easting, m.northing - northing)
+        if d <= radius_m:
+            out.append(MarkSite(m, d, f"site ({easting:.1f}, {northing:.1f})"))
+    return sorted(out, key=lambda s: s.distance_m)
+
+
+def _point_segment_distance(px, py, x0, y0, x1, y1):
+    vx, vy = x1 - x0, y1 - y0
+    L2 = vx * vx + vy * vy
+    if L2 == 0.0:
+        return math.hypot(px - x0, py - y0)
+    t = max(0.0, min(1.0, ((px - x0) * vx + (py - y0) * vy) / L2))
+    return math.hypot(px - (x0 + t * vx), py - (y0 + t * vy))
+
+
+def discover_near_lines(control: ControlSet, lines: dict, half_width_m: float) -> list:
+    """Marks within ``half_width_m`` of any of a set of flight-line tracks.
+
+    ``lines`` maps a line id to a track: either two endpoints ``((x0, y0), (x1, y1))`` or
+    a sequence of vertices. ``half_width_m`` has no default -- it is the swath half-width
+    of the acquisition being studied, which the caller measures.
+
+    **This is a search, not an assignment.** Which line actually hit a mark is settled by
+    :func:`assign_line_from_returns` from the returns themselves; a track fitted at one
+    latitude walks off by hundreds of metres over tens of kilometres, which is precisely
+    the mislabelling this module's line statistics must not inherit.
+    """
+    half_width_m = float(half_width_m)
+    out = []
+    for m in control:
+        best, best_line = math.inf, None
+        for lid, track in lines.items():
+            pts = list(track)
+            for a, b in zip(pts[:-1], pts[1:]):
+                d = _point_segment_distance(m.easting, m.northing, a[0], a[1], b[0], b[1])
+                if d < best:
+                    best, best_line = d, lid
+        if best <= half_width_m:
+            out.append(MarkSite(m, best, f"nearest of {len(lines)} flight-line tracks",
+                                nearest_feature=str(best_line)))
+    return sorted(out, key=lambda s: s.distance_m)
+
+
+# -------------------------------------------------------------------- tile resolution
+
+@dataclass(frozen=True)
+class TileNeed:
+    """One tile, the marks it holds, and whether it is already on disk."""
+
+    tile: str
+    path: str | None
+    marks: tuple
+
+    @property
+    def on_disk(self) -> bool:
+        return self.path is not None
+
+
+@dataclass
+class TileResolution:
+    """Which tile each mark falls in, split into on-disk and to-be-fetched.
+
+    Nothing here fetches anything. ``to_fetch`` is a list for a human to work through one
+    tile at a time; :func:`lidar_diff_icp.tiles.download_tile` is the caller's to run.
+    """
+
+    per_mark: dict                    # point_id -> tile name
+    needs: list                       # [TileNeed]
+    search_dirs: tuple
+    index_cache: str
+
+    @property
+    def on_disk(self) -> list:
+        return [n for n in self.needs if n.on_disk]
+
+    @property
+    def to_fetch(self) -> list:
+        return [n for n in self.needs if not n.on_disk]
+
+    def path_for(self, point_id: str) -> str | None:
+        t = self.per_mark.get(point_id)
+        for n in self.needs:
+            if n.tile == t:
+                return n.path
+        return None
+
+    @staticmethod
+    def table_columns() -> dict:
+        return {
+            "tile": "MnGeo AAAA-BB-CC tile name from tiles.find_tile (statewide centroid index)",
+            "on_disk": "True when a file of that name was found in one of search_dirs",
+            "n_marks": "control marks falling in that tile, count",
+            "marks": "their point ids",
+            "path": "the file found, or '' when the tile must be fetched",
+        }
+
+    def table_rows(self) -> list:
+        return [[n.tile, n.on_disk, len(n.marks), ", ".join(n.marks[:4])
+                 + (" ..." if len(n.marks) > 4 else ""), n.path or ""]
+                for n in self.needs]
+
+
+def resolve_tiles(sites, search_dirs, *, cache=None, suffixes=(".laz", ".las")
+                  ) -> TileResolution:
+    """Name the tile each mark falls in and say which of those are already on disk.
+
+    ``search_dirs``  directories to look in for ``<tile><suffix>``. No download is ever
+                     attempted -- a missing tile is reported, not fetched, because on a
+                     shared machine the fetch is a decision with a cost.
+    ``cache``        the statewide centroid index CSV passed to
+                     :func:`lidar_diff_icp.tiles.find_tile`; ``None`` uses that
+                     function's own repo default. If the cache does not exist the lookup
+                     will try to build it, which needs the network -- pass a built cache
+                     to keep this offline.
+    """
+    from ..tiles import find_tile
+
+    dirs = tuple(str(d) for d in (search_dirs if not isinstance(search_dirs, (str, Path))
+                                  else [search_dirs]))
+    kw = {} if cache is None else {"cache": cache}
+    per_mark, by_tile = {}, {}
+    for s in sites:
+        t = find_tile(s.mark.easting, s.mark.northing, **kw)
+        per_mark[s.point_id] = t
+        by_tile.setdefault(t, []).append(s.point_id)
+
+    needs = []
+    for t, ids in by_tile.items():
+        found = None
+        for d in dirs:
+            for suf in suffixes:
+                p = os.path.join(d, f"{t}{suf}")
+                if os.path.exists(p):
+                    found = p
+                    break
+            if found:
+                break
+        needs.append(TileNeed(tile=t, path=found, marks=tuple(ids)))
+    needs.sort(key=lambda n: (not n.on_disk, n.tile))
+    from ..tiles import DEFAULT_TILE_INDEX_CACHE
+    return TileResolution(per_mark=per_mark, needs=needs, search_dirs=dirs,
+                          index_cache=str(cache or DEFAULT_TILE_INDEX_CACHE))
