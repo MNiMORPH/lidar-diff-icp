@@ -1,0 +1,93 @@
+{
+ "sigma": 3.0,
+ "value_mm": 45.57257282640686,
+ "se_mm": 18.807322839001312,
+ "n_marks": 14,
+ "n_lines": 5,
+ "marks": [
+  {
+   "point_id": "L1O-2124 Fillmore VRS",
+   "cover": "L1O",
+   "line": 133,
+   "tie_mm": 120.98419853998621
+  },
+  {
+   "point_id": "L5U-2121 Fillmore VRS",
+   "cover": "L5U",
+   "line": 137,
+   "tie_mm": -56.97573630095576
+  },
+  {
+   "point_id": "L5U-2122 Fillmore VRS",
+   "cover": "L5U",
+   "line": 137,
+   "tie_mm": 4.87845904575579
+  },
+  {
+   "point_id": "L1O-6182 Wabasha RTK",
+   "cover": "L1O",
+   "line": 137,
+   "tie_mm": 7.675707982912172
+  },
+  {
+   "point_id": "L5U-6187 Wabasha RTK",
+   "cover": "L5U",
+   "line": 135,
+   "tie_mm": -15.980107979771674
+  },
+  {
+   "point_id": "L1O-6189 Wabasha RTK",
+   "cover": "L1O",
+   "line": 135,
+   "tie_mm": 89.35441260945254
+  },
+  {
+   "point_id": "L1O-6196 Wabasha RTK",
+   "cover": "L1O",
+   "line": 134,
+   "tie_mm": 118.2082911669795
+  },
+  {
+   "point_id": "L1O-6123 Wabasha RTK",
+   "cover": "L1O",
+   "line": 134,
+   "tie_mm": 154.47371277201682
+  },
+  {
+   "point_id": "L1O101",
+   "cover": "L1O",
+   "line": 137,
+   "tie_mm": -11.289194249513912
+  },
+  {
+   "point_id": "L1O173",
+   "cover": "L1O",
+   "line": 138,
+   "tie_mm": 45.68131388171537
+  },
+  {
+   "point_id": "L1O43",
+   "cover": "L1O",
+   "line": 133,
+   "tie_mm": -32.72873658448816
+  },
+  {
+   "point_id": "L5U135",
+   "cover": "L5U",
+   "line": 133,
+   "tie_mm": 12.85133425795948
+  },
+  {
+   "point_id": "L5U171",
+   "cover": "L5U",
+   "line": 137,
+   "tie_mm": 47.065859637683616
+  },
+  {
+   "point_id": "L5U172",
+   "cover": "L5U",
+   "line": 134,
+   "tie_mm": 67.88133598445256
+  }
+ ]
+}

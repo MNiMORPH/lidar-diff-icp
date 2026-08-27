@@ -212,3 +212,100 @@ def marks_on_scope_psids(meas, psids):
     """Measurements whose RETURNS put them on one of the site's psids."""
     want = {int(p) for p in psids}
     return [m for m in meas if m.line_id is not None and int(m.line_id) in want]
+
+
+# ------------------------------------- the catchment-free estimator (preferred)
+
+def marks_in_tiles(control, tile_dirs, *, covers=None):
+    """Every control mark that falls inside a gen1 tile ON DISK.
+
+    This replaces the catchment search entirely.  The catchment was only ever a compute
+    bound on candidates -- ``assign_line_from_returns`` does the assigning, and it can
+    only reject -- so bounding by "is the tile here" is both simpler and strictly more
+    complete than bounding by distance to a fitted track.  It also removes the confound
+    a radius introduces: at Elba, widening 481 m -> 2000 m added four marks that were ALL
+    urban, so the radius was silently shifting the COVER mix.
+    """
+    import glob
+    import laspy
+
+    paths = []
+    for d in tile_dirs:
+        paths.extend(p for p in glob.glob(f"{d}/*.laz") if "merged" not in p)
+    boxes = {}
+    for p in sorted(paths):
+        with laspy.open(p) as f:
+            h = f.header
+            boxes[p] = (h.mins[0], h.mins[1], h.maxs[0], h.maxs[1])
+    out = []
+    for m in control:
+        if covers is not None and m.cover_class not in set(covers):
+            continue
+        e, n = m.checkpoint.easting, m.checkpoint.northing
+        for p, b in boxes.items():
+            if b[0] <= e <= b[2] and b[1] <= n <= b[3]:
+                out.append((G.MarkSite(m, 0.0, f"inside tile {Path(p).name}"), p))
+                break
+    return out
+
+
+def on_site_line(trackset, mark_easting, mark_northing, psid, *, site_easting,
+                 site_northing, collinear_sigma):
+    """Is this mark on the SAME PHYSICAL LINE as the site's pass of ``psid``?
+
+    Only matters for a psid carrying more than one pass -- 16 of 41 here.  The mark is
+    attributed to the pass of that psid whose track runs nearest IT, and that pass is
+    then tested for collinearity with the pass nearest the SITE.
+
+    ``gps_time`` cannot do this job and must not be substituted: measured on Elba's
+    psids, the correlation between the gps_time gap and the collinearity sigma is
+    **-0.32** -- the wrong sign.  Adjacent lines flown back-to-back are close in time and
+    different (138.0/138.1: 135 s apart, 21.6 sigma), while one line interrupted by
+    missing tiles has a long gap and is the same (133.0/133.1: 682 s apart, 0.2 sigma).
+    """
+    cands = trackset.by_psid(int(psid))
+    if len(cands) <= 1:
+        return True, "single pass: no ambiguity"
+    site_pass = min(cands, key=lambda q: _track_distance(site_easting, site_northing,
+                                                         q.vertices))
+    mark_pass = min(cands, key=lambda q: _track_distance(mark_easting, mark_northing,
+                                                         q.vertices))
+    if mark_pass.key == site_pass.key:
+        return True, f"same pass {mark_pass.key}"
+    sg = collinearity_sigma(site_pass, mark_pass)
+    ok = sg < collinear_sigma
+    return ok, f"{mark_pass.key} vs site {site_pass.key}: {sg:.1f} sigma"
+
+
+def estimate_by_returns(trackset, *, psids, easting, northing, covers, tile_dirs, res,
+                        collinear_sigma, control=None, on_missing="skip"):
+    """The catchment-free estimate: every mark in a tile, assigned by its own returns.
+
+    Returns ``(measurements, kept, rejected, Gen1DatumEstimate)``.
+    """
+    control = G.load_control() if control is None else control
+    cand = marks_in_tiles(control, tile_dirs, covers=covers)
+    sites = [s for s, _ in cand]
+    resolution = G.resolve_tiles(sites, tile_dirs)
+    meas, skipped = G.measure_sites(sites, resolution, on_missing=on_missing, res=res)
+    want = {int(p) for p in psids}
+    kept, rejected = [], []
+    for m in meas:
+        if m.line_id is None:
+            rejected.append((m.point_id, None, "no ground returns: no line"))
+            continue
+        if int(m.line_id) not in want:
+            rejected.append((m.point_id, m.line_id, "returns place it on another line"))
+            continue
+        ok, why = on_site_line(trackset, m.site.mark.easting, m.site.mark.northing,
+                               m.line_id, site_easting=easting, site_northing=northing,
+                               collinear_sigma=collinear_sigma)
+        (kept if ok else rejected).append(
+            (m.point_id, m.line_id, why) if not ok else m)
+    est = G.combine_datum([k for k in kept], mode="per_line",
+                          notes=("candidates: every control mark inside a tile on disk; "
+                                 "NO catchment radius",
+                                 "assignment: assign_line_from_returns",
+                                 f"reused psids disambiguated by collinearity at "
+                                 f"{collinear_sigma} sigma"))
+    return meas, kept, rejected, est
