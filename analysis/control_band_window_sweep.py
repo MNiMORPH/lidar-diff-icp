@@ -1,0 +1,206 @@
+#!/usr/bin/env python3
+"""What height window, and what weighting inside it, best turns near-ground returns into a
+predictor of gen2's ground-surface offset at surveyed control?
+
+`analysis/control_lowveg_offset.py` fixes the predictor at a BOXCAR over (0.15, 2.0] m and
+sweeps only its edges. This script sweeps the whole weight FUNCTION w(h), and repeats the
+sweep within strata, because the optimum need not be the same in the open and under
+vegetation.
+
+    metric(mark) = sum_h w(h) * counts(h) / sum_h counts(h)
+
+Height axis is SPLICED: the near-ground cube's 20 mm bins from -1 m to +2 m, then the tall
+window's 250 mm bins above +2 m. Both are raw counts from the same box, so the ratio is a
+genuine fraction of returns; the bin width changes at 2 m but w(h) is evaluated at bin
+centres, so a wide window is not biased by the change.
+
+TWO SCORINGS ARE REPORTED AND THEY ARE NOT COMPARABLE TO EACH OTHER:
+  alone   the metric is the only predictor. This is the number quoted in
+          `analysis/CONTROL_LOWVEG_OFFSET.md` (boxcar 0.15-2.0 scores +0.170).
+  +block  the metric PLUS one intercept per EPT block. Each block is a separate acquisition
+          with its own unpublished vendor bias, so this asks what the metric adds once that
+          is absorbed. It scores ~0.02 higher throughout. Compare within a column only.
+
+Scored on HELD-OUT 10 km spatial blocks, 5 folds, 20 fold seeds; mean and sd over seeds.
+
+    ./lidar-icp/bin/python analysis/control_band_window_sweep.py --all
+"""
+import argparse, os, sys
+import numpy as np, pandas as pd
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import control_lowveg_offset as M
+
+# Values recovered from the inline sweeps of 2026-08-27T18:15-18:19Z, kept so that any change
+# to the loaders or the splice shows up as a mismatch instead of passing silently.
+REFERENCE = {
+    ("shape", "boxcar 0.15-2"): 0.1844, ("shape", "boxcar 0.15-3"): 0.1942,
+    ("shape", "boxcar 0.15-5"): 0.1989, ("shape", "sqrt-h weight (0.15-3)"): 0.2018,
+    ("shape", "exp decay lam=1.2"): 0.1751, ("shape", "gauss h0=0.25 sd=0.15"): 0.1167,
+    ("upper", 2): 0.1844, ("upper", 4): 0.1993, ("upper", 8): 0.2007, ("upper", 20): 0.1910,
+    ("lower", 0.05): 0.1249, ("lower", 0.15): 0.1989, ("lower", 0.30): 0.1456,
+}
+
+
+def build(min_returns=200):
+    """Spliced raw-count profiles, the offset, coordinates, EPT block and stratifiers."""
+    m = M.load(0.15, 2.0)
+    NG, CAN, keep = [], [], []
+    for i, r in m.iterrows():
+        f = os.path.join(M.STRUCT, f"gen2_2021_control__{r.point_id}.npz")
+        if not os.path.exists(f):
+            continue
+        z = np.load(f)
+        ng = z["ng_all"].astype(float); ca = z["can_all"].astype(float)
+        if ng.sum() < min_returns or ca.sum() < min_returns:
+            continue
+        NG.append(ng); CAN.append(ca); keep.append(i)
+        ngm = 0.5 * (z["ng_edges"][:-1] + z["ng_edges"][1:])
+        cam = 0.5 * (z["can_edges"][:-1] + z["can_edges"][1:])
+    m = m.loc[keep].reset_index(drop=True)
+    NG = np.array(NG); CAN = np.array(CAN)
+    hs = np.concatenate([ngm[ngm > -1.0], cam[cam > 2.0]])
+    CNT = np.concatenate([NG[:, ngm > -1.0], CAN[:, cam > 2.0]], axis=1)
+    return m, hs, CNT, np.maximum(CNT.sum(1), 1.0)
+
+
+def weights(hs):
+    """The candidate weight functions, in the order they were first tried."""
+    W = {}
+    for hi in (2.0, 3.0, 5.0):
+        W[f"boxcar 0.15-{hi:g}"] = ((hs > 0.15) & (hs <= hi)).astype(float)
+    for lam in (0.15, 0.3, 0.6, 1.2):
+        W[f"exp decay lam={lam}"] = np.where(hs > 0.15, np.exp(-(hs - 0.15) / lam), 0.0)
+    for h0, sg in ((0.25, 0.15), (0.35, 0.25), (0.5, 0.4)):
+        W[f"gauss h0={h0} sd={sg}"] = np.where(hs > 0.05, np.exp(-0.5 * ((hs - h0) / sg) ** 2), 0.0)
+    W["soft sigmoid edge, k=40"] = 1 / (1 + np.exp(-40 * (hs - 0.15))) * np.where(hs <= 5, 1, 0)
+    W["ramp up then decay"] = np.where(
+        hs > 0.05, np.clip((hs - 0.05) / 0.2, 0, 1) * np.exp(-np.maximum(hs - 0.25, 0) / 0.8), 0.0)
+    W["sqrt-h weight (0.15-3)"] = np.where((hs > 0.15) & (hs <= 3.0), np.sqrt(np.maximum(hs, 0)), 0.0)
+    return W
+
+
+class Scorer:
+    def __init__(self, m, seeds=20):
+        self.y = m.resid_mm.to_numpy(float)
+        self.blk = M._blocks(m.easting.to_numpy(float), m.northing.to_numpy(float), 10.0)
+        ub = sorted(set(m.ept_block))
+        self.D = np.column_stack([(m.ept_block == b).to_numpy(float) for b in ub[1:]]) \
+            if len(ub) > 1 else np.zeros((len(m), 0))
+        self.seeds = seeds
+        self.n_blocks = len(np.unique(self.blk))
+
+    def cv(self, x, with_block):
+        X = np.c_[x, self.D] if with_block and self.D.shape[1] else np.asarray(x).reshape(-1, 1)
+        out = []
+        for s in range(self.seeds):
+            ub = np.unique(self.blk); r = np.random.default_rng(s); r.shuffle(ub)
+            out.append(M._cv_r2(X, self.y, self.blk, np.array_split(ub, 5)))
+        return float(np.mean(out)), float(np.std(out, ddof=1))
+
+
+def metric(CNT, TOT, w):
+    return (CNT * w).sum(1) / TOT
+
+
+def _ref(row, obs):
+    r = REFERENCE.get(row)
+    return "" if r is None else f"   [2026-08-27 run {r:+.4f}, d {obs - r:+.4f}]"
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__,
+                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--shape", action="store_true", help="bake-off of weight functions w(h)")
+    ap.add_argument("--edges", action="store_true", help="sweep the upper and lower edges")
+    ap.add_argument("--strata", action="store_true",
+                    help="repeat the edge sweep within NVA/VVA and lowveg terciles")
+    ap.add_argument("--seeds", type=int, default=20)
+    ap.add_argument("--all", action="store_true")
+    a = ap.parse_args()
+    if a.all:
+        a.shape = a.edges = a.strata = True
+    if not (a.shape or a.edges or a.strata):
+        ap.error("pick a section, or --all")
+
+    m, hs, CNT, TOT = build()
+    sc = Scorer(m, a.seeds)
+    print(f"n = {len(m)} marks   {sc.n_blocks} spatial blocks of 10 km   "
+          f"{m.ept_block.nunique()} EPT blocks   offset sd {sc.y.std(ddof=1):.1f} mm")
+    print(f"height axis: {hs.min():+.3f} to {hs.max():+.2f} m, {len(hs)} bins "
+          f"({int((hs <= 2).sum())} at 20 mm, {int((hs > 2).sum())} at 250 mm)")
+    print(f"CV: held-out 10 km blocks, 5 folds, mean +/- sd over {a.seeds} fold seeds\n")
+
+    if a.shape:
+        print("=" * 84)
+        print("WEIGHT FUNCTION w(h), ranked by the +block score")
+        print("=" * 84)
+        print(f"  {'w(h)':30s} {'alone':>9} {'sd':>7} {'+block':>9} {'sd':>7}")
+        rows = []
+        for nm, w in weights(hs).items():
+            x = metric(CNT, TOT, w)
+            rows.append((sc.cv(x, True), sc.cv(x, False), nm))
+        for (b, sb), (al, sa), nm in sorted(rows, reverse=True):
+            print(f"  {nm:30s} {al:+9.4f} {sa:7.4f} {b:+9.4f} {sb:7.4f}"
+                  + _ref(("shape", nm), b))
+        print()
+
+    if a.edges:
+        print("=" * 84)
+        print("UPPER EDGE, lower fixed at 0.15 m")
+        print("=" * 84)
+        print(f"  {'upper (m)':>9} {'boxcar alone':>14} {'boxcar +block':>15} {'sqrt-h +block':>15}")
+        for hi in (2, 3, 4, 5, 6, 8, 10, 14, 20):
+            w = ((hs > 0.15) & (hs <= hi)).astype(float)
+            w2 = np.where((hs > 0.15) & (hs <= hi), np.sqrt(np.maximum(hs, 0)), 0.0)
+            al, _ = sc.cv(metric(CNT, TOT, w), False)
+            b, _ = sc.cv(metric(CNT, TOT, w), True)
+            b2, _ = sc.cv(metric(CNT, TOT, w2), True)
+            print(f"  {hi:9d} {al:+14.4f} {b:+15.4f} {b2:+15.4f}" + _ref(("upper", hi), b))
+        print(f"\n  LOWER EDGE, upper fixed at 5 m (boxcar)")
+        for lo in (0.05, 0.10, 0.13, 0.15, 0.18, 0.22, 0.30):
+            w = ((hs > lo) & (hs <= 5.0)).astype(float)
+            al, _ = sc.cv(metric(CNT, TOT, w), False)
+            b, _ = sc.cv(metric(CNT, TOT, w), True)
+            print(f"  lower {lo:.2f} m {al:+12.4f} {b:+15.4f}" + _ref(("lower", lo), b))
+        print()
+
+    if a.strata:
+        print("=" * 84)
+        print("WITHIN STRATA -- does the best window differ under vegetation?")
+        print("=" * 84)
+        print("  NVA/VVA is the SURVEY's own non-vegetated / vegetated designation, not a cut")
+        print("  of mine. The lowveg terciles ARE my cut, chosen only to give three equal groups.")
+        print("  Scored ALONE (a stratum can hold too few EPT blocks for block intercepts).\n")
+        q = m.lowveg.quantile([1 / 3, 2 / 3]).to_numpy()
+        strata = [("all marks", np.ones(len(m), bool)),
+                  ("NVA (open)", (m.point_type_g2 == "NVA").to_numpy()),
+                  ("VVA (vegetated)", (m.point_type_g2 == "VVA").to_numpy()),
+                  (f"lowveg <= {q[0]:.3f}", (m.lowveg <= q[0]).to_numpy()),
+                  (f"lowveg {q[0]:.3f}-{q[1]:.3f}", ((m.lowveg > q[0]) & (m.lowveg <= q[1])).to_numpy()),
+                  (f"lowveg > {q[1]:.3f}", (m.lowveg > q[1]).to_numpy())]
+        uppers = (1, 2, 4, 8, 12, 16, 24, 40)
+        print(f"  {'stratum':22s} {'n':>4} {'blk':>4} {'sd_mm':>7} " +
+              " ".join(f"{u:>7d}" for u in uppers) + "   best")
+        for nm, k in strata:
+            if k.sum() < 30:
+                print(f"  {nm:22s} {k.sum():4d}   -- too few marks to cross-validate")
+                continue
+            s = Scorer(m[k].reset_index(drop=True), a.seeds)
+            vals = []
+            for hi in uppers:
+                w = ((hs > 0.15) & (hs <= hi)).astype(float)
+                vals.append(s.cv(metric(CNT[k], TOT[k], w), False)[0])
+            best = uppers[int(np.argmax(vals))]
+            print(f"  {nm:22s} {k.sum():4d} {s.n_blocks:4d} {s.y.std(ddof=1):7.1f} " +
+                  " ".join(f"{v:+7.3f}" for v in vals) + f"   {best} m")
+        print("\n  LIMIT OF THIS CONTROL SET: it does not sample full forest. Canopy cover")
+        print("  (PyForestScan, r=10 m) is 0.000 at the median and reaches 0.30 at only "
+              f"{int((m['cover_r10'] >= 0.30).sum())} marks;")
+        print(f"  lowveg reaches 0.30 at {int((m.lowveg >= 0.30).sum())} marks, 0.40 at "
+              f"{int((m.lowveg >= 0.40).sum())}. Marks are sited for sky view.")
+        print("  Any window chosen here is calibrated on understory, NOT on closed canopy.")
+
+
+if __name__ == "__main__":
+    main()
