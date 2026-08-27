@@ -69,3 +69,62 @@ the 2011-epoch 2021 marks is **not** modelled.
 terrain, `L2T` tall weeds and crops, `L3B` brush and low trees, `L4F` forested, `L5U`
 urban. It matters: pooled over all classes the residual is dominated by vegetation in the
 ground class. See `analysis/GEN1_OWN_CONTROL_TIE.md`.
+
+## `mn_se_driftless_2021_control.csv`
+
+The **534** surveyed control points of the 2021 3DEP MN_SE_Driftless project -- **gen2's
+own control** -- with, for 390 of them, the **per-point residual USGS publishes**. This
+supersedes the six-mark file above for everything except the offline-fallback role that
+file's docstring describes.
+
+Regenerate with `analysis/groundtruth/parse_gen2_control.py --check --tol-m <tol>`; the
+script's docstring names all three sources and `--check` reproduces every published
+aggregate from the parsed rows.
+
+**Where the residuals come from.** Not the survey report and not the contractor's
+checkpoint shapefile -- neither carries a lidar elevation. They are in the *USGS* NGTOC
+"VATool" output shapefiles,
+
+```
+https://rockyweb.usgs.gov/vdelivery/Datasets/Staged/Elevation/metadata/
+    MN_SE_Driftless_2021_B21/Vertical_Accuracy/USGS/
+    USGS_MN_SE_Driftless_2021_B21_QL{0,1}.dbf
+```
+
+whose fields are `srcChkptId, X, Y, Z, Lndcover, DEMz, zdiff, zdiffSq, LAZz, LAZzdiff,
+LAZzdiffSq`. `Z` is the surveyed height; **`DEMz` is the delivered OPR DEM** read at the
+mark and **`LAZz` the delivered classified point cloud** read at the mark. Two delivered
+surfaces, where gen1's validation reports give one.
+
+**Sign.** `zdiff == Z - DEMz` and `LAZzdiff == Z - LAZz`, exact on all 395 rows (max
+residual 5e-16 m; the other order misses by up to 1.098 m). Negative therefore means the
+delivered 2021 surface reads **above** the mark -- the same sign family as
+`groundtruth.tie`'s `tie = surveyed - z_lidar`, and the same as gen1's `dnr_error_m`.
+
+**`role` is the column that matters.** The vendor FGDC metadata states that the 143
+**LCP**s were used to *calibrate* the lidar and that the NVA/VVA checkpoints "were not
+used to calibrate or post process the data". LCP rows therefore carry `role=calibration`
+and **no residual** (the VATool never tested them); using them to check gen2 would be
+circular. The 227 NVA and 164 VVA rows carry `role=check`.
+
+**Counts, and two discrepancies carried rather than hidden.** The survey report's §1.3
+text says 143 + 227 + 164 = 534. Its coordinate tables hold **533**: the 164th VVA,
+`3000_2021_MN`, is missing from them and is recovered from the USGS shapefile, whose X/Y/Z
+agree with the report to 0.0000 m on all 389 marks the two share. One NVA id carries a
+letter suffix (`2198A_2022_MN`) and a regex without `[A-Z]?` silently drops it. One
+report-table VVA, `3021_2021_MN`, was never tested by the VATool and so has no residual.
+
+**Datum.** NAVD88 on **GEOID18**, NAD83(2011) epoch 2010.00, UTM 15N, metres. gen2 is
+delivered on the same geoid, so **a gen2 tie needs no geoid conversion** -- the reason
+these marks are a direct absolute check where gen1's need `references.geoid_difference`.
+The geoid is asserted **per mark** for the 390 shapefile marks (`geoid` attribute =
+"Geoid 18" on all 395 rows) and from the report's own per-table header
+("Geoid Model: Geoid18", §1.8.4 and §2.2) for the 144 that are in no shapefile.
+
+**`va_blocks`** records which QL block(s) tested the mark. Five marks were tested against
+both, and the two blocks' DEMs differ at them by up to 3 cm, so both are carried in
+separate columns rather than averaged.
+
+**What the residuals do not remove.** gen2 carries a vendor vertical **bias adjustment**
+of unpublished magnitude (`MN_SE_Driftless_2_2021_Lidar_Mapping_Report.pdf` p. 15), tuned
+against the LCPs. These checkpoints measure gen2 *after* that adjustment.
