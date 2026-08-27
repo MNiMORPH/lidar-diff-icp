@@ -108,6 +108,112 @@ def _ref(row, obs):
     return "" if r is None else f"   [2026-08-27 run {r:+.4f}, d {obs - r:+.4f}]"
 
 
+# Candidate rules for --adaptive. These grids are MY proposal, not measured: a
+# coarse ladder chosen to bracket the optima the stratified sweep found (4 m pooled,
+# 8-12 m vegetated) without being fine enough to fit noise.
+EDGES_CONST = (1.0, 2.0, 3.0, 4.0, 6.0, 8.0, 12.0)
+FIRSTPASS = (0.15, 2.0)          # the cheap statistic a first scan of the cell yields
+THRESHOLDS = (0.03, 0.06, 0.09, 0.15)
+EDGES_LO = (1.0, 2.0, 3.0, 4.0)
+EDGES_HI = (4.0, 6.0, 8.0, 12.0)
+
+
+def _edge_metrics(hs, CNT, TOT, edges):
+    """metric for every candidate upper edge, precomputed once."""
+    return {e: metric(CNT, TOT, ((hs > 0.15) & (hs <= e)).astype(float)) for e in edges}
+
+
+def _fit_pred(x_tr, y_tr, x_te):
+    D = np.c_[np.ones(len(x_tr)), x_tr]
+    b, *_ = np.linalg.lstsq(D, y_tr, rcond=None)
+    return np.c_[np.ones(len(x_te)), x_te] @ b
+
+
+def _inner_select(idx, y, blk, cand, rng):
+    """Pick the rule with the best INNER-CV score, using training marks only."""
+    ub = np.unique(blk[idx]); rng.shuffle(ub)
+    folds = np.array_split(ub, 4)
+    best, bestscore = None, -np.inf
+    for nm, x in cand.items():
+        pred = np.full(len(idx), np.nan)
+        for fo in folds:
+            te = np.isin(blk[idx], fo); tr = ~te
+            if te.sum() < 2 or tr.sum() < 15:
+                continue
+            pred[te] = _fit_pred(x[idx][tr], y[idx][tr], x[idx][te])
+        ok = np.isfinite(pred)
+        if ok.sum() < 10:
+            continue
+        sc = 1 - np.sum((y[idx][ok] - pred[ok]) ** 2) / np.sum((y[idx][ok] - y[idx][ok].mean()) ** 2)
+        if sc > bestscore:
+            best, bestscore = nm, sc
+    return best
+
+
+def adaptive(m, hs, CNT, TOT, seeds):
+    """Nested CV: does a window chosen from a first scan of each cell beat a constant?"""
+    y = m.resid_mm.to_numpy(float)
+    blk = M._blocks(m.easting.to_numpy(float), m.northing.to_numpy(float), 10.0)
+    EM = _edge_metrics(hs, CNT, TOT, sorted(set(EDGES_CONST) | set(EDGES_LO) | set(EDGES_HI)))
+    v = metric(CNT, TOT, ((hs > FIRSTPASS[0]) & (hs <= FIRSTPASS[1])).astype(float))
+
+    const = {f"const {e:g} m": EM[e] for e in EDGES_CONST}
+    adapt = {}
+    for t in THRESHOLDS:
+        for lo in EDGES_LO:
+            for hi in EDGES_HI:
+                if hi <= lo:
+                    continue
+                adapt[f"v<={t:g} -> {lo:g} m, else {hi:g} m"] = np.where(v <= t, EM[lo], EM[hi])
+
+    print("=" * 84)
+    print("IS THE WINDOW ALLOWED TO DEPEND ON A FIRST SCAN OF THE CELL?")
+    print("=" * 84)
+    print(f"  first-pass statistic v = fraction of returns in ({FIRSTPASS[0]:g}, {FIRSTPASS[1]:g}] m")
+    print(f"  -- computed from the cell's OWN returns, so the rule needs no external label.")
+    print(f"  NESTED CV: the rule is chosen by an inner 4-fold on the training blocks only,")
+    print(f"  then scored on the held-out block. Both families select the same way, so the")
+    print(f"  adaptive family is not rewarded for having more knobs.")
+    print(f"  {len(const)} constant rules, {len(adapt)} adaptive rules.\n")
+
+    rows = []
+    for nm, fam in (("constant only", const), ("adaptive only", adapt),
+                    ("both families", {**const, **adapt})):
+        scores, picks = [], {}
+        for s in range(seeds):
+            ub = np.unique(blk); r = np.random.default_rng(s); r.shuffle(ub)
+            pred = np.full(len(y), np.nan)
+            for fo in np.array_split(ub, 5):
+                te = np.isin(blk, fo); tr = np.where(~te)[0]
+                if te.sum() < 2 or len(tr) < 15:
+                    continue
+                pick = _inner_select(tr, y, blk, fam, np.random.default_rng(1000 + s))
+                if pick is None:
+                    continue
+                picks[pick] = picks.get(pick, 0) + 1
+                x = fam[pick]
+                pred[te] = _fit_pred(x[tr], y[tr], x[te])
+            ok = np.isfinite(pred)
+            scores.append(1 - np.sum((y[ok] - pred[ok]) ** 2) / np.sum((y[ok] - y[ok].mean()) ** 2))
+        rows.append((nm, np.mean(scores), np.std(scores, ddof=1), np.array(scores), picks))
+
+    print(f"  {'family':16s} {'nested CV R2':>13} {'sd':>7}   most-chosen rule (of "
+          f"{seeds * 5} fold fits)")
+    for nm, mu, sd, _, picks in rows:
+        top = sorted(picks.items(), key=lambda kv: -kv[1])[:2]
+        t = "; ".join(f"{k} x{n}" for k, n in top)
+        print(f"  {nm:16s} {mu:+13.4f} {sd:7.4f}   {t}")
+
+    a = dict((r[0], r[3]) for r in rows)
+    d = a["adaptive only"] - a["constant only"]
+    print(f"\n  paired over {seeds} seeds:  adaptive - constant = {d.mean():+.4f} "
+          f"+- {d.std(ddof=1) / np.sqrt(seeds):.4f} (SE), wins {int((d > 0).sum())}/{seeds}")
+    print(f"\n  For reference, the same data with the edge FIXED, no selection at all:")
+    for e in EDGES_CONST:
+        sc = Scorer(m, seeds)
+        print(f"    fixed {e:4g} m   CV R2 {sc.cv(EM[e], False)[0]:+.4f}")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -115,12 +221,14 @@ def main():
     ap.add_argument("--edges", action="store_true", help="sweep the upper and lower edges")
     ap.add_argument("--strata", action="store_true",
                     help="repeat the edge sweep within NVA/VVA and lowveg terciles")
+    ap.add_argument("--adaptive", action="store_true",
+                    help="does a window chosen per-cell beat a constant one?")
     ap.add_argument("--seeds", type=int, default=20)
     ap.add_argument("--all", action="store_true")
     a = ap.parse_args()
     if a.all:
-        a.shape = a.edges = a.strata = True
-    if not (a.shape or a.edges or a.strata):
+        a.shape = a.edges = a.strata = a.adaptive = True
+    if not (a.shape or a.edges or a.strata or a.adaptive):
         ap.error("pick a section, or --all")
 
     m, hs, CNT, TOT = build()
@@ -200,6 +308,10 @@ def main():
         print(f"  lowveg reaches 0.30 at {int((m.lowveg >= 0.30).sum())} marks, 0.40 at "
               f"{int((m.lowveg >= 0.40).sum())}. Marks are sited for sky view.")
         print("  Any window chosen here is calibrated on understory, NOT on closed canopy.")
+        print()
+
+    if a.adaptive:
+        adaptive(m, hs, CNT, TOT, a.seeds)
 
 
 if __name__ == "__main__":
