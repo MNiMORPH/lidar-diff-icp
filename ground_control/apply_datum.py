@@ -74,3 +74,17 @@ def gauge_invariance_residual(z_mm, per_swath_dz_mm, datum: DatumApplication):
         unc.append(z_r)
         cor.append(z_r + datum.regauged_to(r, per_swath_dz_mm).constant_mm)
     return np.array(unc), np.array(cor)
+
+
+def datum_for_pipeline(gen1_own_frame_mm, geoid_mm, gen2_mm, gauge_ref, source, *,
+                       gen1_sigma_mm=None, gen2_sigma_mm=None):
+    """Build the ``absolute_datum`` dict ``pipeline.difference_dem`` accepts.
+
+    ``gen1_own_frame_mm`` is the constant measured against gen1 in ITS OWN geoid frame --
+    what the 2008 control gives. The pipeline's gen1 has already had ``geoid_mm`` added, so
+    the constant that applies THERE is ``gen1_own_frame_mm − geoid_mm``. Getting this
+    subtraction wrong is the exact error that once made a correct result look contradicted.
+    """
+    return {"gen1_mm": float(gen1_own_frame_mm) - float(geoid_mm),
+            "gen2_mm": float(gen2_mm), "gauge_ref": int(gauge_ref), "source": str(source),
+            "gen1_sigma_mm": gen1_sigma_mm, "gen2_sigma_mm": gen2_sigma_mm}

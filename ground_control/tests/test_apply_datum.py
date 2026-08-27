@@ -31,3 +31,12 @@ def test_regauging_is_reversible():
     d = A.DatumApplication(58.70, 25.89, 133, "x")
     back = d.regauged_to(138, DZ).regauged_to(133, DZ)
     assert abs(back.constant_mm - d.constant_mm) < 1e-9
+
+
+def test_datum_for_pipeline_removes_the_geoid_from_gen1s_constant():
+    d = A.datum_for_pipeline(gen1_own_frame_mm=58.70, geoid_mm=67.38, gen2_mm=-6.56,
+                             gauge_ref=133, source="ANSWER_gen1_elba.json")
+    assert abs(d["gen1_mm"] - (-8.68)) < 1e-9      # 58.70 - 67.38
+    assert abs(d["gen2_mm"] - (-6.56)) < 1e-9
+    # the DoD shift is the DIFFERENCE of the two constants
+    assert abs((d["gen2_mm"] - d["gen1_mm"]) - 2.12) < 1e-9

@@ -386,7 +386,8 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
                    ground_source="csf", after_ground="class2", csf_pdal=None,
                    csf_cache=None, robust_stable=True, before_crs=io.MN_GEN1_CRS,
                    geoid_datum=None, correct_boresight=False,
-                   boresight_roll_mm_per_deg=None, swath_tie="intercept"):
+                   boresight_roll_mm_per_deg=None, swath_tie="intercept",
+                   absolute_datum=None):
     """Corrected bare-earth DEM of Difference (after - before).
 
     ``before_laz``  : first-generation (gen1) MN lidar tile (retains point_source_id + gps_time).
@@ -417,6 +418,21 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
     unaffected. To obtain an absolute elevation, apply a ground-control datum constant
     measured against this gauge -- ``ground_control/apply_datum.py``. The output records
     ``swath_gauge_ref`` and leaves ``absolute_datum_mm`` None until one is supplied.
+
+    ``absolute_datum`` : optional dict placing BOTH epochs on surveyed NAVD88, making the
+                      output's elevation gauge-invariant. Keys:
+                      ``gen1_mm``  constant to ADD to gen1 **as it sits in this DoD**, i.e.
+                                   AFTER the geoid shift (= c1_own_frame − geoid_mm);
+                      ``gen2_mm``  constant to ADD to gen2;
+                      ``gauge_ref`` the flight line the gen1 constant was measured against
+                                   — CHECKED against this run's gauge and raises on a
+                                   mismatch, because a constant measured against another
+                                   gauge belongs to a different product;
+                      ``source``   where the constants came from.
+                      Optional: ``gen1_sigma_mm``, ``gen2_sigma_mm``.
+                      ``None`` (default) leaves the product exactly as before and records
+                      ``absolute_datum_mm: None``. Constants are measured with
+                      ``ground_control/`` and built by ``apply_datum.datum_for_pipeline``.
 
     ``swath_tie``   : how the VERTICAL offset of each flight-line pair is reduced from
                       their overlap. "intercept" (default) is the LAD (median-regression)
@@ -807,6 +823,32 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
                              + np.nan_to_num(s21**2 / np.maximum(n21, 1)))
         lod_method = "within-cell spread proxy (fallback; relief-inflated on slopes)"
 
+    # ABSOLUTE DATUM. Placing each epoch on surveyed NAVD88 removes the gauge dependence
+    # exactly: re-gauging by d shifts z by +d and the measured constant by -d, so the
+    # corrected surface is unchanged. Applied to BOTH epochs, so the DoD moves by the
+    # DIFFERENCE of the two constants and true change on stable ground goes to zero.
+    datum_applied = None
+    if absolute_datum is not None:
+        need = {"gen1_mm", "gen2_mm", "gauge_ref", "source"}
+        missing = need - set(absolute_datum)
+        if missing:
+            raise ValueError(f"absolute_datum is missing {sorted(missing)}")
+        if int(absolute_datum["gauge_ref"]) != swath_gauge_ref:
+            raise ValueError(
+                f"absolute_datum was measured against gauge line "
+                f"{absolute_datum['gauge_ref']} but this run is gauged on "
+                f"{swath_gauge_ref}. A constant belongs to the product it was measured "
+                f"against; re-express it with ground_control apply_datum.regauged_to().")
+        g1 = float(absolute_datum["gen1_mm"]); g2 = float(absolute_datum["gen2_mm"])
+        Z21 = Z21 + g2 / 1000.0                      # gen2 onto NAVD88
+        dod = dod + (g2 - g1) / 1000.0               # DoD moves by the DIFFERENCE
+        datum_applied = {
+            "gen1_mm": round(g1, 3), "gen2_mm": round(g2, 3),
+            "dod_shift_mm": round(g2 - g1, 3),
+            "gen1_sigma_mm": absolute_datum.get("gen1_sigma_mm"),
+            "gen2_sigma_mm": absolute_datum.get("gen2_sigma_mm"),
+            "gauge_ref": swath_gauge_ref, "source": absolute_datum["source"]}
+
     corrections = {
         "epochs": "after - before (positive = deposition)",
         "crs": "EPSG:26915", "res_m": res, "ground_percentile": ground_q,
@@ -820,7 +862,7 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
         "swath_tie": swath_tie,
         "swath_gauge_ref": swath_gauge_ref,
         "absolute_level_is_gauge_dependent": True,
-        "absolute_datum_mm": None,
+        "absolute_datum_mm": datum_applied,
         "absolute_datum_note": (
             "The absolute level of this product is the reference line's own error, not a "
             "measured elevation: re-gauging on another line shifts every elevation (44.60 "
