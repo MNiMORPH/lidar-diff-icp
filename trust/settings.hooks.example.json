@@ -24,7 +24,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/trust/hooks/stop_gate.py\"",
+            "command": "python3 \"$(git -C \"${CLAUDE_PROJECT_DIR:-$PWD}\" rev-parse --show-toplevel)/trust/hooks/stop_gate.py\"",
             "timeout": 20,
             "statusMessage": "trust gate"
           }
@@ -36,7 +36,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/trust/hooks/stop_gate.py\"",
+            "command": "python3 \"$(git -C \"${CLAUDE_PROJECT_DIR:-$PWD}\" rev-parse --show-toplevel)/trust/hooks/stop_gate.py\"",
             "timeout": 20,
             "statusMessage": "trust gate (subagent)"
           }
@@ -49,7 +49,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/trust/hooks/banner_gate.py\"",
+            "command": "python3 \"$(git -C \"${CLAUDE_PROJECT_DIR:-$PWD}\" rev-parse --show-toplevel)/trust/hooks/banner_gate.py\"",
             "timeout": 20
           }
         ]

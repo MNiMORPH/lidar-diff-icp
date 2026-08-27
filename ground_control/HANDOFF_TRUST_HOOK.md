@@ -4,8 +4,12 @@
 therefore **cannot apply the fix itself**. Everything below was verified by command in that
 session; each claim names the check that produced it.
 
-**The fix is three one-line edits outside `ground_control/`.** It needs someone with write
-access to `.claude/settings.local.json` and `trust/settings.hooks.example.json`.
+**STATUS: FIXED AND VERIFIED 2026-08-27**, on Andy's explicit authorization to cross the
+write boundary. The fix of §4 was applied to `.claude/settings.local.json` (untracked --
+globally gitignored) and `trust/settings.hooks.example.json` (tracked). §7 records the proof
+that the gate now bites. The rest of this document is kept as the diagnosis, because the
+failure mode it describes is not specific to this repository and will recur wherever a session
+is started in a subdirectory.
 
 ---
 
@@ -146,3 +150,37 @@ way a regression test is proven to bite. Set `TRUST_LEVEL=normal` and end a turn
 containing a typed, unpasted number; `stop_gate.py --selftest`'s first case
 (`typed number blocked`) is the behaviour to expect. A gate that has never been seen to fire
 is indistinguishable from one that is still broken.
+
+
+---
+
+## 7. The fix, applied and proven to bite (2026-08-27)
+
+Applied by replacing `$CLAUDE_PROJECT_DIR/trust/hooks/` with
+`$(git -C "${CLAUDE_PROJECT_DIR:-$PWD}" rev-parse --show-toplevel)/trust/hooks/` in three
+`command` strings in each of the two files. Both files re-parse as valid JSON; the diff is
+6 changed lines each (3 replacements x 2), line counts unchanged at 49 and 59, no line-ending
+churn.
+
+**Proven to bite, the way a regression test must be.** The command string was read back out of
+`.claude/settings.local.json` rather than retyped, and run from a `ground_control/` working
+directory with `CLAUDE_PROJECT_DIR` set to that subdirectory -- the exact condition that
+failed -- at the configured `TRUST_LEVEL=core`, against two synthetic transcripts: one whose
+reply contains a typed, unpasted number, one clean.
+
+```
+                    reply=typed          reply=clean
+OLD (broken)        exit=2               exit=2        <- "can't open file", both alike
+NEW (fixed)         exit=2               exit=0        <- "TRUST GATE -- this reply cannot
+                                                          be delivered as written."
+```
+
+The discrimination is the result. The broken hook returned 2 on **both** replies, so it was
+not a gate that had stopped working -- it was a gate that had been replaced by one which
+fired on everything with a message about a missing file. The fixed hook fires on the typed
+number and passes the clean reply.
+
+**Not done, still the maintainer's call:** the two proposals in §5 -- making the gate fail
+closed with a self-describing `TRUST GATE NOT RUNNING` message rather than a Python
+traceback, and whether to configure `PostToolUse`/`banner_gate` at all at `TRUST_LEVEL=core`
+given §3 shows it cannot fire there. Only the path was changed.
