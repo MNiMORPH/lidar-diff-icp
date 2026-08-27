@@ -7,6 +7,20 @@ __pycache__/
 
 # Data: large and publicly re-fetchable via scripts/fetch_tile.py
 /data/
+# --- tracked exception ------------------------------------------------------------------
+# The control-mark DERIVED TABLES (~6.5 MB) are tracked on purpose, so that
+# analysis/control_lowveg_offset.py reproduces from a bare clone in ~60 s instead of
+# needing the ~55-minute EPT acquisition first. Git needs the parent dirs un-ignored
+# before a file inside them can be re-included, hence the ladder.
+# The 1.5 GB of point-cloud boxes under data/derived/control_boxes/ stay UNTRACKED.
+!/data/
+/data/*
+!/data/derived/
+/data/derived/*
+!/data/derived/control_cover.csv
+!/data/derived/control_structure/
+!/data/derived/control_structure/*.npz
+# ------------------------------------------------------------------------------------------
 *.laz
 *.las
 *.tif
