@@ -129,6 +129,117 @@ deposition; standard NW (315°/45°) hillshade.**
   `PROJ_DATA` unset); falls back to a within-cell-spread proxy otherwise. The
   slope-dependence is real uncertainty — modeled, not detrended.
 
+## The absolute vertical datum
+
+Swath alignment makes the flight lines mutually consistent. It does not tell you where
+the resulting surface sits. `coreg.align_swaths` solves a free network and subtracts the
+reference swath's value afterwards, so the gauge touches no swath-to-swath difference –
+but the mosaic inherits **the reference line's own vertical error** as its absolute level.
+Measured on elbaext, the six per-swath `dz` span
+
+    133  +0.00   134 +22.00   135  +6.20   136  -9.80   137 -18.40   138 -22.60
+
+so re-gauging on a different line moves every elevation by up to **44.60 mm**. An
+uncorrected elevation is therefore an arbitrary implementation detail, not a measurement.
+
+**Ground control supplies the one number the network is blind to.** Each epoch is tied to
+its own contemporaneous control – the 2008 MnGeo/MnDNR validation checkpoints for gen1,
+the 2021 USGS held-out NVA/VVA checkpoints for gen2 – and the correction is applied to
+both, so the DoD moves by the difference. Applying it removes the gauge dependence
+exactly: with `corrected = z + c` and `c` measured against the same gauged product,
+re-gauging by `d` shifts `z` by `+d` and `c` by `-d`, and they cancel.
+`ground_control/tests/test_apply_datum.py` demonstrates this rather than asserting it –
+uncorrected spread 44.60 mm across the six gauges, corrected spread below 1e-9.
+
+### The relation that governs it
+
+    DoD = c1 - c2 - g
+
+where `c1` and `c2` are each epoch's constant against its own control and `g` is the
+geoid-model term the pipeline adds to gen1. **The geoid does not cancel between the two
+constants**, which is the trap in this problem: NAVD88 is the datum, whereas GEOID03 and
+GEOID18 are models for converting GPS ellipsoidal heights to orthometric ones. Both
+control sets publish NAVD88 and are directly comparable, but each epoch's lidar `z` was
+converted with a different model, so the two constants reference surfaces in different
+frames.
+
+Two independent checks close on this. The measured DoD on stable open ground predicts
+`-2.12 mm` against `-2.12 mm` observed over 116,507 cells. Furthermore the control's own
+epoch separation, `c1 - c2 = +69.30 mm`, recovers the PROJ geoid difference of
+`+67.38 mm` to **1.92 mm** – two survey networks reproducing a geoid model that neither
+knows anything about.
+
+### Elba, measured
+
+| quantity | value |
+|---|---|
+| gen1, delivered surface | **+62.74 ± 23.38 mm** (open ground, 8 marks on 5 lines) |
+| bridge, delivered → our reconstruction | **-4.04 ± 11.12 mm** (29 open marks) |
+| gen1, our surface | **+58.70 ± 25.89 mm** |
+| gen2, its own held-out control | **-2.37 ± 2.37 mm** project-wide; **-6.83 ± 2.96** in the QL1 block |
+| geoid term added to gen1 | **+67.38 mm** |
+| **DoD shift** | **+2.18 mm**, and it puts stable open ground at **-0.003 mm** |
+
+The DoD shift is small, which is **not** a reason to skip it: the gauge choice it removes
+is 21× larger, and its smallness here is a property of line 133 having been a lucky pin.
+
+### Four rules that changed the answer
+
+1. **Epoch-matched control.** 2008 for gen1, 2021 for gen2, never crossed. A 2021 mark on
+   a 2008 surface carries thirteen years of real ground change.
+2. **Open ground only.** Pooling cover classes bakes canopy response into the datum and
+   pre-decides the canopy-versus-erosion question. At Elba this moved the answer 17.17 mm
+   and collapsed a disambiguation sensitivity from 8.69 mm to 1.90 mm.
+3. **The flight line is the unit of replication.** Marks under one line share that line's
+   unknown constant; treating them as independent understates the standard error by a
+   measured design effect of 1.40×.
+4. **The returns assign the line, never the geometry.** `point_source_id` is reused across
+   missions, and a near-north–south line drifts about 1.1 km in easting over 94 km of
+   track, so across-track separation is no evidence of a second line. Passes are merged by
+   collinearity scaled by the extrapolation's own prediction standard deviation.
+
+### Measuring it at a new site
+
+```bash
+# 1. flight-line tracks, once per acquisition (46 tiles, ~60 s, committed thereafter)
+./lidar-icp/bin/python ground_control/run_derive_tracks.py \
+    --tiles 'data/before/*.laz' --exclude-substring merged \
+    --out ground_control/data/gen1_line_tracks.json --chunk-size 2000000
+
+# 2. both epochs' constants at the site
+env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python ground_control/run_site_datum.py \
+    --easting 578762.8 --northing 4884487.6 --site elbaext \
+    --corrections data/derived/elbaext/corrections_geoid.json \
+    --tracks ground_control/data/gen1_line_tracks.json \
+    --psids 133 134 135 136 137 138 --covers L1O --collinear-sigma 3 \
+    --tiles data/before --res 5.0 --gen2-surface ql1_laz \
+    --bridge-mm -4.04 --bridge-source "products/bridge_wide_L1O.json" \
+    --max-lags-m 20000 40000 80000 160000 --n-lags 25 --n-pairs 800000 \
+    --estimators dowd matheron --seed 0 --out SITE_DATUM_elbaext.json
+
+# 3. pass its absolute_datum block straight to the pipeline
+#    difference_dem(..., absolute_datum=json.load(open("SITE_DATUM_elbaext.json"))["absolute_datum"])
+```
+
+`difference_dem` checks that the constant's `gauge_ref` matches the run's own
+`swath_gauge_ref` and raises on a mismatch, because a constant measured against one
+reference line belongs to that product and would silently mis-level another. Nothing is
+defaulted: `covers`, `gen2_surface`, `collinear_sigma` and the bridge are all required,
+and each of them moved the Elba answer by more than the correction itself.
+
+### What is still open
+
+- **Near versus far marks.** Six of Elba's eight open marks sit 14–63 km away and disagree
+  with the two near ones by 59.13 mm, which is enough to change the correction's sign.
+- **Mechanism, not relation.** The relation is verified; the story that "most of the
+  difference was the geoid" is consistent but unproven, and it competes with the
+  **unpublished vendor bias adjustments** that both epochs carry and neither publishes.
+- **gen2's bridge** is bounded to 0 ± 26 mm by the closure but was never measured
+  directly: its checkpoints sit on engineered ground, giving radius spreads of 131–715 mm.
+- **The statewide per-line correction** is where control actually pays off. The weighted
+  uncertainty falls from 22.75 mm toward 11 mm only as per-line constants improve, which
+  needs many marks per line rather than more marks at one site.
+
 ## Quick start
 
 ```bash
@@ -229,6 +340,13 @@ Reference point 44.101944, −92.004137 (E 579705.72, N 4883677.71, EPSG:26915).
 - `scripts/` — CLIs: `fetch_3dep_curl`, `filter_last_return`, `gridded_ground_dod`
   (final product), `m3c2_pointcloud` (point-based cross-check),
   `along_track_drift`, `decimation_test`, `fetch_tile`.
+- `ground_control/` — the absolute vertical datum subsystem: `control` (epoch-agnostic
+  access to both control tables), `lines` (flight-line tracks, one per pass, committed as
+  `data/gen1_line_tracks.json`), `same_line` (the site's own lines, marks assigned by
+  their returns), `our_surface` (local reconstruction of either epoch's surface anywhere a
+  tile is on disk), `site_datum` + `run_site_datum` (both epochs' constants at any site),
+  `apply_datum` (gauge-invariant application). `FRAME.md` is the state anchor,
+  `REPORT.md` the method record, `INTEGRATION.md` what belongs in `src/` on promotion.
 - `analysis/` — documented studies (density decimation, method comparisons).
 - `tests/` — regression tests (coreg sign conventions, correction surface,
   synthetic-warp recovery).
