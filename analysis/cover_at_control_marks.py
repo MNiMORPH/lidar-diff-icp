@@ -68,10 +68,17 @@ RADII = (2.5, 5.0, 7.5, 10.0, 15.0, 25.0)
 
 
 def _ept_index():
-    """(STRtree, polygons, names) over the 2021 acquisition's five EPT blocks."""
+    """(STRtree, polygons, names) over the 2021 acquisition's five EPT blocks.
+
+    The boundary index is FETCHED AND CACHED if absent (``threedep._load_boundaries``), so a
+    fresh clone with no ``data/`` still runs -- slower, but possible. Nothing here assumes a
+    file that only exists on the machine it was first run on.
+    """
     from shapely.geometry import shape
     from shapely.strtree import STRtree
-    gj = json.load(open(BOUNDARIES))
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))
+    from lidar_diff_icp import threedep
+    gj = threedep._load_boundaries(cache=BOUNDARIES)
     polys, names = [], []
     for f in gj["features"]:
         nm = f["properties"].get("name", "")

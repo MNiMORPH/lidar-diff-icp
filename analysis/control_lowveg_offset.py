@@ -52,6 +52,15 @@ def lowveg(point_id, lo, hi, setname="gen2_2021_control"):
 
 
 def load(band_lo, band_hi):
+    missing = [p for p in (COVER, STRUCT) if not os.path.exists(p)]
+    if missing:
+        raise SystemExit(
+            f"missing {', '.join(missing)}.\n"
+            "These are the products of the acquisition step, which reads the gen2 3DEP EPT\n"
+            "over the network (~55 min for 1,497 marks, ~1.6 GB of kept boxes):\n"
+            "    PROJ_DATA=$CENV/share/proj GDAL_DATA=$CENV/share/gdal $CENV/bin/python \\\n"
+            "        analysis/cover_at_control_marks.py --out data/derived/control_cover.csv\n"
+            "It is resumable: rerun it and it skips marks already present.")
     cov = pd.read_csv(COVER)
     cov = cov[(cov.set == "gen2_2021_control") & (cov.status == "ok")]
     g2 = pd.read_csv(G2)
