@@ -75,16 +75,125 @@ def at_marks(limit=None):
     return pd.DataFrame(out)
 
 
+MIN_CLASS2 = 20      # order-2 needs 6; below this the surface is not meaningfully constrained
+
+
+def _cell_index(x, y, x0, y0, nx, ny, res):
+    """CSR-like index of points into res-sized bins, for O(1) neighbourhood gather."""
+    j = np.floor((x - x0) / res).astype(np.int64)
+    i = np.floor((y - y0) / res).astype(np.int64)
+    ok = (j >= 0) & (j < nx) & (i >= 0) & (i < ny)
+    flat = np.where(ok, i * nx + j, -1)
+    order = np.argsort(flat, kind="stable")
+    flat_s = flat[order]
+    start = np.searchsorted(flat_s, np.arange(nx * ny), side="left")
+    stop = np.searchsorted(flat_s, np.arange(nx * ny), side="right")
+    return order, start, stop
+
+
+def tile(tile_dir, copc, band_rows=60, out=None, progress=True):
+    """Per-cell NGV over a tile's grid, banded so memory stays flat."""
+    import json, pdal, time
+    cfg = json.load(open(os.path.join(tile_dir, "corrections.json")))
+    X0, Y0, X1, Y1 = cfg["bounds"]; res = float(cfg["res_m"])
+    nx = int(round((X1 - X0) / res)); ny = int(round((Y1 - Y0) / res))
+    NG = np.full((ny, nx), np.nan)
+    NPTS = np.zeros((ny, nx), np.int32)
+    NC2 = np.zeros((ny, nx), np.int32)
+    halo = RADIUS + res
+    print(f"  grid {ny} x {nx} at {res:g} m, bounds {X0:.1f} {Y0:.1f} {X1:.1f} {Y1:.1f}")
+    print(f"  radius {RADIUS} m, window ({NGV_LO}, {NGV_HI}] m, min class-2 {MIN_CLASS2}")
+    t0 = time.time()
+    for r0 in range(0, ny, band_rows):
+        r1 = min(r0 + band_rows, ny)
+        yb0, yb1 = Y0 + r0 * res - halo, Y0 + r1 * res + halo
+        pl = pdal.Pipeline(json.dumps({"pipeline": [
+            {"type": "readers.copc", "filename": copc,
+             "bounds": f"([{X0 - halo},{X1 + halo}],[{yb0},{yb1}])"}]}))
+        n = pl.execute()
+        if n == 0:
+            continue
+        a = pl.arrays[0]
+        px = a["X"].astype(np.float64); py = a["Y"].astype(np.float64)
+        pz = a["Z"].astype(np.float64); cl = a["Classification"]
+        # local bin grid covering the band plus halo
+        bx0 = X0 - halo; by0 = yb0
+        bnx = int(np.ceil((X1 + halo - bx0) / res)); bny = int(np.ceil((yb1 - by0) / res))
+        order, start, stop = _cell_index(px, py, bx0, by0, bnx, bny, res)
+        for i in range(r0, r1):
+            cy = Y0 + (i + 0.5) * res
+            bi = int((cy - by0) // res)
+            for j in range(nx):
+                cx = X0 + (j + 0.5) * res
+                bj = int((cx - bx0) // res)
+                idx = []
+                for di in range(bi - 2, bi + 3):
+                    if di < 0 or di >= bny:
+                        continue
+                    base = di * bnx
+                    lo_j = max(bj - 2, 0); hi_j = min(bj + 2, bnx - 1)
+                    s_ = start[base + lo_j]; e_ = stop[base + hi_j]
+                    if e_ > s_:
+                        idx.append(order[s_:e_])
+                if not idx:
+                    continue
+                sel = np.concatenate(idx)
+                dx = px[sel] - cx; dy = py[sel] - cy
+                k = dx * dx + dy * dy <= RADIUS * RADIUS
+                if not k.any():
+                    continue
+                sel = sel[k]; dx = dx[k]; dy = dy[k]
+                NPTS[i, j] = sel.size
+                g = cl[sel] == 2
+                NC2[i, j] = int(g.sum())
+                if NC2[i, j] < MIN_CLASS2:
+                    continue
+                A = design(dx[g], dy[g])
+                try:
+                    coef = np.linalg.solve(A.T @ A, A.T @ pz[sel][g])
+                except np.linalg.LinAlgError:
+                    continue
+                h = (pz[sel] - design(dx, dy) @ coef) / np.sqrt(1 + coef[1] ** 2 + coef[2] ** 2)
+                NG[i, j] = ((h > NGV_LO) & (h <= NGV_HI)).sum() / sel.size
+        if progress:
+            done = (r1 - 0) / ny
+            el = time.time() - t0
+            print(f"    rows {r0:4d}-{r1:4d}  {n:9,d} pts read  "
+                  f"{el:6.1f} s elapsed, ~{el / done - el:5.1f} s left", flush=True)
+    out = out or os.path.join(tile_dir, "ngv.npy")
+    np.save(out, NG)
+    np.save(out.replace(".npy", "_npts.npy"), NPTS)
+    np.save(out.replace(".npy", "_nclass2.npy"), NC2)
+    fin = np.isfinite(NG)
+    print(f"\n  cells {NG.size:,}   with NGV {int(fin.sum()):,} ({100*fin.mean():.1f}%)")
+    print(f"  BLANK cells and why: {int((NPTS == 0).sum()):,} had no returns in the disc; "
+          f"{int(((NPTS > 0) & (NC2 < MIN_CLASS2)).sum()):,} had < {MIN_CLASS2} class-2 returns")
+    print(f"  NGV percentiles: " + "  ".join(
+        f"p{q}={np.percentile(NG[fin], q):.3f}" for q in (0, 10, 25, 50, 75, 90, 99, 100)))
+    print(f"  returns per disc: median {np.median(NPTS[fin]):.0f}, "
+          f"class-2 median {np.median(NC2[fin]):.0f}")
+    print(f"wrote {out}")
+    return NG
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--marks", action="store_true",
                     help="recompute NGV exactly at the control marks and refit the offset")
+    ap.add_argument("--tile", default=None, help="tile directory, e.g. data/derived/elba_fulldensity")
+    ap.add_argument("--copc", default=None, help="gen2 COPC to read")
+    ap.add_argument("--band-rows", type=int, default=60)
     ap.add_argument("--limit", type=int, default=None)
     ap.add_argument("--out", default="data/derived/control_ngv_exact.csv")
     a = ap.parse_args()
-    if not a.marks:
+    if not (a.marks or a.tile):
         ap.error("pick a section")
+    if a.tile:
+        if not a.copc:
+            ap.error("--tile needs --copc")
+        tile(a.tile, a.copc, a.band_rows)
+        return
 
     print(f"NGV = returns in ({NGV_LO}, {NGV_HI}] m / ALL returns within {RADIUS} m, "
           f"slope-normal above an order-2 class-2 surface")
