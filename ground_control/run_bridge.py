@@ -60,8 +60,17 @@ from lidar_diff_icp.groundtruth import gen1_datum as G  # noqa: E402
 from trust.provenance import Run  # noqa: E402
 
 
-def read_grid_at(site_dir, dod_name, easting, northing, *, win):
-    """gen1's gridded surface at a coordinate: the containing cell and a window median."""
+def read_grid_at(site_dir, dod_name, easting, northing, *, radius_m):
+    """gen1's gridded surface AT a coordinate, by the repo's own tie estimator.
+
+    A window median drifts on sloping terrain -- swept over 5 to 55 m it moved the answer
+    at L1O101 by 72.3 mm and at L2T51 by 224.8 mm, so it was measuring the terrain, not
+    the surface.  Instead the finite grid cells within ``radius_m`` are handed to
+    ``groundtruth.tie.ground_elevation_at`` as points: the same order-2 local surface fit
+    plus residual-quantile the tie machinery uses at a control mark, so grid and cloud are
+    read the SAME WAY and the bridge differences like with like.
+    """
+    from lidar_diff_icp.groundtruth import tie
     d = json.loads((Path(site_dir) / "corrections.json").read_text())
     x0, y0, x1, y1 = d["bounds"]
     res = float(d["res_m"])
@@ -75,12 +84,22 @@ def read_grid_at(site_dir, dod_name, easting, northing, *, win):
     iy = int((northing - y0) // res)      # row 0 = south; pipeline uses +row = north
     if not (0 <= ix < nx and 0 <= iy < ny):
         return None, None, res, zb.shape
-    cell = float(zb[iy, ix])
-    h = win // 2
-    sl = zb[max(iy - h, 0):iy + h + 1, max(ix - h, 0):ix + h + 1]
-    fin = sl[np.isfinite(sl)]
-    return (cell if np.isfinite(cell) else None,
-            float(np.median(fin)) if fin.size else None, res, zb.shape)
+    h = int(np.ceil(radius_m / res)) + 1
+    i0, i1 = max(ix - h, 0), min(ix + h + 1, nx)
+    j0, j1 = max(iy - h, 0), min(iy + h + 1, ny)
+    sub = zb[j0:j1, i0:i1]
+    gx = x0 + (np.arange(i0, i1) + 0.5) * res
+    gy = y0 + (np.arange(j0, j1) + 0.5) * res
+    GX, GY = np.meshgrid(gx, gy)
+    fin = np.isfinite(sub)
+    if fin.sum() < 6:
+        return None, None, res, zb.shape
+    zhat, info = tie.ground_elevation_at(GX[fin], GY[fin], sub[fin],
+                                         easting, northing, radius_m,
+                                         surface_order=2, quantile=0.50)
+    if not np.isfinite(zhat):
+        return None, None, res, zb.shape
+    return float(info["n"]), float(zhat), res, zb.shape
 
 
 def geoid_shift_mm_at(site_dir, easting, northing):
@@ -111,7 +130,8 @@ def main(argv=None):
                    help="data/derived/<site> dirs holding z_after.npy and a dod")
     p.add_argument("--dod-name", nargs="+", required=True,
                    help="one per --grid-sites; which DoD recovers gen1 there")
-    p.add_argument("--window-cells", type=int, required=True)
+    p.add_argument("--radii-m", type=float, nargs="+", required=True,
+                   help="swept; a single radius would hide the sensitivity")
     a = p.parse_args(argv)
 
     ts = L.load_tracks(a.tracks)
@@ -133,10 +153,11 @@ def main(argv=None):
             why="which DoD product recovers gen1 at each site; verified on "
                 "elba_fulldensity against an independent gen1 grid to median +0.489 mm, "
                 "NMAD 0.391 mm over 341,239 cells")
-    R.param("window_cells", a.window_cells, src="MINE",
-            why="side of the square whose median is reported BESIDE the containing cell; "
-                "a single 5 m cell is one noisy sample. Both are printed and neither is "
-                "called the answer")
+    R.param("radii_m", tuple(a.radii_m), src="MINE",
+            why="radius of grid cells handed to tie.ground_elevation_at; SWEPT, because "
+                "a single radius would hide the sensitivity. The predecessor window "
+                "MEDIAN moved 72.3 mm over 5-55 m, which is why an order-2 surface fit "
+                "replaced it")
     R.column("point_id", "control mark id")
     R.column("cover", "MnDNR land-cover class of the mark, unitless code: L1O open, "
                       "L2T tall weeds/crops, L3B brush, L4F forest, L5U urban")
@@ -144,7 +165,9 @@ def main(argv=None):
                     "vendor's Surface Z). B = processing gap (our gridded CSF/aligned/"
                     "geoid-shifted surface vs the vendor's Surface Z)")
     R.column("delivered_z_m", "the vendor's own dnr_surface_z_m at the mark")
-    R.column("ours_z_m", "our surface at the mark: cloud reduction for A, grid for B")
+    R.column("ours_z_m", "our surface AT the mark, m: for A the cloud reduction, for B "
+                         "the same order-2 surface fit + residual median applied to the "
+                         "grid cell centres within radius")
     R.column("geoid_mm", "geoid conversion applied to gen1 at this mark to carry it onto "
                          "gen2's GEOID18 frame, mm (references.geoid_difference); 0 for "
                          "gap A, which is entirely within GEOID03")
@@ -182,20 +205,20 @@ def main(argv=None):
 
     # ---- B: processing gap, wherever our grid actually covers a mark
     B = []
-    for sdir, dn in zip(a.grid_sites, a.dod_name):
+    for win in a.radii_m:
+      for sdir, dn in zip(a.grid_sites, a.dod_name):
         for mk in control:
             if mk.dnr_surface_z_m is None:
                 continue
             cell, wmed, res, shape = read_grid_at(sdir, dn, mk.checkpoint.easting,
-                                                 mk.checkpoint.northing,
-                                                 win=a.window_cells)
+                                                 mk.checkpoint.northing, radius_m=win)
             if wmed is None:
                 continue
             raw = (mk.dnr_surface_z_m - wmed) * 1000.0
             g = geoid_shift_mm_at(sdir, mk.checkpoint.easting, mk.checkpoint.northing)
             br = raw + g          # undo the GEOID03 -> GEOID18 carry
-            B.append((mk.aliases[0], mk.cover_class, raw, g, br))
-            rows.append([mk.aliases[0], mk.cover_class, "B",
+            B.append((mk.aliases[0], mk.cover_class, raw, g, br, win))
+            rows.append([f"{mk.aliases[0]} r{win:g}", mk.cover_class, "B",
                          f"{mk.dnr_surface_z_m:.3f}", f"{wmed:.3f}",
                          f"{g:+.1f}", f"{raw:+.1f}", f"{br:+.1f}"])
     R.table(["point_id", "cover", "gap", "delivered_z_m", "ours_z_m", "geoid_mm",
@@ -210,14 +233,21 @@ def main(argv=None):
     print(f"  B  processing gap: n={len(B)}"
           + ("  -- too few to carry an uncertainty; listed above, not summarised"
              if len(B) < 3 else ""))
-    for pid, cv, raw, g, br in B:
-        print(f"       {pid:<28s} {cv}  raw {raw:+7.1f}  geoid {g:+6.1f}  "
-              f"-> bridge {br:+7.1f} mm")
+    import collections
+    per = collections.defaultdict(list)
+    for pid, cv, raw, g, br, win in B:
+        per[(pid, cv)].append((win, br))
+    for (pid, cv), v in per.items():
+        v.sort()
+        vals = np.array([b for _, b in v])
+        print(f"       {pid:<24s} {cv}  " +
+              "  ".join(f"r{w:g}:{b:+7.1f}" for w, b in v) +
+              f"   |  spread {np.ptp(vals):.1f} mm")
     print()
     print("  The products need B. A is reported because it is measurable and because")
     print("  conflating the two would let an estimator difference stand in for a")
     print("  processing difference.")
-    R.done(headline=f"A n={A.size} mean {A.mean():+.2f} mm; B n={len(B)}")
+    R.done(headline=f"A n={A.size} mean {A.mean():+.2f} mm; B on {len(per)} marks swept over {len(a.radii_m)} radii")
     return 0
 
 
