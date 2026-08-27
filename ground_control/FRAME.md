@@ -17,16 +17,28 @@ control that existed.
 **The rule this subsystem enforces: 2008 control for gen1, 2021 control for gen2, no
 cross-epoch control, no chaining where the site's own line carries marks.**
 
-## Where the number stands
+## Where the number stands — ADOPTED 2026-08-27
 
-| quantity | value | producer |
-|---|---|---|
-| gen1 at Elba, delivered surface | **+54.77** (2 km catchment, track@3σ) | `run_same_line.py` |
-| gen1, on OUR surface | **≈ +51** (bridge −4.04 applied) | + `run_bridge_wide.py` |
-| SE, flight line as unit of replication | **± ~18** | — |
-| gen1 bridge | **−4.04 ± 11.12 mm**, 29 open marks | `run_bridge_wide.py` |
-| gen2 open, delivered | −6.56 (ql1_laz) / +5.28 (ql0_laz) | `run_datum_at_site.py` |
-| gen2 bridge | **NOT MEASURABLE** — engineered siting | `GEN2_BRIDGE_NOT_MEASURABLE.md` |
+**`ground_control/products/ANSWER_gen1_elba.json` is the canonical gen1 surface offset.**
+
+| surface | offset (mm, ADD) | uncertainty | of what |
+|---|---|---|---|
+| **DELIVERED** (what the vendor shipped; what the 2008 control measured) | **+45.57** | ± 18.81 | SE over the 5 flight lines, 14 marks |
+| bridge, delivered → ours | −4.04 | ± 11.12 | SE of the mean over 29 open marks |
+| **OURS** (CSF, swath-aligned, geoid-shifted 5 m grid the DoD runs on) | **+41.53** | ± 21.85 | the two in quadrature |
+
+Producer: `run_datum_by_returns.py` (catchment-free) + `run_bridge_wide.py`, assembled by
+`run_gen1_elba_answer.py`. Ledger `.trust/runs/20260827T220404-3482736.json`.
+
+**Superseded, and why.** The `+55` lineage (2026-08-26 ledger +55.0; my catchment rebuild
++54.77) was inflated ~9 mm by marks on line segments that are NOT collinear with Elba's own
+passes. A catchment search conflates "found near a track" with "belongs to that line"; the
+catchment-free estimator tests each mark's own pass and rejects three (138.0 at 19.3σ,
+138.3 at 4.1σ, 136.2 at 3.5σ), which drops line 136 entirely.
+
+**Two live choices still move this number**, and neither is made in code: cover is
+`L1O+L5U`, not yet narrowed to open-only; and `collinear_sigma` moves it **8.69 mm** across
+2–5 (flat 2→3 at 0.47 mm, jumping 8.22 mm at 5).
 
 The DoD absolute correction still cannot be assembled cleanly: it differences two constants
 and only the gen1 side has been carried onto our surface.
