@@ -172,6 +172,11 @@ def _partial(x, y, z_):
     return stats.pearsonr(rx, ry)
 
 
+# NAMING. This project uses "slope" for two unrelated things, which is a real hazard here:
+#   * `slope_deg`            = the GROUND's gradient in degrees (a confound, see --slope-check)
+#   * `d(offset)/d(lowveg)`  = the REGRESSION COEFFICIENT, mm of offset per unit of lowveg
+# Every printed coefficient below is spelled out as d(offset)/d(lowveg) for that reason.
+
 LOWVEG_DEFINITION = """\
 lowveg, EXACT DEFINITION -- it must travel with any coefficient fitted from it
 --------------------------------------------------------------------------------
@@ -286,9 +291,9 @@ def main():
     ba, sa = wls(g.x.values, g["mean"].values, g.n.values.astype(float))
     print(f"\nfits on the binned means ({len(g)} bins with n>1):")
     print(f"  DESIGN-weighted  1/SE^2 : intercept {bd[0]:+7.1f} +/- {sd_[0]:.1f}   "
-          f"slope {bd[1]:+8.1f} +/- {sd_[1]:.1f} mm per unit")
+          f"d(offset)/d(lowveg) {bd[1]:+8.1f} +/- {sd_[1]:.1f} mm per unit")
     print(f"  ABUNDANCE-weighted by n : intercept {ba[0]:+7.1f} +/- {sa[0]:.1f}   "
-          f"slope {ba[1]:+8.1f} +/- {sa[1]:.1f} mm per unit")
+          f"d(offset)/d(lowveg) {ba[1]:+8.1f} +/- {sa[1]:.1f} mm per unit")
 
     B = a.block_km * 1000.0
     m["blk"] = (m.easting // B).astype(int).astype(str) + "_" + (m.northing // B).astype(int).astype(str)
@@ -298,17 +303,18 @@ def main():
         if s.lowveg.nunique() > 2:
             sl.append(np.polyfit(s.lowveg, s.resid_mm, 1)[0])
     sl = np.array(sl); nv = stats.linregress(m.lowveg, m.resid_mm)
-    print(f"\nper-mark slope: naive {nv.slope:+.1f} +/- {nv.stderr:.1f} mm per unit (p {nv.pvalue:.1e})")
+    print(f"\nper-mark d(offset)/d(lowveg): naive {nv.slope:+.1f} +/- {nv.stderr:.1f} mm per unit (p {nv.pvalue:.1e})")
     print(f"  block bootstrap on {len(ub)} blocks of {a.block_km:.0f} km: "
           f"{np.mean(sl):+.1f} +/- {np.std(sl, ddof=1):.1f}   "
           f"-> SE inflated {np.std(sl, ddof=1)/nv.stderr:.2f}x")
 
-    print(f"\nconfound check -- slope within each EPT block (they differ in FLIGHT DATE):")
+    print(f"\nconfound check -- d(offset)/d(lowveg) within each EPT block "
+              f"(they differ in FLIGHT DATE):")
     for k, s in m.groupby("ept_block"):
         if len(s) < 25 or s.lowveg.nunique() < 5:
             print(f"  {k:24s} n={len(s):4d}  too few"); continue
         r = stats.linregress(s.lowveg, s.resid_mm)
-        print(f"  {k:24s} n={len(s):4d}  slope {r.slope:+8.1f} +/- {r.stderr:6.1f}  p {r.pvalue:.1e}")
+        print(f"  {k:24s} n={len(s):4d}  d(offset)/d(lowveg) {r.slope:+8.1f} +/- {r.stderr:6.1f}  p {r.pvalue:.1e}")
 
     if a.sweep:
         print(f"\nband-edge sensitivity (the metric is ORDINAL; its scale is not meaningful):")
@@ -350,9 +356,13 @@ def main():
     if a.slope_check:
         sl = m.slope_deg.dropna()
         f = 1 / np.cos(np.radians(sl))
-        print(f"\nSLOPE. The scatter is slope-normal by construction; the OFFSET is a VERTICAL")
+        print(f"\nTERRAIN SLOPE (deg) -- NOT the regression coefficient. In this script "
+              f"\"d(offset)/d(lowveg)\" is always the")
+        print(f"regression coefficient in mm per unit lowveg, and \"slope_deg\" is always "
+              f"the ground's gradient.")
+        print(f"The scatter is slope-normal by construction; the OFFSET is a VERTICAL")
         print(f"difference (USGS surveyed_Z - delivered_Z) and is not converted. Size of that:")
-        print(f"  slope: median {sl.median():.2f} deg  p90 {sl.quantile(.9):.2f}  max {sl.max():.2f}")
+        print(f"  TERRAIN slope: median {sl.median():.2f} deg  p90 {sl.quantile(.9):.2f}  max {sl.max():.2f}")
         print(f"  1/cos(slope): median {f.median():.4f}  max {f.max():.4f}  "
               f"-> {100*(f.median()-1):.2f}% typical, {100*(f.max()-1):.1f}% worst")
         rv, _ = stats.spearmanr(m.lowveg, m.resid_mm)
