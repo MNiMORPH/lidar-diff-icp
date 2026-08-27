@@ -1,4 +1,7 @@
-# HANDOFF — a generalizable ground-control method for MN lidar vertical datums
+# `ground_control/` — a generalizable ground-control method for MN lidar vertical datums
+
+**This directory is the permanent home for ground-control code. This file is the brief for the
+session that builds it.**
 
 **Written 2026-08-27 by the session that produced the evidence below. Read this whole file
 before doing anything.**
@@ -10,14 +13,15 @@ before doing anything.**
 **You may READ anything in this repository.** The existing modules and the `analysis/*.md`
 reports are your evidence base and you should use them heavily.
 
-**You may WRITE only inside `handoff/ground-control-method/`.** Do not create, edit, move or
+**You may WRITE only inside `ground_control/`.** Do not create, edit, move or
 delete any file outside this directory. That includes `src/`, `tests/`, `analysis/`,
 `data/`, `docs/` and the repository root. Another session owns those and is working in them.
 
-Your deliverable is a **self-contained implementation inside this directory** — module,
-tests, driver, report — which will be merged into `src/lidar_diff_icp/` deliberately, later,
-by a human decision. Write it so that merge is mechanical: keep your public API small and
-name things as they would be named in the package.
+**`ground_control/` is the permanent home for ground-control code in this project** — not a
+staging area. Build here as if the code lives here for good: a real module, real tests, a real
+driver. It may later be promoted into `src/lidar_diff_icp/` or kept as its own importable
+subsystem, but that is a separate decision and nothing you write should depend on it. Keep the
+public API small and name things as they would be named in the package either way.
 
 Standing project rules that apply to you:
 
@@ -224,8 +228,8 @@ flagged as a proposal, not adopted.
 - **The radius-spread siting screen does not work.** Three independent measurements: σ_site
   83–97 mm at every cut from 15 mm to none; sd 105.6 / 95.4 / 92.6 / 92.9 / 96.5 with the
   *tightest* cut having the *largest* scatter; 47.7–59.8 flat. Keep the columns as reported
-  diagnostics. **Do not filter on them.** `handoff` note: an earlier `screen_marks.py`
-  implemented this filter; it is not in the repo and should not be resurrected.
+  diagnostics. **Do not filter on them.** An earlier `screen_marks.py` implemented this
+  filter; it is deliberately not in the repo and should not be resurrected.
 - **The routed mass balance cannot estimate a datum.** Continuity is one-sided
   (`V_acc ≤ +zσ`); raising the surface only makes it more satisfied. It yields a **lower
   bound** and nothing more. Scene-integrated at 1σ: **−24.5 ± 15.2 / −5.8 ± 9.4 /
@@ -287,8 +291,9 @@ Inside this directory:
 - `REPORT.md`: the API, every design decision with its reason, what you verified and how,
   what you could NOT verify, and **every parameter you chose flagged as YOURS with its
   measured effect**.
-- A short `MERGE.md` saying exactly which files should move where in `src/` and `tests/`, and
-  what would need renaming — so the merge is a decision, not an archaeology exercise.
+- A short `INTEGRATION.md`: how this subsystem is imported by the rest of the project, which
+  of its pieces (if any) belong in `src/lidar_diff_icp/` instead, and what would need renaming
+  if promoted — so that call is a decision later, not an archaeology exercise.
 
 **Acceptance test:** given a site coordinate and an epoch, the method returns a constant and an
 uncertainty *at that site*, states which route produced it (published residual / field
