@@ -1,0 +1,434 @@
+{
+ "marks": [
+  {
+   "point_id": "L1O-2124 Fillmore VRS",
+   "cover": "L1O",
+   "tile": "5142-15-63.laz",
+   "bridge_mm": -15.815860214956956,
+   "radius_spread_mm": 57.03445568093457,
+   "n_csf": 212262,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "lines": [
+    133,
+    134
+   ]
+  },
+  {
+   "point_id": "L1O-2320 Fillmore VRS",
+   "cover": "L1O",
+   "tile": "5142-11-62.laz",
+   "bridge_mm": 28.38847947751333,
+   "radius_spread_mm": 9.303657286579892,
+   "n_csf": 279788,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "lines": [
+    130,
+    131
+   ]
+  },
+  {
+   "point_id": "L1O-2323 Fillmore VRS",
+   "cover": "L1O",
+   "tile": "5142-11-62.laz",
+   "bridge_mm": 27.61638292184898,
+   "radius_spread_mm": 22.71120031434748,
+   "n_csf": 226961,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "lines": [
+    131,
+    132
+   ]
+  },
+  {
+   "point_id": "L1O-2326 Fillmore VRS",
+   "cover": "L1O",
+   "tile": "5158-10-01.laz",
+   "bridge_mm": -38.82680196772981,
+   "radius_spread_mm": 21.526690298742324,
+   "n_csf": 220141,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "lines": [
+    139,
+    140
+   ]
+  },
+  {
+   "point_id": "L10-1024 Olmsted VRS",
+   "cover": "L1O",
+   "tile": "5142-01-60.laz",
+   "bridge_mm": -18.079665216447438,
+   "radius_spread_mm": 35.430013112545566,
+   "n_csf": 301921,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "lines": [
+    126,
+    127
+   ]
+  },
+  {
+   "point_id": "L1O-6113 Wabasha RTK",
+   "cover": "L1O",
+   "tile": "4342-27-59.laz",
+   "bridge_mm": 14.045767513152896,
+   "radius_spread_mm": 5.6529605263335725,
+   "n_csf": 238698,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "lines": [
+    124,
+    125
+   ]
+  },
+  {
+   "point_id": "L1O-6182 Wabasha RTK",
+   "cover": "L1O",
+   "tile": "4342-21-64.laz",
+   "bridge_mm": 38.78352439922139,
+   "radius_spread_mm": 9.48266951152732,
+   "n_csf": 285276,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "lines": [
+    137,
+    138
+   ]
+  },
+  {
+   "point_id": "L1O-6104 Wabasha RTK",
+   "cover": "L1O",
+   "tile": "4358-26-03.laz",
+   "bridge_mm": 137.6077837399663,
+   "radius_spread_mm": 239.0646133706298,
+   "n_csf": 273559,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "lines": [
+    145,
+    146
+   ]
+  },
+  {
+   "point_id": "L1O-6189 Wabasha RTK",
+   "cover": "L1O",
+   "tile": "4342-21-63.laz",
+   "bridge_mm": -54.05802182016828,
+   "radius_spread_mm": 13.730779133709348,
+   "n_csf": 161160,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "lines": [
+    135,
+    136
+   ]
+  },
+  {
+   "point_id": "L1O-6196 Wabasha RTK",
+   "cover": "L1O",
+   "tile": "4342-22-63.laz",
+   "bridge_mm": -32.40508775510875,
+   "radius_spread_mm": 30.87822587886535,
+   "n_csf": 230099,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "lines": [
+    133,
+    134
+   ]
+  },
+  {
+   "point_id": "L1O-6123 Wabasha RTK",
+   "cover": "L1O",
+   "tile": "4342-25-63.laz",
+   "bridge_mm": -25.273106768679554,
+   "radius_spread_mm": 147.7848722198587,
+   "n_csf": 311777,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "lines": [
+    133,
+    134
+   ]
+  },
+  {
+   "point_id": "L1O101",
+   "cover": "L1O",
+   "tile": "4342-30-64.laz",
+   "bridge_mm": 23.84870457035504,
+   "radius_spread_mm": 27.879323360764374,
+   "n_csf": 138843,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "lines": [
+    136,
+    137
+   ]
+  },
+  {
+   "point_id": "L1O125",
+   "cover": "L1O",
+   "tile": "5158-01-05.laz",
+   "bridge_mm": 88.50409951878646,
+   "radius_spread_mm": 8.194071639422873,
+   "n_csf": 344549,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "lines": [
+    148,
+    149,
+    1482
+   ]
+  },
+  {
+   "point_id": "L1O132",
+   "cover": "L1O",
+   "tile": "5142-04-62.laz",
+   "bridge_mm": 9.710803501576493,
+   "radius_spread_mm": 3.635179578509451,
+   "n_csf": 307231,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "lines": [
+    132,
+    133
+   ]
+  },
+  {
+   "point_id": "L1O138",
+   "cover": "L1O",
+   "tile": "5158-01-02.laz",
+   "bridge_mm": -79.45043134930074,
+   "radius_spread_mm": 19.1993375575521,
+   "n_csf": 229740,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "lines": [
+    141,
+    142
+   ]
+  },
+  {
+   "point_id": "L1O140",
+   "cover": "L1O",
+   "tile": "5158-01-01.laz",
+   "bridge_mm": 2.792230896204728,
+   "radius_spread_mm": 37.08430533822593,
+   "n_csf": 215992,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "lines": [
+    139,
+    140
+   ]
+  },
+  {
+   "point_id": "L1O144",
+   "cover": "L1O",
+   "tile": "4358-29-03.laz",
+   "bridge_mm": 30.286838784235215,
+   "radius_spread_mm": 33.58603715258823,
+   "n_csf": 300128,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "lines": [
+    144,
+    145
+   ]
+  },
+  {
+   "point_id": "L1O148",
+   "cover": "L1O",
+   "tile": "4358-32-03.laz",
+   "bridge_mm": -52.93578217765571,
+   "radius_spread_mm": 5.08814849825967,
+   "n_csf": 288139,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "lines": [
+    144,
+    145
+   ]
+  },
+  {
+   "point_id": "L1O154",
+   "cover": "L1O",
+   "tile": "4358-29-06.laz",
+   "bridge_mm": 84.60274089446784,
+   "radius_spread_mm": 9.788507189625761,
+   "n_csf": 231530,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "lines": [
+    153,
+    1542
+   ]
+  },
+  {
+   "point_id": "L1O173",
+   "cover": "L1O",
+   "tile": "4358-28-01.laz",
+   "bridge_mm": 28.370642624665265,
+   "radius_spread_mm": 35.6511436374376,
+   "n_csf": 347840,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "lines": [
+    138,
+    139
+   ]
+  },
+  {
+   "point_id": "L1O43",
+   "cover": "L1O",
+   "tile": "5142-02-62.laz",
+   "bridge_mm": -162.0345500853091,
+   "radius_spread_mm": 108.94558795877174,
+   "n_csf": 290947,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "lines": [
+    132,
+    133
+   ]
+  },
+  {
+   "point_id": "L1O44",
+   "cover": "L1O",
+   "tile": "5142-01-62.laz",
+   "bridge_mm": 20.937011901168034,
+   "radius_spread_mm": 57.70591287330262,
+   "n_csf": 229676,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "lines": [
+    132,
+    133
+   ]
+  },
+  {
+   "point_id": "L1O50",
+   "cover": "L1O",
+   "tile": "4358-30-03.laz",
+   "bridge_mm": 29.705062336319088,
+   "radius_spread_mm": 18.467386944053032,
+   "n_csf": 306030,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "lines": [
+    143,
+    144
+   ]
+  },
+  {
+   "point_id": "L1O52",
+   "cover": "L1O",
+   "tile": "4342-30-62.laz",
+   "bridge_mm": -58.10521100502797,
+   "radius_spread_mm": 123.84506706837328,
+   "n_csf": 335946,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "lines": [
+    131,
+    132
+   ]
+  },
+  {
+   "point_id": "L1O59",
+   "cover": "L1O",
+   "tile": "4358-29-03.laz",
+   "bridge_mm": 49.49209624609807,
+   "radius_spread_mm": 149.66911283562467,
+   "n_csf": 236761,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "lines": [
+    144,
+    145
+   ]
+  },
+  {
+   "point_id": "L1O63",
+   "cover": "L1O",
+   "tile": "4358-28-07.laz",
+   "bridge_mm": -44.35785890399302,
+   "radius_spread_mm": 52.91447368415447,
+   "n_csf": 245210,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "lines": [
+    155,
+    156,
+    157
+   ]
+  },
+  {
+   "point_id": "L1O64",
+   "cover": "L1O",
+   "tile": "4358-27-07.laz",
+   "bridge_mm": -19.427990105413073,
+   "radius_spread_mm": 14.83173257943804,
+   "n_csf": 84065,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "lines": [
+    153,
+    1542
+   ]
+  },
+  {
+   "point_id": "L1O65",
+   "cover": "L1O",
+   "tile": "4358-26-05.laz",
+   "bridge_mm": -89.30643001147587,
+   "radius_spread_mm": 147.00197135357485,
+   "n_csf": 187430,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "lines": [
+    149,
+    150,
+    1482
+   ]
+  },
+  {
+   "point_id": "L1O69",
+   "cover": "L1O",
+   "tile": "4358-32-06.laz",
+   "bridge_mm": -41.7538209001691,
+   "radius_spread_mm": 50.36827869929539,
+   "n_csf": 330985,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "lines": [
+    151,
+    152
+   ]
+  }
+ ],
+ "covers": [
+  "L1O"
+ ],
+ "params": {
+  "covers": [
+   "L1O"
+  ],
+  "tiles": "data/before",
+  "csf_half_width_m": 300.0,
+  "res": 5.0,
+  "radii_m": [
+   10.0,
+   12.5,
+   15.0,
+   20.0
+  ],
+  "align_res": 2.0,
+  "swath_tie": "intercept",
+  "csf_cache": "/tmp/claude-1000/-home-awickert-projects-lidar-diff-icp-ground-control/ecf79f4c-3c28-466b-aa7e-a241bc03d28b/scratchpad/csfcache",
+  "out": "ground_control/products/bridge_wide_L1O.json"
+ }
+}
