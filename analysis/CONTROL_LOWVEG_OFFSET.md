@@ -80,6 +80,66 @@ does not fix it: `mh=0.15` and `mh=0.5` are identical row-for-row, because `voxe
 puts everything from bare ground to 1 m in one voxel. The voxel height, not the threshold, is
 the binding constraint.
 
+## Sign convention — read this before any number above
+
+`offset = surveyed_Z − delivered_lidar_Z`, mm.
+
+* **positive** = surveyed ground is ABOVE the lidar surface → the lidar reads **low**
+* **negative** = surveyed ground is BELOW the lidar surface → the lidar reads **high**
+
+A **negative correlation with `lowveg`** therefore says: more low vegetation → true ground
+sits further beneath the lidar surface → **the lidar's ground floats up**. Vegetation returns
+enter the ground class and drag the fitted surface above the soil. About −8 mm on bare ground
+(unbiased) to −235 mm at the densest mark. For the DoD this is the sign that makes vegetated
+ground look like it gained elevation.
+
+## Scatter is a symptom, not a second driver
+
+`--scatter`. Class-2 IQR runs 60 mm on bare ground to 630 mm in the densest bin, and tracks
+vegetation almost perfectly (Spearman +0.83 to +0.89). Against the offset it does no better
+than `lowveg` itself (−0.36 to −0.40 vs −0.366), and the partials settle it:
+
+```
+  class-2 NMAD | controlling for lowveg : r +0.035  p 4.85e-01
+  lowveg       | controlling for NMAD   : r -0.253  p 4.10e-07
+```
+
+Spread carries NOTHING about the offset once vegetation is accounted for. It is the tempting
+covariate — computable anywhere, no classification decisions — and it is the worse one.
+(IQR values are quantised at the 20 mm bin width; treat the ladder as ordinal.)
+
+## Slope: removed on one side, negligible on the other, and not the cause
+
+`--slope-check`. The scatter is slope-normal by construction — an order-2 surface removes
+slope AND curvature as a trend, and the `|n|` division converts vertical to perpendicular.
+The OFFSET is a vertical difference and is not converted, but median slope at these marks is
+2.59°, so the conversion is 0.10% typical / 6.7% worst and `rho` is `-0.366` either way.
+
+Slope does covary with vegetation (`+0.394`) — steeper ground is less farmed — so it is a
+real candidate confound. It survives: `lowveg vs offset controlling for slope, r -0.349,
+p 1.31e-12`.
+
+## It is the lowest layer, not the canopy
+
+`--strata`. Extending the upper edge from 0.5 m to 45 m makes the relation WEAKER, and the
+0.25–0.5 m band alone is the strongest of the sweep:
+
+```
+  0.25-  0.5 m       0.0016          -0.316    1.88e-10
+  0.25-  2.0 m       0.0050          -0.298    2.04e-09
+  0.25- 45.0 m       0.0087          -0.265    1.07e-07
+
+   0.25-  2.0 m       0.0050          -0.298    2.04e-09
+   2.00-  5.0 m       0.0000          -0.109    3.08e-02
+   5.00- 10.0 m       0.0000          -0.076    1.34e-01
+  10.00- 45.0 m       0.0000          -0.069    1.75e-01
+```
+
+Ankle-to-knee height does the work: stubble, grass, low brush. **Limit:** the tall strata have
+a median fraction of exactly 0.0000 — surveyors do not place marks under closed canopy — so
+this cannot test tall canopy. It shows only that the near-ground layer alone reproduces the
+full signal.
+
 ## Open
 
 - **Within-block slopes span −144 to −468, a factor of three.** Phenology is the obvious

@@ -73,6 +73,47 @@ def load(band_lo, band_hi):
     return m.dropna(subset=["lowveg", "resid_mm"]).copy()
 
 
+def near_ground_stats(point_id, setname="gen2_2021_control"):
+    """Spread of the near-ground returns at a mark: IQR, p90-p10 and NMAD, mm, for class-2
+    and for all returns. Read off the stored histogram, so these are QUANTISED at the 20 mm
+    bin width -- treat the ladder as ordinal. The boxes resolve it finer if ever needed."""
+    f = os.path.join(STRUCT, f"{setname}__{point_id}.npz")
+    if not os.path.exists(f):
+        return None
+    z = np.load(f); e = z["ng_edges"]; mid = 0.5 * (e[:-1] + e[1:])
+    out = {}
+    for key, tag in (("ng_class2", "c2"), ("ng_all", "all")):
+        h = z[key].astype(float); t = h.sum()
+        if t < 20:
+            return None
+        c = np.cumsum(h) / t
+        q = lambda pp: mid[np.searchsorted(c, pp)]
+        med = q(0.5)
+        order = np.argsort(np.abs(mid - med)); cw = np.cumsum(h[order]) / t
+        out[f"iqr_{tag}"] = (q(0.75) - q(0.25)) * 1000
+        out[f"p9010_{tag}"] = (q(0.90) - q(0.10)) * 1000
+        out[f"nmad_{tag}"] = 1.4826 * np.abs(mid - med)[order][np.searchsorted(cw, 0.5)] * 1000
+    return out
+
+
+def canopy_frac(point_id, lo, hi, setname="gen2_2021_control"):
+    """Fraction of ALL returns in (lo, hi] m above the local surface, from the TALL window
+    (-2..+45 m, 0.25 m bins) -- so the upper edge can be swept past the near-ground cube."""
+    f = os.path.join(STRUCT, f"{setname}__{point_id}.npz")
+    if not os.path.exists(f):
+        return np.nan
+    z = np.load(f); e = z["can_edges"]; mid = 0.5 * (e[:-1] + e[1:])
+    h = z["can_all"].astype(float); t = h.sum()
+    return h[(mid > lo) & (mid <= hi)].sum() / t if t else np.nan
+
+
+def _partial(x, y, z_):
+    """Pearson correlation of x and y after linearly removing z_ from both."""
+    rx = x - np.poly1d(np.polyfit(z_, x, 1))(z_)
+    ry = y - np.poly1d(np.polyfit(z_, y, 1))(z_)
+    return stats.pearsonr(rx, ry)
+
+
 def wls(x, y, w):
     X = np.c_[np.ones(len(x)), x]; W = np.diag(w)
     beta = np.linalg.solve(X.T @ W @ X, X.T @ W @ y)
@@ -92,9 +133,18 @@ def main():
     ap.add_argument("--block-km", type=float, default=10.0, help="spatial block for the bootstrap")
     ap.add_argument("--n-boot", type=int, default=2000)
     ap.add_argument("--sweep", action="store_true", help="report the band-edge sensitivity")
+    ap.add_argument("--scatter", action="store_true",
+                    help="near-ground spread vs vegetation vs offset, with partial correlations")
+    ap.add_argument("--slope-check", action="store_true",
+                    help="size the vertical-vs-slope-normal mismatch and test slope as a confound")
+    ap.add_argument("--strata", action="store_true",
+                    help="sweep the band's UPPER edge and isolate each height stratum")
+    ap.add_argument("--all", action="store_true", help="every section")
     ap.add_argument("--out", default=None, help="write the per-mark table")
     a = ap.parse_args()
 
+    if a.all:
+        a.sweep = a.scatter = a.slope_check = a.strata = True
     m = load(a.band_lo, a.band_hi)
     print(f"n = {len(m)} gen2 checkpoints (held-out NVA/VVA; LCPs excluded and asserted)")
     print(f"lowveg = fraction of returns in ({a.band_lo}, {a.band_hi}] m above the local surface")
@@ -151,6 +201,68 @@ def main():
             ok = np.isfinite(v)
             r, p = stats.spearmanr(v[ok], m.resid_mm[ok])
             print(f"  {a.band_lo+d:9.2f} m {np.nanmedian(v):14.4f} {r:15.3f} {p:10.2e}")
+
+    if a.scatter:
+        rec = []
+        for _, r in m.iterrows():
+            st = near_ground_stats(r.point_id)
+            if st:
+                rec.append({**r.to_dict(), **st})
+        t = pd.DataFrame(rec)
+        print(f"\nNEAR-GROUND SCATTER (mm; quantised at the 20 mm bin width), n={len(t)}:")
+        print(f"{'lowveg bin':>13} {'n':>4} {'iqr_c2':>8} {'nmad_c2':>8} {'iqr_all':>8} {'offset':>9}")
+        E2 = np.arange(0, t.lowveg.max() + 0.09, 0.09)
+        for lo, hi in zip(E2[:-1], E2[1:]):
+            s_ = t[(t.lowveg >= lo) & (t.lowveg < hi)]
+            if not len(s_):
+                continue
+            print(f"  {lo:.2f}-{hi:.2f} {len(s_):4d} {s_.iqr_c2.median():8.1f} "
+                  f"{s_.nmad_c2.median():8.1f} {s_.iqr_all.median():8.1f} {s_.resid_mm.median():9.1f}")
+        print(f"\n{'':22s} {'vs lowveg':>12} {'vs offset':>12}")
+        for c in ("iqr_c2", "nmad_c2", "p9010_c2", "iqr_all", "nmad_all"):
+            r1, _ = stats.spearmanr(t[c], t.lowveg); r2, p2 = stats.spearmanr(t[c], t.resid_mm)
+            print(f"  {c:20s} {r1:+12.3f} {r2:+12.3f}   (p {p2:.1e})")
+        r1, _ = stats.spearmanr(t.lowveg, t.resid_mm)
+        print(f"  {'lowveg':20s} {'':12s} {r1:+12.3f}")
+        pa, ppa = _partial(t.nmad_c2.values, t.resid_mm.values, t.lowveg.values)
+        pb, ppb = _partial(t.lowveg.values, t.resid_mm.values, t.nmad_c2.values)
+        print(f"\n  class-2 NMAD | controlling for lowveg : r {pa:+.3f}  p {ppa:.2e}")
+        print(f"  lowveg       | controlling for NMAD   : r {pb:+.3f}  p {ppb:.2e}")
+        print("  -> scatter is a SYMPTOM of vegetation, not an independent driver of the offset")
+
+    if a.slope_check:
+        sl = m.slope_deg.dropna()
+        f = 1 / np.cos(np.radians(sl))
+        print(f"\nSLOPE. The scatter is slope-normal by construction; the OFFSET is a VERTICAL")
+        print(f"difference (USGS surveyed_Z - delivered_Z) and is not converted. Size of that:")
+        print(f"  slope: median {sl.median():.2f} deg  p90 {sl.quantile(.9):.2f}  max {sl.max():.2f}")
+        print(f"  1/cos(slope): median {f.median():.4f}  max {f.max():.4f}  "
+              f"-> {100*(f.median()-1):.2f}% typical, {100*(f.max()-1):.1f}% worst")
+        rv, _ = stats.spearmanr(m.lowveg, m.resid_mm)
+        rn, _ = stats.spearmanr(m.lowveg, m.resid_mm / np.cos(np.radians(m.slope_deg)))
+        print(f"  lowveg vs offset:  vertical rho {rv:+.3f}   slope-normal rho {rn:+.3f}")
+        for c, lab in (("lowveg", "lowveg"), ("resid_mm", "offset")):
+            r, p = stats.spearmanr(m.slope_deg, m[c])
+            print(f"  slope vs {lab:8s} rho {r:+.3f}  p {p:.1e}")
+        r, p = _partial(m.lowveg.values, m.resid_mm.values, m.slope_deg.values)
+        print(f"  lowveg vs offset, controlling for slope: r {r:+.3f}  p {p:.2e}")
+
+    if a.strata:
+        print(f"\nUPPER-EDGE sweep (lower edge 0.25 m; tall window, 0.25 m bins):")
+        print(f"{'band':>14} {'median frac':>12} {'rho vs offset':>15} {'p':>11}")
+        for hi in (0.5, 1.0, 2.0, 3.0, 5.0, 10.0, 45.0):
+            v = np.array([canopy_frac(p_, 0.25, hi) for p_ in m.point_id]); ok = np.isfinite(v)
+            r, p = stats.spearmanr(v[ok], m.resid_mm[ok])
+            print(f"  0.25-{hi:5.1f} m {np.nanmedian(v):12.4f} {r:15.3f} {p:11.2e}")
+        print(f"\nSTRATA in isolation -- which layer carries the signal:")
+        print(f"{'band':>14} {'median frac':>12} {'rho vs offset':>15} {'p':>11}")
+        for lo, hi in ((0.25, 2.0), (2.0, 5.0), (5.0, 10.0), (10.0, 45.0)):
+            v = np.array([canopy_frac(p_, lo, hi) for p_ in m.point_id]); ok = np.isfinite(v)
+            r, p = stats.spearmanr(v[ok], m.resid_mm[ok])
+            print(f"  {lo:5.2f}-{hi:5.1f} m {np.nanmedian(v):12.4f} {r:15.3f} {p:11.2e}")
+        print("  NOTE: the tall strata have a median fraction of 0.0000 -- surveyors do not put")
+        print("  marks under closed canopy -- so this cannot test tall canopy, only show that the")
+        print("  near-ground layer alone reproduces the full signal.")
 
     if a.out:
         cols = ["point_id", "point_type_g2", "easting", "northing", "ept_block",
