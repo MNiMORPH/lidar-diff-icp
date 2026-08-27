@@ -165,6 +165,17 @@ interpolation is the one that reproduces it; the alternatives are printed beside
 (QL1 LAZ: lower 26.91, higher 29.19, nearest 26.91, midpoint 28.05) rather than one
 being chosen quietly.
 
+**Where else I looked, so nobody repeats it.** The contractor's own checkpoint
+shapefiles carry `unique_ind, source_eas, source_nor, source_ele, collection, point_type,
+comment, geoid, source_hor, source_h_1, source_ver, source_v_1, prj_id, ELEVATION,
+ORIG_FID` – **no lidar elevation and no residual**, and `ELEVATION` and `comment` are
+empty on all 395 rows. Their FGDC sidecars (`MN_Driftless_NVA_VVA_UTM15_QL1.shp.xml`,
+11 786 bytes) document no attributes at all and contain no occurrence of "lidar", "dz",
+"residual" or "error". The one file in that directory not previously inventoried,
+`MN_SE_Driftless_2021_B21_20230605.doc` (51 200 bytes), is a **Woolpert transmittal
+letter** – one page, 264 words, no data. The two VATool text reports give aggregates
+only. **The `.dbf` of the USGS shapefiles is the only place the per-point numbers live.**
+
 **`role` is the column that keeps the check honest.** The vendor FGDC metadata says the
 LCPs calibrated the lidar and the NVA/VVA checkpoints "were not used to calibrate or
 post process the data". The 143 LCPs therefore carry `role=calibration`, carry no
