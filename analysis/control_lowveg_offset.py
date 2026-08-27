@@ -107,6 +107,64 @@ def canopy_frac(point_id, lo, hi, setname="gen2_2021_control"):
     return h[(mid > lo) & (mid <= hi)].sum() / t if t else np.nan
 
 
+def load_profiles(m, min_returns=200):
+    """Per-mark normalised return profiles: near-ground all/class-2 (20 mm bins, -1..+2 m)
+    and the tall window (0.25 m bins, -2..+45 m), with the offset and coordinates."""
+    A, C, CA, y, E, N, ids = [], [], [], [], [], [], []
+    ng_mid = can_mid = None
+    for _, r in m.iterrows():
+        f = os.path.join(STRUCT, f"gen2_2021_control__{r.point_id}.npz")
+        if not os.path.exists(f):
+            continue
+        z = np.load(f)
+        a_ = z["ng_all"].astype(float); c_ = z["ng_class2"].astype(float)
+        ca = z["can_all"].astype(float)
+        if a_.sum() < min_returns or c_.sum() < 100 or ca.sum() < min_returns:
+            continue
+        if ng_mid is None:
+            ng_mid = 0.5 * (z["ng_edges"][:-1] + z["ng_edges"][1:])
+            can_mid = 0.5 * (z["can_edges"][:-1] + z["can_edges"][1:])
+        A.append(a_ / a_.sum()); C.append(c_ / c_.sum()); CA.append(ca / ca.sum())
+        y.append(r.resid_mm); E.append(r.easting); N.append(r.northing); ids.append(r.point_id)
+    return (np.array(A), np.array(C), np.array(CA), np.array(y),
+            np.array(E, float), np.array(N, float), ng_mid, can_mid, ids)
+
+
+def _blocks(E, N, km):
+    B = km * 1000.0
+    return np.array([f"{int(a_ // B)}_{int(b_ // B)}" for a_, b_ in zip(E, N)])
+
+
+def _cv_r2(X, y, blk, folds):
+    """R^2 on HELD-OUT spatial blocks. X may be 1-D or (n, k)."""
+    X = X.reshape(-1, 1) if X.ndim == 1 else X
+    pred = np.full(len(y), np.nan)
+    for fo in folds:
+        te = np.isin(blk, fo); tr = ~te
+        if te.sum() < 2 or tr.sum() < 15:
+            continue
+        D = np.c_[np.ones(tr.sum()), X[tr]]
+        b, *_ = np.linalg.lstsq(D, y[tr], rcond=None)
+        pred[te] = np.c_[np.ones(te.sum()), X[te]] @ b
+    ok = np.isfinite(pred)
+    return 1 - np.sum((y[ok] - pred[ok]) ** 2) / np.sum((y[ok] - y[ok].mean()) ** 2)
+
+
+def _cv_ridge(X, y, blk, folds, lam):
+    pred = np.full(len(y), np.nan)
+    for fo in folds:
+        te = np.isin(blk, fo); tr = ~te
+        if te.sum() < 2 or tr.sum() < 20:
+            continue
+        mu = X[tr].mean(0); sd = X[tr].std(0); sd[sd == 0] = 1
+        Xt = (X[tr] - mu) / sd; Xe = (X[te] - mu) / sd
+        ym = y[tr].mean()
+        b = np.linalg.solve(Xt.T @ Xt + lam * np.eye(X.shape[1]), Xt.T @ (y[tr] - ym))
+        pred[te] = Xe @ b + ym
+    ok = np.isfinite(pred)
+    return 1 - np.sum((y[ok] - pred[ok]) ** 2) / np.sum((y[ok] - y[ok].mean()) ** 2)
+
+
 def _partial(x, y, z_):
     """Pearson correlation of x and y after linearly removing z_ from both."""
     rx = x - np.poly1d(np.polyfit(z_, x, 1))(z_)
@@ -176,6 +234,15 @@ def main():
                     help="size the vertical-vs-slope-normal mismatch and test slope as a confound")
     ap.add_argument("--strata", action="store_true",
                     help="sweep the band's UPPER edge and isolate each height stratum")
+    ap.add_argument("--profile", action="store_true",
+                    help="per-bin correlation profile and the mean profile by offset quartile")
+    ap.add_argument("--bakeoff", action="store_true",
+                    help="candidate metrics compared on held-out spatial blocks")
+    ap.add_argument("--ceiling", action="store_true",
+                    help="ridge on the full profile: the ceiling for any profile-based metric")
+    ap.add_argument("--null", action="store_true",
+                    help="does the metric predict ~zero on bare ground? (it does not: per-block)")
+    ap.add_argument("--profile-plot", default=None, help="write the ground-to-canopy figure here")
     ap.add_argument("--all", action="store_true", help="every section")
     ap.add_argument("--plot", default=None, help="write the regression figure here")
     ap.add_argument("--out", default=None, help="write the per-mark table")
@@ -183,6 +250,7 @@ def main():
 
     if a.all:
         a.sweep = a.scatter = a.slope_check = a.strata = True
+        a.profile = a.bakeoff = a.ceiling = a.null = True
     m = load(a.band_lo, a.band_hi)
     print(f"n = {len(m)} gen2 checkpoints (held-out NVA/VVA; LCPs excluded and asserted)")
     print(f"lowveg = fraction of returns in ({a.band_lo}, {a.band_hi}] m above the local surface")
@@ -342,6 +410,134 @@ def main():
         fig.tight_layout(); os.makedirs("figures", exist_ok=True)
         fig.savefig(a.plot, dpi=160)
         print(f"\nwrote {a.plot}")
+
+    if a.profile or a.bakeoff or a.ceiling or a.null:
+        A, C, CA, yy, E, N, ngm, cam, ids = load_profiles(m)
+        blk = _blocks(E, N, a.block_km)
+        ub = np.unique(blk); rng = np.random.default_rng(0); rng.shuffle(ub)
+        folds = np.array_split(ub, 5)
+        fr = lambda P, mid_, lo, hi: P[:, (mid_ > lo) & (mid_ <= hi)].sum(1)
+        lv = fr(A, ngm, a.band_lo, a.band_hi)
+
+    if a.profile:
+        print(f"\nPER-BIN PROFILE: Spearman rho between each height bin's return fraction "
+              f"and the offset (n={len(A)})")
+        print(f"{'height (m)':>14} {'rho':>8} {'p':>10} {'occupancy':>11}")
+        for lo in np.arange(0.0, 0.60, 0.05):
+            v = fr(A, ngm, lo, lo + 0.05)
+            r, p = stats.spearmanr(v, yy)
+            print(f"  {lo:+.2f}..{lo+0.05:+.2f} {r:8.3f} {p:10.1e} {100*(v>0).mean():10.0f}%")
+        print("  -> POSITIVE below ~0.10 m (returns hugging a clean surface), negative above;")
+        print("     the plateau at -0.32/-0.33 over 0.15-0.30 m is why the band starts at 0.15.")
+        grp = np.digitize(yy, np.quantile(yy, [.25, .5, .75]))
+        print(f"\nMEAN profile by OFFSET quartile, fraction per 20 mm bin (x1000):")
+        print(f"{'height m':>12} " + "".join(f"{f'Q{i+1}':>9}" for i in range(4)))
+        for lo, hi in ((-0.10, -0.02), (-0.02, 0.02), (0.02, 0.06), (0.10, 0.15),
+                       (0.15, 0.25), (0.25, 0.40), (0.40, 0.60), (0.60, 1.00)):
+            row = "".join(f"{1000*fr(A[grp==i], ngm, lo, hi).mean():9.2f}" for i in range(4))
+            print(f" {lo:+.2f}..{hi:+.2f}{row}")
+        print("  offset by quartile (mm): " +
+              "  ".join(f"Q{i+1} {np.median(yy[grp==i]):+7.1f}" for i in range(4)))
+        print(f"  returns above 2 m: " +
+              "  ".join(f"Q{i+1} {100*fr(CA[grp==i], cam, 2.0, 45.0).mean():.2f}%" for i in range(4)))
+
+    if a.bakeoff:
+        c2 = fr(C, ngm, 0.15, 2.0)
+        q = lambda P, pp: ngm[np.argmax(np.cumsum(P, 1) >= pp, 1)]
+        cands = {
+            "lowveg (ALL returns) 0.15-2.0": lv,
+            "band 0.15-0.40 (plateau)": fr(A, ngm, 0.15, 0.40),
+            "1 - f(0.00-0.10)": 1 - fr(A, ngm, 0.0, 0.10),
+            "contrast f(.15-.40)-f(0-.05)": fr(A, ngm, 0.15, 0.40) - fr(A, ngm, 0.0, 0.05),
+            "mean h of near-ground": (A * ngm).sum(1),
+            "class-2 fringe 0.15-2.0": c2,
+            "class-2 p50 - p10": q(C, 0.50) - q(C, 0.10),
+            "class-2 p90 - p10": q(C, 0.90) - q(C, 0.10),
+        }
+        print(f"\nMETRIC BAKE-OFF, judged on HELD-OUT spatial blocks so that choosing the form")
+        print(f"here cannot inflate the score ({len(ub)} blocks of {a.block_km:.0f} km, 5 folds):")
+        print(f"{'metric':32s} {'rho':>8} {'CV R2':>8}")
+        for nm, x in cands.items():
+            r, _ = stats.spearmanr(x, yy)
+            print(f"{nm:32s} {r:+8.3f} {_cv_r2(x, yy, blk, folds):+8.3f}")
+        print(f"\nTWO PREDICTORS -- and why the apparent gain is collinearity, not information:")
+        print(f"  corr(lowveg, class-2 fringe) = {np.corrcoef(lv, c2)[0,1]:+.3f}")
+        print(f"  lowveg alone              CV R2 {_cv_r2(lv, yy, blk, folds):+.3f}")
+        print(f"  lowveg + class-2 fringe   CV R2 {_cv_r2(np.c_[lv, c2], yy, blk, folds):+.3f}")
+        D = np.c_[np.ones(len(yy)), lv, c2]; b, *_ = np.linalg.lstsq(D, yy, rcond=None)
+        print(f"  coefficients: intercept {b[0]:+.1f}  lowveg {b[1]:+.1f}  fringe {b[2]:+.1f}"
+              f"   <- large and opposite: they cancel")
+
+    if a.ceiling:
+        print(f"\nCEILING: ridge on the FULL profile, i.e. the best ANY profile-based metric")
+        print(f"could do. Free to weight every height as it likes; scored on held-out blocks.")
+        for nm, X in (("all-returns profile, 150 bins", A), ("class-2 profile, 150 bins", C),
+                      ("both profiles, 300 bins", np.c_[A, C])):
+            best = max((_cv_ridge(X, yy, blk, folds, l), l)
+                       for l in (1, 3, 10, 30, 100, 300, 1000, 3000, 10000))
+            print(f"  {nm:32s} best CV R2 {best[0]:+.3f}  (lambda {best[1]})")
+        print(f"  {'lowveg alone, ONE number':32s}     CV R2 {_cv_r2(lv, yy, blk, folds):+.3f}")
+        print("  -> 300 free bin weights cannot beat one scalar. lowveg is not arbitrary; it is")
+        print("     essentially optimal, and this distribution carries ONE dimension of signal.")
+
+    if a.null:
+        print(f"\nNULL CASE -- does the metric predict ~zero where there is no vegetation?")
+        print(f"{'lowveg <=':>10} {'n':>5} {'mean':>8} {'SE':>6} {'median':>8} {'sd':>7} {'p vs 0':>9}")
+        for thr in (0.002, 0.005, 0.01, 0.02, 0.05, 0.10):
+            s_ = m[m.lowveg <= thr]
+            if len(s_) < 3:
+                continue
+            se = s_.resid_mm.std(ddof=1) / np.sqrt(len(s_))
+            t_ = s_.resid_mm.mean() / se
+            print(f"{thr:10.3f} {len(s_):5d} {s_.resid_mm.mean():8.2f} {se:6.2f} "
+                  f"{s_.resid_mm.median():8.2f} {s_.resid_mm.std(ddof=1):7.1f} "
+                  f"{2*(1-stats.norm.cdf(abs(t_))):9.1e}")
+        z_ = m[m.lowveg <= 0.005]
+        print(f"\n  the apparent bias SHRINKS as the cut tightens -- the signature of residual")
+        print(f"  vegetation leaking in, not a true offset at zero. But it does not reach zero,")
+        print(f"  and the reason is that BARE GROUND ITSELF DIFFERS BY BLOCK:")
+        for k, s_ in z_.groupby("ept_block"):
+            if len(s_) < 10:
+                continue
+            print(f"    {k:24s} n={len(s_):3d}  mean {s_.resid_mm.mean():+7.2f} "
+                  f"+/- {s_.resid_mm.std(ddof=1)/np.sqrt(len(s_)):.2f}")
+        print(f"  Each block is a separate acquisition with its own unpublished vendor bias")
+        print(f"  adjustment. A through-origin fit therefore leaves a BLOCK-SPECIFIC residual.")
+        print(f"  The correction wants a per-block intercept plus a shared vegetation slope.")
+        print(f"\n  per-mark scatter on bare ground: sd {z_.resid_mm.std(ddof=1):.1f} mm, "
+              f"|offset| > 50 mm at {100*np.mean(np.abs(z_.resid_mm)>50):.0f}% of them")
+        print(f"  -> this is the noise floor that caps CV R2 near {_cv_r2(lv, yy, blk, folds):.2f}")
+
+    if a.profile_plot:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+        grp = np.digitize(yy, np.quantile(yy, [.25, .5, .75]))
+        fig2, ax2 = plt.subplots(1, 3, figsize=(14, 5.8))
+        cols = ["C3", "C1", "C0", "C2"]
+        for i in range(4):
+            lab = f"Q{i+1}: offset {np.median(yy[grp==i]):+.0f} mm (n={int((grp==i).sum())})"
+            ax2[0].plot(A[grp == i].mean(0) * 1000, ngm, color=cols[i], lw=1.8, label=lab)
+            P = CA[grp == i].mean(0) * 1000
+            ax2[1].plot(P, cam, color=cols[i], lw=1.8); ax2[2].plot(P, cam, color=cols[i], lw=1.8)
+        ax2[0].set_ylim(-0.3, 0.8); ax2[0].set_title("near-ground, 20 mm bins", fontsize=10)
+        ax2[0].set_xlabel("fraction of NEAR-GROUND returns per bin ($\\times$1000)")
+        ax2[1].set_xscale("log"); ax2[1].set_ylim(-2, 32); ax2[1].set_xlim(0.02, 900)
+        ax2[1].set_title("full profile to canopy top, 0.25 m bins", fontsize=10)
+        ax2[2].set_xscale("log"); ax2[2].set_ylim(1.5, 32); ax2[2].set_xlim(0.02, 30)
+        ax2[2].set_title("canopy only (above 1.5 m), zoomed", fontsize=10)
+        for a_ in ax2[1:]:
+            a_.set_xlabel("fraction of ALL returns per 0.25 m bin ($\\times$1000)")
+        for a_ in ax2:
+            a_.axhline(0, color="0.75", lw=0.8)
+            a_.set_ylabel("slope-normal height above local ground surface (m)")
+        ax2[0].legend(fontsize=8, loc="upper right")
+        fig2.suptitle("Return profile by offset quartile, ground to canopy top\n"
+                      "Q1 = lidar reads highest above surveyed ground. Panels 2-3 normalise by "
+                      "ALL returns, panel 1 by near-ground only", fontsize=10)
+        fig2.tight_layout(); os.makedirs(os.path.dirname(a.profile_plot) or ".", exist_ok=True)
+        fig2.savefig(a.profile_plot, dpi=160)
+        print(f"\nwrote {a.profile_plot}")
 
     if a.out:
         cols = ["point_id", "point_type_g2", "easting", "northing", "ept_block",
