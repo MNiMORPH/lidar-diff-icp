@@ -35,5 +35,25 @@
  "producers": [
   "ground_control/run_datum_by_returns.py",
   "ground_control/run_bridge_wide.py"
- ]
+ ],
+ "STATUS": "RETRACTED 2026-08-27 -- do not use as an absolute datum",
+ "retraction": {
+  "why": "contradicted by two independent instruments that agree with each other: the DoD on stable open ground (-2.12 mm, 116,507 cells) and the leveled benchmark DG8385 (gen2-gen1 = +73.00 +/- 11.00 mm raw, predicting +5.62 mm after the pipeline's +67.38 mm geoid shift). Those two agree to 7.74 mm; this value implies ~+65 mm.",
+  "what_is_wrong": "not the measurement -- our ties match the vendor's own published residuals at the same marks to -6.71 mm. The 8 open marks on Elba's lines sit +54.46 mm above the 230-mark open population and are dominated by control 14-63 km away; the two marks inside 10 km give +17.20 mm and the nearest gives -11.3 mm.",
+  "estimator_spread": {
+   "all covers pooled": [
+    31.01,
+    18.17
+   ],
+   "open only": [
+    62.74,
+    23.38
+   ],
+   "line+cover model read at open": [
+    72.08,
+    36.99
+   ]
+  },
+  "conclusion": "the absolute level of gen1 at Elba is NOT measurable with the available control; the EPOCH DIFFERENCE is settled to ~8 mm by two instruments."
+ }
 }

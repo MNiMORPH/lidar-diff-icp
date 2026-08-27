@@ -1,0 +1,159 @@
+{
+ "sigma": 3.0,
+ "value_mm": 31.01255089202526,
+ "se_mm": 18.166670430139664,
+ "n_marks": 25,
+ "n_lines": 6,
+ "marks": [
+  {
+   "point_id": "FSA Target 602 Preston-2602 Fillmore VRS",
+   "cover": "other",
+   "line": 133,
+   "tie_mm": 147.80139648917157
+  },
+  {
+   "point_id": "L1O-2124 Fillmore VRS",
+   "cover": "L1O",
+   "line": 133,
+   "tie_mm": 120.98419853998621
+  },
+  {
+   "point_id": "L4F-2123 Fillmore VRS",
+   "cover": "L4F",
+   "line": 137,
+   "tie_mm": 15.06606957633494
+  },
+  {
+   "point_id": "L5U-2121 Fillmore VRS",
+   "cover": "L5U",
+   "line": 137,
+   "tie_mm": -56.97573630095576
+  },
+  {
+   "point_id": "L5U-2122 Fillmore VRS",
+   "cover": "L5U",
+   "line": 137,
+   "tie_mm": 4.87845904575579
+  },
+  {
+   "point_id": "L3B-6190 Wabasha RTK",
+   "cover": "L3B",
+   "line": 135,
+   "tie_mm": -50.725488370289895
+  },
+  {
+   "point_id": "L1O-6182 Wabasha RTK",
+   "cover": "L1O",
+   "line": 137,
+   "tie_mm": 7.675707982912172
+  },
+  {
+   "point_id": "L5U-6187 Wabasha RTK",
+   "cover": "L5U",
+   "line": 135,
+   "tie_mm": -15.980107979771674
+  },
+  {
+   "point_id": "L3B-6181 Wabasha RTK",
+   "cover": "L3B",
+   "line": 134,
+   "tie_mm": 218.6362115317877
+  },
+  {
+   "point_id": "L1O-6189 Wabasha RTK",
+   "cover": "L1O",
+   "line": 135,
+   "tie_mm": 89.35441260945254
+  },
+  {
+   "point_id": "L1O-6196 Wabasha RTK",
+   "cover": "L1O",
+   "line": 134,
+   "tie_mm": 118.2082911669795
+  },
+  {
+   "point_id": "L1O-6123 Wabasha RTK",
+   "cover": "L1O",
+   "line": 134,
+   "tie_mm": 154.47371277201682
+  },
+  {
+   "point_id": "L2T-6100 Wabasha RTK",
+   "cover": "L2T",
+   "line": 135,
+   "tie_mm": 172.29521902442002
+  },
+  {
+   "point_id": "L1O101",
+   "cover": "L1O",
+   "line": 137,
+   "tie_mm": -11.289194249513912
+  },
+  {
+   "point_id": "L1O173",
+   "cover": "L1O",
+   "line": 138,
+   "tie_mm": 45.68131388171537
+  },
+  {
+   "point_id": "L1O43",
+   "cover": "L1O",
+   "line": 133,
+   "tie_mm": -32.72873658448816
+  },
+  {
+   "point_id": "L2T51",
+   "cover": "L2T",
+   "line": 134,
+   "tie_mm": 50.554965405638086
+  },
+  {
+   "point_id": "L2T54",
+   "cover": "L2T",
+   "line": 136,
+   "tie_mm": 23.443883792253928
+  },
+  {
+   "point_id": "L2T98",
+   "cover": "L2T",
+   "line": 134,
+   "tie_mm": 53.84437204133974
+  },
+  {
+   "point_id": "L3B143",
+   "cover": "L3B",
+   "line": 133,
+   "tie_mm": -163.44220355716743
+  },
+  {
+   "point_id": "L3B99",
+   "cover": "L3B",
+   "line": 138,
+   "tie_mm": -86.7605313283093
+  },
+  {
+   "point_id": "L4F145",
+   "cover": "L4F",
+   "line": 138,
+   "tie_mm": -3.5241651210640157
+  },
+  {
+   "point_id": "L5U135",
+   "cover": "L5U",
+   "line": 133,
+   "tie_mm": 12.85133425795948
+  },
+  {
+   "point_id": "L5U171",
+   "cover": "L5U",
+   "line": 137,
+   "tie_mm": 47.065859637683616
+  },
+  {
+   "point_id": "L5U172",
+   "cover": "L5U",
+   "line": 134,
+   "tie_mm": 67.88133598445256
+  }
+ ]
+}

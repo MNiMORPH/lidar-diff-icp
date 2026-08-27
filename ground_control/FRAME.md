@@ -17,47 +17,52 @@ control that existed.
 **The rule this subsystem enforces: 2008 control for gen1, 2021 control for gen2, no
 cross-epoch control, no chaining where the site's own line carries marks.**
 
-## Where the number stands — ADOPTED 2026-08-27
+## ★★ CONCLUSION 2026-08-27 — the epoch difference is settled; the absolute is not
 
-**`ground_control/products/ANSWER_gen1_elba.json` is the canonical gen1 surface offset.**
+**Stop chasing the absolute datum at Elba.** It is not measurable with the available
+control, and it is not needed for the science.
 
-| surface | offset (mm, ADD) | uncertainty | of what |
-|---|---|---|---|
-| **DELIVERED** (what the vendor shipped; what the 2008 control measured) | **+62.74** | ± 23.38 | SE over the 5 flight lines, 8 marks |
-| bridge, delivered → ours | −4.04 | ± 11.12 | SE of the mean over 29 open marks |
-| **OURS** (CSF, swath-aligned, geoid-shifted 5 m grid the DoD runs on) | **+58.70** | ± 25.89 | the two in quadrature |
+### What IS settled: the epoch difference, by two independent instruments
 
-Producer: `run_datum_by_returns.py` (catchment-free) + `run_bridge_wide.py`, assembled by
-`run_gen1_elba_answer.py`. Ledger `.trust/runs/20260827T220404-3482736.json`.
+| instrument | value |
+|---|---|
+| DoD on stable AND open ground (116,507 cells) | **−2.12 mm** |
+| leveled benchmark DG8385, gen2 − gen1 raw | **+73.00 ± 11.00 mm** |
+| ⤷ minus the pipeline's +67.38 mm geoid shift, predicts | **+5.62 mm** |
+| **the two agree to** | **7.74 mm** |
 
-**Superseded, and why.** The `+55` lineage (2026-08-26 ledger +55.0; my catchment rebuild
-+54.77) was inflated ~9 mm by marks on line segments that are NOT collinear with Elba's own
-passes. A catchment search conflates "found near a track" with "belongs to that line"; the
-catchment-free estimator tests each mark's own pass and rejects three (138.0 at 19.3σ,
-138.3 at 4.1σ, 136.2 at 3.5σ), which drops line 136 entirely.
+Unrelated failure modes, same answer. **gen1 and gen2 are already level to ~8 mm after the
+geoid**, so *the DoD is correct for change detection and always was.*
 
-**Cover is now OPEN-ONLY (`L1O`), 2026-08-27**, and it bought more than it cost. It moves
-the datum **+17.17 mm** (from +45.57 on `L1O+L5U`) and shrinks the `collinear_sigma`
-sensitivity from **8.69 mm to 1.90 mm** — σ = 3 and σ = 5 now give the identical answer, and
-no mark is rejected by collinearity at all. The σ ambiguity was entirely an urban-mark
-phenomenon: every mark whose pass assignment was in doubt (136.2 at 3.5σ, 138.3 at 4.1σ,
-138.0 at 19.3σ) was `L5U`. Cost: 14 marks → 8, SE 18.81 → 23.38.
+### What is NOT settled: either epoch's absolute level
 
-The DoD absolute correction still cannot be assembled cleanly: it differences two constants
-and only the gen1 side has been carried onto our surface.
+Three defensible control-based estimators disagree by more than any of their error bars,
+and all three contradict the two instruments above:
 
-## What was corrected, and what it cost
+    all covers pooled                +31.01 ± 18.17    averages the canopy mix
+    open only                        +62.74 ± 23.38    2 marks inside 10 km; extrapolates
+    line + cover model, read at open  +72.08 ± 36.99    right structure, unidentifiable here
 
-* **`+53.6 ± 13.0` is reconstructed.** The value reproduces (**+54.77** vs the 2026-08-26
-  ledger's **+55.0**, −0.23 mm). The **±13.0 was the SE over MARKS**; over LINES it is
-  ±18.21, a ratio of **1.40×** — exactly the documented design effect. Marks under one line
-  share that line's unknown constant. The trust ledger reconstructed a number whose script no
-  longer exists, which is what it was built for.
-* **`point_source_id` is not a flight line — but my reason was wrong.** Across-track
-  separation is NOT evidence of two lines: a near-N–S line drifts ~1.1 km in easting over
-  94 km. Valid test = extrapolate and scale by the extrapolation's own prediction sd.
-* **The catchment radius is a SEARCH bound, not a criterion.** Set it wide; the returns
-  discriminate. A narrow one drops marks whose returns are unanimous.
+The measurement is not at fault — our ties match the vendor's own published residuals at
+the same marks to **−6.71 mm**. The 8 open marks on Elba's lines simply sit **+54.46 mm**
+above the 230-mark open population, and the near ones disagree with the far ones (+17.20
+inside 10 km against +76.33 beyond).
+
+The benchmark cannot supply the absolute either: **±180 mm**, dominated by the mark's ±3 m
+horizontal position on a ~6% slope.
+
+`products/ANSWER_gen1_elba.json` is marked **RETRACTED** and carries this reasoning.
+
+### What follows
+
+* The **absolute datum is a supporting measurement, not a blocker.** It matters only for
+  tying our DEMs to external absolute data — not for erosion, not for the spatial pattern,
+  and **not for the forest−open contrast, where a constant cancels exactly**.
+* Ground control's payoff is **statewide per-line structure**, not a single site's level.
+  `run_weighted_datum_test.py` quantifies it: the weighted sd goes from 22.75 mm toward
+  11 mm as per-line constants improve, which only many marks per line can deliver.
+* gen2's bridge remains unmeasurable (engineered checkpoint siting), which no longer
+  blocks anything now that the DoD is known to be correct as it stands.
 
 ## Guardrails
 
