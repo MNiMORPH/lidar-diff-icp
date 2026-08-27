@@ -16,6 +16,17 @@ control this session: NVA -2.2 mm, VVA -75.7 mm, i.e. gen2 reads high in vegetat
 `a` is deliberately excluded: it is a constant datum offset, not a vegetation response, and
 folding it in would shift open ground where no vegetation bias exists.
 
+MEASURED OUTCOME AT ELBA -- THE CORRECTION OVERSHOOTS. Run it and read the numbers, do not
+assume it improves the DoD. The forest-open gap went +28.4 -> -20.0 mm (past zero, sign
+flipped), the DoD-vs-cover trend did not flatten (+82.0 -> +101.6 mm per unit cover), and
+stable-ground scatter rose (NMAD 51.6 -> 56.8 mm, median +2.8 -> -22.5). The cause is a
+calibration-domain mismatch on the axis that matters: the control marks span NGV but NOT
+canopy cover -- 6 of 389 marks sit above cover 0.30, against 26.7% of Elba's cells, and none
+above 0.70. NGV is also NON-MONOTONE in cover (0.000, 0.143, 0.135, 0.128, 0.063, 0.023
+across cover bins), because it is a fraction of ALL returns and closed canopy fills the
+denominator. Treat this as a working implementation of a coefficient that does not yet
+transfer to closed canopy. See TODO.md.
+
     ./lidar-icp/bin/python analysis/ngv_correct_dod.py --tile data/derived/elba_fulldensity
 """
 import argparse, json, os

@@ -78,6 +78,25 @@ delivered surface is unbiased against survey.** The bias is vegetation, essentia
 
 ## THE RESULT TO CARRY BACK TO THE DEM
 
+> **SUPERSEDED 2026-08-28 -- do not apply the coefficient below to a DEM.** The metric it is
+> fitted against, `lowveg`, was read off stored 20 mm histograms with a bin-CENTRE test, so it
+> is really "fraction above 0.14 m", and its window is (0.15, 2.0] m. The exact index, with
+> the window chosen by sweeping the whole weight function, is **NGV** = returns in
+> (0.15, 4.0] m over ALL returns within 7.5 m, defined in `analysis/ngv.py`, which refits:
+>
+>     offset_mm = -8.7 (+/- 4.2)  -325.2 (+/- 35.4) * NGV      block bootstrap b -324.2 +/- 44.4
+>
+> and the FREE-INTERCEPT form is now primary, with only the `b * NGV` term applied to a DEM --
+> the intercept is gen2's own datum level, not a vegetation response. Applied at Elba by
+> `analysis/ngv_correct_dod.py`. **That application OVERSHOT**: the forest-open gap went
+> +28.4 -> -20.0 mm and stable-ground scatter rose, because the control marks span NGV but
+> NOT canopy cover (6 of 389 marks above cover 0.30, against 26.7% of Elba's cells). The
+> coefficient is calibrated on understory, not closed canopy. See `TODO.md`.
+>
+> Everything below stands as the record of how the relation was established; the numbers are
+> correct for the metric named in them.
+
+
 ```
 offset_mm  =  -290 * lowveg          (through the origin, 1/SE^2 weighted on uniform bins)
 ```
