@@ -23,9 +23,9 @@ cross-epoch control, no chaining where the site's own line carries marks.**
 
 | surface | offset (mm, ADD) | uncertainty | of what |
 |---|---|---|---|
-| **DELIVERED** (what the vendor shipped; what the 2008 control measured) | **+45.57** | ± 18.81 | SE over the 5 flight lines, 14 marks |
+| **DELIVERED** (what the vendor shipped; what the 2008 control measured) | **+62.74** | ± 23.38 | SE over the 5 flight lines, 8 marks |
 | bridge, delivered → ours | −4.04 | ± 11.12 | SE of the mean over 29 open marks |
-| **OURS** (CSF, swath-aligned, geoid-shifted 5 m grid the DoD runs on) | **+41.53** | ± 21.85 | the two in quadrature |
+| **OURS** (CSF, swath-aligned, geoid-shifted 5 m grid the DoD runs on) | **+58.70** | ± 25.89 | the two in quadrature |
 
 Producer: `run_datum_by_returns.py` (catchment-free) + `run_bridge_wide.py`, assembled by
 `run_gen1_elba_answer.py`. Ledger `.trust/runs/20260827T220404-3482736.json`.
@@ -36,9 +36,12 @@ passes. A catchment search conflates "found near a track" with "belongs to that 
 catchment-free estimator tests each mark's own pass and rejects three (138.0 at 19.3σ,
 138.3 at 4.1σ, 136.2 at 3.5σ), which drops line 136 entirely.
 
-**Two live choices still move this number**, and neither is made in code: cover is
-`L1O+L5U`, not yet narrowed to open-only; and `collinear_sigma` moves it **8.69 mm** across
-2–5 (flat 2→3 at 0.47 mm, jumping 8.22 mm at 5).
+**Cover is now OPEN-ONLY (`L1O`), 2026-08-27**, and it bought more than it cost. It moves
+the datum **+17.17 mm** (from +45.57 on `L1O+L5U`) and shrinks the `collinear_sigma`
+sensitivity from **8.69 mm to 1.90 mm** — σ = 3 and σ = 5 now give the identical answer, and
+no mark is rejected by collinearity at all. The σ ambiguity was entirely an urban-mark
+phenomenon: every mark whose pass assignment was in doubt (136.2 at 3.5σ, 138.3 at 4.1σ,
+138.0 at 19.3σ) was `L5U`. Cost: 14 marks → 8, SE 18.81 → 23.38.
 
 The DoD absolute correction still cannot be assembled cleanly: it differences two constants
 and only the gen1 side has been carried onto our surface.

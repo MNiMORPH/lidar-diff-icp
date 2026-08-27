@@ -2,28 +2,28 @@
  "site": "elba",
  "easting": 578762.8,
  "northing": 4884487.6,
- "delivered_mm": 45.57257282640686,
- "delivered_se_mm": 18.807322839001312,
+ "delivered_mm": 62.739543261022845,
+ "delivered_se_mm": 23.37641100315907,
  "bridge_mm": -4.039256860546766,
  "bridge_se_mm": 11.11916619809421,
  "n_bridge_marks": 29,
- "our_surface_mm": 41.5333159658601,
- "our_surface_se_mm": 21.848369488619998,
- "n_marks": 14,
+ "our_surface_mm": 58.70028640047608,
+ "our_surface_se_mm": 25.886143944772023,
+ "n_marks": 8,
  "n_lines": 5,
  "adopted_collinear_sigma": 3.0,
  "sigma_sweep": {
   "2.0": {
-   "value_mm": 45.1,
-   "se_mm": 19.11
+   "value_mm": 60.84,
+   "se_mm": 24.72
   },
   "3.0": {
-   "value_mm": 45.57,
-   "se_mm": 18.81
+   "value_mm": 62.74,
+   "se_mm": 23.38
   },
   "5.0": {
-   "value_mm": 53.79,
-   "se_mm": 16.5
+   "value_mm": 62.74,
+   "se_mm": 23.38
   }
  },
  "sign_convention": "tie = surveyed - z_lidar; POSITIVE = surface reads LOW, so ADD",

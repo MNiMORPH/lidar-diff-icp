@@ -1,0 +1,57 @@
+{
+ "sigma": 3.0,
+ "value_mm": 62.739543261022845,
+ "se_mm": 23.37641100315907,
+ "n_marks": 8,
+ "n_lines": 5,
+ "marks": [
+  {
+   "point_id": "L1O-2124 Fillmore VRS",
+   "cover": "L1O",
+   "line": 133,
+   "tie_mm": 120.98419853998621
+  },
+  {
+   "point_id": "L1O-6182 Wabasha RTK",
+   "cover": "L1O",
+   "line": 137,
+   "tie_mm": 7.675707982912172
+  },
+  {
+   "point_id": "L1O-6189 Wabasha RTK",
+   "cover": "L1O",
+   "line": 135,
+   "tie_mm": 89.35441260945254
+  },
+  {
+   "point_id": "L1O-6196 Wabasha RTK",
+   "cover": "L1O",
+   "line": 134,
+   "tie_mm": 118.2082911669795
+  },
+  {
+   "point_id": "L1O-6123 Wabasha RTK",
+   "cover": "L1O",
+   "line": 134,
+   "tie_mm": 154.47371277201682
+  },
+  {
+   "point_id": "L1O101",
+   "cover": "L1O",
+   "line": 137,
+   "tie_mm": -11.289194249513912
+  },
+  {
+   "point_id": "L1O173",
+   "cover": "L1O",
+   "line": 138,
+   "tie_mm": 45.68131388171537
+  },
+  {
+   "point_id": "L1O43",
+   "cover": "L1O",
+   "line": 133,
+   "tie_mm": -32.72873658448816
+  }
+ ]
+}
