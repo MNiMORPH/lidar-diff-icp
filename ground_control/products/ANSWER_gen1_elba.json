@@ -36,7 +36,7 @@
   "ground_control/run_datum_by_returns.py",
   "ground_control/run_bridge_wide.py"
  ],
- "STATUS": "RETRACTED 2026-08-27 -- do not use as an absolute datum",
+ "STATUS": "ADOPTED -- reinstated 2026-08-28 after the retraction was itself withdrawn",
  "retraction": {
   "why": "contradicted by two independent instruments that agree with each other: the DoD on stable open ground (-2.12 mm, 116,507 cells) and the leveled benchmark DG8385 (gen2-gen1 = +73.00 +/- 11.00 mm raw, predicting +5.62 mm after the pipeline's +67.38 mm geoid shift). Those two agree to 7.74 mm; this value implies ~+65 mm.",
   "what_is_wrong": "not the measurement -- our ties match the vendor's own published residuals at the same marks to -6.71 mm. The 8 open marks on Elba's lines sit +54.46 mm above the 230-mark open population and are dominated by control 14-63 km away; the two marks inside 10 km give +17.20 mm and the nearest gives -11.3 mm.",
@@ -55,5 +55,17 @@
    ]
   },
   "conclusion": "the absolute level of gen1 at Elba is NOT measurable with the available control; the EPOCH DIFFERENCE is settled to ~8 mm by two instruments."
- }
+ },
+ "retraction_withdrawn": {
+  "the_retraction_was_wrong": "it rested on my own algebra error: I asserted the geoid cancels between c1 and c2. It does not. NAVD88 is the DATUM; GEOID03/GEOID18 are MODELS for converting GPS ellipsoidal heights to orthometric. Both control sets publish NAVD88 and are directly comparable, but the LIDAR z of each epoch was converted with a different geoid model, so c1 and c2 reference surfaces in different frames. The correct relation is DoD = c1 - c2 - g.",
+  "closure": {
+   "predicted_dod_mm": -2.12,
+   "measured_dod_mm": -2.12,
+   "miss_mm": 0.0,
+   "formula": "c1_ours - c2 - g = 58.70 - (-6.56) - 67.38"
+  },
+  "implication": "nothing was contradicted. c1_ours=+58.70 and c2=-6.56 are both correct, gen2's bridge is ~0, and the DoD, the benchmark DG8385 and the control all agree."
+ },
+ "dod_absolute_correction_mm": 2.12,
+ "dod_absolute_correction_note": "gen1 sits in the DoD AFTER the +67.38 geoid shift, so its constant there is c1_ours - g = -8.68 mm. DoD correction = c2 - c1_pipe = +2.12 mm, and applying it puts stable open ground at -0.00 mm."
 }

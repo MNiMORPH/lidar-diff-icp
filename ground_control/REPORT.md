@@ -7,18 +7,19 @@
 
 ## 1. The headline, and it is not the one the brief expected
 
-The brief asked for a constant and an uncertainty at a site. The honest result is that
-**at Elba the absolute constant is not measurable, while the quantity the DoD actually
-needs — the epoch difference — is settled.**
+**CORRECTED 2026-08-28.** An earlier version of this section said the absolute constant
+was not measurable at Elba. That was wrong and rested on my own algebra error — see
+`FRAME.md`. The constant IS determined and closes with the DoD to 0.0000 mm.
 
 | | value | instruments |
 |---|---|---|
 | **epoch difference (settled)** | gen1 and gen2 level to **7.74 mm** after the geoid | DoD on stable+open ground **−2.12 mm**; benchmark DG8385 **+73.00 ± 11.00** raw → **+5.62** predicted |
-| **gen1 absolute (NOT settled)** | **+31.01 / +62.74 / +72.08** depending on defensible variant | 2008 control, three estimators |
+| **gen1 absolute (settled)** | **+58.70 ± 25.89 mm** on our surface | 2008 control, open ground, per-line; closes with the DoD to 0.0000 mm |
+| **DoD absolute correction** | **+2.12 mm** (negligible) | `c2 − (c1_ours − g)` |
 
-So **the DoD is correct for change detection and always was**; coregistration was never
-broken. The absolute datum never worked — the shipped product carried ±39.7 mm on a value
-of +22.7 — and today it got an honest error bar for the first time.
+So the DoD needs only **+2.12 mm**, and coregistration was never broken. The shipped
+`z_before_absolute` constant (+22.7 ± 39.7) is still superseded — cross-epoch control,
+chained 5–6 links — but it is replaced by a determined number, not by a shrug.
 
 Full reasoning: `FRAME.md`, and the memory `elba-absolute-not-measurable`.
 

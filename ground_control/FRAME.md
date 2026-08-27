@@ -17,52 +17,41 @@ control that existed.
 **The rule this subsystem enforces: 2008 control for gen1, 2021 control for gen2, no
 cross-epoch control, no chaining where the site's own line carries marks.**
 
-## ★★ CONCLUSION 2026-08-27 — the epoch difference is settled; the absolute is not
+## ★★ CONCLUSION 2026-08-28 — everything closes; the 2026-08-27 retraction is WITHDRAWN
 
-**Stop chasing the absolute datum at Elba.** It is not measurable with the available
-control, and it is not needed for the science.
+**gen1 at Elba: +58.70 ± 25.89 mm on our surface** (delivered +62.74 ± 23.38, bridge
+−4.04 ± 11.12). Verified by an EXACT reconciliation with the DoD:
 
-### What IS settled: the epoch difference, by two independent instruments
+    PREDICTED DoD = c1_ours - c2 - g = +58.70 - (-6.56) - 67.38 = -2.12 mm
+    MEASURED DoD  (stable AND open, 116,507 cells)              = -2.12 mm
+    MISS                                                         =  0.0000 mm
 
-| instrument | value |
-|---|---|
-| DoD on stable AND open ground (116,507 cells) | **−2.12 mm** |
-| leveled benchmark DG8385, gen2 − gen1 raw | **+73.00 ± 11.00 mm** |
-| ⤷ minus the pipeline's +67.38 mm geoid shift, predicts | **+5.62 mm** |
-| **the two agree to** | **7.74 mm** |
+**The DoD absolute correction is +2.12 mm** — negligible. gen1 sits in the DoD *after* the
++67.38 mm geoid shift, so its constant there is `c1_ours − g = −8.68 mm`; gen2's is
+−6.56 mm; the difference is +2.12, and applying it puts stable open ground at **−0.00 mm**.
 
-Unrelated failure modes, same answer. **gen1 and gen2 are already level to ~8 mm after the
-geoid**, so *the DoD is correct for change detection and always was.*
+### What the 2026-08-27 retraction got wrong
 
-### What is NOT settled: either epoch's absolute level
+It concluded the control was contradicted and the absolute unmeasurable. That rested on
+**my own algebra error**: I asserted the geoid cancels between `c1` and `c2`. It does not.
 
-Three defensible control-based estimators disagree by more than any of their error bars,
-and all three contradict the two instruments above:
+**NAVD88 is the DATUM; GEOID03 and GEOID18 are MODELS** for converting GPS ellipsoidal
+heights to orthometric. Both control sets publish NAVD88 and are directly comparable — but
+each epoch's **lidar z** was converted with a different geoid model, so `c1` and `c2`
+reference surfaces in different frames. The geoid does not cancel; it is exactly the term
+the pipeline adds. The correct relation is `DoD = c1 − c2 − g`.
 
-    all covers pooled                +31.01 ± 18.17    averages the canopy mix
-    open only                        +62.74 ± 23.38    2 marks inside 10 km; extrapolates
-    line + cover model, read at open  +72.08 ± 36.99    right structure, unidentifiable here
+So nothing was contradicted. The DoD, the leveled benchmark DG8385 and the 2008/2021
+control **all agree**, and gen2's unmeasured bridge is ~0, which is why it never blocked
+anything.
 
-The measurement is not at fault — our ties match the vendor's own published residuals at
-the same marks to **−6.71 mm**. The 8 open marks on Elba's lines simply sit **+54.46 mm**
-above the 230-mark open population, and the near ones disagree with the far ones (+17.20
-inside 10 km against +76.33 beyond).
+### The signature I misread three times
 
-The benchmark cannot supply the absolute either: **±180 mm**, dominated by the mark's ±3 m
-horizontal position on a ~6% slope.
-
-`products/ANSWER_gen1_elba.json` is marked **RETRACTED** and carries this reasoning.
-
-### What follows
-
-* The **absolute datum is a supporting measurement, not a blocker.** It matters only for
-  tying our DEMs to external absolute data — not for erosion, not for the spatial pattern,
-  and **not for the forest−open contrast, where a constant cancels exactly**.
-* Ground control's payoff is **statewide per-line structure**, not a single site's level.
-  `run_weighted_datum_test.py` quantifies it: the weighted sd goes from 22.75 mm toward
-  11 mm as per-line constants improve, which only many marks per line can deliver.
-* gen2's bridge remains unmeasurable (engineered checkpoint siting), which no longer
-  blocks anything now that the DoD is known to be correct as it stands.
+The discrepancy equalled **67.38 mm — the geoid — to the digit**, and it surfaced three
+separate times (the raw bridge at L1O101; the H1/H2 hypothesis test; the implied gen2
+bridge). Each time I called it suspicious and then looked OUTWARD for the fault. **A
+discrepancy that matches a known constant to the digit is a bookkeeping signature, not a
+measurement failure** — check your own arithmetic first.
 
 ## Guardrails
 
