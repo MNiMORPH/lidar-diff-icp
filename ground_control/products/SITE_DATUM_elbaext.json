@@ -1,0 +1,58 @@
+{
+ "site": [
+  578762.8,
+  4884487.6
+ ],
+ "gen1_delivered_mm": 62.739543261022845,
+ "gen1_delivered_se_mm": 23.37641100315907,
+ "gen1_n_marks": 8,
+ "gen1_n_lines": 5,
+ "bridge_mm": -4.04,
+ "bridge_source": "products/bridge_wide_L1O.json (29 open marks, Elba)",
+ "gen1_our_surface_mm": 58.699543261022846,
+ "gen2_delivered_mm": -6.564701905788852,
+ "gen2_surface": "ql1_laz",
+ "geoid_mm": 67.44154912241008,
+ "gauge_ref": 133,
+ "dod_shift_mm": 2.177303955598382,
+ "params": {
+  "covers": [
+   "L1O"
+  ],
+  "collinear_sigma": 3.0,
+  "res_m": 5.0,
+  "psids": [
+   133,
+   134,
+   135,
+   136,
+   137,
+   138
+  ],
+  "gen2_surface": "ql1_laz",
+  "max_lags_m": [
+   20000.0,
+   40000.0,
+   80000.0,
+   160000.0
+  ],
+  "n_lags": 25,
+  "n_pairs": 800000,
+  "estimators": [
+   "dowd",
+   "matheron"
+  ],
+  "seed": 0
+ },
+ "warnings": [
+  "lines with NO mark: [136] -- their level is unconstrained and they may carry substantial weight in the tile's ground"
+ ],
+ "absolute_datum": {
+  "gen1_mm": -8.742005861387234,
+  "gen2_mm": -6.564701905788852,
+  "gauge_ref": 133,
+  "source": "ground_control/run_site_datum.py @ elbaext",
+  "gen1_sigma_mm": 23.37641100315907,
+  "gen2_sigma_mm": null
+ }
+}
