@@ -45,6 +45,41 @@ out. The script asserts no LCP carries a residual.
 **~ −29 mm per 0.1 of low-vegetation fraction. Intercept −5.7 ± 4.3 mm: on bare ground the
 delivered surface is unbiased against survey.** The bias is vegetation, essentially all of it.
 
+## THE RESULT TO CARRY BACK TO THE DEM
+
+```
+offset_mm  =  -290 * lowveg          (through the origin, 1/SE^2 weighted on uniform bins)
+```
+
+```
+  binned, 1/SE^2 weighted : b =   -289.7 +/- 31.7 mm per unit lowveg
+  per-mark, unweighted    : b =   -332.9 +/- 24.8 mm per unit lowveg
+```
+
+`figures/control_lowveg_offset.png`. The through-origin and free-intercept lines are visually
+indistinguishable over the fitted range.
+
+**The origin is justified, not assumed.** With no vegetation there is no vegetation-induced
+bias, and two independent measurements agree: the free intercept here is `-5.7 +/- 4.3 mm`,
+and gen2's own open-ground level against held-out control is `NVA -2.22 +/- 2.35 mm`. Forcing
+the origin would ABSORB a real datum offset into the slope if one existed, so the
+free-intercept fit is printed beside it every time as the check.
+
+**How to apply it.** By definition `offset = surveyed - delivered`, and the fit makes that
+negative wherever there is vegetation. So
+
+    surveyed  =  delivered + offset  =  delivered - 290 * lowveg   [mm]
+
+i.e. **subtract `290 * lowveg` mm from the delivered gen2 surface** to reach true ground. The
+delivered surface reads HIGH in vegetation, and the correction lowers it.
+
+Regenerate the figure with
+`./lidar-icp/bin/python analysis/control_lowveg_offset.py --plot figures/control_lowveg_offset.png`
+(`figures/` is not tracked; the figure is a ~60 s rebuild from tracked inputs).
+
+**Range of validity: lowveg 0 to 0.54.** Do not apply beyond it without saying so — at Elba
+5.4% of reference cells exceed any mark's density and carry 17-24% of the total correction.
+
 ## Checks
 
 **Not a block or phenology artifact.** All five EPT blocks give a negative slope, four

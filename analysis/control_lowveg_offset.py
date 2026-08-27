@@ -114,6 +114,36 @@ def _partial(x, y, z_):
     return stats.pearsonr(rx, ry)
 
 
+LOWVEG_DEFINITION = """\
+lowveg, EXACT DEFINITION -- it must travel with any coefficient fitted from it
+--------------------------------------------------------------------------------
+1. At the mark, read gen2's OWN acquisition from the covering MN_SEDriftless_*_2021
+   EPT block: a 105 m box, every return, every class.
+2. Fit an ORDER-2 least-squares surface S to the CLASS-2 returns within 7.5 m of the
+   mark (7.5 m = 1.5 x the pipeline's 5 m grid, the tie estimator's own report radius).
+   Order 2 removes slope AND curvature as a trend.
+3. For every return within 7.5 m, take the SLOPE-NORMAL height above that surface:
+       h = (z - S(x,y)) / sqrt(1 + gx^2 + gy^2),  gradient at the mark.
+4. lowveg = the fraction of those returns with 0.15 m < h <= 2.00 m.
+   Lower edge 0.15 m: ~2.5x the bare-ground class-2 NMAD (59.3 mm), so above the
+   surface's own noise. Upper edge 2.00 m: below tree crowns. NEITHER IS PHYSICAL --
+   see --sweep and --strata; the metric is ORDINAL, its scale moves ~50x with the
+   lower edge while the rank correlation moves 0.07.
+Because S comes from the box's own returns, lowveg is INVARIANT to any vertical shift
+of the cloud: it structurally cannot carry the offset it is used to predict."""
+
+
+def fit_origin(x, y, w=None):
+    """Weighted least squares THROUGH THE ORIGIN: y = b*x. Returns (b, se)."""
+    x = np.asarray(x, float); y = np.asarray(y, float)
+    w = np.ones_like(x) if w is None else np.asarray(w, float)
+    b = (w * x * y).sum() / (w * x * x).sum()
+    r = y - b * x
+    dof = max(len(x) - 1, 1)
+    se = np.sqrt((w * r ** 2).sum() / dof / (w * x * x).sum())
+    return b, se
+
+
 def wls(x, y, w):
     X = np.c_[np.ones(len(x)), x]; W = np.diag(w)
     beta = np.linalg.solve(X.T @ W @ X, X.T @ W @ y)
@@ -140,6 +170,7 @@ def main():
     ap.add_argument("--strata", action="store_true",
                     help="sweep the band's UPPER edge and isolate each height stratum")
     ap.add_argument("--all", action="store_true", help="every section")
+    ap.add_argument("--plot", default=None, help="write the regression figure here")
     ap.add_argument("--out", default=None, help="write the per-mark table")
     a = ap.parse_args()
 
@@ -149,6 +180,7 @@ def main():
     print(f"n = {len(m)} gen2 checkpoints (held-out NVA/VVA; LCPs excluded and asserted)")
     print(f"lowveg = fraction of returns in ({a.band_lo}, {a.band_hi}] m above the local surface")
     print(f"offset = USGS surveyed_Z - delivered_LAZ_Z, +ve = surface reads LOW\n")
+    print(LOWVEG_DEFINITION + "\n")
 
     E = np.arange(0, m.lowveg.max() + a.bin_width, a.bin_width)
     rows = []
@@ -165,6 +197,16 @@ def main():
                f"{r['median']:8.1f} {r['mean']:8.1f} {r.se:7.1f}"))
 
     g = b[(b.n > 1) & np.isfinite(b.se)].copy(); g["x"] = 0.5 * (g.lo + g.hi)
+    # THROUGH-ORIGIN fit. Justified, not assumed: with no vegetation there is no
+    # vegetation-induced bias, and both the free intercept here (-5.7 +/- 4.3 mm) and gen2's
+    # own open-ground level against held-out control (NVA -2.22 +/- 2.35 mm) are consistent
+    # with zero. Forcing the origin would ABSORB a real datum offset into the slope, so the
+    # free-intercept fit is always printed beside it as the check.
+    bo_bin, so_bin = fit_origin(g.x.values, g["mean"].values, 1 / g.se.values ** 2)
+    bo_mk, so_mk = fit_origin(m.lowveg.values, m.resid_mm.values)
+    print(f"\nTHROUGH-ORIGIN (offset = b * lowveg), the form to carry back to the DEM:")
+    print(f"  binned, 1/SE^2 weighted : b = {bo_bin:+8.1f} +/- {so_bin:.1f} mm per unit lowveg")
+    print(f"  per-mark, unweighted    : b = {bo_mk:+8.1f} +/- {so_mk:.1f} mm per unit lowveg")
     bd, sd_ = wls(g.x.values, g["mean"].values, 1 / g.se.values ** 2)
     ba, sa = wls(g.x.values, g["mean"].values, g.n.values.astype(float))
     print(f"\nfits on the binned means ({len(g)} bins with n>1):")
@@ -263,6 +305,36 @@ def main():
         print("  NOTE: the tall strata have a median fraction of 0.0000 -- surveyors do not put")
         print("  marks under closed canopy -- so this cannot test tall canopy, only show that the")
         print("  near-ground layer alone reproduces the full signal.")
+
+    if a.plot:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots(figsize=(7.6, 5.4))
+        ax.axhline(0, color="0.8", lw=0.8, zorder=0)
+        ax.scatter(m.lowveg, m.resid_mm, s=12, c="0.65", edgecolor="none", zorder=1,
+                   label=f"{len(m)} checkpoints")
+        ax.errorbar(g.x, g["mean"], yerr=g.se, fmt="o", ms=7, color="C0", capsize=3, zorder=3,
+                    label="uniform bins, mean $\\pm$ SE")
+        for _, r in g.iterrows():
+            ax.annotate(f"{int(r.n)}", (r.x, r["mean"]), textcoords="offset points",
+                        xytext=(7, 5), fontsize=7, color="C0")
+        xs = np.linspace(0, m.lowveg.max() * 1.02, 50)
+        ax.plot(xs, bo_bin * xs, "C3-", lw=2, zorder=4,
+                label=f"through origin: ${bo_bin:.0f} \\pm {so_bin:.0f}$ mm per unit")
+        ax.plot(xs, bd[0] + bd[1] * xs, "C3--", lw=1.2, zorder=4,
+                label=f"free intercept: ${bd[0]:+.1f} \\pm {sd_[0]:.1f}$ mm")
+        ax.set_xlabel(f"lowveg  =  fraction of returns {a.band_lo:.2f}–{a.band_hi:.2f} m "
+                      "above the local ground surface")
+        ax.set_ylabel("surveyed $-$ delivered lidar elevation  (mm)")
+        ax.set_title("gen2 ground surface floats above true ground in proportion to low vegetation\n"
+                     f"{len(m)} held-out NVA/VVA checkpoints, single epoch", fontsize=10)
+        ax.text(0.985, 0.04, "negative = lidar reads HIGH", transform=ax.transAxes,
+                ha="right", fontsize=8, color="0.35")
+        ax.legend(loc="lower left", fontsize=8, framealpha=0.9)
+        fig.tight_layout(); os.makedirs("figures", exist_ok=True)
+        fig.savefig(a.plot, dpi=160)
+        print(f"\nwrote {a.plot}")
 
     if a.out:
         cols = ["point_id", "point_type_g2", "easting", "northing", "ept_block",
