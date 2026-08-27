@@ -1,0 +1,39 @@
+{
+ "routes": [
+  {
+   "route": "residual_field",
+   "n": 230,
+   "unit": "prediction sd of the field",
+   "delivered_mm": -12.994802409416872,
+   "uncert_mm": 33.38807744712598,
+   "bridged_mm": -17.034059269963638,
+   "assumes": "the residual is a smooth spatial field with NO flight-line term, so 963 marks anywhere inform this site",
+   "fails_if": "the per-line structure is real (measured: F = 8.63, p < 0.001), in which case this averages across lines that genuinely differ",
+   "reproducible": "yes"
+  },
+  {
+   "route": "same_line_pass",
+   "n": 7,
+   "unit": "SE over 4 lines",
+   "delivered_mm": 46.15009631371454,
+   "uncert_mm": 25.703263569244974,
+   "bridged_mm": 42.11083945316778,
+   "assumes": "only the site's own flight-line PASSES carry its datum; a line has one constant along its length",
+   "fails_if": "a line's constant drifts along track (tested: slope +0.74 +/- 2.37 mm/km, and 15.5 mm/km excluded at 6.23 sigma), or 7 marks are too few",
+   "reproducible": "yes"
+  },
+  {
+   "route": "same_line_psid",
+   "n": 15,
+   "unit": "SE over 6 lines",
+   "delivered_mm": 67.50432378092894,
+   "uncert_mm": 20.633629745890367,
+   "bridged_mm": 63.46506692038218,
+   "assumes": "same, but point_source_id names a line -- which it does not",
+   "fails_if": "always -- two passes sharing a psid sit 10.4-83.3 km apart and are different physical lines",
+   "reproducible": "yes"
+  }
+ ],
+ "bridge_mm": -4.039256860546766,
+ "bridge_se_mm": 11.11916619809421
+}

@@ -41,6 +41,9 @@ def parse_args(argv=None):
     p.add_argument("--tiles", nargs="+", required=True)
     p.add_argument("--res", type=float, required=True)
     p.add_argument("--half-width-m", type=float, default=S.SEAM_HALF_SPACING_M)
+    p.add_argument("--collinear-sigma", type=float, nargs="+", required=True,
+                   help="for scope=track: how many prediction-sd two passes may sit "
+                        "apart and still be one line. Swept; no default.")
     return p.parse_args(argv)
 
 
@@ -65,7 +68,11 @@ def main(argv=None):
                 "= the vendor's class-12 seam at which bare-earth ground is cut, from "
                 "analysis/GEN1_DATUM_MORE_MARKS.md section 1. Not a chosen radius")
     R.param("res_m", a.res, src="repo", why="corrections.json res_m; sets the radius ladder")
-    R.param("scopes", ("pass", "psid"), src="MINE",
+    R.param("collinear_sigma", tuple(a.collinear_sigma), src="MINE",
+            why="scope=track merges passes whose tracks are collinear within this many "
+                "prediction-sd. SWEPT because at Elba's psids the pairwise verdicts run "
+                "0.1 to 21.6 sigma, so the cut changes the grouping")
+    R.param("scopes", ("pass", "psid", "track"), src="MINE",
             why="both are run; they differ ONLY in which tracks the search walks, so the "
                 "difference isolates the search")
     R.param("swath_constants", "none (mode=per_line)", src="repo",
@@ -85,16 +92,18 @@ def main(argv=None):
     R.banner()
 
     rows, keep = [], {}
-    for scope in S.SCOPES:
+    jobs = [("pass", None), ("psid", None)] + [("track", s) for s in a.collinear_sigma]
+    for scope, sig in jobs:
+        label = scope if sig is None else f"track@{sig:g}s"
         sc, sites, meas, skipped, est = S.estimate(
             ts, psids=a.psids, easting=a.easting, northing=a.northing, scope=scope,
             half_width_m=a.half_width_m, covers=a.covers, tile_dirs=a.tiles,
-            res=a.res, control=control)
+            res=a.res, control=control, collinear_sigma=sig)
         on = S.marks_on_scope_psids(meas, a.psids)
         d = [np.hypot(m.site.mark.easting - a.easting,
                       m.site.mark.northing - a.northing) / 1000.0 for m in on]
-        keep[scope] = (sc, meas, on, est)
-        rows.append([scope, sc.n_tracks, len(sites), len(meas), len(on),
+        keep[label] = (sc, meas, on, est)
+        rows.append([label, sc.n_tracks, len(sites), len(meas), len(on),
                      len({m.line_id for m in on}),
                      f"{est.value_mm:+.2f}", f"{est.se_mm:.2f}",
                      f"{max(d):.1f}" if d else "--"])
@@ -102,7 +111,7 @@ def main(argv=None):
              "datum_mm", "se_mm", "max_km"], rows)
 
     print()
-    for scope in S.SCOPES:
+    for scope in keep:
         sc, meas, on, est = keep[scope]
         print(f"  scope={scope}: {sc.note}")
         print(f"    tracks: {', '.join(sc.track_keys)}")
@@ -128,7 +137,7 @@ def main(argv=None):
                 print(f"    {m.point_id:<24s} line {m.line_id}  {km:6.1f} km away  "
                       f"tie {m.tie_mm:+.1f} mm")
 
-    e = keep["pass"][3]
+    e = keep[[k for k in keep if k.startswith("track")][0]][3]
     R.done(headline=f"gen1 at the site, scope=pass: {e.value_mm:+.2f} +/- {e.se_mm:.2f} mm "
                     f"over {e.n_lines} lines")
     return 0

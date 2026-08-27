@@ -50,13 +50,68 @@ sys.path.insert(0, str(_HERE.parent / "src"))
 import lines as L  # noqa: E402
 from lidar_diff_icp.groundtruth import gen1_datum as G  # noqa: E402
 
-SCOPES = ("pass", "psid")
+SCOPES = ("pass", "psid", "track")
 
 #: Half of the measured gen1 line spacing (942/987/932/988/956 m, mean 961) -- the
 #: vendor's own class-12 overlap seam, at which bare-earth ground is cut.  From
 #: ``analysis/GEN1_DATUM_MORE_MARKS.md`` section 1.  A MEASUREMENT of this acquisition,
 #: not a chosen search radius: past it, ground belongs to the neighbouring line.
 SEAM_HALF_SPACING_M = 481.0
+
+
+def collinearity_sigma(A, B):
+    """How many prediction-sd away pass B sits from pass A's extrapolated track.
+
+    A near-N-S line at heading 179.3 deg drifts ~1.1 km in easting over 94 km of track,
+    so a raw easting separation of ~800 m between two passes 56 km apart is what ONE
+    continuous line looks like -- it is NOT evidence of two lines.  This extrapolates the
+    longer pass's fitted track to the shorter one's position and scales the miss by the
+    extrapolation's own prediction sd, which is the only way the comparison has meaning
+    tens of kilometres beyond the data.
+    """
+    if len(A.vertices) < len(B.vertices):
+        A, B = B, A
+    va = np.asarray(A.vertices, float); vb = np.asarray(B.vertices, float)
+    xn, ye = va[:, 1], va[:, 0]
+    if np.ptp(xn) < 100 or xn.size < 3:
+        return float("inf")
+    w = np.polyfit(xn, ye, 1)
+    r = ye - np.polyval(w, xn)
+    s = float(np.sqrt((r ** 2).sum() / max(xn.size - 2, 1)))
+    nb = float(np.median(vb[:, 1]))
+    Sxx = float(((xn - xn.mean()) ** 2).sum())
+    pred_sd = s * np.sqrt(1.0 / xn.size + (nb - xn.mean()) ** 2 / Sxx)
+    if pred_sd <= 0:
+        return float("inf")
+    return abs(np.polyval(w, nb) - np.median(vb[:, 0])) / pred_sd
+
+
+def collinear_groups(trackset, psid, *, sigma):
+    """Passes of one psid, merged into physical LINES by collinearity.
+
+    ``sigma`` is the caller's: it is how far, in units of the extrapolation's own
+    uncertainty, two passes may sit apart and still be called one line.  There is no
+    default -- at Elba's six psids the verdicts run 0.1 to 21.6 sigma, so where the line
+    is drawn changes the grouping.
+    """
+    ps = list(trackset.by_psid(psid))
+    parent = {p.key: p.key for p in ps}
+
+    def find(k):
+        while parent[k] != k:
+            parent[k] = parent[parent[k]]; k = parent[k]
+        return k
+
+    for i in range(len(ps)):
+        for j in range(i + 1, len(ps)):
+            if collinearity_sigma(ps[i], ps[j]) < sigma:
+                a, b = find(ps[i].key), find(ps[j].key)
+                if a != b:
+                    parent[a] = b
+    out = {}
+    for p in ps:
+        out.setdefault(find(p.key), []).append(p.key)
+    return list(out.values())
 
 
 @dataclass(frozen=True)
@@ -71,7 +126,8 @@ class Scope:
     note: str
 
 
-def site_scope(trackset: L.TrackSet, *, psids, easting, northing, scope: str) -> Scope:
+def site_scope(trackset: L.TrackSet, *, psids, easting, northing, scope: str,
+               collinear_sigma: float | None = None) -> Scope:
     """The tracks to search along, for one site.
 
     ``scope="pass"``  -- for each psid, ONLY the pass whose track runs nearest the site.
@@ -90,11 +146,24 @@ def site_scope(trackset: L.TrackSet, *, psids, easting, northing, scope: str) ->
             keep.extend(q.key for q in cands)
             continue
         best = min(cands, key=lambda q: _track_distance(easting, northing, q.vertices))
-        keep.append(best.key)
-        dropped.extend(q.key for q in cands if q.key != best.key)
-    note = ("only the pass of each psid running nearest the site; the others are "
-            "different physical lines that reuse the id"
+        if scope == "pass":
+            keep.append(best.key)
+            dropped.extend(q.key for q in cands if q.key != best.key)
+            continue
+        if collinear_sigma is None:
+            raise ValueError("scope='track' requires collinear_sigma; where the line is "
+                             "drawn changes the grouping and has no default")
+        grp = next(g for g in collinear_groups(trackset, p, sigma=collinear_sigma)
+                   if best.key in g)
+        keep.extend(grp)
+        dropped.extend(q.key for q in cands if q.key not in grp)
+    note = ("only the pass of each psid running nearest the site -- the most "
+            "conservative choice, and it DISCARDS same-line marks whenever a gap was a "
+            "tile hole rather than a separate flight"
             if scope == "pass" else
+            "every pass COLLINEAR with the site's nearest one, i.e. the physical flight "
+            "line, merged across gaps that are tile holes"
+            if scope == "track" else
             "EVERY pass of each psid, including ones in other survey blocks -- the "
             "behaviour of code that keys on point_source_id alone")
     return Scope(scope=scope, psids=psids, track_keys=tuple(keep), n_tracks=len(keep),
@@ -118,14 +187,15 @@ def discover(control, trackset: L.TrackSet, sc: Scope, *, half_width_m: float):
 
 
 def estimate(trackset, *, psids, easting, northing, scope, half_width_m, covers,
-             tile_dirs, res, on_missing="skip", control=None):
+             tile_dirs, res, on_missing="skip", control=None, collinear_sigma=None):
     """Discover -> resolve -> measure -> combine, for one scope.
 
     Returns ``(Scope, sites, measurements, skipped, Gen1DatumEstimate)``.  Everything
     downstream of :func:`discover` is ``gen1_datum``'s own code, unchanged.
     """
     control = G.load_control() if control is None else control
-    sc = site_scope(trackset, psids=psids, easting=easting, northing=northing, scope=scope)
+    sc = site_scope(trackset, psids=psids, easting=easting, northing=northing,
+                    scope=scope, collinear_sigma=collinear_sigma)
     sites = discover(control, trackset, sc, half_width_m=half_width_m)
     if covers is not None:
         keep = set(covers)
