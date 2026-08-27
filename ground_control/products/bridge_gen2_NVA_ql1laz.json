@@ -1,0 +1,56 @@
+{
+ "marks": [
+  {
+   "point_id": "2024_2021_MN",
+   "point_type": "NVA",
+   "bridge_mm": 133.46112164995816,
+   "radius_spread_mm": 131.0913409816976,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "n_ground": 591638
+  },
+  {
+   "point_id": "2036_2021_MN",
+   "point_type": "NVA",
+   "bridge_mm": -22.73182129258089,
+   "radius_spread_mm": 202.4210396394892,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "n_ground": 644031
+  },
+  {
+   "point_id": "2099_2021_MN",
+   "point_type": "NVA",
+   "bridge_mm": 45.05909503794214,
+   "radius_spread_mm": 292.9510229295147,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "n_ground": 456414
+  },
+  {
+   "point_id": "2210_2021_MN",
+   "point_type": "NVA",
+   "bridge_mm": 153.357602860126,
+   "radius_spread_mm": 714.8159321297953,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "n_ground": 569011
+  }
+ ],
+ "params": {
+  "crops": "data/after/checkpoints",
+  "point_types": [
+   "NVA"
+  ],
+  "surface": "ql1_laz",
+  "res": 5.0,
+  "radii_m": [
+   10.0,
+   12.5,
+   15.0,
+   20.0
+  ],
+  "ground_class": 2,
+  "out": "ground_control/products/bridge_gen2_NVA_ql1laz.json"
+ }
+}

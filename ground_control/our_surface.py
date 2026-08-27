@@ -145,3 +145,56 @@ def our_gen1_surface_at(tile_path, easting, northing, *, csf_half_width_m, res,
                         n_cells=int(zc.size), radius_m=float(radius_m),
                         csf_half_width_m=float(csf_half_width_m), swath_source=src,
                         lines_present=tuple(sorted(int(v) for v in np.unique(ps))))
+
+
+# ------------------------------------------------------------------ gen2 side
+
+def our_gen2_surface_at(laz_path, easting, northing, *, res, radius_m, ground_class,
+                        half_width_m=None):
+    """Our gen2 surface at a coordinate, from a gen2 cloud on disk.
+
+    Simpler than the gen1 side, and deliberately so -- gen2 is the REFERENCE epoch:
+
+    * no swath alignment.  No ``corrections*.json`` anywhere on disk carries a gen2
+      swath, and ``ground_control/gen2_swath_deviation.py`` measures gen2's adjacent-pair
+      ties at |k| <= 4.8 mm with a window sensitivity of 1.49 mm, against gen1's 32-40 mm.
+    * no geoid term.  gen2 IS the frame gen1 is carried onto, so there is nothing to
+      convert; its control is NAVD88(GEOID18) and so is it.
+
+    Ground is ``classification == ground_class``: gen2's delivered classification carries
+    only classes 1 and 2 (plus a handful of 7), which is also why ``coreg``'s shipped
+    ``exclude=(5, 6, 9)`` is inert on gen2 and must not be relied on to remove canopy.
+    """
+    import laspy
+
+    f = laspy.read(str(laz_path))
+    x = np.asarray(f.x); y = np.asarray(f.y); z = np.asarray(f.z)
+    c = np.asarray(f.classification)
+    m = c == ground_class
+    if half_width_m is not None:
+        m &= (np.abs(x - easting) <= half_width_m) & (np.abs(y - northing) <= half_width_m)
+    x, y, z = x[m], y[m], z[m]
+    if x.size < 6:
+        return None
+    hw = half_width_m if half_width_m is not None else max(
+        float(np.abs(x - easting).max()), float(np.abs(y - northing).max()))
+    x0, y0 = easting - hw, northing - hw
+    nx = int(np.ceil(2 * hw / res))
+    ix = ((x - x0) / res).astype(int); iy = ((y - y0) / res).astype(int)
+    ok = (ix >= 0) & (ix < nx) & (iy >= 0) & (iy < nx)
+    if ok.sum() < 6:
+        return None
+    import pandas as pd
+    fid = iy[ok] * nx + ix[ok]
+    s = pd.Series(z[ok]).groupby(fid).quantile(0.50)
+    cx = x0 + (s.index.values % nx + 0.5) * res
+    cy = y0 + (s.index.values // nx + 0.5) * res
+    zhat, info = T.ground_elevation_at(cx, cy, s.values, easting, northing, radius_m,
+                                       surface_order=2, quantile=0.50)
+    if not np.isfinite(zhat):
+        return None
+    return SurfacePoint(z_geoid18_m=float(zhat), z_geoid03_m=float("nan"),
+                        geoid_mm=0.0, n_ground_pts=int(x.size), n_cells=int(s.size),
+                        radius_m=float(radius_m), csf_half_width_m=float(hw),
+                        swath_source="none (gen2 is the reference epoch)",
+                        lines_present=(), note="gen2: no swath alignment, no geoid term")
