@@ -214,6 +214,111 @@ def adaptive(m, hs, CNT, TOT, seeds):
         print(f"    fixed {e:4g} m   CV R2 {sc.cv(EM[e], False)[0]:+.4f}")
 
 
+NGV_LO, NGV_HI = 0.15, 4.0
+
+NGV_DEFINITION = """\
+NGV -- near-ground vegetation fraction.  Name is a proposal; the DEFINITION is what
+must travel with any coefficient fitted from it.
+
+  1. Fit an order-2 least-squares surface to the CLASS-2 returns within 7.5 m of the mark.
+     Order 2 removes local slope AND curvature, so neither enters the index.
+  2. For every return in that radius -- every class, not just ground -- take its
+     SLOPE-NORMAL height above that surface:  h = (z - S(x,y)) / sqrt(1 + gx^2 + gy^2).
+  3. NGV = ( number of returns with 0.15 < h <= 4.00 m ) / ( ALL returns in the radius ).
+
+  Range 0 to 1.  Denominator is EVERY return, so NGV falls if canopy above 4 m grows
+  while understory stays fixed -- it is a fraction, not a density.
+
+  The window is (0.15, 4.0] m and both edges are chosen, not arbitrary:
+    lower 0.15 m -- the ground peak's own tail leaks in below this; 0.05 m costs 0.074 CV R2.
+    upper 4.0  m -- the top of a plateau flat from 3 to 8 m (within 0.005), so the exact
+                    value is not delicate. See --edges and --adaptive.
+
+  Because the surface is fitted from the box's OWN returns, NGV is invariant to any
+  vertical shift of the cloud. It structurally cannot carry offset information, which is
+  what makes the regression below a real test rather than a tautology."""
+
+
+def index_regression(m, hs, CNT, TOT, block_km, n_boot, bin_width=0.06):
+    from scipy import stats as st
+    y = m.resid_mm.to_numpy(float)
+    ngv = metric(CNT, TOT, ((hs > NGV_LO) & (hs <= NGV_HI)).astype(float))
+    old = metric(CNT, TOT, ((hs > 0.15) & (hs <= 2.0)).astype(float))
+
+    print("=" * 84)
+    print("THE VEGETATION INDEX")
+    print("=" * 84)
+    print(NGV_DEFINITION)
+    print(f"\n  n = {len(y)} marks.  NGV percentiles:")
+    print("   ", "  ".join(f"p{q}={np.percentile(ngv, q):.3f}" for q in (0, 10, 25, 50, 75, 90, 99, 100)))
+    print(f"    NGV vs the (0.15, 2.0] incumbent: Pearson {st.pearsonr(ngv, old)[0]:+.4f}, "
+          f"NGV/old ratio median {np.median(ngv / np.maximum(old, 1e-9)):.3f}")
+    print(f"  offset = USGS surveyed_Z - delivered_LAZ_Z, mm, +ve = the surface reads LOW")
+    print(f"    sd {y.std(ddof=1):.1f} mm, median {np.median(y):+.1f}\n")
+
+    E = np.arange(0, ngv.max() + bin_width, bin_width)
+    rows = []
+    for lo, hi in zip(E[:-1], E[1:]):
+        k = (ngv >= lo) & (ngv < hi)
+        se = y[k].std(ddof=1) / np.sqrt(k.sum()) if k.sum() > 1 else np.nan
+        rows.append((lo, hi, int(k.sum()),
+                     np.median(y[k]) if k.sum() else np.nan,
+                     y[k].mean() if k.sum() else np.nan, se))
+    b = pd.DataFrame(rows, columns=["lo", "hi", "n", "median", "mean", "se"])
+    print(f"  EVERY bin at its true span, counts visible -- no bin dropped, none merged.")
+    print(f"  {'bin':>13} {'n':>4} {'median':>8} {'mean':>8} {'SE':>7}")
+    for _, r in b.iterrows():
+        print(f"  {r.lo:.2f}-{r.hi:.2f} {int(r.n):4d} " +
+              ("      -        -       -" if r.n == 0 else
+               f"{r['median']:8.1f} {r['mean']:8.1f} {r.se:7.1f}"))
+
+    g = b[(b.n > 1) & np.isfinite(b.se)].copy(); g["x"] = 0.5 * (g.lo + g.hi)
+    w = 1 / g.se.values ** 2
+    print(f"\n  REGRESSION  offset = a + b * NGV      ({len(g)} bins with n>1 of {len(b)})")
+    bd, sd_ = M.wls(g.x.values, g["mean"].values, w)
+    ba, sa = M.wls(g.x.values, g["mean"].values, g.n.values.astype(float))
+    print(f"    binned, DESIGN-weighted 1/SE^2 : a {bd[0]:+7.1f} +/- {sd_[0]:.1f}   "
+          f"b {bd[1]:+8.1f} +/- {sd_[1]:.1f} mm per unit NGV")
+    print(f"    binned, ABUNDANCE-weighted by n: a {ba[0]:+7.1f} +/- {sa[0]:.1f}   "
+          f"b {ba[1]:+8.1f} +/- {sa[1]:.1f} mm per unit NGV")
+    lr = st.linregress(ngv, y)
+    print(f"    per-mark, unweighted           : a {lr.intercept:+7.1f} +/- {lr.intercept_stderr:.1f}   "
+          f"b {lr.slope:+8.1f} +/- {lr.stderr:.1f}   (p {lr.pvalue:.1e})")
+
+    bo_b, so_b = M.fit_origin(g.x.values, g["mean"].values, w)
+    bo_m, so_m = M.fit_origin(ngv, y)
+    print(f"\n  THROUGH THE ORIGIN  offset = b * NGV   -- the form to carry back to the DEM")
+    print(f"    binned, 1/SE^2 weighted        : b = {bo_b:+8.1f} +/- {so_b:.1f} mm per unit NGV")
+    print(f"    per-mark, unweighted           : b = {bo_m:+8.1f} +/- {so_m:.1f} mm per unit NGV")
+    print(f"    the origin is a CHECK, not an assumption: the free intercept above is "
+          f"{bd[0]:+.1f} +/- {sd_[0]:.1f} mm.")
+
+    B = block_km * 1000.0
+    blk = M._blocks(m.easting.to_numpy(float), m.northing.to_numpy(float), block_km)
+    ub = np.unique(blk); rng = np.random.default_rng(0); sl = []
+    for _ in range(n_boot):
+        pick = rng.choice(ub, size=len(ub), replace=True)
+        idx = np.concatenate([np.where(blk == k)[0] for k in pick])
+        if len(np.unique(ngv[idx])) > 2:
+            sl.append(np.polyfit(ngv[idx], y[idx], 1)[0])
+    sl = np.array(sl)
+    print(f"\n  UNCERTAINTY that respects the spatial clustering")
+    print(f"    naive per-mark SE              : {lr.stderr:.1f}")
+    print(f"    block bootstrap, {len(ub)} blocks of {block_km:.0f} km, {len(sl)} draws: "
+          f"b = {sl.mean():+.1f} +/- {sl.std(ddof=1):.1f}  "
+          f"-> SE inflated {sl.std(ddof=1)/lr.stderr:.2f}x")
+
+    sc = Scorer(m, 20)
+    a_ngv = sc.cv(ngv, False); a_old = sc.cv(old, False)
+    print(f"\n  HELD-OUT (10 km blocks, 5 folds, 20 seeds)")
+    print(f"    NGV  (0.15, 4.0]               : CV R2 {a_ngv[0]:+.4f} +/- {a_ngv[1]:.4f}   "
+          f"RMSE {y.std(ddof=1)*np.sqrt(1-a_ngv[0]):.1f} mm")
+    print(f"    incumbent (0.15, 2.0]          : CV R2 {a_old[0]:+.4f} +/- {a_old[1]:.4f}   "
+          f"RMSE {y.std(ddof=1)*np.sqrt(1-a_old[0]):.1f} mm")
+    print(f"    no model                       : {'':22s} RMSE {y.std(ddof=1):.1f} mm")
+    return ngv
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -221,14 +326,18 @@ def main():
     ap.add_argument("--edges", action="store_true", help="sweep the upper and lower edges")
     ap.add_argument("--strata", action="store_true",
                     help="repeat the edge sweep within NVA/VVA and lowveg terciles")
+    ap.add_argument("--index", action="store_true",
+                    help="define the vegetation index on the chosen window and regress it")
+    ap.add_argument("--block-km", type=float, default=10.0)
+    ap.add_argument("--n-boot", type=int, default=2000)
     ap.add_argument("--adaptive", action="store_true",
                     help="does a window chosen per-cell beat a constant one?")
     ap.add_argument("--seeds", type=int, default=20)
     ap.add_argument("--all", action="store_true")
     a = ap.parse_args()
     if a.all:
-        a.shape = a.edges = a.strata = a.adaptive = True
-    if not (a.shape or a.edges or a.strata or a.adaptive):
+        a.shape = a.edges = a.strata = a.adaptive = a.index = True
+    if not (a.shape or a.edges or a.strata or a.adaptive or a.index):
         ap.error("pick a section, or --all")
 
     m, hs, CNT, TOT = build()
@@ -308,6 +417,10 @@ def main():
         print(f"  lowveg reaches 0.30 at {int((m.lowveg >= 0.30).sum())} marks, 0.40 at "
               f"{int((m.lowveg >= 0.40).sum())}. Marks are sited for sky view.")
         print("  Any window chosen here is calibrated on understory, NOT on closed canopy.")
+        print()
+
+    if a.index:
+        index_regression(m, hs, CNT, TOT, a.block_km, a.n_boot)
         print()
 
     if a.adaptive:
