@@ -3,6 +3,37 @@
 **Reproduce:** `./lidar-icp/bin/python analysis/control_lowveg_offset.py --sweep`
 (local data only; no network). Acquisition: `analysis/cover_at_control_marks.py`.
 
+## How `lowveg` is calculated
+
+Printed in full by every run (`LOWVEG_DEFINITION` in `control_lowveg_offset.py`).
+
+1. At the mark, read gen2's **own** acquisition from the covering `MN_SEDriftless_*_2021`
+   EPT block — a 105 m box, every return, every class. Indexed read, no tile download.
+2. Fit an **order-2 least-squares surface** `S` to the **class-2** returns within **7.5 m**
+   of the mark (7.5 m = 1.5 x the pipeline's 5 m grid, the tie estimator's own report
+   radius). Order 2 removes slope **and** curvature as a trend.
+3. For every return within 7.5 m, take its **slope-normal** height above that surface:
+   `h = (z - S(x,y)) / sqrt(1 + gx^2 + gy^2)`, gradient taken at the mark.
+4. `lowveg = (returns with 0.15 < h <= 2.00 m) / (returns with -1.00 < h <= 2.00 m)`.
+
+**The denominator is the near-ground population, not every return.** Anything above +2 m —
+tree crowns — is dropped from numerator *and* denominator. So `lowveg` answers "of the returns
+close to the ground, what fraction sit in the low-vegetation band". It is a **composition**,
+not a canopy density, which is why it outperforms canopy cover here.
+
+Worked example, mark `3089_2021_MN`: 1,872 returns within 7.5 m; 462 lie above +2 m and are
+dropped, leaving 1,410; 7 of those fall in the band → `lowveg = 0.0050`.
+
+**Why the edges sit where they do.** Lower 0.15 m: about 2.5x the bare-ground class-2 NMAD
+(59.3 mm), so above the surface's own noise — below it you would be counting roughness as
+vegetation. Upper 2.00 m: below tree crowns. **Neither is physical** — see the band-edge sweep
+and the strata table; the metric is ORDINAL, its scale moves ~50x with the lower edge while
+the rank correlation moves 0.07.
+
+**It cannot carry the offset.** Because `S` is fitted from the box's own returns, `lowveg` is
+invariant to any vertical shift of the cloud — shift everything up a metre and the number does
+not change. That is what makes it independent of the quantity it predicts.
+
 ## The design
 
 Two quantities at the same 389 points, independent by construction:

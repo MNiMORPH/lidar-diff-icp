@@ -124,7 +124,14 @@ lowveg, EXACT DEFINITION -- it must travel with any coefficient fitted from it
    Order 2 removes slope AND curvature as a trend.
 3. For every return within 7.5 m, take the SLOPE-NORMAL height above that surface:
        h = (z - S(x,y)) / sqrt(1 + gx^2 + gy^2),  gradient at the mark.
-4. lowveg = the fraction of those returns with 0.15 m < h <= 2.00 m.
+4. lowveg = (returns with 0.15 < h <= 2.00 m) / (returns with -1.00 < h <= 2.00 m).
+   NOTE THE DENOMINATOR: it is the NEAR-GROUND returns only, not every return in the
+   window. Anything above +2 m -- tree crowns -- is excluded from BOTH numerator and
+   denominator. So lowveg is a COMPOSITION of the near-ground return population: "of the
+   returns close to the ground, what fraction sit in the low-vegetation band". It is not a
+   canopy-density measure, which is why it outperforms canopy cover here. Worked example,
+   mark 3089_2021_MN: 1,872 returns within 7.5 m, of which 462 lie above +2 m and are
+   dropped, leaving 1,410; 7 of those 1,410 fall in the band, so lowveg = 0.0050.
    Lower edge 0.15 m: ~2.5x the bare-ground class-2 NMAD (59.3 mm), so above the
    surface's own noise. Upper edge 2.00 m: below tree crowns. NEITHER IS PHYSICAL --
    see --sweep and --strata; the metric is ORDINAL, its scale moves ~50x with the
