@@ -3,7 +3,12 @@
 and an honest look at whether the detection threshold improved.
 
 The `stable` mask is not saved by difference_dem, so it is REBUILT here with the pipeline's
-own lines (pipeline.py 515-526) from the saved z_after.npy. Same code, not an approximation.
+own lines from the saved z_after.npy -- BOTH stages: the geometric mask (pipeline.py 517-526)
+and the iterative 3-NMAD sigma-clip against the DoD (pipeline.py 751-760). It is the CLIPPED
+mask that difference_dem returns as "stable" and that run_all_sites.py hands the detector; the
+geometric one alone gives a different population. Verified against the values the tile recorded
+when it was built: stable_clip_fraction 0.049444 vs 0.049500 recorded, stable_1sigma_m 0.051572
+vs 0.051600. The clip is DoD-dependent, so it is recomputed for the corrected DoD too.
 
 Reported, because it is the real question: the correction carries its own uncertainty. Its
 coefficient has a block-bootstrap SE of 44.4 mm per unit NGV, and that scales with NGV, so it
@@ -40,6 +45,20 @@ def stable_mask(Z21, res):
     return ((sdeg < 3) & (tpi > -2)) | convex
 
 
+def clip_stable(stable, dod):
+    """pipeline.py 751-760: iterative 3-NMAD sigma-clip, so real change in a floodplain
+    wider than the TPI window does not bleed into the stable-ground error."""
+    s = stable & np.isfinite(dod)
+    n0 = int(s.sum())
+    for _ in range(8):
+        v = dod[s]; med = np.median(v); nm = 1.4826 * np.median(np.abs(v - med))
+        keep = s & (np.abs(dod - med) < 3.0 * max(nm, 1e-3))
+        if keep.sum() == s.sum():
+            break
+        s = keep
+    return s, (1.0 - s.sum() / n0) if n0 else 0.0
+
+
 def nmad(v):
     v = v[np.isfinite(v)]
     return float(1.4826 * np.median(np.abs(v - np.median(v)))) if v.size else np.nan
@@ -62,15 +81,19 @@ def main():
     lod = np.load(f"{T}/lod.npy")
     Z21 = np.load(f"{T}/z_after.npy")
     ny, nx = dod.shape
-    st = stable_mask(Z21, res) & np.isfinite(dod)
-    print(f"stable mask rebuilt from z_after.npy: {int(st.sum()):,} cells "
-          f"({100 * st.sum() / np.isfinite(dod).sum():.1f}% of cells with a DoD)")
+    geom = stable_mask(Z21, res)
+    st, cf = clip_stable(geom, dod)            # the mask the pipeline hands the detector
+    st_c, cf_c = clip_stable(geom, corr)       # re-clipped for the corrected DoD
+    print(f"stable mask rebuilt from z_after.npy: geometric {int(geom.sum()):,}, "
+          f"after the 3-NMAD clip {int(st.sum()):,} ({100*cf:.1f}% removed)")
+    print(f"  recorded when the tile was built: stable_clip_fraction "
+          f"{cfg['stable_clip_fraction']:.4f}, mine {cf:.4f}")
 
     print(f"\nDID THE CORRECTION IMPROVE THE THRESHOLD? -- scatter on STABLE ground,")
     print(f"which is what sets the LoD. If the correction removes a real bias, this falls.")
     print(f"  {'':22s} {'median':>9} {'NMAD':>9}   (mm)")
-    for nm, d in (("DoD before", dod), ("DoD after NGV", corr)):
-        print(f"  {nm:22s} {1000 * np.median(d[st]):+9.1f} {1000 * nmad(d[st]):9.1f}")
+    for nm, d, k in (("DoD before", dod, st), ("DoD after NGV", corr, st_c)):
+        print(f"  {nm:22s} {1000 * np.median(d[k]):+9.1f} {1000 * nmad(d[k]):9.1f}")
     print(f"  NGV on stable ground   median {np.median(ngv[st & np.isfinite(ngv)]):.3f}"
           f"   p90 {np.percentile(ngv[st & np.isfinite(ngv)], 90):.3f}")
 
@@ -89,9 +112,9 @@ def main():
 
     print(f"\nDETECTION, Wheaton coherence + tau_sys floor (detect_change_standard)")
     out = {}
-    for nm, d, L in (("before", dod, lod), ("after, old LoD", corr, lod),
-                     ("after, LoD+SE", corr, lod_c)):
-        det = detect_change_standard(d, L, st, res)
+    for nm, d, L, k in (("before", dod, lod, st), ("after, old LoD", corr, lod, st_c),
+                        ("after, LoD+SE", corr, lod_c, st_c)):
+        det = detect_change_standard(d, L, k, res)
         ch = det["change"]
         vol = sum(r["volume_m3"] for r in det["regions"])
         print(f"  {nm:15s} {len(det['regions']):4d} regions  {int(ch.sum()):7,d} cells "
