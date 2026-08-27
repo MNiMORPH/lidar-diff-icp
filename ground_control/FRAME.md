@@ -53,6 +53,30 @@ bridge). Each time I called it suspicious and then looked OUTWARD for the fault.
 discrepancy that matches a known constant to the digit is a bookkeeping signature, not a
 measurement failure** — check your own arithmetic first.
 
+## ★ WHY THE CORRECTION IS REQUIRED, even at +2.12 mm
+
+`align_swaths` is gauged on the lowest-numbered flight line. That choice touches no
+swath-to-swath difference, but it sets the absolute level the mosaic inherits — which
+becomes **the reference line's own vertical error**. Measured on elbaext:
+
+    133 +0.00   134 +22.00   135 +6.20   136 -9.80   137 -18.40   138 -22.60
+    => re-gauging on a different line moves EVERY elevation by up to 44.60 mm
+
+**The gauge choice is worth 21x the correction.** So an uncorrected elevation is an
+arbitrary implementation detail (`ref=int(ps.min())`), not a measurement, and the
+correction's smallness at Elba is a property of line 133 having been a lucky pin.
+
+Applying a control datum removes the dependence *exactly*: `corrected = z + c` with `c`
+measured against the same gauged product, so re-gauging by `d` shifts `z` by `+d` and `c`
+by `-d` and they cancel. `tests/test_apply_datum.py` demonstrates this — uncorrected
+spread 44.60 mm across the six gauges, corrected spread < 1e-9.
+
+**This is now a required pipeline step.** `pipeline.difference_dem` records
+`swath_gauge_ref` and leaves `absolute_datum_mm` None until a constant is supplied, and
+its docstring states that the absolute level is gauge-dependent. Applier:
+`ground_control/apply_datum.py`; a constant is tied to its gauge and must be re-expressed
+via `regauged_to()` if `ref` changes.
+
 ## Guardrails
 
 * **Every parameter is swept or declared.** Cover treatment moves gen1 by 68.03 mm; gen2

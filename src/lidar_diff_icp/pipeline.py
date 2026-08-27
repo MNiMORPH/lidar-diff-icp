@@ -410,6 +410,14 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
                       ``geoid_datum`` is supplied). No plane is fitted to "stable"
                       surfaces; residual offsets are left for later analysis. The
                       reference_plane fit and the parabola tie were removed (git history).
+    **The absolute level of the output is GAUGE-DEPENDENT and is not a measured
+    elevation.** ``align_swaths`` is gauged on the lowest-numbered flight line, so the
+    mosaic inherits that line's own vertical error; re-gauging on another line shifts every
+    elevation (measured span 44.60 mm at elbaext). Swath-to-swath DIFFERENCES are
+    unaffected. To obtain an absolute elevation, apply a ground-control datum constant
+    measured against this gauge -- ``ground_control/apply_datum.py``. The output records
+    ``swath_gauge_ref`` and leaves ``absolute_datum_mm`` None until one is supplied.
+
     ``swath_tie``   : how the VERTICAL offset of each flight-line pair is reduced from
                       their overlap. "intercept" (default) is the LAD (median-regression)
                       intercept at across-track position zero, i.e. at
@@ -679,7 +687,16 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
                           else coreg.estimate_boresight_roll(pc, res).b)
         z8 = z8 - boresight_used * sa8 / 1000.0      # mm/deg * deg -> mm -> m
         pc = io.PointCloud(x8, y8, z8, ps8, cl8, np.zeros_like(z8), sa8, before_crs)
-    corr, _, _ = coreg.align_swaths(pc, ref=int(ps8.min()), tie=swath_tie)
+    # GAUGE. align_swaths solves a FREE NETWORK and only then subtracts the reference
+    # swath's value, so this choice does not touch any swath-to-swath DIFFERENCE -- but it
+    # DOES set the absolute level the whole mosaic inherits, because that level becomes the
+    # reference line's own error. Measured on elbaext: the six per-swath dz span 44.60 mm
+    # (-22.60 .. +22.00), so re-gauging on a different line moves every elevation by up to
+    # that much. The product is therefore GAUGE-DEPENDENT in its absolute level until a
+    # ground-control datum constant is applied; see `swath_gauge_ref` and
+    # `absolute_datum_mm` in corrections.json, and ground_control/apply_datum.py.
+    swath_gauge_ref = int(ps8.min())
+    corr, _, _ = coreg.align_swaths(pc, ref=swath_gauge_ref, tie=swath_tie)
     xc, yc, zc = x8.copy(), y8.copy(), z8.copy()
     for s, (dx, dy, dz) in corr.items():
         m = ps8 == s; xc[m] += dx; yc[m] += dy; zc[m] += dz
@@ -801,6 +818,17 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
         "boresight_roll_mm_per_deg": (round(float(boresight_used), 3)
                                       if boresight_used is not None else None),
         "swath_tie": swath_tie,
+        "swath_gauge_ref": swath_gauge_ref,
+        "absolute_level_is_gauge_dependent": True,
+        "absolute_datum_mm": None,
+        "absolute_datum_note": (
+            "The absolute level of this product is the reference line's own error, not a "
+            "measured elevation: re-gauging on another line shifts every elevation (44.60 "
+            "mm across the six lines at elbaext). Apply a ground-control datum constant "
+            "measured against THIS gauge to make the result gauge-invariant -- "
+            "corrected = z + c, and if the gauge moves by d then z moves by +d and c by "
+            "-d, so the corrected surface is unchanged. See ground_control/apply_datum.py "
+            "and ground_control/FRAME.md."),
         "per_swath_internal_alignment_dxdydz_m":
             {str(k): [round(float(v), 4) for v in val] for k, val in corr.items()},
         "cross_epoch_datum": tie_info,
