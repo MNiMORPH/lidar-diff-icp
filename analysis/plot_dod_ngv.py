@@ -22,8 +22,9 @@ ext = (X0, X1, Y0, Y1)
 
 fig, ax = plt.subplots(1, 3, figsize=(16.5, 7.2), sharex=True, sharey=True)
 for A, D, ttl, cmap, lim in (
-        (ax[0], dod, "DoD before", "RdBu_r", a.clip),
-        (ax[1], corr, "DoD after NGV correction", "RdBu_r", a.clip),
+        # RdBu (not _r): negative -> RED = erosion, positive -> BLUE = deposition
+        (ax[0], dod, "DoD before", "RdBu", a.clip),
+        (ax[1], corr, "DoD after NGV correction", "RdBu", a.clip),
         (ax[2], dz, "the correction applied  ($-325.2\\,$mm $\\times$ NGV)", "viridis", None)):
     if lim is not None:
         im = A.imshow(D, origin="lower", extent=ext, cmap=cmap, vmin=-lim, vmax=lim,
@@ -33,7 +34,8 @@ for A, D, ttl, cmap, lim in (
                       vmin=np.nanpercentile(dz, 0.5), vmax=0, interpolation="nearest")
     A.set_title(ttl, fontsize=11)
     A.set_xlabel("easting (m)")
-    fig.colorbar(im, ax=A, fraction=0.046, pad=0.03, label="mm")
+    cb = fig.colorbar(im, ax=A, fraction=0.046, pad=0.03,
+                      label="mm   (red = erosion, blue = deposition)" if lim is not None else "mm")
 ax[0].set_ylabel("northing (m)")
 fin = np.isfinite(dod) & np.isfinite(corr)
 fig.suptitle(
