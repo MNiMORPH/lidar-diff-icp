@@ -415,6 +415,18 @@ Reference point 44.101944, −92.004137 (E 579705.72, N 4883677.71, EPSG:26915).
 - `analysis/` — documented studies (density decimation, method comparisons).
 - `tests/` — regression tests (coreg sign conventions, correction surface,
   synthetic-warp recovery).
+- `.trust/runs/` — one provenance ledger per run of anything wired through
+  `trust/provenance.py`, recording the question, the `argv`, every input with its digest,
+  and every parameter with its source (`andy` / `repo` / **`MINE`** for one the assistant
+  chose unasked). These are **tracked**, because the documents above cite them by
+  filename. The counter-argument is real and worth stating: a collaborator's clone
+  generates its own ledgers, so what travels is *our* history, not theirs, and the durable
+  half — the `argv` — belongs in the product a number is adopted into (it now is). They
+  are kept anyway because of what they bought this week: the headline gen1 datum was
+  reconstructed **after its producing script had been deleted**, from a ledger that held
+  the mark set, the unasked `catchment_radius_m = 2000.0` flag, and the headline. The
+  value reproduced to −0.23 mm. Committed code alone would not have recovered which run
+  made the number, or which unasked parameter set it.
 
 ## References
 
