@@ -239,6 +239,88 @@ must travel with any coefficient fitted from it.
   what makes the regression below a real test rather than a tautology."""
 
 
+def plot_index(m, hs, CNT, TOT, block_km, n_boot, path, bin_width=0.06):
+    """Scatter + binned means + both fits + a block-bootstrap band. Every mark is drawn."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from scipy import stats as st
+
+    y = m.resid_mm.to_numpy(float)
+    ngv = metric(CNT, TOT, ((hs > NGV_LO) & (hs <= NGV_HI)).astype(float))
+    veg = (m.point_type_g2 == "VVA").to_numpy()
+
+    E = np.arange(0, ngv.max() + bin_width, bin_width)
+    bx, bm, bse, bn, blo, bhi = [], [], [], [], [], []
+    for lo, hi in zip(E[:-1], E[1:]):
+        k = (ngv >= lo) & (ngv < hi)
+        bx.append(0.5 * (lo + hi)); bn.append(int(k.sum())); blo.append(lo); bhi.append(hi)
+        bm.append(y[k].mean() if k.sum() else np.nan)
+        bse.append(y[k].std(ddof=1) / np.sqrt(k.sum()) if k.sum() > 1 else np.nan)
+    bx, bm, bse, bn = map(np.array, (bx, bm, bse, bn))
+    ok = (bn > 1) & np.isfinite(bse)
+    w = 1 / bse[ok] ** 2
+
+    cf, cse = M.wls(bx[ok], bm[ok], w)
+    bo, bose = M.fit_origin(bx[ok], bm[ok], w)
+
+    blk = M._blocks(m.easting.to_numpy(float), m.northing.to_numpy(float), block_km)
+    ub = np.unique(blk); rng = np.random.default_rng(0); lines = []
+    for _ in range(n_boot):
+        idx = np.concatenate([np.where(blk == k)[0] for k in rng.choice(ub, len(ub), True)])
+        if len(np.unique(ngv[idx])) > 2:
+            lines.append(np.polyfit(ngv[idx], y[idx], 1))
+    lines = np.array(lines)
+
+    xg = np.linspace(0, ngv.max() * 1.02, 200)
+    band = np.array([l[0] * xg + l[1] for l in lines])
+    lo_b, hi_b = np.percentile(band, [2.5, 97.5], axis=0)
+
+    fig, (axh, ax) = plt.subplots(2, 1, figsize=(9.2, 8.2), sharex=True,
+                                  gridspec_kw=dict(height_ratios=[1, 5], hspace=0.06))
+    axh.hist([ngv[~veg], ngv[veg]], bins=E, stacked=True, color=["0.75", "C2"],
+             edgecolor="white", linewidth=0.4, label=["NVA (open)", "VVA (vegetated)"])
+    axh.set_ylabel("marks"); axh.legend(fontsize=8, frameon=False)
+    axh.set_title("gen2 ground-surface offset against NGV, the near-ground vegetation index\n"
+                  "NGV = returns in (0.15, 4.0] m above the mark's own order-2 surface, "
+                  "as a fraction of ALL returns", fontsize=10.5)
+
+    ax.fill_between(xg, lo_b, hi_b, color="C0", alpha=0.13, lw=0,
+                    label=f"95% CI, block bootstrap ({len(ub)} blocks of {block_km:g} km)")
+    ax.scatter(ngv[~veg], y[~veg], s=11, c="0.55", alpha=0.55, lw=0, label="NVA (open)")
+    ax.scatter(ngv[veg], y[veg], s=11, c="C2", alpha=0.65, lw=0, label="VVA (vegetated)")
+    ax.errorbar(bx[ok], bm[ok], yerr=bse[ok],
+                xerr=[bx[ok] - np.array(blo)[ok], np.array(bhi)[ok] - bx[ok]],
+                fmt="o", ms=6, color="k", lw=1.4, capsize=0, zorder=5,
+                label="bin mean $\\pm$ SE, drawn at the bin's true span")
+    for xx, mm, nn in zip(bx[ok], bm[ok], bn[ok]):
+        ax.annotate(f"n={nn}", (xx, mm), textcoords="offset points", xytext=(0, 9),
+                    ha="center", fontsize=7.5)
+    thin = (bn == 1)
+    if thin.any():
+        ax.scatter(bx[thin], bm[thin], s=55, facecolor="none", edgecolor="k",
+                   lw=1.2, zorder=5, label="bin with n=1 (no SE; shown, not dropped)")
+    ax.plot(xg, cf[1] * xg + cf[0], "C0", lw=2,
+            label=f"free intercept: {cf[0]:+.1f} $\\pm$ {cse[0]:.1f} "
+                  f"{cf[1]:+.0f} $\\pm$ {cse[1]:.0f}$\\,$NGV")
+    ax.plot(xg, bo * xg, "C3--", lw=2,
+            label=f"through origin: {bo:+.0f} $\\pm$ {bose:.0f}$\\,$NGV")
+    ax.axhline(0, color="0.6", lw=0.8)
+    ax.set_xlabel("NGV   (fraction of returns in 0.15-4.0 m)")
+    ax.set_ylabel("offset: surveyed $Z$ $-$ delivered LAZ $Z$  (mm)\n$+$ve = the surface reads LOW")
+    ax.legend(fontsize=8, loc="lower left", framealpha=0.92)
+    ax.set_xlim(-0.01, ngv.max() * 1.03)
+    fig.tight_layout()
+    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+    fig.savefig(path, dpi=160)
+    print(f"  free intercept : a {cf[0]:+.1f} +/- {cse[0]:.1f}   b {cf[1]:+.1f} +/- {cse[1]:.1f}")
+    print(f"  through origin : b {bo:+.1f} +/- {bose:.1f}")
+    print(f"  bootstrap band from {len(lines)} draws over {len(ub)} blocks")
+    print(f"  {int(ok.sum())} bins with n>1, {int(thin.sum())} with n=1 drawn open, "
+          f"{int((bn == 0).sum())} empty")
+    print(f"wrote {path}")
+
+
 def index_regression(m, hs, CNT, TOT, block_km, n_boot, bin_width=0.06):
     from scipy import stats as st
     y = m.resid_mm.to_numpy(float)
@@ -328,6 +410,8 @@ def main():
                     help="repeat the edge sweep within NVA/VVA and lowveg terciles")
     ap.add_argument("--index", action="store_true",
                     help="define the vegetation index on the chosen window and regress it")
+    ap.add_argument("--plot", default=None,
+                    help="write the NGV regression figure here")
     ap.add_argument("--block-km", type=float, default=10.0)
     ap.add_argument("--n-boot", type=int, default=2000)
     ap.add_argument("--adaptive", action="store_true",
@@ -337,7 +421,7 @@ def main():
     a = ap.parse_args()
     if a.all:
         a.shape = a.edges = a.strata = a.adaptive = a.index = True
-    if not (a.shape or a.edges or a.strata or a.adaptive or a.index):
+    if not (a.shape or a.edges or a.strata or a.adaptive or a.index or a.plot):
         ap.error("pick a section, or --all")
 
     m, hs, CNT, TOT = build()
@@ -421,6 +505,10 @@ def main():
 
     if a.index:
         index_regression(m, hs, CNT, TOT, a.block_km, a.n_boot)
+        print()
+
+    if a.plot:
+        plot_index(m, hs, CNT, TOT, a.block_km, a.n_boot, a.plot)
         print()
 
     if a.adaptive:
