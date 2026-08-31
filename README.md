@@ -212,27 +212,23 @@ uncorrected spread 44.60 mm across the six gauges, corrected spread below 1e-9.
 
 ### The relation that governs it
 
-    DoD = c1 - c2 - g
+**Definitions.** Every constant below is a *tie*, `c = surveyed − z_lidar`, so **positive
+means the surface reads LOW and the constant is what you ADD**.
 
-where `c1` and `c2` are each epoch's constant against its own control and `g` is the
-geoid-model term the pipeline adds to gen1. **The geoid does not cancel between the two
-constants**, which is the trap in this problem: NAVD88 is the datum, whereas GEOID03 and
-GEOID18 are models for converting GPS ellipsoidal heights to orthometric ones. Both
-control sets publish NAVD88 and are directly comparable, but each epoch's lidar `z` was
-converted with a different model, so the two constants reference surfaces in different
-frames.
+| symbol | is | from | at Elba |
+|---|---|---|---|
+| `c1` | surveyed NAVD88 minus gen1's **delivered** surface | the 2008 MnGeo/MnDNR validation control, open ground, per flight line | **+62.74 ± 23.38 mm** |
+| `c2` | surveyed NAVD88 minus gen2's **delivered** surface | the 2021 USGS **held-out** NVA checkpoints (the LCPs calibrated gen2 and are excluded) | **−6.56 mm** |
+| `bridge` | delivered surface minus **our** reconstruction | per-mark comparison; carries a constant from the vendor's product onto ours | gen1 **−4.04 ± 11.12**, gen2 **unmeasured** |
+| `g` | the geoid carry ADDED to gen1, GEOID03 → GEOID18 | `references.geoid_difference`, from the PROJ grids | **+67.38 mm** |
 
-**One** closure supports this, and it can be read two ways. The measured DoD on stable open
-ground predicts `-2.12 mm` against `-2.12 mm` observed over 116,507 cells; equivalently,
-the control's own epoch separation `c1 - c2 = +69.30 mm` recovers the PROJ geoid difference
-of `+67.38 mm` to **1.92 mm**. Because the observed DoD is itself near zero, those are the
-same equation stated twice, not two independent checks – an earlier version of this section
-claimed two, and that was an overstatement.
+`c1` and `c2` are *not* interchangeable: each is measured against **its own epoch's**
+control, and each describes that epoch's **delivered** product, not ours.
 
-What makes the single closure worth something is that its three terms come from three
-unrelated sources: the constants from two survey networks, the geoid from the PROJ grids,
-and the DoD from the point clouds. One relation among them closes to 1.92 mm. That is a
-real cross-validation of the relation; it is not two.
+Because the constants come from three unrelated sources — two survey networks, the PROJ
+geoid grids, and the point clouds — one relation among them closing to 1.92 mm on the
+`c1 − c2` versus `g` reading is a real cross-validation of the *relation*. It is one
+closure, not several.
 
 ### Elba, measured
 
