@@ -222,11 +222,17 @@ control sets publish NAVD88 and are directly comparable, but each epoch's lidar 
 converted with a different model, so the two constants reference surfaces in different
 frames.
 
-Two independent checks close on this. The measured DoD on stable open ground predicts
-`-2.12 mm` against `-2.12 mm` observed over 116,507 cells. Furthermore the control's own
-epoch separation, `c1 - c2 = +69.30 mm`, recovers the PROJ geoid difference of
-`+67.38 mm` to **1.92 mm** – two survey networks reproducing a geoid model that neither
-knows anything about.
+**One** closure supports this, and it can be read two ways. The measured DoD on stable open
+ground predicts `-2.12 mm` against `-2.12 mm` observed over 116,507 cells; equivalently,
+the control's own epoch separation `c1 - c2 = +69.30 mm` recovers the PROJ geoid difference
+of `+67.38 mm` to **1.92 mm**. Because the observed DoD is itself near zero, those are the
+same equation stated twice, not two independent checks – an earlier version of this section
+claimed two, and that was an overstatement.
+
+What makes the single closure worth something is that its three terms come from three
+unrelated sources: the constants from two survey networks, the geoid from the PROJ grids,
+and the DoD from the point clouds. One relation among them closes to 1.92 mm. That is a
+real cross-validation of the relation; it is not two.
 
 ### Elba, measured
 
