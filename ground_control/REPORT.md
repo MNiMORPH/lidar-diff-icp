@@ -116,7 +116,13 @@ second test with it; file restored byte-identically (md5 `11d096cf…` before an
 * **The 2008 control's geoid.** `GEOID03` is a *dataset-level assertion*; the validation
   reports state no datum. Not resolved, and it is a candidate explanation for the ~67 mm
   discrepancy between control and the two difference instruments.
-* **gen1's absolute level at Elba.** Three defensible estimators, three answers.
+* **gen1's absolute level at Elba.** Three defensible estimators, three answers — though
+  the near/far concern that motivated much of that spread was RESOLVED 2026-08-31 as
+  per-line structure, not distance (Welch t = −1.435, p = 0.234; confounded with line).
+* **The vendor bias adjustments are absorbed, not unverifiable.** `c1` measures what
+  remains after them, so their values are never needed. Hold-out verified: the 963 published
+  residuals give mean −43.41 mm, t = −10.17, p = 3.860e-23 against zero. What stays
+  unverified is only their spatial uniformity, which the documentation does not state.
 
 ---
 

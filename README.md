@@ -294,11 +294,26 @@ and each of them moved the Elba answer by more than the correction itself.
 
 ### What is still open
 
-- **Near versus far marks.** Six of Elba's eight open marks sit 14–63 km away and disagree
-  with the two near ones by 59.13 mm, which is enough to change the correction's sign.
+- **Near versus far marks — RESOLVED 2026-08-31, and it was not a distance effect.** The
+  split is not significant (Welch t = −1.435, p = 0.234) and is **confounded with line**:
+  both near marks sit on the low-tie lines 137/138 while every far mark sits on 133/134/135.
+  Within a line, where distance is unconfounded, the comparisons are small and opposite in
+  sign (+153.7 over 44.7 km, −36.3 over 10.1 km, +19.0 over 25.6 km). It is therefore the
+  per-line structure the estimator already averages over, not an uncorrected bias. Producer:
+  `ground_control/run_nearfar_and_holdout.py`.
+- **The unpublished vendor bias adjustments are ABSORBED, not a limitation on the number.**
+  `c1` is measured against the *delivered* surface, which already carries the vendor's
+  adjustment, so our constant is what remains after it and its value is never needed. The
+  condition is that our marks were held out from that calibration, and they were: the 963
+  published residuals have mean −43.41 mm, t = −10.17 against zero, p = 3.860e-23. Had they
+  been the calibration set they would sit on zero by construction. This limits *explaining*
+  `c1` — it cannot be decomposed into geoid error, lidar error and residual bias — but not
+  *using* it. The one caveat that survives: the documentation does not say whether the
+  adjustment was global, per lift or per line, so its spatial uniformity is unverified.
 - **Mechanism, not relation.** The relation is verified; the story that "most of the
-  difference was the geoid" is consistent but unproven, and it competes with the
-  **unpublished vendor bias adjustments** that both epochs carry and neither publishes.
+  difference was the geoid" remains consistent but unproven. Given the point above, this is
+  now a scientific curiosity rather than an obstacle: `c1` is the total correction needed
+  whatever its composition.
 - **gen2's bridge** is bounded to 0 ± 26 mm by the closure but was never measured
   directly: its checkpoints sit on engineered ground, giving radius spreads of 131–715 mm.
 - **The statewide per-line correction** is where control actually pays off. The weighted

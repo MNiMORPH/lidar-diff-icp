@@ -77,6 +77,28 @@ its docstring states that the absolute level is gauge-dependent. Applier:
 `ground_control/apply_datum.py`; a constant is tied to its gauge and must be re-expressed
 via `regauged_to()` if `ref` changes.
 
+## Open items — status 2026-08-31
+
+- **Near versus far marks — RESOLVED 2026-08-31, and it was not a distance effect.** The
+  split is not significant (Welch t = −1.435, p = 0.234) and is **confounded with line**:
+  both near marks sit on the low-tie lines 137/138 while every far mark sits on 133/134/135.
+  Within a line, where distance is unconfounded, the comparisons are small and opposite in
+  sign (+153.7 over 44.7 km, −36.3 over 10.1 km, +19.0 over 25.6 km). It is therefore the
+  per-line structure the estimator already averages over, not an uncorrected bias. Producer:
+  `ground_control/run_nearfar_and_holdout.py`.
+- **The unpublished vendor bias adjustments are ABSORBED, not a limitation on the number.**
+  `c1` is measured against the *delivered* surface, which already carries the vendor's
+  adjustment, so our constant is what remains after it and its value is never needed. The
+  condition is that our marks were held out from that calibration, and they were: the 963
+  published residuals have mean −43.41 mm, t = −10.17 against zero, p = 3.860e-23. Had they
+  been the calibration set they would sit on zero by construction. This limits *explaining*
+  `c1` — it cannot be decomposed into geoid error, lidar error and residual bias — but not
+  *using* it. The one caveat that survives: the documentation does not say whether the
+  adjustment was global, per lift or per line, so its spatial uniformity is unverified.
+- **gen2's bridge** remains the one genuinely open term: bounded to 0 ± 26 mm by the
+  closure, never measured directly (engineered checkpoint siting, radius spreads
+  131–715 mm). gen2 is barely reprocessed, so there is little for it to be.
+
 ## Guardrails
 
 * **Every parameter is swept or declared.** Cover treatment moves gen1 by 68.03 mm; gen2
