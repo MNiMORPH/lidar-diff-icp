@@ -31,13 +31,13 @@ system-driven from the navigation logs.
 
 ## What gen1 needs, in order
 
-Seven steps turn a delivered 2008 tile into a surface comparable with 3DEP. They fall
-into three tiers, and the distinction matters because each tier is blind to the errors of
-the one below it:
+Seven steps turn a delivered 2008 tile into a surface comparable with 3DEP. Five of them
+are **corrections** – they remove an error or tie to a frame – and fall into three tiers,
+each blind to the errors of the tier below it:
 
 | tier | steps | uses | what it cannot catch |
 |---|---|---|---|
-| **within-epoch** | 1, 2, 3, 7 | only that epoch's own data | anything shared by every swath |
+| **within-epoch** | 2, 3 | only that epoch's own data | anything shared by every swath |
 | **between-epoch registration** | 4 | both clouds, no outside information | an error common to both epochs |
 | **external tie** | 5, 6 | PROJ geoid grids; surveyed control | – |
 
@@ -46,6 +46,17 @@ mutually consistent, and if gen2 is itself laterally displaced then gen1 is disp
 it, the DoD looks clean, and no amount of data-driven work will reveal it. Step 5 is also a
 between-epoch correction, but computed from external geodetic grids rather than fitted to
 gen2. Only steps 5 and 6 bring in information from outside the two point clouds.
+
+**Steps 1 and 7 are not corrections at all.** They are *reductions* – ground selection and
+gridding – applied after or independently of registration, and they act the same way within
+an epoch as between epochs. Their requirement is not accuracy but **symmetry**: whatever
+bias they carry must be identical on both sides so that it cancels in the difference. Step 7
+is applied identically to both epochs by construction, which is what makes the slope-normal
+median safe; grid the two differently and you manufacture change that is not there (the
+banding artefact this pipeline was built to remove). Step 1 is the one asymmetry we cannot
+avoid – gen1 needs CSF because its vendor class is seam-cut, while gen2's delivered class 2
+is sound – so the ground-source difference is a carried term rather than a cancelled one,
+measured at ~6.5 mm median absolute on the pilot.
 
 1. **Classify ground with CSF, not the vendor class.** gen1's delivered bare earth is cut
    at the class-12 overlap seam, at half the line spacing (measured 462–506 m), so one
@@ -68,7 +79,8 @@ gen2. Only steps 5 and 6 bring in information from outside the two point clouds.
    gauge-invariant. Three rules govern it: epoch-matched control, open ground only, and the
    flight line as the unit of replication.
 7. **Grid at the working resolution with the slope-normal estimator**, identically for both
-   epochs, then difference.
+   epochs, then difference. This is a reduction, not a correction: it earns its place by
+   being the same on both sides, so its bias cancels rather than being removed.
 
 Skipping step 5 leaves a ~67 mm epoch offset. Skipping step 6 leaves an arbitrary,
 site-dependent level that no amount of alignment can detect from the data alone – the
