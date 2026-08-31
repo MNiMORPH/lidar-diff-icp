@@ -1,0 +1,55 @@
+{
+ "question": "Is the near/far mark split a distance effect or the per-line structure, and were our marks held out from the vendor's bias adjustment?",
+ "started": "2026-08-31T17:40:29+02:00",
+ "argv": [
+  "ground_control/run_nearfar_and_holdout.py",
+  "--product",
+  "ground_control/products/gen1_datum_by_returns_elba_L1O.json",
+  "--easting",
+  "578762.8",
+  "--northing",
+  "4884487.6",
+  "--near-km",
+  "10"
+ ],
+ "seconds": 0.0,
+ "cwd": "/home/awickert/projects/lidar-diff-icp",
+ "inputs": [
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/ground_control/products/gen1_datum_by_returns_elba_L1O.json",
+   "role": "the datum's own open marks, with the line their returns assign",
+   "bytes": 999,
+   "mtime": "2026-08-31T16:30:49",
+   "digest": "a568c6060328"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/src/lidar_diff_icp/groundtruth/data/mn_dnr_2008_control_semn.csv",
+   "role": "gen1's own 2008 control; dnr_error_m is the vendor's published residual on the DELIVERED surface, i.e. AFTER its bias adjustment",
+   "bytes": 313278,
+   "mtime": "2026-08-31T16:30:49",
+   "digest": "9792fcd677e7"
+  }
+ ],
+ "params": [
+  {
+   "name": "near_km",
+   "value": "10.0",
+   "src": "MINE",
+   "why": "the near/far cut; it is REPORTED as confounded rather than used to select, and the within-line comparison below does not depend on it"
+  }
+ ],
+ "masks": [],
+ "columns": {
+  "line": "flight line point_source_id",
+  "km": "distance from the site, km",
+  "tie_mm": "surveyed - lidar at the mark, mm",
+  "stat": "name of the statistic",
+  "value": "its value; mm unless the name says otherwise"
+ },
+ "notes": [],
+ "headline": "near/far p=0.234 and confounded with line; hold-out p=3.860e-23",
+ "unasked": [
+  "near_km"
+ ],
+ "session": ""
+}
