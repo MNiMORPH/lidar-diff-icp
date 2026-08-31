@@ -1,0 +1,105 @@
+{
+ "question": "gen1's datum at this site with NO catchment radius: every control mark inside a tile we hold, assigned to a line by its own ground returns.",
+ "started": "2026-08-27T22:06:24+02:00",
+ "argv": [
+  "ground_control/run_datum_by_returns.py",
+  "--easting",
+  "578762.8",
+  "--northing",
+  "4884487.6",
+  "--psids",
+  "133",
+  "134",
+  "135",
+  "136",
+  "137",
+  "138",
+  "--covers",
+  "L1O",
+  "--tiles",
+  "data/before",
+  "--res",
+  "5.0",
+  "--tracks",
+  "ground_control/data/gen1_line_tracks.json",
+  "--collinear-sigma",
+  "3",
+  "2",
+  "5",
+  "--out",
+  "ground_control/products/gen1_datum_by_returns_elba_L1O.json"
+ ],
+ "seconds": 125.7,
+ "cwd": "/home/awickert/projects/lidar-diff-icp",
+ "inputs": [
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/src/lidar_diff_icp/groundtruth/data/mn_dnr_2008_control_semn.csv",
+   "role": "gen1's own 2008 control",
+   "bytes": 313278,
+   "mtime": "2026-08-26T16:58:09",
+   "digest": "9792fcd677e7"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/ground_control/data/gen1_line_tracks.json",
+   "role": "flight-line tracks; used ONLY to disambiguate a reused point_source_id, never to search or to assign",
+   "bytes": 362313,
+   "mtime": "2026-08-27T17:57:25",
+   "digest": "9ac0db133b79"
+  }
+ ],
+ "params": [
+  {
+   "name": "site",
+   "value": "(578762.8, 4884487.6)",
+   "src": "andy",
+   "why": ""
+  },
+  {
+   "name": "psids",
+   "value": "(133, 134, 135, 136, 137, 138)",
+   "src": "andy",
+   "why": "the lines the site's tile is built from, per corrections.json"
+  },
+  {
+   "name": "covers",
+   "value": "('L1O',)",
+   "src": "andy",
+   "why": ""
+  },
+  {
+   "name": "catchment_radius_m",
+   "value": "'NONE -- removed'",
+   "src": "andy",
+   "why": "it was a compute bound, not a criterion; the returns assign, and a radius silently shifted the cover mix (at Elba all 4 marks it added were urban)"
+  },
+  {
+   "name": "collinear_sigma",
+   "value": "(3.0, 2.0, 5.0)",
+   "src": "MINE",
+   "why": "how many prediction-sd two passes of one psid may sit apart and still be one line; swept, no default"
+  },
+  {
+   "name": "res_m",
+   "value": "5.0",
+   "src": "repo",
+   "why": ""
+  }
+ ],
+ "masks": [],
+ "columns": {
+  "sigma": "collinearity cut used for reused-psid disambiguation, unitless",
+  "candidates": "control marks of these covers inside a tile on disk, count",
+  "measured": "of those, marks that yielded a tie, count",
+  "kept": "marks the RETURNS place on one of --psids AND that survive reused-psid disambiguation, count",
+  "n_lines": "distinct point_source_id among the kept marks, count",
+  "datum_mm": "constant to ADD to gen1 at the site, mm; mean over line means; positive = gen1 reads LOW",
+  "se_mm": "SE of the mean over LINES, mm -- the line is the unit of replication because marks under one line share its constant",
+  "max_km": "farthest kept mark from the site, km"
+ },
+ "notes": [],
+ "headline": "no-catchment datum +62.74 +/- 23.38 mm (8 marks, 5 lines)",
+ "unasked": [
+  "collinear_sigma"
+ ],
+ "session": ""
+}

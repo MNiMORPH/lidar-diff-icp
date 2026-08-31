@@ -1,0 +1,150 @@
+{
+ "question": "What constant places each epoch's surface on surveyed NAVD88 at this site, using ONLY that epoch's own contemporaneous control?",
+ "started": "2026-08-27T19:58:38+02:00",
+ "argv": [
+  "ground_control/run_datum_at_site.py",
+  "--easting",
+  "578762.8",
+  "--northing",
+  "4884487.6",
+  "--site",
+  "elba",
+  "--gen2-surfaces",
+  "ql1_laz",
+  "ql0_laz",
+  "--max-lags-m",
+  "20000",
+  "40000",
+  "80000",
+  "160000",
+  "--n-lags",
+  "25",
+  "--n-pairs",
+  "800000",
+  "--estimators",
+  "dowd",
+  "matheron",
+  "--seed",
+  "0",
+  "--out-dir",
+  "ground_control/products",
+  "--gen1-bridge-mm",
+  "-4.04",
+  "--gen1-bridge-sd-mm",
+  "11.12"
+ ],
+ "seconds": 3.7,
+ "cwd": "/home/awickert/projects/lidar-diff-icp",
+ "inputs": [
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/src/lidar_diff_icp/groundtruth/data/mn_dnr_2008_control_semn.csv",
+   "role": "gen1's OWN 2008 MnGeo/MnDNR validation control; the column dnr_error_m is Control Z - Surface Z, verified exact on 1004 of 1004 rows",
+   "bytes": 313278,
+   "mtime": "2026-08-26T16:58:09",
+   "digest": "9792fcd677e7"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/src/lidar_diff_icp/groundtruth/data/mn_se_driftless_2021_control.csv",
+   "role": "gen2's OWN 2021 USGS NVA/VVA held-out checkpoints; the usgs_*_error_m columns are Z - <surface>z, verified exact on all four columns",
+   "bytes": 175770,
+   "mtime": "2026-08-27T07:18:05",
+   "digest": "43120ae79abc"
+  }
+ ],
+ "params": [
+  {
+   "name": "site_easting",
+   "value": "578762.8",
+   "src": "andy",
+   "why": "the site asked for"
+  },
+  {
+   "name": "site_northing",
+   "value": "4884487.6",
+   "src": "andy",
+   "why": ""
+  },
+  {
+   "name": "epoch_matching",
+   "value": "'gen1<-2008 control, gen2<-2021 control'",
+   "src": "andy",
+   "why": "Andy's directive: adjust each epoch internally, no cross-epoch control"
+  },
+  {
+   "name": "gen2_surfaces",
+   "value": "('ql1_laz', 'ql0_laz')",
+   "src": "MINE",
+   "why": "gen2 publishes FOUR surfaces and they are four different answers; these are reported side by side, not reduced to one"
+  },
+  {
+   "name": "max_lags_m",
+   "value": "(20000.0, 40000.0, 80000.0, 160000.0)",
+   "src": "MINE",
+   "why": "swept, not fitted once: the control does not determine a variogram range and single fits pin to the largest lag centre"
+  },
+  {
+   "name": "n_lags",
+   "value": "25",
+   "src": "MINE",
+   "why": "lag bins in the empirical variogram; excludes nothing -- it sets the resolution at which the sweep can see structure, not which marks enter"
+  },
+  {
+   "name": "n_pairs",
+   "value": "800000",
+   "src": "MINE",
+   "why": "random pairs drawn per variogram; excludes no marks, but a small value would add sampling noise to the fit and so to sd_field"
+  },
+  {
+   "name": "estimators",
+   "value": "('dowd', 'matheron')",
+   "src": "MINE",
+   "why": "dowd is robust, matheron is classical; both are run so the nugget/sill partition's instability is visible"
+  },
+  {
+   "name": "seed",
+   "value": "0",
+   "src": "MINE",
+   "why": "fixes the random pair draw so the run is reproducible; changing it re-draws pairs and moves the fit slightly, not the marks"
+  },
+  {
+   "name": "cover_treatment",
+   "value": "'ALL swept; none chosen'",
+   "src": "MINE",
+   "why": "the largest single lever in the problem; choosing one here would silently set the datum"
+  },
+  {
+   "name": "bridge_mm",
+   "value": "(-4.04, None)",
+   "src": "MINE",
+   "why": "delivered-surface -> our reconstructed surface; None means NOT applied and NOT assumed zero"
+  }
+ ],
+ "masks": [],
+ "columns": {
+  "epoch": "which acquisition the constant is for",
+  "selection": "gen2 surface (if any) and cover treatment",
+  "n_marks": "control marks entering the kriging system",
+  "constant_mm": "constant to ADD to the DELIVERED surface at the site, mm; median over the variogram sweep; positive = surface reads LOW",
+  "sweep_min_mm": "smallest constant over the variogram sweep, mm",
+  "sweep_max_mm": "largest constant over the variogram sweep, mm",
+  "sd_field_mm": "sd of the error in predicting the spatially correlated component of the surface offset at this coordinate, mm; median over the sweep; NOT an SE of a mean over marks",
+  "sd_field_min_mm": "smallest sd_field over the sweep, mm",
+  "sd_field_max_mm": "largest sd_field over the sweep, mm"
+ },
+ "notes": [
+  "gen1 reads ONLY the 2008 table and gen2 ONLY the 2021 table. No cross-epoch control is read and no flight-line chaining is performed.",
+  "sd_field is set by the fitted nugget/sill partition, which short-lag pairs do not identify on a control set spread over ~200 km; its sweep range is reported for that reason."
+ ],
+ "headline": "gen1 open -12.99 mm; gen2 ql1_laz open -6.56 mm; gen2 ql0_laz open +5.28 mm",
+ "unasked": [
+  "gen2_surfaces",
+  "max_lags_m",
+  "n_lags",
+  "n_pairs",
+  "estimators",
+  "seed",
+  "cover_treatment",
+  "bridge_mm"
+ ],
+ "session": ""
+}

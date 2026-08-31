@@ -1,0 +1,74 @@
+{
+ "question": "does the level Pool 5 water surface measure one gen1 flight line's across-track coefficient on its own, without any other line?",
+ "started": "2026-08-26T16:49:11+02:00",
+ "argv": [
+  "analysis/degeneracy_water_surface.py"
+ ],
+ "seconds": 3.7,
+ "cwd": "/home/awickert/projects/lidar-diff-icp",
+ "inputs": [
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4358-26-03.laz",
+   "role": "raw 2008 gen1 LAZ tile holding the Mississippi Pool 5 backwater, vendor classification (9 = water)",
+   "bytes": 23902428,
+   "mtime": "2026-08-18T07:46:07",
+   "digest": "905bc2844edf"
+  }
+ ],
+ "params": [
+  {
+   "name": "dz_m",
+   "value": "0.3",
+   "src": "MINE",
+   "why": "keeps class-9 returns within this distance of the line's modal water elevation, to exclude a second water body or a mis-classified bank; the effect of 0.15/0.30/0.60 m is measured and printed below"
+  },
+  {
+   "name": "block_m",
+   "value": "50.0",
+   "src": "repo",
+   "why": "the 50 m cluster-robust block size used by swath_across_track_test.py"
+  },
+  {
+   "name": "h_m",
+   "value": "2562.0",
+   "src": "repo",
+   "why": "flying height, SWATH_ACROSS_TRACK_TEST.md Sec 0"
+  },
+  {
+   "name": "chunk",
+   "value": "2000000",
+   "src": "MINE",
+   "why": "points per streamed read, a memory ceiling only; the reduction is done after the whole tile is assembled so it changes no result"
+  }
+ ],
+ "masks": [],
+ "columns": {
+  "psid": "point_source_id, i.e. the flight line, dimensionless integer",
+  "dz_win": "half-window about the modal water elevation, m",
+  "n": "class-9 water returns of that line inside the window",
+  "blocks": "independent 50 m spatial blocks they span",
+  "x_span": "easting span of those returns, m",
+  "tan_lo": "minimum tan(scan_angle_rank) over them",
+  "tan_hi": "maximum of the same",
+  "z_sd": "standard deviation of the water-return elevation, m",
+  "c_mm": "OLS slope of elevation on tan(scan angle) within the line, mm per unit tangent -- the line's own across-track coefficient if the surface is level",
+  "c_se": "its cluster-robust standard error, mm per unit tangent",
+  "h_sign": "sign of the line's body-fixed side, from its heading (N-bound = +1)",
+  "c_over_h": "c_mm / (h_sign * h): the cross-track TILT the coefficient implies, mm/km. Common to all lines = the pool's own slope; differing = per-line roll",
+  "dzdx": "OLS slope of the water elevation on EASTING, mm/km: the pool surface slope as the lidar sees it, pooled over the line",
+  "dzdy": "the same on NORTHING, mm/km",
+  "pair": "the two flight lines differenced, dimensionless ids",
+  "c_A_hat": "the lower-numbered line's raw water-fit coefficient, mm per unit tangent",
+  "c_B_hat": "the higher-numbered line's raw water-fit coefficient, mm per unit tangent",
+  "q": "(c_A_hat - c_B_hat)/2: the antisymmetric combination the N-S overlaps cannot see, mm per unit tangent, with the common water response cancelled",
+  "q_se": "its standard error from the two independent fits, mm per unit tangent",
+  "q_per_poolslope": "mm per unit tangent of systematic error in q per 1 mm/km of true pool surface slope in easting (= h in km)"
+ },
+ "notes": [],
+ "headline": "per-line across-track coefficient from a level Pool 5 water surface",
+ "unasked": [
+  "dz_m",
+  "chunk"
+ ],
+ "session": ""
+}

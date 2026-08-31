@@ -1,0 +1,70 @@
+{
+ "question": "Does the ground-return median float on grass at the control marks the gen1 datum rests on, and by how much relative to open ground generally?",
+ "started": "2026-08-31T17:08:32+02:00",
+ "argv": [
+  "ground_control/run_grass_lift_check.py",
+  "--product",
+  "ground_control/products/gen1_datum_by_returns_elba_L1O.json",
+  "--tiles",
+  "data/before",
+  "--radius-m",
+  "7.5",
+  "--read-half-width-m",
+  "50.0",
+  "--reference-open-upland-mm",
+  "60.2"
+ ],
+ "seconds": 10.7,
+ "cwd": "/home/awickert/projects/lidar-diff-icp",
+ "inputs": [
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/ground_control/products/gen1_datum_by_returns_elba_L1O.json",
+   "role": "the marks the adopted gen1 constant is measured from",
+   "bytes": 999,
+   "mtime": "2026-08-31T16:30:49",
+   "digest": "a568c6060328"
+  }
+ ],
+ "params": [
+  {
+   "name": "radius_m",
+   "value": "7.5",
+   "src": "MINE",
+   "why": "disc within which returns are taken; matches the tie estimator's own pipeline-scale radius so the statistic describes the ties' own support"
+  },
+  {
+   "name": "ground_source",
+   "value": "'vendor class 2'",
+   "src": "repo",
+   "why": "the source those ties used; measuring the lift on a DIFFERENT ground source would not describe them"
+  },
+  {
+   "name": "detrend",
+   "value": "'order-2 surface removed first'",
+   "src": "MINE",
+   "why": "without it terrain slope inside the disc masquerades as vertical spread"
+  },
+  {
+   "name": "reference_open_upland_mm",
+   "value": "60.2",
+   "src": "andy",
+   "why": "the other session's gen1-internal open-upland figure, for comparison; their statistic is PER CELL and this one is per disc, so the two are indicative rather than strictly like-for-like"
+  }
+ ],
+ "masks": [],
+ "columns": {
+  "point_id": "control mark id",
+  "n_ground": "vendor class-2 returns within radius_m, count",
+  "p50_p10_mm": "median minus 10th percentile of the DETRENDED return residuals, mm -- a spread, NOT a bias",
+  "p95_p05_mm": "95th minus 5th percentile of the same, mm",
+  "stat": "name of the statistic",
+  "value": "its value; mm unless stated"
+ },
+ "notes": [],
+ "headline": "median p50-p10 40.9 mm at the datum's marks against 60.2 mm for open upland generally",
+ "unasked": [
+  "radius_m",
+  "detrend"
+ ],
+ "session": ""
+}

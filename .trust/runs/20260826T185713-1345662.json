@@ -1,0 +1,150 @@
+{
+ "question": "what is gen1's absolute vertical datum at this site, measured against the 2008 MnGeo control the acquisition was itself validated on?",
+ "started": "2026-08-26T18:56:16+02:00",
+ "argv": [
+  "analysis/groundtruth/gen1_datum_at_site.py",
+  "--easting",
+  "579705.72",
+  "--northing",
+  "4883677.71",
+  "--radius-km",
+  "20",
+  "--mode",
+  "common_datum",
+  "--corrections",
+  "data/derived/elbaext/corrections_geoid.json",
+  "--tiles",
+  "data/before",
+  "--out",
+  "/tmp/claude-1000/-home-awickert-projects-lidar-diff-icp/fcf38646-c462-4fe8-b23f-2d07528a329b/scratchpad/gd/common_elbaext.json"
+ ],
+ "seconds": 57.2,
+ "cwd": "/home/awickert/projects/lidar-diff-icp",
+ "inputs": [
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/src/lidar_diff_icp/groundtruth/data/mn_dnr_2008_control_semn.csv",
+   "role": "the 2008 MnDNR control transcribed from the eight MnGeo county validation reports, NAVD88(GEOID03)",
+   "bytes": 313278,
+   "mtime": "2026-08-26T16:58:09",
+   "digest": "9792fcd677e7"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/mn_tile_centroids.csv",
+   "role": "MnGeo statewide tile centroid index, for naming the tile each mark falls in",
+   "bytes": 2476268,
+   "mtime": "2026-08-18T14:29:10",
+   "digest": "790a2fd7e2f7"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elbaext/corrections_geoid.json",
+   "role": "per-swath alignment constants solved by coreg.align_swaths, gen1-internal",
+   "bytes": 27679,
+   "mtime": "2026-08-26T17:24:39",
+   "digest": "12bb6df04808"
+  }
+ ],
+ "params": [
+  {
+   "name": "site_easting_m",
+   "value": "579705.72",
+   "src": "andy",
+   "why": "the site asked about"
+  },
+  {
+   "name": "site_northing_m",
+   "value": "4883677.71",
+   "src": "andy",
+   "why": "the site asked about"
+  },
+  {
+   "name": "search_radius_km",
+   "value": "20.0",
+   "src": "andy",
+   "why": "supplied on the command line; the module has no default radius"
+  },
+  {
+   "name": "cover_class",
+   "value": "'ALL COVERS POOLED'",
+   "src": "andy",
+   "why": "supplied on the command line; pooling covers measures canopy, not datum"
+  },
+  {
+   "name": "mode",
+   "value": "'common_datum'",
+   "src": "andy",
+   "why": "per_line = swath constants unknown; common_datum = align_swaths constants applied"
+  },
+  {
+   "name": "swath_constants",
+   "value": "\"/home/awickert/projects/lidar-diff-icp/data/derived/elbaext/corrections_geoid.json per_swath_internal_alignment_dxdydz_m, swath_tie='intercept', ground_source='csf', res_m=5.0\"",
+   "src": "repo",
+   "why": "/home/awickert/projects/lidar-diff-icp/data/derived/elbaext/corrections_geoid.json per_swath_internal_alignment_dxdydz_m, swath_tie='intercept', ground_source='csf', res_m=5.0"
+  },
+  {
+   "name": "ground_source",
+   "value": "'vendor class 2'",
+   "src": "repo",
+   "why": "ASPRS bare earth as delivered; CSF is ~460 s/tile and the 2026-08-26 control run measured the ground-source effect at 6.5 mm median absolute over 16 marks"
+  },
+  {
+   "name": "geoid_shift_m",
+   "value": "0.0",
+   "src": "repo",
+   "why": "both sides are NAVD88(GEOID03); assert_no_geoid_conversion checks it per mark and raises rather than converting"
+  },
+  {
+   "name": "lateral_shift_m",
+   "value": "None",
+   "src": "repo",
+   "why": "NOT applied: a cross-epoch term has no place in gen1 vs its own control"
+  },
+  {
+   "name": "res_m",
+   "value": "5.0",
+   "src": "repo",
+   "why": "corrections.json res_m; sets the radius ladder"
+  },
+  {
+   "name": "threshold_on_the_screen",
+   "value": "'none'",
+   "src": "repo",
+   "why": "the screen statistics are printed for every mark and NOTHING is cut on them; the radius-spread screen was measured not to reduce site-to-site scatter (analysis/GEN1_DATUM_MODULE.md)"
+  }
+ ],
+ "masks": [],
+ "columns": {
+  "tile": "the gen1 tile the mark falls in",
+  "on_disk": "True when a file of that name was found in one of search_dirs",
+  "n_marks": "control marks falling in that tile, count",
+  "marks": "the control mark ids in that group",
+  "path": "the file found, or '' when the tile must be fetched",
+  "point": "control mark id (first spelling in the bundled CSV)",
+  "cover": "MnDNR land-cover class of the mark: L1O open, L2T tall weeds/crops, L3B brush/low trees, L4F forested, L5U urban",
+  "km": "distance from whatever the search was relative to, km",
+  "tie_mm": "surveyed elevation minus gen1 ground at the mark, mm; the constant to ADD to gen1. No geoid term (both sides GEOID03)",
+  "sigma_mm": "half the tie's radius spread over the pipeline-scale radii, mm",
+  "line": "point_source_id contributing the most ground returns within radius_m",
+  "line_frac": "that line's share of the ground returns within radius_m, 0-1",
+  "n_lines": "distinct point_source_id values within radius_m, count",
+  "line_counts": "every point_source_id within radius_m with its return count",
+  "n": "ground returns within the report radius, count",
+  "slope_deg": "|grad S| of the local order-2 surface at the mark, degrees",
+  "relief_mm": "p95 - p05 of return elevations within the report radius, mm",
+  "fit_rms_mm": "RMS of z_i - S(x_i, y_i) for that surface, mm",
+  "radius_spread_mm": "max - min of the tie across the pipeline-scale radii (res/2 to 2*res), mm -- how much the answer depends on an unstated window",
+  "mean_mm": "mean tie over that line's marks, mm",
+  "sd_mm": "sd of the ties within that line, mm (nan for n = 1)",
+  "se_mm": "sd_mm / sqrt(n), mm; the within-line SE, not the datum's",
+  "resid_mm": "common_datum only: the line's mean minus the datum value, mm -- how far the swath network's constant for this line sits from ground truth",
+  "stat": "name of the statistic on this row",
+  "value": "its value, units in the name"
+ },
+ "notes": [
+  "1004 transcribed rows -> 963 physical marks; 41 rows merged as the same mark published in more than one county report (exact match on easting, northing and elevation)",
+  "no geoid conversion: all 98 marks and the lidar are on NAVD88(GEOID03); checked, not assumed",
+  "27 of 65 tiles are on disk; 38 would have to be fetched and NONE was"
+ ],
+ "headline": "gen1 datum +44.4 +/- 30.5 mm (common_datum, 14 marks, 6 lines)",
+ "unasked": [],
+ "session": ""
+}

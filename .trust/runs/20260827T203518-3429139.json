@@ -1,0 +1,100 @@
+{
+ "question": "What are gen1's defensible datum routes at this site, and how far apart are they?",
+ "started": "2026-08-27T20:34:48+02:00",
+ "argv": [
+  "ground_control/compare_gen1_routes.py",
+  "--easting",
+  "578762.8",
+  "--northing",
+  "4884487.6",
+  "--tracks",
+  "ground_control/data/gen1_line_tracks.json",
+  "--psids",
+  "133",
+  "134",
+  "135",
+  "136",
+  "137",
+  "138",
+  "--covers",
+  "L1O",
+  "L5U",
+  "--tiles",
+  "data/before",
+  "--res",
+  "5.0",
+  "--field-product",
+  "ground_control/products/elba__gen1__open__datum.json",
+  "--bridge-product",
+  "ground_control/products/bridge_wide_L1O.json",
+  "--out",
+  "ground_control/products/gen1_routes_elba.json"
+ ],
+ "seconds": 29.5,
+ "cwd": "/home/awickert/projects/lidar-diff-icp",
+ "inputs": [
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/ground_control/products/elba__gen1__open__datum.json",
+   "role": "kriged residual-field datum at this site, open ground",
+   "bytes": 4288,
+   "mtime": "2026-08-27T19:58:41",
+   "digest": "3d61a11cbac2"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/ground_control/products/bridge_wide_L1O.json",
+   "role": "per-mark bridge; its population mean carries a delivered-surface constant onto OUR surface",
+   "bytes": 8208,
+   "mtime": "2026-08-27T19:47:04",
+   "digest": "b8f05703cc29"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/ground_control/data/gen1_line_tracks.json",
+   "role": "flight-line tracks, one per PASS",
+   "bytes": 362313,
+   "mtime": "2026-08-27T17:57:25",
+   "digest": "9ac0db133b79"
+  }
+ ],
+ "params": [
+  {
+   "name": "site",
+   "value": "(578762.8, 4884487.6)",
+   "src": "andy",
+   "why": ""
+  },
+  {
+   "name": "covers",
+   "value": "('L1O', 'L5U')",
+   "src": "andy",
+   "why": ""
+  },
+  {
+   "name": "psids",
+   "value": "(133, 134, 135, 136, 137, 138)",
+   "src": "andy",
+   "why": ""
+  },
+  {
+   "name": "routes",
+   "value": "('residual_field', 'same_line_pass', 'same_line_psid')",
+   "src": "MINE",
+   "why": "every route reachable from committed code; none is preferred here"
+  }
+ ],
+ "masks": [],
+ "columns": {
+  "route": "which estimator produced the constant",
+  "n": "marks entering it, count",
+  "unit": "the unit of replication its uncertainty is over",
+  "delivered_mm": "constant to ADD to the DELIVERED gen1 surface, mm",
+  "uncert_mm": "its stated uncertainty, mm -- see 'unit' for what OF",
+  "bridged_mm": "the same constant carried onto OUR reconstructed surface, mm (delivered + bridge)",
+  "reproducible": "whether committed code regenerates it"
+ },
+ "notes": [],
+ "headline": "3 routes spanning 80.5 mm",
+ "unasked": [
+  "routes"
+ ],
+ "session": ""
+}

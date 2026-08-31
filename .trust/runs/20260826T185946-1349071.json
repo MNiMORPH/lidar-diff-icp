@@ -1,0 +1,132 @@
+{
+ "question": "Does widening the 2008-control catchment on gen1's own flight lines 133-138 enlarge the set and tighten gen1's datum?",
+ "started": "2026-08-26T18:59:46+02:00",
+ "argv": [
+  "analysis/groundtruth/gen1_more_marks_report.py"
+ ],
+ "seconds": 0.3,
+ "cwd": "/home/awickert/projects/lidar-diff-icp",
+ "inputs": [
+  {
+   "path": "/tmp/claude-1000/-home-awickert-projects-lidar-diff-icp/fcf38646-c462-4fe8-b23f-2d07528a329b/scratchpad/more_marks.csv",
+   "role": "per-mark ties + siting screen, vendor class-2 ground, no geoid shift, no lateral shift",
+   "bytes": 11828,
+   "mtime": "2026-08-26T18:55:54",
+   "digest": "ab818f17e060"
+  },
+  {
+   "path": "/tmp/claude-1000/-home-awickert-projects-lidar-diff-icp/fcf38646-c462-4fe8-b23f-2d07528a329b/scratchpad/more_marks_perline.csv",
+   "role": "per-mark-per-line ties, restricted to that line's own returns",
+   "bytes": 4416,
+   "mtime": "2026-08-26T18:55:54",
+   "digest": "67e3fb9d3dba"
+  },
+  {
+   "path": "/tmp/claude-1000/-home-awickert-projects-lidar-diff-icp/fcf38646-c462-4fe8-b23f-2d07528a329b/scratchpad/line_tracks.json",
+   "role": "whole-line straight ground-track fits; used for TARGETING only",
+   "bytes": 55180,
+   "mtime": "2026-08-26T18:50:50",
+   "digest": "4feff222e2df"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elbaext/corrections_geoid.json",
+   "role": "the pipeline's own per-swath internal alignment, the thing the marks are tested against",
+   "bytes": 27679,
+   "mtime": "2026-08-26T17:24:39",
+   "digest": "12bb6df04808"
+  }
+ ],
+ "params": [
+  {
+   "name": "lines",
+   "value": "[133, 134, 135, 136, 137, 138]",
+   "src": "andy",
+   "why": "Elba's own flight lines"
+  },
+  {
+   "name": "cover_classes",
+   "value": "['L1O', 'L5U']",
+   "src": "repo",
+   "why": "ADDITIONAL_GROUND_CONTROL.md section 7.1 / GEN1_OWN_CONTROL_TIE.md section 4: the vegetated classes measure canopy, not datum"
+  },
+  {
+   "name": "catchment_radius_m",
+   "value": "2000.0",
+   "src": "MINE",
+   "why": "widened from the previous 500 m purely to MEASURE where the catchment ends; it selects candidates to READ, and the line assignment that decides membership is read off point_source_id, not off this"
+  },
+  {
+   "name": "ground_source",
+   "value": "'vendor_class2'",
+   "src": "andy",
+   "why": "CSF is ~460 s/tile"
+  },
+  {
+   "name": "geoid_shift_m",
+   "value": "0.0",
+   "src": "repo",
+   "why": "2008 control is NAVD88(GEOID03) and so is the raw gen1 cloud -- same frame, nothing to convert"
+  },
+  {
+   "name": "swath_shift_m",
+   "value": "(0.0, 0.0, 0.0)",
+   "src": "repo",
+   "why": "no gen2-derived term in a gen1-against-its-own-control comparison"
+  }
+ ],
+ "masks": [
+  {
+   "name": "on_lines_133_138",
+   "kept": 18,
+   "total": 30,
+   "frac": 0.6,
+   "defn": "the mark's vendor class-2 ground returns inside the 7.5 m report radius include at least one point_source_id in 133-138",
+   "warn": false
+  }
+ ],
+ "columns": {
+  "line": "point_source_id of the returns the tie was estimated from (unitless id)",
+  "n_marks": "count of open/urban 2008 control marks carrying that line's ground returns",
+  "mean_mm": "mean over those marks of tie = surveyed - z_lidar, mm; positive = gen1 reads BELOW the mark",
+  "sd_mm": "sample sd of tie over those marks (ddof=1)",
+  "SE_mm": "standard error of the mean of the per-mark ties on that line, sd/sqrt(n_marks), mm",
+  "median_mm": "median of tie over those marks",
+  "km_min": "smallest distance from the Elba reference point, km",
+  "km_max": "largest distance from the Elba reference point, km",
+  "R_m": "candidate catchment: |cross-track| to the nearest 133-138 centreline",
+  "n_cand": "count of open/urban control marks inside R_m",
+  "n_on_lines": "count of those candidates whose ground returns actually include a point_source_id in 133-138",
+  "n_tiles": "count of distinct gen1 tiles the candidates fall in",
+  "n_new_tiles": "count of those tiles not already on disk before this run",
+  "point": "MnDNR 2008 control point identifier (unitless label)",
+  "cls": "MnDNR land-cover class label: L1O open terrain, L5U urban (unitless)",
+  "km": "distance from the Elba reference point (579705.72, 4883677.71), km",
+  "d_near_m": "|cross-track| to the nearest of the six centrelines",
+  "line_proxy": "line id assigned by nearest fitted centreline -- the OLD rule (unitless id)",
+  "line_psid": "line id(s) actually present in the ground returns at the mark -- the NEW rule (unitless id)",
+  "n_report": "count of ground returns inside the 7.5 m report radius",
+  "tie_mm": "surveyed - z_lidar at the report radius, that line's returns only",
+  "sigma_mm": "half the tie spread across the pipeline-scale radii (2.5-10 m)",
+  "ladder_mm": "full tie spread across the pipeline-scale radii",
+  "spread_mm": "local p05-p95 of ground z within 5 m -- section 7.1 siting",
+  "ctrl_pct": "percentile of the surveyed height in that local z distribution",
+  "dnr_mm": "MnDNR's own Control Z - Surface Z for this mark, mm",
+  "cut_mm": "the sweep value: marks with ladder_mm <= this are kept, mm",
+  "sigma_site_mm": "pooled sd of tie about its own line's mean (ANOVA within-line)",
+  "sd_all_mm": "sd of tie over all kept marks, ignoring line",
+  "quantity": "name of the statistic stated in this row (unitless label)",
+  "value": "the value of that statistic, with its unit printed in the cell",
+  "note": "how that value was obtained (unitless text)",
+  "dz_pipeline_mm": "the vertical component of corrections_geoid.json per_swath_internal_alignment_dxdydz_m for this line, converted to mm",
+  "mark_mean_mm": "the mark-derived mean tie for this line, mm",
+  "n_kept": "count of mark-line ties surviving the cut",
+  "n_lines_kept": "count of distinct flight lines surviving the cut",
+  "mean_mm_kept": "mean of tie over the surviving mark-line ties, mm"
+ },
+ "notes": [],
+ "headline": "18 marks, 6 lines, mean of line means +55.0 +/- 16.6 mm; widening the catchment from 500 m to 2000 m added 0 marks",
+ "unasked": [
+  "catchment_radius_m"
+ ],
+ "session": ""
+}

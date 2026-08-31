@@ -1,0 +1,101 @@
+{
+ "question": "is a gen1 flight-line vertical tie a property of the LINE, or of the place it was fitted?",
+ "started": "2026-08-26T19:01:27+02:00",
+ "argv": [
+  "analysis/local_tie_chaining.py",
+  "--section",
+  "ladder"
+ ],
+ "seconds": 43.4,
+ "cwd": "/home/awickert/projects/lidar-diff-icp",
+ "inputs": [
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-29-64.laz",
+   "role": "gen1 tile over the Elba study area, for the window ladder",
+   "bytes": 27153945,
+   "mtime": "2026-08-15T14:33:13",
+   "digest": "436012d25b08"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-28-64.laz",
+   "role": "gen1 tile over the Elba study area, for the window ladder",
+   "bytes": 28042351,
+   "mtime": "2026-08-22T09:19:13",
+   "digest": "24646accb38c"
+  }
+ ],
+ "params": [
+  {
+   "name": "res_m",
+   "value": "2.0",
+   "src": "repo",
+   "why": "coreg.coregister_swaths / align_swaths default grid resolution (2.0 m)"
+  },
+  {
+   "name": "exclude",
+   "value": "(5, 6, 9)",
+   "src": "repo",
+   "why": "coreg.coregister_swaths terrain proxy ~isin(classification,(5,6,9)) -- the VENDOR classes, so no CSF run is needed"
+  },
+  {
+   "name": "tie_modes",
+   "value": "('overlap_median', 'intercept')",
+   "src": "repo",
+   "why": "the two estimators coreg.coregister_swaths supports; corrections_geoid.json records swath_tie='intercept' as the pipeline's"
+  },
+  {
+   "name": "half_width_m",
+   "value": "400.0",
+   "src": "MINE",
+   "why": "window half-width for the along-track sweep and the chains. There is NO library default and none is invented here; 400 m is one rung of the ladder in section 2, chosen so the window fits inside a single 2.5 km tile at every along-track sample. Section 2 measures what the choice costs; section 3 is re-runnable at any other rung with --half-width-m"
+  },
+  {
+   "name": "ladder_half_widths_m",
+   "value": "(100.0, 200.0, 400.0, 800.0, 1200.0)",
+   "src": "MINE",
+   "why": "the window sizes reported in section 2. Chosen to span a factor of 12, from below one flight-line sidelap width to a whole tile; nothing is excluded on their basis, the whole ladder is printed"
+  },
+  {
+   "name": "shape",
+   "value": "'square'",
+   "src": "MINE",
+   "why": "square window. A disk would give a ragged grid edge and fewer cells for the same half-width; localtie supports both and --shape switches it"
+  },
+  {
+   "name": "mark_radius_m",
+   "value": "25.0",
+   "src": "MINE",
+   "why": "radius within which a mark's flight line is identified by return count (groundtruth.chain.covering_lines). It selects WHICH LINE the mark is on, not which marks are used; every mark is reported"
+  },
+  {
+   "name": "target_line",
+   "value": "137",
+   "src": "MINE",
+   "why": "the frame the marks are carried into. 137 is the middle Elba line and the one the brief names; --target-line changes it"
+  }
+ ],
+ "masks": [],
+ "columns": {
+  "pair": "flight-line pair, ref-src; dz is added to src to reach ref's frame",
+  "tie_mode": "which coreg tie estimator: overlap_median or intercept",
+  "half_width_m": "window half-width about the stated location, m",
+  "dz_mm": "the tie, from coreg.coregister_swaths in the stated tie mode, mm",
+  "dz_sig_mm": "coreg's formal 1-sigma, nmad_after/sqrt(n_cells), mm -- optimistic",
+  "dz_median_mm": "independent check: median of the UNSHIFTED overlap difference, mm",
+  "nk_cells": "cells the Nuth & Kaeaeb fit used; 0 means the fit was abandoned",
+  "ovl_cells": "cells where both lines have terrain returns in this window",
+  "ovl_km2": "that overlap's area, km^2",
+  "nmad1_mm": "robust scatter left in the overlap after the tie, mm",
+  "degenerate": "YES when the N&K fit used zero cells (dz is then coreg's 0.0)"
+ },
+ "notes": [],
+ "headline": "",
+ "unasked": [
+  "half_width_m",
+  "ladder_half_widths_m",
+  "shape",
+  "mark_radius_m",
+  "target_line"
+ ],
+ "session": ""
+}

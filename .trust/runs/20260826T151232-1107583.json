@@ -1,0 +1,162 @@
+{
+ "question": "are the gen1 per-swath dx/dy/dz constants samples of one continuous mission-time drift, or per-flight-line quantities that gps_time merely correlates with?",
+ "started": "2026-08-26T15:12:32+02:00",
+ "argv": [
+  "analysis/mission_time_drift.py"
+ ],
+ "seconds": 0.0,
+ "cwd": "/home/awickert/projects/lidar-diff-icp",
+ "inputs": [
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-29-64.laz",
+   "role": "elba: gen1 (2008-2012 MN) cloud align_swaths was run on -- point_source_id + gps_time per return",
+   "bytes": 27153945,
+   "mtime": "2026-08-15T14:33:13",
+   "digest": "436012d25b08"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elba/corrections.json",
+   "role": "elba: saved per_swath_internal_alignment_dxdydz_m (m) and grid bounds",
+   "bytes": 19178,
+   "mtime": "2026-08-19T08:41:41",
+   "digest": "be4c64a8d46b"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/elbaext_gen1_merged.laz",
+   "role": "elbaext: gen1 (2008-2012 MN) cloud align_swaths was run on -- point_source_id + gps_time per return",
+   "bytes": 56723164,
+   "mtime": "2026-08-25T14:26:52",
+   "digest": "f677c5de6931"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elbaext/corrections.json",
+   "role": "elbaext: saved per_swath_internal_alignment_dxdydz_m (m) and grid bounds",
+   "bytes": 27909,
+   "mtime": "2026-08-22T11:41:33",
+   "digest": "caa9d2f619bc"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4358-26-03.laz",
+   "role": "whitewater: gen1 (2008-2012 MN) cloud align_swaths was run on -- point_source_id + gps_time per return",
+   "bytes": 23902428,
+   "mtime": "2026-08-18T07:46:07",
+   "digest": "905bc2844edf"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/whitewater/corrections.json",
+   "role": "whitewater: saved per_swath_internal_alignment_dxdydz_m (m) and grid bounds",
+   "bytes": 19044,
+   "mtime": "2026-08-19T08:50:27",
+   "digest": "6bc6bd7dc0ad"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before_mnrv/4342-23-01.laz",
+   "role": "mnrv: gen1 (2008-2012 MN) cloud align_swaths was run on -- point_source_id + gps_time per return",
+   "bytes": 62663333,
+   "mtime": "2026-08-18T08:04:40",
+   "digest": "25ea0879ffab"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/mnrv/corrections.json",
+   "role": "mnrv: saved per_swath_internal_alignment_dxdydz_m (m) and grid bounds",
+   "bytes": 27676,
+   "mtime": "2026-08-19T09:01:15",
+   "digest": "2543e887a720"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before_ne/1158-31-59.laz",
+   "role": "cook: gen1 (2008-2012 MN) cloud align_swaths was run on -- point_source_id + gps_time per return",
+   "bytes": 53829519,
+   "mtime": "2026-08-18T10:50:33",
+   "digest": "02d1247f0762"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/cook/corrections.json",
+   "role": "cook: saved per_swath_internal_alignment_dxdydz_m (m) and grid bounds",
+   "bytes": 19798,
+   "mtime": "2026-08-19T09:10:34",
+   "digest": "9aab1d5182c3"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before_carlton/2742-12-53.laz",
+   "role": "carlton: gen1 (2008-2012 MN) cloud align_swaths was run on -- point_source_id + gps_time per return",
+   "bytes": 85836095,
+   "mtime": "2026-08-18T11:02:26",
+   "digest": "cd1bbe4a89f0"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/carlton/corrections.json",
+   "role": "carlton: saved per_swath_internal_alignment_dxdydz_m (m) and grid bounds",
+   "bytes": 24502,
+   "mtime": "2026-08-19T09:19:33",
+   "digest": "963f220b8fda"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before_battlecreek/4342-03-32_b_a.laz",
+   "role": "battlecreek: gen1 (2008-2012 MN) cloud align_swaths was run on -- point_source_id + gps_time per return",
+   "bytes": 27438940,
+   "mtime": "2026-08-18T14:36:56",
+   "digest": "4e8c216a8861"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/battlecreek/corrections.json",
+   "role": "battlecreek: saved per_swath_internal_alignment_dxdydz_m (m) and grid bounds",
+   "bytes": 18743,
+   "mtime": "2026-08-19T13:36:31",
+   "digest": "4a81413865f7"
+  }
+ ],
+ "params": [
+  {
+   "name": "min_pts",
+   "value": "2000",
+   "src": "repo",
+   "why": "coreg.fit_along_track_drift default; used for a SECONDARY disclosure row only"
+  },
+  {
+   "name": "swath_reference",
+   "value": "'min(point_source_id)'",
+   "src": "repo",
+   "why": "pipeline.difference_dem calls align_swaths(ref=int(ps8.min())) -- that swath's (dx,dy,dz) is pinned to zero and is NOT an observation"
+  }
+ ],
+ "masks": [],
+ "columns": {
+  "site": "study site = one gen1 tile/merge processed by scripts/run_all_sites.py",
+  "swath": "point_source_id (flight line) in the gen1 file",
+  "n_file": "returns of that swath in the whole gen1 file (the extent align_swaths saw)",
+  "n_grid": "returns of that swath inside the analysis bounds (what the drift fit saw)",
+  "t_mid": "mean gps_time of the swath over the whole file, s (raw file units)",
+  "span_s": "t_max - t_min of the swath over the whole file, s",
+  "gap_s": "elapsed gps_time from the previous swath's t_mid, s (time order)",
+  "dx_m": "saved per-swath alignment East shift, m (added to gen1 x)",
+  "dy_m": "saved per-swath alignment North shift, m (added to gen1 y)",
+  "dz_mm": "saved per-swath alignment vertical shift, mm (added to gen1 z)",
+  "hdg_deg": "flight heading from a least-squares fit of x(t), y(t), deg clockwise from North",
+  "axis": "which of dz / dx / dy / across-track / along-track is being regressed",
+  "nsw": "number of swaths entering the fit (reference swath excluded unless stated)",
+  "r": "Pearson correlation of the axis against gps_time across swaths",
+  "slope_per_h": "ordinary-least-squares slope against gps_time, mm/hour (dz) or m/hour (dx,dy)",
+  "r_incl_ref": "same Pearson r with the forced-zero reference swath INCLUDED",
+  "R2_time": "R-squared of a 2-parameter fit linear in elapsed gps_time",
+  "R2_ordinal": "R-squared of a 2-parameter fit linear in flight-line ordinal (time order)",
+  "cv_per_h": "coefficient of variation of the consecutive-pair step expressed PER HOUR",
+  "cv_per_line": "coefficient of variation of the same steps expressed PER LINE",
+  "pair": "consecutive pair of swaths in time order",
+  "d_dz_mm": "dz of the later swath minus dz of the earlier, mm",
+  "rate_mm_h": "d_dz_mm divided by the elapsed gap, mm/hour",
+  "pred_mm": "step the site's own fitted continuous rate predicts over that gap, mm",
+  "dow": "GPS day of week of the swath midpoint (0 = Sunday); only defined for week-seconds files",
+  "date_utc": "UTC date from adjusted-standard gps_time; blank where the file stores week-seconds",
+  "t_mid_elba": "elba mean gps_time for that swath, in-grid, s",
+  "t_mid_ext": "elbaext mean gps_time for the SAME swath, in-grid, s",
+  "dt_s": "t_mid_ext - t_mid_elba, s",
+  "disagree_mm": "elbaext dz minus elba dz for the same swath, both re-referenced to swath 135, mm",
+  "need_mm_s": "mm/s of drift that would be required for dt_s to explain disagree_mm",
+  "gps_time_type": "LAS global encoding bit 0: 0 = GPS week seconds, 1 = adjusted standard GPS time"
+ },
+ "notes": [],
+ "headline": "mission-time drift: correlation vs gap-structure test across 7 gen1 sites",
+ "unasked": [],
+ "session": ""
+}

@@ -1,0 +1,109 @@
+{
+ "question": "Where does each gen1 flight-line PASS run, so that marks it could have seen can be found anywhere along it?",
+ "started": "2026-08-27T17:56:24+02:00",
+ "argv": [
+  "ground_control/run_derive_tracks.py",
+  "--tiles",
+  "data/before/*.laz",
+  "--exclude-substring",
+  "merged",
+  "--out",
+  "ground_control/data/gen1_line_tracks.json",
+  "--chunk-size",
+  "2000000"
+ ],
+ "seconds": 60.8,
+ "cwd": "/home/awickert/projects/lidar-diff-icp",
+ "inputs": [
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-20-62.laz",
+   "role": "gen1 2008 delivered tile; the near-nadir returns give the flight track, and point_source_id names the pass",
+   "bytes": 23919870,
+   "mtime": "2026-08-26T18:53:27",
+   "digest": "27d4ecc178aa"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-20-63.laz",
+   "role": "gen1 2008 delivered tile; the near-nadir returns give the flight track, and point_source_id names the pass",
+   "bytes": 19950022,
+   "mtime": "2026-08-26T18:25:21",
+   "digest": "59ca7348e547"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-21-63.laz",
+   "role": "gen1 2008 delivered tile; the near-nadir returns give the flight track, and point_source_id names the pass",
+   "bytes": 24219191,
+   "mtime": "2026-08-26T18:25:26",
+   "digest": "fbee92d83ffc"
+  }
+ ],
+ "params": [
+  {
+   "name": "n_tiles",
+   "value": "46",
+   "src": "repo",
+   "why": "every gen1 tile already on disk; nothing is downloaded"
+  },
+  {
+   "name": "tiles_glob",
+   "value": "'data/before/*.laz'",
+   "src": "andy",
+   "why": ""
+  },
+  {
+   "name": "stride",
+   "value": "7",
+   "src": "repo",
+   "why": "inherited verbatim from analysis/groundtruth/gen1_line_tracks.py so these tracks are the object that module built"
+  },
+  {
+   "name": "nadir_deg",
+   "value": "2.0",
+   "src": "repo",
+   "why": "inherited verbatim from analysis/groundtruth/gen1_line_tracks.py so these tracks are the object that module built"
+  },
+  {
+   "name": "bin_s",
+   "value": "1.0",
+   "src": "repo",
+   "why": "inherited verbatim from analysis/groundtruth/gen1_line_tracks.py so these tracks are the object that module built"
+  },
+  {
+   "name": "gap_s",
+   "value": "120.0",
+   "src": "repo",
+   "why": "inherited verbatim from analysis/groundtruth/gen1_line_tracks.py so these tracks are the object that module built"
+  },
+  {
+   "name": "min_bin_points",
+   "value": "20",
+   "src": "repo",
+   "why": "inherited verbatim from analysis/groundtruth/gen1_line_tracks.py so these tracks are the object that module built"
+  },
+  {
+   "name": "chunk_size",
+   "value": "2000000",
+   "src": "MINE",
+   "why": "points per streamed read; affects peak memory on this shared laptop only, not the result"
+  }
+ ],
+ "masks": [],
+ "columns": {
+  "psid_pass": "point_source_id and pass index; a psid is NOT a flight line, it is reused across missions and split at gps_time gaps",
+  "n_bins": "gps_time bins surviving min_bin_points, count",
+  "span_km": "straight-line distance between the pass's first and last binned centroid, km",
+  "heading_deg": "bearing from first to last centroid, degrees clockwise from north",
+  "gap_before_s": "gps_time gap to the previous pass of the SAME psid, seconds; blank for the first pass",
+  "resid_med_m": "median perpendicular distance of the binned centroids to the fitted straight track, m",
+  "resid_p95_m": "95th percentile of the same, m"
+ },
+ "notes": [
+  "A gap is not by itself proof of a second pass: it is equally a stretch of line under tiles we do not hold. The gap is printed so the caller judges.",
+  "These tracks TARGET marks. Which line actually illuminated a mark is settled by gen1_datum.assign_line_from_returns from the returns, never by distance to a track."
+ ],
+ "headline": "67 passes over 41 psids from 46 tiles; 16 psids carry more than one pass",
+ "unasked": [
+  "chunk_size"
+ ],
+ "session": ""
+}

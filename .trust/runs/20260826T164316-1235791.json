@@ -1,0 +1,150 @@
+{
+ "question": "what exactly is unidentifiable in the gen1 swath network, and which available observation would determine it?",
+ "started": "2026-08-26T16:43:12+02:00",
+ "argv": [
+  "analysis/degeneracy_identifiability.py"
+ ],
+ "seconds": 3.9,
+ "cwd": "/home/awickert/projects/lidar-diff-icp",
+ "inputs": [
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/groundtruth/elba_gen1_ties.json",
+   "role": "gen1 absolute ties at the surveyed 3DEP checkpoints, mm to ADD to gen1, with each mark's sigma and chain path",
+   "bytes": 4874,
+   "mtime": "2026-08-26T15:50:02",
+   "digest": "3ed1fc52e011"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/analysis/ELBAEXT2_SCOPE.md",
+   "role": "the fitted nadir-track eastings and per-mark cross-track distances quoted below (Sec 2), read not recomputed",
+   "bytes": 20712,
+   "mtime": "2026-08-26T14:39:53",
+   "digest": "6dd2a1042c10"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elba_fulldensity/corrections.json",
+   "role": "pipeline corrections: grid geometry, per-swath alignment, datum, drift",
+   "bytes": 18646,
+   "mtime": "2026-08-25T18:42:16",
+   "digest": "e19161542e9d"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elba_fulldensity/z_after.npy",
+   "role": "gen2 gridded ground (the DoD reference surface), m",
+   "bytes": 2844928,
+   "mtime": "2026-08-21T11:53:20",
+   "digest": "d014cef67453"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elba_fulldensity/beam_offset_table.parquet",
+   "role": "per-return gen1 CSF ground offsets to the gen2 surface, slope-normal mm, with the four registration terms",
+   "bytes": 306344161,
+   "mtime": "2026-08-25T18:44:27",
+   "digest": "6f437488d069"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elbaext/corrections.json",
+   "role": "pipeline corrections: grid geometry, per-swath alignment, datum, drift",
+   "bytes": 27909,
+   "mtime": "2026-08-22T11:41:33",
+   "digest": "caa9d2f619bc"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elbaext/z_after.npy",
+   "role": "gen2 gridded ground (the DoD reference surface), m",
+   "bytes": 5767328,
+   "mtime": "2026-08-22T11:41:33",
+   "digest": "0e91639d5253"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elbaext/beam_offset_table.parquet",
+   "role": "per-return gen1 CSF ground offsets to the gen2 surface, slope-normal mm, with the four registration terms",
+   "bytes": 653013412,
+   "mtime": "2026-08-25T17:52:52",
+   "digest": "25c6d3c56f66"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elba_fulldensity/z_before_absolute.json",
+   "role": "the gen1 absolute datum product and its budget",
+   "bytes": 9793,
+   "mtime": "2026-08-26T15:53:48",
+   "digest": "3f38d2c9f34f"
+  }
+ ],
+ "params": [
+  {
+   "name": "min_cell_line",
+   "value": "1",
+   "src": "repo",
+   "why": "the same definitional floor swath_across_track_test.py runs at, so the two runs read the identical population"
+  },
+  {
+   "name": "block_m",
+   "value": "50.0",
+   "src": "repo",
+   "why": ""
+  },
+  {
+   "name": "h_m",
+   "value": "2562.0",
+   "src": "repo",
+   "why": "flying height, the median |h| of the per-line fits in analysis/SWATH_ACROSS_TRACK_TEST.md Sec 0"
+  }
+ ],
+ "masks": [
+  {
+   "name": "elba_fulldensity reference cells",
+   "kept": 57056,
+   "total": 355600,
+   "frac": 0.16044994375703037,
+   "defn": "refcells.reference_cells() at its repo defaults: divide cells, |curv|<=0.015, slope<12 deg, no building returns, not clear-cut, not blufftop margin, |DoD|<=500 mm",
+   "warn": false
+  },
+  {
+   "name": "elbaext reference cells",
+   "kept": 128950,
+   "total": 720900,
+   "frac": 0.1788736301844916,
+   "defn": "refcells.reference_cells() at its repo defaults: divide cells, |curv|<=0.015, slope<12 deg, no building returns, not clear-cut, not blufftop margin, |DoD|<=500 mm",
+   "warn": false
+  }
+ ],
+ "columns": {
+  "pair": "adjacent flight-line pair index in the synthetic network, dimensionless",
+  "P": "the pair's fitted slope (c_A+c_B)/2, mm per unit tangent",
+  "K": "the pair's fitted intercept, mm",
+  "dP": "change in P under the candidate null direction, mm per unit tangent",
+  "dK": "change in K under the candidate null direction, mm",
+  "line": "flight line index in the synthetic network, dimensionless",
+  "dc": "change in that line's across-track coefficient under the direction, mm per unit tangent",
+  "da": "change in that line's nadir offset under the direction, mm",
+  "tile": "derived-product directory the overlap cells come from",
+  "pairname": "unordered flight-line pair (point_source_id)",
+  "cells": "overlap reference cells used",
+  "sd_sum": "standard deviation of tan(scan_A)+tan(scan_B) over those cells",
+  "sd_dif": "standard deviation of tan(scan_A)-tan(scan_B) over those cells",
+  "p_mm": "fitted (c_A+c_B)/2, mm per unit tangent",
+  "p_se": "its cluster-robust standard error, mm per unit tangent",
+  "q_mm": "fitted (c_A-c_B)/2, mm per unit tangent -- the degenerate combination",
+  "q_se": "its cluster-robust standard error, mm per unit tangent",
+  "se_ratio": "q_se / p_se: how many times worse the degenerate combination is known",
+  "dsum_dz": "OLS slope of tan(scan_A)+tan(scan_B) on the gen2 ground elevation of the same cell, per metre",
+  "dsum_dz_pred": "the value predicted by geometry, mean(sum_tan)/(h - mean z), per metre",
+  "r2_z": "r-squared of that regression, dimensionless",
+  "mark": "surveyed 3DEP checkpoint id",
+  "psid_mark": "the gen1 flight line that overflies the mark",
+  "east": "the mark's easting, m (UTM 15N)",
+  "offnadir": "the mark's distance from that line's fitted nadir track, m",
+  "tan_mark": "tan of the scan angle at which that line sees the mark = offnadir / h",
+  "tie": "surveyed - gen1, mm (the constant to ADD to gen1)",
+  "tie_sigma": "that tie's own standard error, mm",
+  "c_effect": "how much a per-line coefficient of 130 mm per unit tangent moves the tie at that mark: 130 * tan_mark, mm"
+ },
+ "notes": [
+  "elba_fulldensity reference_cells cuts: start=355600, not a divide cell=243595, |curv| > 0.015=12788, slope >= 12 deg=37771, building returns=116, clear-cut (frac drop > 0.3)=1160, blufftop retreat margin=2738, |DoD| > 500 mm=376, kept=57056",
+  "elbaext reference_cells cuts: start=720900, not a divide cell=507896, |curv| > 0.015=23160, slope >= 12 deg=58177, building returns=627, clear-cut (frac drop > 0.3)=1318, |DoD| > 500 mm=772, kept=128950"
+ ],
+ "headline": "the swath-network null space is a global cross-track tilt; a cross line fixes the body-fixed per-line coefficients, ground control fixes the tilt",
+ "unasked": [],
+ "session": ""
+}

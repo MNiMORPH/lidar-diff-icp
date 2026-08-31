@@ -1,0 +1,118 @@
+{
+ "question": "What is gen1's datum at this site, from marks on the site's OWN flight lines, and does searching by point_source_id instead of by PASS change it?",
+ "started": "2026-08-27T21:12:08+02:00",
+ "argv": [
+  "ground_control/run_same_line.py",
+  "--easting",
+  "578762.8",
+  "--northing",
+  "4884487.6",
+  "--tracks",
+  "ground_control/data/gen1_line_tracks.json",
+  "--psids",
+  "133",
+  "134",
+  "135",
+  "136",
+  "137",
+  "138",
+  "--covers",
+  "L1O",
+  "L5U",
+  "--tiles",
+  "data/before",
+  "--res",
+  "5.0",
+  "--half-width-m",
+  "2000",
+  "--collinear-sigma",
+  "3"
+ ],
+ "seconds": 64.3,
+ "cwd": "/home/awickert/projects/lidar-diff-icp",
+ "inputs": [
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/ground_control/data/gen1_line_tracks.json",
+   "role": "gen1 flight-line tracks, one per PASS; TARGETS marks, never assigns them",
+   "bytes": 362313,
+   "mtime": "2026-08-27T17:57:25",
+   "digest": "9ac0db133b79"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/src/lidar_diff_icp/groundtruth/data/mn_dnr_2008_control_semn.csv",
+   "role": "gen1's own 2008 MnGeo/MnDNR control; dnr_error_m is Control Z - Surface Z",
+   "bytes": 313278,
+   "mtime": "2026-08-26T16:58:09",
+   "digest": "9792fcd677e7"
+  }
+ ],
+ "params": [
+  {
+   "name": "site",
+   "value": "(578762.8, 4884487.6)",
+   "src": "andy",
+   "why": ""
+  },
+  {
+   "name": "psids",
+   "value": "(133, 134, 135, 136, 137, 138)",
+   "src": "andy",
+   "why": "the flight lines the site's tile is built from"
+  },
+  {
+   "name": "covers",
+   "value": "('L1O', 'L5U')",
+   "src": "andy",
+   "why": "supplied on the command line; pooling covers measures canopy, not datum"
+  },
+  {
+   "name": "half_width_m",
+   "value": "2000.0",
+   "src": "repo",
+   "why": "half the MEASURED gen1 line spacing (942/987/932/988/956 m, mean 961) = the vendor's class-12 seam at which bare-earth ground is cut, from analysis/GEN1_DATUM_MORE_MARKS.md section 1. Not a chosen radius"
+  },
+  {
+   "name": "res_m",
+   "value": "5.0",
+   "src": "repo",
+   "why": "corrections.json res_m; sets the radius ladder"
+  },
+  {
+   "name": "collinear_sigma",
+   "value": "(3.0,)",
+   "src": "MINE",
+   "why": "scope=track merges passes whose tracks are collinear within this many prediction-sd. SWEPT because at Elba's psids the pairwise verdicts run 0.1 to 21.6 sigma, so the cut changes the grouping"
+  },
+  {
+   "name": "scopes",
+   "value": "('pass', 'psid', 'track')",
+   "src": "MINE",
+   "why": "both are run; they differ ONLY in which tracks the search walks, so the difference isolates the search"
+  },
+  {
+   "name": "swath_constants",
+   "value": "'none (mode=per_line)'",
+   "src": "repo",
+   "why": "per_line treats each line's constant as unknown, which it is"
+  }
+ ],
+ "masks": [],
+ "columns": {
+  "scope": "which tracks the mark search walked: pass = only each psid's nearest pass to the site; psid = every pass of every psid",
+  "tracks": "number of tracks searched",
+  "candidates": "marks within half_width_m of any searched track, count",
+  "measured": "candidates whose tile is on disk and which yielded a tie, count",
+  "on_site_psids": "of those, marks the RETURNS place on one of --psids, count",
+  "n_lines": "distinct point_source_id among them, count",
+  "datum_mm": "constant to ADD to gen1 at the site, mm; mean over line means; positive = gen1 reads LOW",
+  "se_mm": "SE of the mean over LINES: sd of the line means / sqrt(n_lines). The line, not the mark, is the unit of replication",
+  "max_km": "farthest measured mark from the site, km -- how far the search reached"
+ },
+ "notes": [],
+ "headline": "gen1 at the site, scope=pass: +54.77 +/- 18.21 mm over 9 lines",
+ "unasked": [
+  "collinear_sigma",
+  "scopes"
+ ],
+ "session": ""
+}

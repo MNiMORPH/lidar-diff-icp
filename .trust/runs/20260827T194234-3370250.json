@@ -1,0 +1,124 @@
+{
+ "question": "What is the bridge -- z_delivered minus OUR reconstructed gen1 surface -- at every control mark inside a gen1 tile we already hold?",
+ "started": "2026-08-27T19:33:46+02:00",
+ "argv": [
+  "ground_control/run_bridge_wide.py",
+  "--covers",
+  "L1O",
+  "--tiles",
+  "data/before",
+  "--csf-half-width-m",
+  "300",
+  "--res",
+  "5.0",
+  "--radii-m",
+  "7.5",
+  "10",
+  "--align-res",
+  "2.0",
+  "--swath-tie",
+  "intercept",
+  "--csf-cache",
+  "/tmp/claude-1000/-home-awickert-projects-lidar-diff-icp-ground-control/ecf79f4c-3c28-466b-aa7e-a241bc03d28b/scratchpad/csfcache",
+  "--out",
+  "ground_control/products/bridge_wide_L1O.json"
+ ],
+ "seconds": 527.6,
+ "cwd": "/home/awickert/projects/lidar-diff-icp",
+ "inputs": [
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/src/lidar_diff_icp/groundtruth/data/mn_dnr_2008_control_semn.csv",
+   "role": "gen1's own 2008 control; dnr_surface_z_m is the vendor's DELIVERED surface elevation at the mark",
+   "bytes": 313278,
+   "mtime": "2026-08-26T16:58:09",
+   "digest": "9792fcd677e7"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-20-62.laz",
+   "role": "gen1 2008 delivered tile; CSF ground + swath alignment here rebuild our surface locally",
+   "bytes": 23919870,
+   "mtime": "2026-08-26T18:53:27",
+   "digest": "27d4ecc178aa"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-20-63.laz",
+   "role": "gen1 2008 delivered tile; CSF ground + swath alignment here rebuild our surface locally",
+   "bytes": 19950022,
+   "mtime": "2026-08-26T18:25:21",
+   "digest": "59ca7348e547"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-21-63.laz",
+   "role": "gen1 2008 delivered tile; CSF ground + swath alignment here rebuild our surface locally",
+   "bytes": 24219191,
+   "mtime": "2026-08-26T18:25:26",
+   "digest": "fbee92d83ffc"
+  }
+ ],
+ "params": [
+  {
+   "name": "covers",
+   "value": "('L1O',)",
+   "src": "andy",
+   "why": "the validation gate reproduces the shipped grid to +1.7 mm on the OPEN mark and -30.5 mm on the vegetated one, so the producer is trusted on open ground only"
+  },
+  {
+   "name": "csf_half_width_m",
+   "value": "300.0",
+   "src": "MINE",
+   "why": "CSF window half-width; must be wide enough that the cloth is not dominated by the crop edge. Excludes no marks; it sets how much context the cloth sees"
+  },
+  {
+   "name": "res_m",
+   "value": "5.0",
+   "src": "repo",
+   "why": "the pipeline's grid resolution"
+  },
+  {
+   "name": "align_res_m",
+   "value": "2.0",
+   "src": "repo",
+   "why": "coreg.align_swaths' own default, which pipeline.difference_dem uses; NOT the grid resolution"
+  },
+  {
+   "name": "swath_tie",
+   "value": "'intercept'",
+   "src": "repo",
+   "why": "elbaext's corrections_geoid.json records swath_tie=intercept"
+  },
+  {
+   "name": "radii_m",
+   "value": "(7.5, 10.0)",
+   "src": "MINE",
+   "why": "radius of the order-2 surface fit at the mark; swept. Only radii a 5 m grid can fill with 6+ cells are usable, so 7.5 m is the floor"
+  },
+  {
+   "name": "lateral_nuth_kaab",
+   "value": "'NOT applied'",
+   "src": "MINE",
+   "why": "that term is gen1->gen2 registration and needs gen2, which is not on disk away from Elba. Its measured effect on a tie is 10.0 mm (ABSOLUTE_BASIS_ELBA). Its absence is what the validation gate measures"
+  }
+ ],
+ "masks": [],
+ "columns": {
+  "point_id": "control mark id",
+  "cover": "MnDNR land-cover class, unitless code",
+  "tile": "gen1 tile the mark falls in",
+  "lines": "point_source_id values present in the CSF window, unitless",
+  "n_csf": "CSF ground returns in the window, count",
+  "delivered_z_m": "the vendor's own dnr_surface_z_m at the mark",
+  "ours_z_m": "our reconstructed gen1 surface at the mark, on NAVD88(GEOID03), m",
+  "bridge_mm": "z_delivered - z_ours, both on NAVD88(GEOID03), mm; ADD to a delivered-surface constant to carry it onto our surface",
+  "radius_spread_mm": "max - min of bridge_mm across the swept radii, mm -- how much the answer depends on an unstated window"
+ },
+ "notes": [
+  "VALIDATION GATE, run before this table: the same reconstruction at the two marks inside elbaext reproduces the SHIPPED grid to +1.7 mm (open) and -30.5 mm (vegetated)."
+ ],
+ "headline": "bridge n=29 mean +1.68 +/- 10.25 mm",
+ "unasked": [
+  "csf_half_width_m",
+  "radii_m",
+  "lateral_nuth_kaab"
+ ],
+ "session": ""
+}

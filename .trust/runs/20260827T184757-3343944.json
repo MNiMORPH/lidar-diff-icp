@@ -1,0 +1,132 @@
+{
+ "question": "How far is the surface our DoD runs on from the surface the 2008 control actually measured?",
+ "started": "2026-08-27T18:47:38+02:00",
+ "argv": [
+  "ground_control/run_bridge.py",
+  "--easting",
+  "578762.8",
+  "--northing",
+  "4884487.6",
+  "--tracks",
+  "ground_control/data/gen1_line_tracks.json",
+  "--psids",
+  "133",
+  "134",
+  "135",
+  "136",
+  "137",
+  "138",
+  "--covers",
+  "L1O",
+  "L5U",
+  "L2T",
+  "--tiles",
+  "data/before",
+  "--res",
+  "5.0",
+  "--grid-sites",
+  "data/derived/elbaext",
+  "data/derived/elba_fulldensity",
+  "--dod-name",
+  "dod_geoid",
+  "dod",
+  "--window-cells",
+  "3"
+ ],
+ "seconds": 18.6,
+ "cwd": "/home/awickert/projects/lidar-diff-icp",
+ "inputs": [
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/src/lidar_diff_icp/groundtruth/data/mn_dnr_2008_control_semn.csv",
+   "role": "gen1's own 2008 control; dnr_surface_z_m is the vendor's DELIVERED surface elevation at the mark",
+   "bytes": 313278,
+   "mtime": "2026-08-26T16:58:09",
+   "digest": "9792fcd677e7"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/ground_control/data/gen1_line_tracks.json",
+   "role": "flight-line tracks, to find the site's own-line marks",
+   "bytes": 362313,
+   "mtime": "2026-08-27T17:57:25",
+   "digest": "9ac0db133b79"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elbaext/z_after.npy",
+   "role": "gen2 gridded surface at elbaext",
+   "bytes": 5767328,
+   "mtime": "2026-08-22T11:41:33",
+   "digest": "0e91639d5253"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elbaext/dod_geoid.npy",
+   "role": "DoD at elbaext; gen1's grid is recovered as z_after - this",
+   "bytes": 5767328,
+   "mtime": "2026-08-26T17:24:39",
+   "digest": "250686f69d9d"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elba_fulldensity/z_after.npy",
+   "role": "gen2 gridded surface at elba_fulldensity",
+   "bytes": 2844928,
+   "mtime": "2026-08-21T11:53:20",
+   "digest": "d014cef67453"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elba_fulldensity/dod.npy",
+   "role": "DoD at elba_fulldensity; gen1's grid is recovered as z_after - this",
+   "bytes": 2844928,
+   "mtime": "2026-08-26T17:16:57",
+   "digest": "9a1647cc21ea"
+  }
+ ],
+ "params": [
+  {
+   "name": "site",
+   "value": "(578762.8, 4884487.6)",
+   "src": "andy",
+   "why": ""
+  },
+  {
+   "name": "psids",
+   "value": "(133, 134, 135, 136, 137, 138)",
+   "src": "andy",
+   "why": ""
+  },
+  {
+   "name": "covers",
+   "value": "('L1O', 'L5U', 'L2T')",
+   "src": "andy",
+   "why": ""
+  },
+  {
+   "name": "dod_name",
+   "value": "('dod_geoid', 'dod')",
+   "src": "MINE",
+   "why": "which DoD product recovers gen1 at each site; verified on elba_fulldensity against an independent gen1 grid to median +0.489 mm, NMAD 0.391 mm over 341,239 cells"
+  },
+  {
+   "name": "window_cells",
+   "value": "3",
+   "src": "MINE",
+   "why": "side of the square whose median is reported BESIDE the containing cell; a single 5 m cell is one noisy sample. Both are printed and neither is called the answer"
+  }
+ ],
+ "masks": [],
+ "columns": {
+  "point_id": "control mark id",
+  "cover": "MnDNR land-cover class of the mark, unitless code: L1O open, L2T tall weeds/crops, L3B brush, L4F forest, L5U urban",
+  "gap": "A = estimator gap (our reduction of the DELIVERED cloud vs the vendor's Surface Z). B = processing gap (our gridded CSF/aligned/geoid-shifted surface vs the vendor's Surface Z)",
+  "delivered_z_m": "the vendor's own dnr_surface_z_m at the mark",
+  "ours_z_m": "our surface at the mark: cloud reduction for A, grid for B",
+  "bridge_mm": "z_delivered - z_ours, mm; ADD to a delivered-surface constant to carry it onto our surface"
+ },
+ "notes": [
+  "A and B are DIFFERENT quantities. A is not a proxy for B: it changes only the reduction, while B also changes the ground classification, the swath alignment and the vertical datum."
+ ],
+ "headline": "A n=11 mean -6.59 mm; B n=2",
+ "unasked": [
+  "dod_name",
+  "window_cells"
+ ],
+ "session": ""
+}

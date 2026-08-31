@@ -1,0 +1,56 @@
+{
+ "question": "Does the control-derived gen1 datum close with the measured DoD on stable open ground?",
+ "started": "2026-08-28T00:05:16+02:00",
+ "argv": [
+  "ground_control/run_closure_check.py",
+  "--answer",
+  "ground_control/products/ANSWER_gen1_elba.json",
+  "--gen2-product",
+  "ground_control/products/elba__gen2__ql1_laz__open__datum.json",
+  "--geoid-mm",
+  "67.38",
+  "--measured-dod-mm",
+  "-2.12"
+ ],
+ "seconds": 0.0,
+ "cwd": "/home/awickert/projects/lidar-diff-icp",
+ "inputs": [
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/ground_control/products/ANSWER_gen1_elba.json",
+   "role": "adopted gen1 surface offsets at this site",
+   "bytes": 3194,
+   "mtime": "2026-08-28T00:03:51",
+   "digest": "fb9465dd408f"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/ground_control/products/elba__gen2__ql1_laz__open__datum.json",
+   "role": "gen2's datum on its DELIVERED surface, open ground",
+   "bytes": 4096,
+   "mtime": "2026-08-27T19:58:41",
+   "digest": "95d4d51246a5"
+  }
+ ],
+ "params": [
+  {
+   "name": "geoid_mm",
+   "value": "67.38",
+   "src": "repo",
+   "why": "references.geoid_difference over elbaext; the GEOID03->GEOID18 term the pipeline ADDS to gen1, which is why it does not cancel between c1 and c2"
+  },
+  {
+   "name": "measured_dod_mm",
+   "value": "-2.12",
+   "src": "repo",
+   "why": "median of dod_geoid.npy on stable AND open cells, 116,507 cells"
+  }
+ ],
+ "masks": [],
+ "columns": {
+  "quantity": "what is being reported",
+  "value_mm": "millimetres; positive = the surface reads LOW, so ADD it"
+ },
+ "notes": [],
+ "headline": "closure miss 0.0050 mm; DoD absolute correction +2.12 mm",
+ "unasked": [],
+ "session": ""
+}

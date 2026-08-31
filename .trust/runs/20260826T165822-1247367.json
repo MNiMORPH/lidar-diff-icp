@@ -1,0 +1,157 @@
+{
+ "question": "does taking each swath-to-swath tie as the fitted intercept at across-track position zero, instead of the unweighted overlap median, remove the tile-extent dependence of the gen1 per-swath constants -- and what does it do to the DoD?",
+ "started": "2026-08-26T16:56:08+02:00",
+ "argv": [
+  "analysis/swath_tie_intercept.py"
+ ],
+ "seconds": 134.2,
+ "cwd": "/home/awickert/projects/lidar-diff-icp",
+ "inputs": [
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elba_fulldensity/corrections.json",
+   "role": "pipeline corrections actually shipped for this tile: grid geometry and the per-swath constants this run must reproduce before changing them",
+   "bytes": 18646,
+   "mtime": "2026-08-25T18:42:16",
+   "digest": "e19161542e9d"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/csf_cache/elba.las",
+   "role": "gen1 2008 cloud with PDAL CSF ground classification, cached by pipeline.difference_dem (ground_source='csf'), raw coordinates",
+   "bytes": 243778407,
+   "mtime": "2026-08-21T11:50:43",
+   "digest": "84dce4617599"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elbaext/corrections.json",
+   "role": "pipeline corrections actually shipped for this tile: grid geometry and the per-swath constants this run must reproduce before changing them",
+   "bytes": 27909,
+   "mtime": "2026-08-22T11:41:33",
+   "digest": "caa9d2f619bc"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/csf_cache/elbaext.las",
+   "role": "gen1 2008 cloud with PDAL CSF ground classification, cached by pipeline.difference_dem (ground_source='csf'), raw coordinates",
+   "bytes": 560937651,
+   "mtime": "2026-08-25T15:29:33",
+   "digest": "b9d1209cedd7"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elba_fulldensity/beam_offset_table.parquet",
+   "role": "per-return gen1 CSF ground offsets to the gen2 surface, slope-normal mm, with the four registration terms and point_source_id / scan_angle per return",
+   "bytes": 306344161,
+   "mtime": "2026-08-25T18:44:27",
+   "digest": "6f437488d069"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elbaext/beam_offset_table.parquet",
+   "role": "per-return gen1 CSF ground offsets to the gen2 surface, slope-normal mm, with the four registration terms and point_source_id / scan_angle per return",
+   "bytes": 653013412,
+   "mtime": "2026-08-25T17:52:52",
+   "digest": "25c6d3c56f66"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elba_fulldensity/dod_cover_q2.npy",
+   "role": "the DoD in use: gen2 at the cover-dependent percentile minus gen1's registered median, m, + = elevation rose",
+   "bytes": 2844928,
+   "mtime": "2026-08-26T13:17:39",
+   "digest": "0d9dc8e98aab"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elba_fulldensity/z_after.npy",
+   "role": "gen2 gridded ground, the DoD reference surface, m",
+   "bytes": 2844928,
+   "mtime": "2026-08-21T11:53:20",
+   "digest": "d014cef67453"
+  }
+ ],
+ "params": [
+  {
+   "name": "tie estimators compared",
+   "value": "'overlap_median (shipped) vs intercept (new)'",
+   "src": "repo",
+   "why": ""
+  },
+  {
+   "name": "res (pairwise co-registration grid)",
+   "value": "2.0",
+   "src": "repo",
+   "why": ""
+  },
+  {
+   "name": "exclude (non-terrain classes)",
+   "value": "(5, 6, 9)",
+   "src": "repo",
+   "why": ""
+  },
+  {
+   "name": "ground_q",
+   "value": "0.5",
+   "src": "repo",
+   "why": ""
+  },
+  {
+   "name": "minimum counts imposed",
+   "value": "'none'",
+   "src": "repo",
+   "why": ""
+  },
+  {
+   "name": "reproduction tolerance (vertical)",
+   "value": "0.001",
+   "src": "MINE",
+   "why": "the gate on whether the re-derived shipped ties ARE the shipped ties. 1 mm is the coarsest level at which a reproduction failure could still matter here: it is a sixth of the smallest tie change measured below and an eighth of the smallest tile-to-tile disagreement being explained. The achieved values are printed per tile and per axis; it excludes no data."
+  },
+  {
+   "name": "gauge swath",
+   "value": "137",
+   "src": "MINE",
+   "why": "chosen by a stated rule on measured quantities, not by taste: of the lines BOTH tiles carry (135, 136, 137, 138), the one whose worst |mean scan angle| across the two tiles is smallest -- the line both tiles sample most symmetrically about nadir. Its effect is measured below and is a LEVEL shift only (tests/test_coreg.py proves the gauge changes no swath-to-swath difference), so it excludes no data and moves no gradient."
+  }
+ ],
+ "masks": [],
+ "columns": {
+  "tile": "derived-product directory / cached cloud the numbers come from",
+  "pair": "adjacent flight-line pair A-B (point_source_id), A < B",
+  "cells": "overlap grid cells the pairwise tie used",
+  "dz_med": "pairwise vertical tie from the shipped overlap median, mm (+ = line B must be raised onto line A)",
+  "dz_int": "the same tie from the across-track intercept at dtan = 0, mm",
+  "delta": "dz_int - dz_med, mm: what the extent-dependence was worth on that link",
+  "c_mm": "across-track slope fitted with the intercept, mm per unit tangent",
+  "mean_dtan": "mean of tan(scan_A) - tan(scan_B) over the pair's overlap cells in this tile: the across-track position the shipped tie averages at",
+  "pred": "-c_mm * mean_dtan, mm: the shift the ramp predicts for this link, against which delta is the measured value",
+  "swath": "gen1 flight line (point_source_id)",
+  "returns": "in-grid gen1 CSF ground returns of that line",
+  "scan_mean": "mean scan angle of that line's in-grid returns, deg (signed)",
+  "scan_sd": "standard deviation of that line's scan angle, deg",
+  "scan_p5": "5th percentile of that line's scan angle, deg",
+  "scan_p95": "95th percentile of that line's scan angle, deg",
+  "asym": "|mean scan| of the line, deg: 0 means the tile samples it symmetrically about nadir, large means the tile only ever sees it off to one side",
+  "dz_old": "per-swath constant from the shipped tie, re-referenced as stated, mm",
+  "dz_new": "per-swath constant from the intercept tie, re-referenced as stated, mm",
+  "elba_old": "elba's constant for that swath, shipped tie, re-referenced to 135, mm",
+  "ext_old": "elbaext's constant for the same swath, shipped tie, ref 135, mm",
+  "dis_old": "elba_old - ext_old: the tile-to-tile disagreement, shipped tie, mm",
+  "elba_new": "elba's constant, intercept tie, re-referenced to 135, mm",
+  "ext_new": "elbaext's constant, intercept tie, ref 135, mm",
+  "dis_new": "elba_new - ext_new: the same disagreement, intercept tie, mm",
+  "removed": "dis_old - dis_new, mm, and as a percentage of dis_old",
+  "gauge": "which flight line the network is pinned to, and with which tie",
+  "level": "point-count-weighted mean vertical shift of the gen1 cloud under that gauge, mm: the level the tile's whole DoD inherits",
+  "raster": "DoD raster file this run wrote",
+  "md_mm": "median change in the DoD against the shipped raster, mm",
+  "lo_mm": "most negative change in the DoD, mm",
+  "hi_mm": "most positive change in the DoD, mm",
+  "subset": "which shared flight lines the summary is taken over",
+  "spread_old": "max - min of the tile-to-tile disagreement over those lines, shipped tie, mm (independent of the gauge)",
+  "spread_new": "the same spread with the intercept tie, mm",
+  "rms_old": "RMS of the disagreement after removing its mean over those lines, shipped tie, mm (independent of the gauge)",
+  "rms_new": "the same RMS with the intercept tie, mm"
+ },
+ "notes": [],
+ "headline": "intercept tie changes elba's constants by +0.0, +5.9, +5.8, +5.1 mm; the elba/elbaext disagreement goes -8.02, -9.66, -17.41 -> -2.04, -2.11, -9.81 mm",
+ "unasked": [
+  "reproduction tolerance (vertical)",
+  "gauge swath"
+ ],
+ "session": ""
+}

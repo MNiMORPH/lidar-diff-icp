@@ -1,0 +1,100 @@
+{
+ "question": "is the per-swath constant biased by the scan angles the tile samples, and does that explain the elba/elbaext disagreement?",
+ "started": "2026-08-26T15:41:10+02:00",
+ "argv": [
+  "analysis/groundtruth/reference_swath_bias.py",
+  "--n-boot",
+  "40"
+ ],
+ "seconds": 46.6,
+ "cwd": "/home/awickert/projects/lidar-diff-icp",
+ "inputs": [
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elba_fulldensity/gen1_csf_angles.npz",
+   "role": "elba_fulldensity gen1 CSF ground returns: per-return scan angle, flight line, grid cell and offset d_mm to the gen2 reference",
+   "bytes": 46955578,
+   "mtime": "2026-08-25T16:20:10",
+   "digest": "64c0a51b0ed1"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elba_fulldensity/corrections.json",
+   "role": "elba_fulldensity pipeline corrections: the saved per-swath alignment",
+   "bytes": 18646,
+   "mtime": "2026-08-25T18:42:16",
+   "digest": "e19161542e9d"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elbaext/gen1_csf_angles.npz",
+   "role": "elbaext gen1 CSF ground returns: per-return scan angle, flight line, grid cell and offset d_mm to the gen2 reference",
+   "bytes": 98951341,
+   "mtime": "2026-08-25T16:20:21",
+   "digest": "562cb0afb1ae"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elbaext/corrections_geoid.json",
+   "role": "elbaext pipeline corrections: the saved per-swath alignment",
+   "bytes": 27568,
+   "mtime": "2026-08-23T14:01:04",
+   "digest": "f6dd581a3a43"
+  }
+ ],
+ "params": [
+  {
+   "name": "shared_swaths",
+   "value": "[135, 136, 137, 138]",
+   "src": "repo",
+   "why": "the flight lines both Elba products align; data/derived/{elba_fulldensity,elbaext}/corrections*.json"
+  },
+  {
+   "name": "compare_reference_swath",
+   "value": "135",
+   "src": "repo",
+   "why": "elba's own align_swaths reference (min point_source_id); MISSION_TIME_DRIFT.md section 4 re-references elbaext to it"
+  },
+  {
+   "name": "min_cell_line",
+   "value": "3",
+   "src": "repo",
+   "why": "boresight.estimate_boresight min_cell_line default"
+  },
+  {
+   "name": "n_boot",
+   "value": "40",
+   "src": "repo",
+   "why": "boresight.estimate_boresight n_boot default"
+  },
+  {
+   "name": "gauge_res_m",
+   "value": "2.0",
+   "src": "repo",
+   "why": "coreg.align_swaths res default"
+  }
+ ],
+ "masks": [],
+ "columns": {
+  "tile": "which Elba product",
+  "swath": "gen1 flight line (point_source_id)",
+  "n_returns": "CSF ground returns of that swath inside the tile, count",
+  "scan_mean": "mean SIGNED scan angle of those returns, deg (0 = nadir)",
+  "scan_med": "median signed scan angle of those returns, deg",
+  "edge": "adjacent swath pair, as coregister_swaths solves it",
+  "n_cells": "grid cells the pair shares -- the overlap strip the pair is solved on",
+  "scan_a": "mean signed scan angle of the LOWER-numbered line inside the strip, deg",
+  "scan_b": "mean signed scan angle of the HIGHER-numbered line inside the strip, deg",
+  "asym": "scan_b - scan_a: the across-track sampling asymmetry of the edge, deg",
+  "ref": "swath pinned to zero by the gauge",
+  "rel_max_mm": "largest change in any swath-to-swath DIFFERENCE against the zero-mean solve, mm",
+  "abs_shift_mm": "the constant the gauge subtracts from every swath, mm",
+  "variant": "which vertical registration the per-swath constants were chained from",
+  "d136": "elbaext minus elba constant for swath 136, referenced to 135, mm",
+  "d137": "same for swath 137, mm",
+  "d138": "same for swath 138, mm",
+  "rms_mm": "RMS of those three disagreements, mm (the pinned swath is a gauge, not an observation, so it is excluded -- as in MISSION_TIME_DRIFT.md section 4)",
+  "b_mm_per_deg": "pooled across-track slope from boresight.estimate_boresight, mm per degree of scan angle",
+  "b_pair_std": "std of the per-pair slopes -- the honest uncertainty on b"
+ },
+ "notes": [],
+ "headline": "reference swath is a pure gauge (relative solution invariant); across-track sampling is real on the outermost edge only and accounts for 9.3->5.1 mm RMS of the elba/elbaext disagreement",
+ "unasked": [],
+ "session": ""
+}

@@ -44,9 +44,8 @@ data/las_local/
 # Routed-continuity intermediates: large, regenerable with --save
 analysis/mass_balance/out/*.npz
 
-# Provenance ledgers written by trust/provenance.py -- one JSON per RUN, including
-# exploratory and failed ones (139 in the first five days), keyed to timestamp and PID.
-# They are a local audit trail, not a reproducible artifact: a collaborator's clone
-# generates its own. The half worth keeping is the argv, which belongs IN the product
-# a number is adopted into -- see https://github.com/MNiMORPH/lidar-diff-icp/issues/2
-.trust/
+# Provenance ledgers written by trust/provenance.py -- one JSON per RUN. These ARE
+# tracked (1.2 MB for 140), because README.md, ground_control/FRAME.md, REPORT.md and the
+# adopted products cite them BY FILENAME as the record of how each number was produced.
+# Ignoring them leaves those citations dangling on a fresh clone and discards the audit
+# trail that reconstructed a headline number after its producing script had been deleted.

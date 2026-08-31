@@ -1,0 +1,65 @@
+{
+ "question": "Is the site's datum a deterministic weighted sum of its lines' constants, rather than a mean over lines with a between-line SE?",
+ "started": "2026-08-27T22:15:36+02:00",
+ "argv": [
+  "ground_control/run_weighted_datum_test.py",
+  "--weights",
+  "/tmp/claude-1000/-home-awickert-projects-lidar-diff-icp-ground-control/ecf79f4c-3c28-466b-aa7e-a241bc03d28b/scratchpad/weights.json",
+  "--datum-product",
+  "ground_control/products/gen1_datum_by_returns_elba_L1O.json",
+  "--sigma-mark-mm",
+  "54.5",
+  "--se-over-lines-mm",
+  "23.38",
+  "--value-over-lines-mm",
+  "62.74"
+ ],
+ "seconds": 0.0,
+ "cwd": "/home/awickert/projects/lidar-diff-icp",
+ "inputs": [
+  {
+   "path": "/tmp/claude-1000/-home-awickert-projects-lidar-diff-icp-ground-control/ecf79f4c-3c28-466b-aa7e-a241bc03d28b/scratchpad/weights.json",
+   "role": "each flight line's share of the GROUND CELLS the pipeline built for this tile -- the weights w_i",
+   "bytes": 167,
+   "mtime": "2026-08-27T22:14:52",
+   "digest": "f5231253cf26"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/ground_control/products/gen1_datum_by_returns_elba_L1O.json",
+   "role": "open-ground per-line marks and ties at this site",
+   "bytes": 999,
+   "mtime": "2026-08-27T22:08:29",
+   "digest": "a568c6060328"
+  }
+ ],
+ "params": [
+  {
+   "name": "sigma_mark_mm",
+   "value": "54.5",
+   "src": "repo",
+   "why": "within-line sd of a mark about its own line mean, measured on 25 open marks across 18 lines out to 40 km; the per-mark scatter that sets var(c_i) = sigma_mark^2 / n_i"
+  },
+  {
+   "name": "unknown_line_treatment",
+   "value": "'reported BOTH ways'",
+   "src": "MINE",
+   "why": "a line with no mark has an unknown constant; renormalising its weight away ASSUMES it behaves like the others, so the alternative -- charging it the full between-line variance -- is reported beside it"
+  }
+ ],
+ "masks": [],
+ "columns": {
+  "line": "flight line point_source_id",
+  "w": "that line's share of the tile's ground cells, 0-1",
+  "n_marks": "open control marks on that line, count",
+  "c_mm": "that line's mean tie, mm; blank if no mark",
+  "var_c_mm2": "variance of that line's constant, mm^2 = sigma_mark^2/n",
+  "stat": "name of the statistic",
+  "value": "its value; mm unless the name says otherwise"
+ },
+ "notes": [],
+ "headline": "weighted +69.99 +/- 22.75 (renorm) vs mean-over-lines +62.74 +/- 23.38",
+ "unasked": [
+  "unknown_line_treatment"
+ ],
+ "session": ""
+}

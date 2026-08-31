@@ -1,0 +1,105 @@
+{
+ "question": "does one linear mission-time curve F(t) reproduce the gen1 per-swath constants, and does it make the two Elba tiles agree about the same flight lines?",
+ "started": "2026-08-26T15:15:23+02:00",
+ "argv": [
+  "analysis/mission_time_drift_fit.py"
+ ],
+ "seconds": 0.0,
+ "cwd": "/home/awickert/projects/lidar-diff-icp",
+ "inputs": [
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/mission_time/swath_gps_stats.json",
+   "role": "per-swath gps_time window, midpoint and return count, from the gen1 LAZ files",
+   "bytes": 14420,
+   "mtime": "2026-08-26T15:11:11",
+   "digest": "83a47501b8bd"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elba/corrections.json",
+   "role": "elba: saved per-swath (dx,dy,dz), along-track drift curves, stable 1-sigma",
+   "bytes": 19178,
+   "mtime": "2026-08-19T08:41:41",
+   "digest": "be4c64a8d46b"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elbaext/corrections.json",
+   "role": "elbaext: saved per-swath (dx,dy,dz), along-track drift curves, stable 1-sigma",
+   "bytes": 27909,
+   "mtime": "2026-08-22T11:41:33",
+   "digest": "caa9d2f619bc"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/whitewater/corrections.json",
+   "role": "whitewater: saved per-swath (dx,dy,dz), along-track drift curves, stable 1-sigma",
+   "bytes": 19044,
+   "mtime": "2026-08-19T08:50:27",
+   "digest": "6bc6bd7dc0ad"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/mnrv/corrections.json",
+   "role": "mnrv: saved per-swath (dx,dy,dz), along-track drift curves, stable 1-sigma",
+   "bytes": 27676,
+   "mtime": "2026-08-19T09:01:15",
+   "digest": "2543e887a720"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/cook/corrections.json",
+   "role": "cook: saved per-swath (dx,dy,dz), along-track drift curves, stable 1-sigma",
+   "bytes": 19798,
+   "mtime": "2026-08-19T09:10:34",
+   "digest": "9aab1d5182c3"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/carlton/corrections.json",
+   "role": "carlton: saved per-swath (dx,dy,dz), along-track drift curves, stable 1-sigma",
+   "bytes": 24502,
+   "mtime": "2026-08-19T09:19:33",
+   "digest": "963f220b8fda"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/battlecreek/corrections.json",
+   "role": "battlecreek: saved per-swath (dx,dy,dz), along-track drift curves, stable 1-sigma",
+   "bytes": 18743,
+   "mtime": "2026-08-19T13:36:31",
+   "digest": "4a81413865f7"
+  }
+ ],
+ "params": [
+  {
+   "name": "swath_reference",
+   "value": "'min(point_source_id)'",
+   "src": "repo",
+   "why": "align_swaths gauge in pipeline.difference_dem; that swath is pinned to zero and is excluded from every fit below"
+  }
+ ],
+ "masks": [],
+ "columns": {
+  "site": "study site = one gen1 tile/merge",
+  "axis": "dz (mm), dx (m) or dy (m) -- the alignment component being modelled",
+  "nsw": "swaths in the fit (the forced-zero reference swath excluded)",
+  "rate": "fitted F rate: mm/hour for dz, m/hour for dx and dy",
+  "rms_time": "RMS residual of F linear in gps_time to the saved constants (mm or m)",
+  "rms_ord": "RMS residual of F linear in flight-line ordinal, same units",
+  "max_time": "largest absolute residual of the gps_time model (mm or m)",
+  "p_now": "free parameters of the current model on this axis: n swaths minus the gauge",
+  "p_Ft": "free parameters of linear F on this axis after the gauge: 1 (the rate)",
+  "stable_sigma_mm": "stable_1sigma_m from the site's corrections.json, mm",
+  "swath": "point_source_id shared by the two Elba tiles",
+  "obs_mm": "observed elbaext-minus-elba dz for that swath, both re-referenced to 135, mm",
+  "Ft_mm": "the same difference predicted by each tile's own fitted F(t), mm",
+  "Fk_mm": "the same difference predicted by each tile's own fit linear in swath id, mm",
+  "model": "which model the row summarises",
+  "rms_mm": "RMS over the shared swaths, mm",
+  "pair": "consecutive pair of swaths in time order",
+  "gap_h": "elapsed time between consecutive swath midpoints, hours",
+  "obs_h": "hours of the gap in which returns actually exist (the two 45-60 s windows)",
+  "frac_obs": "obs_h / gap_h -- the fraction of the interval F(t) is constrained on",
+  "drift_pp_mm": "peak-to-peak of the saved WITHIN-swath along-track drift curve, mm",
+  "drift_rate_mm_h": "drift_pp_mm divided by the swath's own duration, mm/hour",
+  "between_rate_mm_h": "the site's fitted BETWEEN-swath rate, mm/hour, for comparison"
+ },
+ "notes": [],
+ "headline": "single-curve mission-time model fitted and compared with the per-swath constants",
+ "unasked": [],
+ "session": ""
+}

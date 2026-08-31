@@ -1,0 +1,84 @@
+{
+ "question": "What is gen1's datum at Elba, on the delivered surface and on ours, with every choice that moves it declared?",
+ "started": "2026-08-27T22:04:04+02:00",
+ "argv": [
+  "ground_control/run_gen1_elba_answer.py",
+  "--datum-product",
+  "ground_control/products/gen1_datum_by_returns_elba.json",
+  "--bridge-product",
+  "ground_control/products/bridge_wide_L1O.json",
+  "--sigma-sweep",
+  "2",
+  "3",
+  "5",
+  "--sigma-values-mm",
+  "45.10",
+  "45.57",
+  "53.79",
+  "--sigma-se-mm",
+  "19.11",
+  "18.81",
+  "16.50",
+  "--adopted-sigma",
+  "3",
+  "--out",
+  "ground_control/products/ANSWER_gen1_elba.json"
+ ],
+ "seconds": 0.0,
+ "cwd": "/home/awickert/projects/lidar-diff-icp",
+ "inputs": [
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/ground_control/products/gen1_datum_by_returns_elba.json",
+   "role": "catchment-free per-line datum; marks assigned by their own ground returns, reused psids disambiguated by track collinearity",
+   "bytes": 1647,
+   "mtime": "2026-08-27T22:00:47",
+   "digest": "46aabb54a9c6"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/ground_control/products/bridge_wide_L1O.json",
+   "role": "per-mark bridge on open ground; its population mean carries a delivered-surface constant onto ours",
+   "bytes": 8208,
+   "mtime": "2026-08-27T19:47:04",
+   "digest": "b8f05703cc29"
+  }
+ ],
+ "params": [
+  {
+   "name": "adopted_collinear_sigma",
+   "value": "3.0",
+   "src": "MINE",
+   "why": "the estimate is flat across sigma 2-3 (0.47 mm) and jumps 8.22 mm at sigma 5 where the disambiguation readmits marks on non-collinear passes; 3 sits at the top of the stable range"
+  },
+  {
+   "name": "catchment_radius_m",
+   "value": "'NONE'",
+   "src": "andy",
+   "why": "removed: it was a compute bound, not a criterion, and it admitted marks the pass test rejects"
+  },
+  {
+   "name": "cover",
+   "value": "'L1O+L5U as run'",
+   "src": "andy",
+   "why": "NOT yet narrowed to open-only; doing so is an open decision that will move this number"
+  },
+  {
+   "name": "gen2_side",
+   "value": "'NOT carried onto our surface'",
+   "src": "repo",
+   "why": "gen2's bridge is not measurable at its checkpoints (engineered siting), so a DoD correction built from these two constants is asymmetric"
+  }
+ ],
+ "masks": [],
+ "columns": {
+  "quantity": "what is being reported",
+  "value_mm": "millimetres; positive = the surface reads LOW, so ADD it",
+  "uncert_mm": "its uncertainty, mm",
+  "uncert_of": "what that uncertainty is the uncertainty OF"
+ },
+ "notes": [],
+ "headline": "gen1 at Elba: delivered +45.57 +/- 18.81; our surface +41.53 +/- 21.85 mm",
+ "unasked": [
+  "adopted_collinear_sigma"
+ ],
+ "session": ""
+}

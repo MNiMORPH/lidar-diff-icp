@@ -1,0 +1,149 @@
+{
+ "question": "is the gen1 per-swath vertical offset a constant, or a function of across-track (scan-angle) position that the constant averages over?",
+ "started": "2026-08-26T15:40:51+02:00",
+ "argv": [
+  "analysis/swath_across_track_test.py"
+ ],
+ "seconds": 215.8,
+ "cwd": "/home/awickert/projects/lidar-diff-icp",
+ "inputs": [
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elba_fulldensity/corrections.json",
+   "role": "pipeline corrections: grid geometry, per-swath internal alignment, geoid datum, drift curves",
+   "bytes": 18646,
+   "mtime": "2026-08-25T18:42:16",
+   "digest": "e19161542e9d"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elba_fulldensity/beam_offset_table.parquet",
+   "role": "per-return gen1 CSF ground offsets to the gen2 surface, slope-normal mm, with the four registration terms",
+   "bytes": 306344161,
+   "mtime": "2026-08-25T18:44:27",
+   "digest": "6f437488d069"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elbaext/corrections.json",
+   "role": "pipeline corrections: grid geometry, per-swath internal alignment, geoid datum, drift curves",
+   "bytes": 27909,
+   "mtime": "2026-08-22T11:41:33",
+   "digest": "caa9d2f619bc"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elbaext/beam_offset_table.parquet",
+   "role": "per-return gen1 CSF ground offsets to the gen2 surface, slope-normal mm, with the four registration terms",
+   "bytes": 653013412,
+   "mtime": "2026-08-25T17:52:52",
+   "digest": "25c6d3c56f66"
+  }
+ ],
+ "params": [
+  {
+   "name": "min_cell_line",
+   "value": "1",
+   "src": "MINE",
+   "why": "1 is the definitional floor -- a median needs one value, so this imposes NO cut at all. The repo's boresight.estimate_boresight uses 3; that value is run as a sensitivity in section 9 and both answers are reported."
+  },
+  {
+   "name": "block_m",
+   "value": "50.0",
+   "src": "repo",
+   "why": ""
+  },
+  {
+   "name": "ground_q",
+   "value": "0.5",
+   "src": "repo",
+   "why": ""
+  },
+  {
+   "name": "reference_cells defaults",
+   "value": "'curv_max=0.015, slope_max=12, gross_change_mm=500, clearcut_drop=0.30'",
+   "src": "repo",
+   "why": ""
+  }
+ ],
+ "masks": [
+  {
+   "name": "elba_fulldensity reference cells",
+   "kept": 57056,
+   "total": 355600,
+   "frac": 0.16044994375703037,
+   "defn": "refcells.reference_cells() at its repo defaults: divide cells, |curv|<=0.015, slope<12 deg, no building returns, not clear-cut, not blufftop margin, |DoD|<=500 mm",
+   "warn": false
+  },
+  {
+   "name": "elbaext reference cells",
+   "kept": 128950,
+   "total": 720900,
+   "frac": 0.1788736301844916,
+   "defn": "refcells.reference_cells() at its repo defaults: divide cells, |curv|<=0.015, slope<12 deg, no building returns, not clear-cut, not blufftop margin, |DoD|<=500 mm",
+   "warn": false
+  }
+ ],
+ "columns": {
+  "tile": "derived-product directory the returns and cells come from",
+  "pair": "unordered flight-line pair A-B (point_source_id), A < B",
+  "cells": "overlap cells: reference cells covered by BOTH lines of the pair",
+  "ret_A": "gen1 returns of line A in those cells",
+  "ret_B": "gen1 returns of line B in those cells",
+  "blocks": "independent 50 m spatial blocks spanned by the overlap cells",
+  "scan_A": "mean scan angle of line A over the overlap cells, deg (signed, body frame)",
+  "scan_B": "mean scan angle of line B over the overlap cells, deg (signed, body frame)",
+  "sum_tan": "mean of tan(scan_A)+tan(scan_B) over the overlap; ~ +-S/h, the line spacing over flying height, and the sign of the side the pair shares",
+  "dtan_lo": "minimum of tan(scan_A)-tan(scan_B) over the overlap cells",
+  "dtan_hi": "maximum of tan(scan_A)-tan(scan_B) over the overlap cells",
+  "dtan_sd": "standard deviation of tan(scan_A)-tan(scan_B): the leverage available",
+  "k_mm": "fitted intercept: between-line offset at tan(scan_A)=tan(scan_B), mm, positive = line A reads above line B",
+  "k_se": "cluster-robust standard error of k_mm, mm",
+  "c_mm": "fitted coefficient on tan(scan_A)-tan(scan_B), mm per unit tangent",
+  "c_se": "cluster-robust standard error of c_mm, mm per unit tangent",
+  "c_mmdeg": "c_mm converted to mm per degree at small angle (c_mm * pi/180)",
+  "t": "c_mm / c_se, cluster-robust",
+  "r2": "coefficient of determination of the pair's own fit",
+  "medD": "median between-line difference over the overlap cells, mm",
+  "nmadD": "normalised MAD of the between-line difference, mm",
+  "model": "which functional form was fitted",
+  "c_shared": "single coefficient shared by all pairs, mm per unit tangent",
+  "W": "cluster-robust Wald statistic for the stated restriction",
+  "df": "degrees of freedom of the Wald statistic",
+  "p": "upper-tail probability of W under chi-squared with df",
+  "rss": "residual sum of squares of the pooled fit, mm^2",
+  "swath": "flight line (point_source_id)",
+  "returns": "gen1 returns of that swath on the reference cells",
+  "slope_mmdeg": "OLS slope of the response on scan_angle within the swath, mm/deg",
+  "slope_se": "cluster-robust standard error of that slope, mm/deg",
+  "scan_sd": "standard deviation of scan_angle within the swath, deg",
+  "scan_mean": "mean scan_angle within the swath, deg",
+  "corr_ks": "correlation between the fitted constant and slope of that swath's regression; |corr| -> 1 means the two are not separable",
+  "resid_mmdeg": "the same slope after subtracting the shared roll term, mm/deg",
+  "dz_elba": "elba per-swath dz re-referenced to swath 135, mm",
+  "dz_ext": "elbaext per-swath dz re-referenced to swath 135, mm",
+  "disagree": "dz_elba - dz_ext, mm: the tile-to-tile disagreement to be explained",
+  "mean_dtan_elba": "mean tan(scan_A)-tan(scan_B) sampled by elba in that pair's overlap",
+  "mean_dtan_ext": "mean tan(scan_A)-tan(scan_B) sampled by elbaext in the same overlap",
+  "pred_mm": "disagreement predicted by the shared roll: c_shared * (mean_dtan_elba - mean_dtan_ext), mm",
+  "bin_lo": "lower edge of the tan(scan_A)-tan(scan_B) bin",
+  "bin_hi": "upper edge of the bin",
+  "bin_n": "overlap cells in the bin",
+  "bin_med": "median between-line difference in the bin, mm",
+  "bin_se": "cluster-robust standard error of that median, mm",
+  "b_mmdeg": "repo boresight.estimate_boresight pooled roll, mm/deg",
+  "b_se_mmdeg": "its bootstrap SE (cell resampling only -- optimistic), mm/deg",
+  "b_pairsd": "std of its per-pair roll estimates -- the honest uncertainty, mm/deg",
+  "c_shared_se": "cluster-robust standard error of c_shared",
+  "c_over_sumtan": "c_mm divided by the pair's mean sum_tan; constant across pairs if the error is EVEN in scan angle",
+  "offset": "which offset column the estimator was run on",
+  "n_cells": "overlap cells the estimator used",
+  "min_cell_line": "minimum gen1 returns required for a (cell, flight-line) median",
+  "kept_pairs": "cell-pair observations surviving the cut, both tiles pooled"
+ },
+ "notes": [
+  "elba_fulldensity reference_cells cuts: start=355600, not a divide cell=243595, |curv| > 0.015=12788, slope >= 12 deg=37771, building returns=116, clear-cut (frac drop > 0.3)=1160, blufftop retreat margin=2738, |DoD| > 500 mm=376, kept=57056",
+  "elbaext reference_cells cuts: start=720900, not a divide cell=507896, |curv| > 0.015=23160, slope >= 12 deg=58177, building returns=627, clear-cut (frac drop > 0.3)=1318, |DoD| > 500 mm=772, kept=128950"
+ ],
+ "headline": "shared across-track coefficient c = +80.0 +- 5.7 mm per unit tan(scan)",
+ "unasked": [
+  "min_cell_line"
+ ],
+ "session": ""
+}

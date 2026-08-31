@@ -1,0 +1,211 @@
+{
+ "question": "does gen1's own 2008 ground control agree with the +22.7 mm datum anchor carried in from the 2021 3DEP marks, and with what sign?",
+ "started": "2026-08-26T17:02:16+02:00",
+ "argv": [
+  "analysis/groundtruth/gen1_own_control_tie.py",
+  "--ground",
+  "csf",
+  "--json",
+  "/tmp/claude-1000/-home-awickert-projects-lidar-diff-icp/fcf38646-c462-4fe8-b23f-2d07528a329b/scratchpad/own_csf.json"
+ ],
+ "seconds": 160.2,
+ "cwd": "/home/awickert/projects/lidar-diff-icp",
+ "inputs": [
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-28-61.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 29631859,
+   "mtime": "2026-08-26T15:02:18",
+   "digest": "6a7028360799"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-28-63.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 22761742,
+   "mtime": "2026-08-22T09:19:19",
+   "digest": "0fc935e1790d"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-28-64.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 28042351,
+   "mtime": "2026-08-22T09:19:13",
+   "digest": "24646accb38c"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-29-61.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 32790678,
+   "mtime": "2026-08-26T15:02:18",
+   "digest": "6a98ff7ffc50"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-29-62.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 23552454,
+   "mtime": "2026-08-26T15:02:18",
+   "digest": "a05e627a3e7c"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-29-63.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 22473227,
+   "mtime": "2026-08-22T09:18:55",
+   "digest": "ab1ef1217a25"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-29-64.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 27153945,
+   "mtime": "2026-08-15T14:33:13",
+   "digest": "436012d25b08"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-30-63.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 24409455,
+   "mtime": "2026-08-22T09:19:07",
+   "digest": "d3397f2cbed1"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-30-64.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 24356647,
+   "mtime": "2026-08-22T09:19:01",
+   "digest": "a787a1181f2e"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4358-26-03.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 23902428,
+   "mtime": "2026-08-18T07:46:07",
+   "digest": "905bc2844edf"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4358-29-01.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 26002321,
+   "mtime": "2026-08-26T14:44:45",
+   "digest": "4f5ef09e23f3"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4358-29-02.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 21463728,
+   "mtime": "2026-08-26T14:44:53",
+   "digest": "52d6f5139e70"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4358-29-03.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 19934950,
+   "mtime": "2026-08-26T15:02:18",
+   "digest": "3a5f046a8f9f"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/src/lidar_diff_icp/groundtruth/data/mn_dnr_2008_control_semn.csv",
+   "role": "MnDNR 2008 control, 8 SE-MN counties, parsed from the MnGeo county validation reports (NAVD88/GEOID03 -- gen1's own geoid)",
+   "bytes": 313278,
+   "mtime": "2026-08-26T16:58:09",
+   "digest": "9792fcd677e7"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elbaext/corrections_geoid.json",
+   "role": "elbaext datum + lateral shift (the Nuth-Kaaeb term)",
+   "bytes": 27568,
+   "mtime": "2026-08-23T14:01:04",
+   "digest": "f6dd581a3a43"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/src/lidar_diff_icp/groundtruth/data/mn_se_driftless_2021_ql1_near_elba.csv",
+   "role": "the 2021 3DEP marks the +22.7 mm anchor is built on, for a same-estimator siting comparison",
+   "bytes": 1738,
+   "mtime": "2026-08-26T14:49:14",
+   "digest": "8a290a446353"
+  }
+ ],
+ "params": [
+  {
+   "name": "ground_source",
+   "value": "'csf'",
+   "src": "repo",
+   "why": "data/derived/elbaext/corrections_geoid.json ground_source; the same source the anchor's ties were read on"
+  },
+  {
+   "name": "res_m",
+   "value": "5.0",
+   "src": "repo",
+   "why": "data/derived/elbaext/corrections_geoid.json res_m"
+  },
+  {
+   "name": "csf_crop_halfwidth_m",
+   "value": "300.0",
+   "src": "MINE",
+   "why": "CSF is run on a crop, not a tile, to keep it seconds instead of minutes. Copied unchanged from analysis/groundtruth/elba_absolute_tie.py so the two runs are the same method; its effect is measured below by re-reading every mark with the vendor class-2 ground, which uses no crop at all"
+  },
+  {
+   "name": "siting_radius_m",
+   "value": "5.0",
+   "src": "repo",
+   "why": "ADDITIONAL_GROUND_CONTROL.md section 7.1 states the screen at R = 5 m; kept at 5 m so this run is comparable to the 17 measurements there"
+  },
+  {
+   "name": "geoid_shift_m",
+   "value": "0.0",
+   "src": "repo",
+   "why": "the 2008 control and the raw gen1 cloud are both NAVD88(GEOID03) (lidar_semn2008.html); no conversion enters this comparison"
+  },
+  {
+   "name": "lateral_shift_m",
+   "value": "(-0.7498, -0.1893)",
+   "src": "repo",
+   "why": "data/derived/elbaext/corrections_geoid.json cross_epoch_datum.horizontal_shift_m: the elbaext Nuth-Kaaeb shift, reported applied AND withheld because the 2008 control is in gen1's own horizontal frame"
+  },
+  {
+   "name": "swath_chain",
+   "value": "'none'",
+   "src": "repo",
+   "why": "every mark here lies under a gen1 flight line in a tile on disk, so no chain link is needed -- which is the whole point of this control set"
+  }
+ ],
+ "masks": [],
+ "columns": {
+  "tie_mm": "surveyed - z_lidar, mm; POSITIVE = gen1 reads BELOW the mark",
+  "dnr_mm": "the MnDNR table's own Error = Control Z - delivered 2008 DEM, mm; same sign family, different surface",
+  "spread_mm": "p05-p95 of ground returns within the siting radius (section 7.1)",
+  "ctrl_pct": "percentile of the surveyed elevation within those returns; near 50 is well sited, a tail is not",
+  "sigma_mm": "half the tie spread over the pipeline-scale radii (res/2..2*res)",
+  "point": "MnDNR 2008 control point name; the prefix is its land-cover class",
+  "cover": "land-cover class from the point name: L1O open, L2T tall weeds/crops, L3B brush/low trees, L4F forested, L5U urban",
+  "what": "what the land-cover class means, from lidar_semn2008.html",
+  "km": "distance from the Elba reference point (579705.72, 4883677.71), km",
+  "tile": "the gen1 tile the mark falls in, already on disk",
+  "n": "ground returns inside the report radius (or the siting radius, in the siting tables)",
+  "lines": "distinct flight lines contributing inside the report radius",
+  "tie_nolat_mm": "the same tie with the elbaext lateral shift WITHHELD",
+  "mean_tie_mm": "mean of tie_mm over the marks of this class",
+  "median_tie_mm": "median of tie_mm over the marks of this class",
+  "SE_mm": "standard error of the mean over the marks in the row",
+  "mean_spread_mm": "mean of spread_mm over the marks of this class",
+  "mean_dnr_mm": "mean of dnr_mm over the marks of this class",
+  "mark": "2021 3DEP vertical-accuracy mark id",
+  "type": "3DEP accuracy class: NVA open ground, VVA under vegetation",
+  "mean_mm": "mean of the MnDNR Error over the marks in the row, mm",
+  "median_mm": "median of the MnDNR Error over the marks in the row, mm",
+  "L1O_mean_mm": "mean MnDNR Error over the OPEN-cover marks of the row only",
+  "n_L1O": "how many of the row's marks are open cover",
+  "R=2.5": "tie_mm read at radius 2.5 m",
+  "R=5": "tie_mm read at radius 5 m",
+  "R=7.5": "tie_mm read at radius 7.5 m",
+  "R=10": "tie_mm read at radius 10 m",
+  "R=15": "tie_mm read at radius 15 m",
+  "R=20": "tie_mm read at radius 20 m",
+  "R=25": "tie_mm read at radius 25 m"
+ },
+ "notes": [],
+ "headline": "gen1's own 2008 control, measured on the point cloud with the anchor's estimator",
+ "unasked": [
+  "csf_crop_halfwidth_m"
+ ],
+ "session": ""
+}

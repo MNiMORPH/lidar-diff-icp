@@ -1,0 +1,92 @@
+{
+ "question": "Does a mark on the site's own flight line, but tens of km along it, still carry the site's datum -- or has the line drifted in between?",
+ "started": "2026-08-27T18:38:17+02:00",
+ "argv": [
+  "ground_control/run_alongtrack_test.py",
+  "--easting",
+  "578762.8",
+  "--northing",
+  "4884487.6",
+  "--tracks",
+  "ground_control/data/gen1_line_tracks.json",
+  "--psids",
+  "133",
+  "134",
+  "135",
+  "136",
+  "137",
+  "138",
+  "--covers",
+  "L1O",
+  "L5U",
+  "--tiles",
+  "data/before",
+  "--res",
+  "5.0"
+ ],
+ "seconds": 12.9,
+ "cwd": "/home/awickert/projects/lidar-diff-icp",
+ "inputs": [
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/ground_control/data/gen1_line_tracks.json",
+   "role": "gen1 flight-line tracks, one per pass; used here to measure ARC LENGTH along the line, not to assign marks",
+   "bytes": 362313,
+   "mtime": "2026-08-27T17:57:25",
+   "digest": "9ac0db133b79"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/src/lidar_diff_icp/groundtruth/data/mn_dnr_2008_control_semn.csv",
+   "role": "gen1's own 2008 control; dnr_error_m is Control Z - Surface Z",
+   "bytes": 313278,
+   "mtime": "2026-08-26T16:58:09",
+   "digest": "9792fcd677e7"
+  }
+ ],
+ "params": [
+  {
+   "name": "site",
+   "value": "(578762.8, 4884487.6)",
+   "src": "andy",
+   "why": ""
+  },
+  {
+   "name": "psids",
+   "value": "(133, 134, 135, 136, 137, 138)",
+   "src": "andy",
+   "why": ""
+  },
+  {
+   "name": "covers",
+   "value": "('L1O', 'L5U')",
+   "src": "andy",
+   "why": ""
+  },
+  {
+   "name": "scope",
+   "value": "'pass'",
+   "src": "repo",
+   "why": "the defensible scope from ground_control/same_line.py; psid scope mixes different physical lines and would confound the distance test outright"
+  },
+  {
+   "name": "reference_rate_mm_per_km",
+   "value": "15.5",
+   "src": "repo",
+   "why": "within-swath along-track drift measured on the elbaext swaths, analysis/ABSOLUTE_BASIS_ELBA.md uncertainty budget. Used only as a yardstick to compare the fitted slope against; nothing is fitted to it"
+  }
+ ],
+ "masks": [],
+ "columns": {
+  "point_id": "control mark id",
+  "line": "point_source_id from the ground returns at the mark",
+  "along_km": "arc length along that line's own fitted track between the mark's projection and the site's projection, km",
+  "offtrack_m": "perpendicular distance of the mark from that track, m",
+  "tie_mm": "surveyed - lidar at the mark, mm; positive = gen1 reads LOW",
+  "group": "which regression a row enters: pooled, and its line's own"
+ },
+ "notes": [
+  "Along-track distance is CONFOUNDED with line here: the near marks and far marks sit on different lines. The pooled slope therefore mixes a distance effect with a per-line offset and cannot separate them."
+ ],
+ "headline": "pooled slope on 7 marks; see within-line rows",
+ "unasked": [],
+ "session": ""
+}

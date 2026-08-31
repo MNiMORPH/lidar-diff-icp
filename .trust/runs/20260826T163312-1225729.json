@@ -1,0 +1,154 @@
+{
+ "question": "do any 2008 gen1 flight lines run perpendicular to the N-S pattern (a QA tie line), and is there any second-neighbour swath overlap?",
+ "started": "2026-08-26T16:32:20+02:00",
+ "argv": [
+  "analysis/degeneracy_flightline_inventory.py",
+  "--out",
+  "/tmp/claude-1000/-home-awickert-projects-lidar-diff-icp/fcf38646-c462-4fe8-b23f-2d07528a329b/scratchpad/fl_inventory.json"
+ ],
+ "seconds": 52.6,
+ "cwd": "/home/awickert/projects/lidar-diff-icp",
+ "inputs": [
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-28-61.laz",
+   "role": "raw 2008 MN DNR gen1 LAZ tile, vendor classification, point_source_id = flight line",
+   "bytes": 29631859,
+   "mtime": "2026-08-26T15:02:18",
+   "digest": "6a7028360799"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-28-63.laz",
+   "role": "raw 2008 MN DNR gen1 LAZ tile, vendor classification, point_source_id = flight line",
+   "bytes": 22761742,
+   "mtime": "2026-08-22T09:19:19",
+   "digest": "0fc935e1790d"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-28-64.laz",
+   "role": "raw 2008 MN DNR gen1 LAZ tile, vendor classification, point_source_id = flight line",
+   "bytes": 28042351,
+   "mtime": "2026-08-22T09:19:13",
+   "digest": "24646accb38c"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-29-61.laz",
+   "role": "raw 2008 MN DNR gen1 LAZ tile, vendor classification, point_source_id = flight line",
+   "bytes": 32790678,
+   "mtime": "2026-08-26T15:02:18",
+   "digest": "6a98ff7ffc50"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-29-62.laz",
+   "role": "raw 2008 MN DNR gen1 LAZ tile, vendor classification, point_source_id = flight line",
+   "bytes": 23552454,
+   "mtime": "2026-08-26T15:02:18",
+   "digest": "a05e627a3e7c"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-29-63.laz",
+   "role": "raw 2008 MN DNR gen1 LAZ tile, vendor classification, point_source_id = flight line",
+   "bytes": 22473227,
+   "mtime": "2026-08-22T09:18:55",
+   "digest": "ab1ef1217a25"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-29-64.laz",
+   "role": "raw 2008 MN DNR gen1 LAZ tile, vendor classification, point_source_id = flight line",
+   "bytes": 27153945,
+   "mtime": "2026-08-15T14:33:13",
+   "digest": "436012d25b08"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-30-63.laz",
+   "role": "raw 2008 MN DNR gen1 LAZ tile, vendor classification, point_source_id = flight line",
+   "bytes": 24409455,
+   "mtime": "2026-08-22T09:19:07",
+   "digest": "d3397f2cbed1"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-30-64.laz",
+   "role": "raw 2008 MN DNR gen1 LAZ tile, vendor classification, point_source_id = flight line",
+   "bytes": 24356647,
+   "mtime": "2026-08-22T09:19:01",
+   "digest": "a787a1181f2e"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4358-26-03.laz",
+   "role": "raw 2008 MN DNR gen1 LAZ tile, vendor classification, point_source_id = flight line",
+   "bytes": 23902428,
+   "mtime": "2026-08-18T07:46:07",
+   "digest": "905bc2844edf"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4358-29-01.laz",
+   "role": "raw 2008 MN DNR gen1 LAZ tile, vendor classification, point_source_id = flight line",
+   "bytes": 26002321,
+   "mtime": "2026-08-26T14:44:45",
+   "digest": "4f5ef09e23f3"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4358-29-02.laz",
+   "role": "raw 2008 MN DNR gen1 LAZ tile, vendor classification, point_source_id = flight line",
+   "bytes": 21463728,
+   "mtime": "2026-08-26T14:44:53",
+   "digest": "52d6f5139e70"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4358-29-03.laz",
+   "role": "raw 2008 MN DNR gen1 LAZ tile, vendor classification, point_source_id = flight line",
+   "bytes": 19934950,
+   "mtime": "2026-08-26T15:02:18",
+   "digest": "3a5f046a8f9f"
+  }
+ ],
+ "params": [
+  {
+   "name": "nadir_deg",
+   "value": "1.0",
+   "src": "repo",
+   "why": "|scan_angle_rank| <= 1 deg selects returns under the aircraft; the track-fit method of analysis/ELBAEXT2_SCOPE.md Sec 2"
+  },
+  {
+   "name": "ref_northing",
+   "value": "4884126.0",
+   "src": "repo",
+   "why": "the northing at which ELBAEXT2_SCOPE.md Sec 2 reports every track easting"
+  },
+  {
+   "name": "chunk",
+   "value": "2000000",
+   "src": "MINE",
+   "why": "points per streamed read; a memory ceiling only -- it changes no result, and the sufficient statistics are exact regardless of how the file is split"
+  }
+ ],
+ "masks": [],
+ "columns": {
+  "tile": "gen1 LAZ tile the line was measured in",
+  "psid": "point_source_id, i.e. the flight line",
+  "n": "returns of that line in that tile",
+  "n_nadir": "returns with |scan_angle_rank| <= 1 deg, used for the track fit",
+  "heading": "compass bearing of the fitted nadir ground track, degrees",
+  "speed": "along-track speed of the fitted track, m/s",
+  "x_ref": "easting where the fitted track crosses N 4 884 126, m (UTM 15N)",
+  "halfwidth": "99.5th percentile of |cross-track distance| over all that line's returns in the tile, m",
+  "amax": "maximum |scan_angle_rank| of that line in the tile, degrees",
+  "t0": "minimum gps_time of that line in the tile, GPS seconds of week",
+  "t1": "maximum gps_time of that line in the tile, GPS seconds of week",
+  "dx_span": "easting span of that line's returns in the tile, m",
+  "dy_span": "northing span of that line's returns in the tile, m",
+  "cls": "vendor LAS classification code",
+  "count": "returns carrying that classification, summed over all tiles read",
+  "psid_a": "lower-numbered flight line of the pair",
+  "psid_b": "higher-numbered flight line of the pair",
+  "gap": "psid_b - psid_a, i.e. 1 = adjacent, 2 = second neighbour",
+  "spacing": "|x_ref(b) - x_ref(a)|, the nadir-track separation, m",
+  "hw_sum": "halfwidth(a) + halfwidth(b), the separation at which the swaths just touch, m",
+  "sidelap": "hw_sum - spacing: positive = the two swaths overlap by that width, m"
+ },
+ "notes": [],
+ "headline": "flight-line inventory: headings, spacings, second-neighbour overlap, water",
+ "unasked": [
+  "chunk"
+ ],
+ "session": ""
+}

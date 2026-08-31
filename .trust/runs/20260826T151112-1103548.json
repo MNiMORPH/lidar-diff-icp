@@ -1,0 +1,177 @@
+{
+ "question": "what constant must be added to gen1 at Elba to place it on surveyed NAVD88(GEOID18), and do independent control points agree?",
+ "started": "2026-08-26T15:10:13+02:00",
+ "argv": [
+  "analysis/groundtruth/elba_absolute_tie.py"
+ ],
+ "seconds": 59.6,
+ "cwd": "/home/awickert/projects/lidar-diff-icp",
+ "inputs": [
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-29-61.laz",
+   "role": "gen1 2008 MN DNR tile: the corridor the swath chain is solved in",
+   "bytes": 32790678,
+   "mtime": "2026-08-26T15:02:18",
+   "digest": "6a98ff7ffc50"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-29-62.laz",
+   "role": "gen1 2008 MN DNR tile: the corridor the swath chain is solved in",
+   "bytes": 23552454,
+   "mtime": "2026-08-26T15:02:18",
+   "digest": "a05e627a3e7c"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-29-63.laz",
+   "role": "gen1 2008 MN DNR tile: the corridor the swath chain is solved in",
+   "bytes": 22473227,
+   "mtime": "2026-08-22T09:18:55",
+   "digest": "ab1ef1217a25"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-29-64.laz",
+   "role": "gen1 2008 MN DNR tile: the corridor the swath chain is solved in",
+   "bytes": 27153945,
+   "mtime": "2026-08-15T14:33:13",
+   "digest": "436012d25b08"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4358-29-01.laz",
+   "role": "gen1 2008 MN DNR tile: the corridor the swath chain is solved in",
+   "bytes": 26002321,
+   "mtime": "2026-08-26T14:44:45",
+   "digest": "4f5ef09e23f3"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4358-29-02.laz",
+   "role": "gen1 2008 MN DNR tile: the corridor the swath chain is solved in",
+   "bytes": 21463728,
+   "mtime": "2026-08-26T14:44:53",
+   "digest": "52d6f5139e70"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4358-29-03.laz",
+   "role": "gen1 2008 MN DNR tile: the corridor the swath chain is solved in",
+   "bytes": 19934950,
+   "mtime": "2026-08-26T15:02:18",
+   "digest": "3a5f046a8f9f"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-28-61.laz",
+   "role": "gen1 2008 MN DNR tile holding a checkpoint (outside the corridor row; its along-track offset is reported)",
+   "bytes": 29631859,
+   "mtime": "2026-08-26T15:02:18",
+   "digest": "6a7028360799"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elbaext/corrections_geoid.json",
+   "role": "elbaext datum + per-swath alignment; swath 133 is the reference frame the tie is expressed in",
+   "bytes": 27568,
+   "mtime": "2026-08-23T14:01:04",
+   "digest": "f6dd581a3a43"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/src/lidar_diff_icp/groundtruth/data/mn_se_driftless_2021_ql1_near_elba.csv",
+   "role": "surveyed 3DEP QA checkpoints near Elba, NAVD88(GEOID18)",
+   "bytes": 1738,
+   "mtime": "2026-08-26T14:49:14",
+   "digest": "8a290a446353"
+  }
+ ],
+ "params": [
+  {
+   "name": "checkpoint_set",
+   "value": "'mn_se_driftless_2021_ql1_near_elba.csv'",
+   "src": "repo",
+   "why": "the six 3DEP vertical-accuracy marks within ~12 km of Elba, transcribed in ABSOLUTE_ELEVATION_REFS.md section 1a"
+  },
+  {
+   "name": "verdict_tolerance_mm",
+   "value": "161.0",
+   "src": "repo",
+   "why": "gen1 per-county vertical RMSEz for Winona, InPort 68818, ABSOLUTE_ELEVATION_REFS.md section 1b"
+  },
+  {
+   "name": "ground_source",
+   "value": "'csf'",
+   "src": "repo",
+   "why": "data/derived/elbaext/corrections_geoid.json ground_source = csf"
+  },
+  {
+   "name": "csf_crop_halfwidth_m",
+   "value": "300.0",
+   "src": "MINE",
+   "why": "CSF is run on a crop, not a tile, to keep it seconds instead of minutes; 300 m gives a 600 m box (~350k gen1 points) so the cloth is not dominated by the crop edge. It excludes nothing from the estimate: the widest fitting radius is 25 m."
+  },
+  {
+   "name": "target_lines",
+   "value": "[133, 134, 135, 136, 137, 138]",
+   "src": "repo",
+   "why": "the gen1 swaths of the elbaext product; swath 133 is its reference (0,0,0)"
+  },
+  {
+   "name": "elbaext_lateral_shift_m",
+   "value": "(-0.7498, -0.1893)",
+   "src": "repo",
+   "why": "corrections_geoid.json cross_epoch_datum horizontal_shift_m -- the Nuth-Kaaab shift that puts gen1 in gen2's (and the checkpoints') horizontal frame; reported both applied and not"
+  },
+  {
+   "name": "link_res_m",
+   "value": "2.0",
+   "src": "repo",
+   "why": "coreg.coregister_swaths / align_swaths default grid resolution"
+  },
+  {
+   "name": "link_exclude_classes",
+   "value": "(5, 6, 9)",
+   "src": "repo",
+   "why": "coreg.coregister_swaths terrain proxy ~isin(classification,(5,6,9)) -- the VENDOR classification, so no CSF is needed for the chain"
+  }
+ ],
+ "masks": [],
+ "columns": {
+  "R_m": "radius of the fitting window about the checkpoint, m",
+  "n": "ground returns inside the report radius, count",
+  "tie_mm": "constant to ADD to gen1 in swath-133 frame to reach the surveyed datum, mm",
+  "fit_rms_mm": "RMS of z_i - S(x_i,y_i) for the local surface fit S, mm",
+  "medres_mm": "median of those residuals -- the slope-normal quantile term, mm",
+  "slope_deg": "|grad S| at the checkpoint, degrees",
+  "relief_m": "p95 - p05 of return elevations inside the radius, m",
+  "n_lines": "distinct flight lines contributing returns inside the radius, count",
+  "scan_deg": "|scan angle| p05/p50/p95 of those returns, degrees (0 = nadir)",
+  "link": "the flight-line pair, ref-src",
+  "area_km2": "measured overlap area of the pair on the solve grid, km^2",
+  "cells": "grid cells used in the Nuth & Kaeaeb fit, count",
+  "dz_mm": "vertical shift to add to src to align it onto ref, mm",
+  "dz_sig_mm": "1-sigma of that shift (nmad_after / sqrt(n)), mm",
+  "nmad0_mm": "robust scatter of the overlap difference before the link, mm",
+  "nmad1_mm": "and after -- the residual the link could not remove, mm",
+  "dx_m": "eastward shift to add to src, m",
+  "dy_m": "northward shift to add to src, m",
+  "checkpoint": "surveyed 3DEP QA mark id",
+  "type": "NVA = open ground, VVA = under vegetation (3DEP convention)",
+  "line": "gen1 flight line (point_source_id) covering the mark",
+  "links": "cross-swath links between that line and the elbaext frame, count",
+  "sigma_mm": "half the tie's spread across the pipeline-scale radii, mm",
+  "tie_med_mm": "the tie taken as the median over the pipeline-scale radii, mm",
+  "chain_mm": "chain-accumulated vertical shift into the elbaext frame, mm",
+  "chain_sig": "per-link sigmas of that shift in quadrature, mm",
+  "geoid_mm": "references.geoid_difference GEOID03->GEOID18 at the mark, mm",
+  "usable": "does the radius spread fall inside the verdict tolerance",
+  "pair": "which two results are being compared",
+  "what": "what a disagreement between them would mean",
+  "diff_mm": "their difference, mm",
+  "dN_km": "northing offset of the mark from the corridor band centre, km",
+  "swath": "gen1 flight line whose fitted along-track drift curve is summarised",
+  "p2p_mm": "peak-to-peak of that fitted drift curve, mm",
+  "span_km": "along-track distance the curve covers, km (gps_time x 76 m/s)",
+  "mm_per_km": "peak-to-peak divided by span -- the scale of the drift term this module does NOT correct, mm/km",
+  "note": "why a checkpoint has no tie, where it has none"
+ },
+ "notes": [],
+ "headline": "gen1 tie at Elba from 4 control point(s): 2210_2021_MN=+21mm, 3056_2021_MN=-103mm, 2024_2021_MN=+157mm, 2036_2021_MN=+29mm",
+ "unasked": [
+  "csf_crop_halfwidth_m"
+ ],
+ "session": ""
+}

@@ -1,0 +1,101 @@
+{
+ "question": "How wide should the catchment be, and do the marks a wider one admits really belong to the line the returns assign them to?",
+ "started": "2026-08-27T21:45:41+02:00",
+ "argv": [
+  "ground_control/run_catchment_check.py",
+  "--easting",
+  "578762.8",
+  "--northing",
+  "4884487.6",
+  "--tracks",
+  "ground_control/data/gen1_line_tracks.json",
+  "--psids",
+  "133",
+  "134",
+  "135",
+  "136",
+  "137",
+  "138",
+  "--covers",
+  "L1O",
+  "L5U",
+  "--tiles",
+  "data/before",
+  "--res",
+  "5.0",
+  "--half-widths-m",
+  "481",
+  "2000",
+  "--collinear-sigma",
+  "3"
+ ],
+ "seconds": 36.6,
+ "cwd": "/home/awickert/projects/lidar-diff-icp",
+ "inputs": [
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/ground_control/data/gen1_line_tracks.json",
+   "role": "flight-line tracks; used for the SEARCH and to measure the local line spacing",
+   "bytes": 362313,
+   "mtime": "2026-08-27T17:57:25",
+   "digest": "9ac0db133b79"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/src/lidar_diff_icp/groundtruth/data/mn_dnr_2008_control_semn.csv",
+   "role": "gen1's own 2008 control",
+   "bytes": 313278,
+   "mtime": "2026-08-26T16:58:09",
+   "digest": "9792fcd677e7"
+  }
+ ],
+ "params": [
+  {
+   "name": "site",
+   "value": "(578762.8, 4884487.6)",
+   "src": "andy",
+   "why": ""
+  },
+  {
+   "name": "psids",
+   "value": "(133, 134, 135, 136, 137, 138)",
+   "src": "andy",
+   "why": ""
+  },
+  {
+   "name": "covers",
+   "value": "('L1O', 'L5U')",
+   "src": "andy",
+   "why": ""
+  },
+  {
+   "name": "half_widths_m",
+   "value": "(481.0, 2000.0)",
+   "src": "MINE",
+   "why": "the two candidate catchments being compared; the narrow one is half the measured line spacing (the class-12 seam), the wide one is a bound that lets the RETURNS do the discriminating"
+  },
+  {
+   "name": "collinear_sigma",
+   "value": "3.0",
+   "src": "MINE",
+   "why": "passes merged into physical lines within this many prediction-sd"
+  }
+ ],
+ "masks": [],
+ "columns": {
+  "pair": "adjacent flight lines whose tracks are being separated",
+  "spacing_m": "perpendicular distance between the two tracks at the site's northing, m",
+  "half_spacing_m": "half of it -- the class-12 seam, where the vendor cuts bare-earth ground over to the neighbouring line, m",
+  "point_id": "control mark admitted only by the WIDER catchment",
+  "cover": "MnDNR land-cover class, unitless code",
+  "line": "point_source_id the RETURNS assign, not the nearest track",
+  "dist_to_track_m": "perpendicular distance to the nearest searched track, m",
+  "dominant_frac": "share of ground returns at the mark carrying that line, 0-1; how decisively the returns place it",
+  "n_lines_at_mark": "distinct point_source_id values in the mark's window, count"
+ },
+ "notes": [],
+ "headline": "seam 462-506 m; the wider catchment adds 4 marks",
+ "unasked": [
+  "half_widths_m",
+  "collinear_sigma"
+ ],
+ "session": ""
+}

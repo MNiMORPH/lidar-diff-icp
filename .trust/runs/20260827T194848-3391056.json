@@ -1,0 +1,45 @@
+{
+ "question": "What is the bridge on open ground, over all marks, and is any single mark's value resolvable?",
+ "started": "2026-08-27T19:48:48+02:00",
+ "argv": [
+  "ground_control/summarize_bridge.py",
+  "--product",
+  "ground_control/products/bridge_wide_L1O.json"
+ ],
+ "seconds": 0.0,
+ "cwd": "/home/awickert/projects/lidar-diff-icp",
+ "inputs": [
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/ground_control/products/bridge_wide_L1O.json",
+   "role": "per-mark bridge table from run_bridge_wide.py; bridge_mm is z_delivered - z_ours, both on NAVD88(GEOID03)",
+   "bytes": 8208,
+   "mtime": "2026-08-27T19:47:04",
+   "digest": "b8f05703cc29"
+  }
+ ],
+ "params": [
+  {
+   "name": "covers",
+   "value": "('L1O',)",
+   "src": "andy",
+   "why": "open ground only; the validation gate reproduces the shipped grid to +1.7 mm on the open mark and -30.5 mm on the vegetated one"
+  },
+  {
+   "name": "estimator",
+   "value": "'mean and median, both reported, neither chosen'",
+   "src": "MINE",
+   "why": "the per-mark values are heavy-tailed, so a mean alone would be a claim about the tails; nothing is trimmed or filtered"
+  }
+ ],
+ "masks": [],
+ "columns": {
+  "stat": "name of the statistic",
+  "value_mm": "its value in mm, or a count where the name says count"
+ },
+ "notes": [],
+ "headline": "bridge -4.04 +/- 11.12 mm over 29 open marks",
+ "unasked": [
+  "estimator"
+ ],
+ "session": ""
+}

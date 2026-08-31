@@ -1,0 +1,218 @@
+{
+ "question": "what is the 2008 control residual AT the named site, as a value of a fitted spatial field with a prediction variance there, rather than as the mean of whatever marks happened to be nearby?",
+ "started": "2026-08-26T22:32:02+02:00",
+ "argv": [
+  "analysis/control_residual_field.py",
+  "--site-name",
+  "Elba",
+  "--site-easting",
+  "578762.8",
+  "--site-northing",
+  "4884487.6",
+  "--sign-tol-m",
+  "1e-9",
+  "--band-radii-km",
+  "5,10",
+  "--max-lag-m",
+  "20000,60000",
+  "--n-lags",
+  "30",
+  "--n-pairs",
+  "400000",
+  "--estimators",
+  "dowd",
+  "--seeds",
+  "0",
+  "--block-m",
+  "50000",
+  "--loo-verify-idx",
+  "0,3",
+  "--vgm-csv",
+  "/tmp/claude-1000/-home-awickert-projects-lidar-diff-icp/fcf38646-c462-4fe8-b23f-2d07528a329b/scratchpad/vgm_smoke.csv",
+  "--fig",
+  "/tmp/claude-1000/-home-awickert-projects-lidar-diff-icp/fcf38646-c462-4fe8-b23f-2d07528a329b/scratchpad/smoke.png",
+  "--tie-table-18",
+  "analysis/GEN1_DATUM_MORE_MARKS.md",
+  "--tie-table-16",
+  "analysis/GEN1_OWN_CONTROL_TIE.md"
+ ],
+ "seconds": 27.7,
+ "cwd": "/home/awickert/projects/lidar-diff-icp",
+ "inputs": [
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/src/lidar_diff_icp/groundtruth/data/mn_dnr_2008_control_semn.csv",
+   "role": "MnDNR 2008 SE-MN validation control: surveyed Control Z, the delivered 2008 surface Z, and the vendor's own residual dnr_error_m; no lidar processing of ours enters it",
+   "bytes": 313278,
+   "mtime": "2026-08-26T16:58:09",
+   "digest": "9792fcd677e7"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/analysis/GEN1_DATUM_MORE_MARKS.md",
+   "role": "another agent's committed table, printed by analysis/groundtruth/gen1_more_marks_report.py this session: 18 open/urban marks on lines 133-138 with OUR tie_mm (vendor class-2 ground, no lateral shift) beside the vendor dnr_mm; READ, not recomputed here",
+   "bytes": 30474,
+   "mtime": "2026-08-26T19:08:32",
+   "digest": "aafee5c633bc"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/analysis/GEN1_OWN_CONTROL_TIE.md",
+   "role": "the earlier committed table from analysis/groundtruth/gen1_own_control_tie.py: 16 marks inside the 13 gen1 tiles on disk with OUR tie_mm (CSF ground, elbaext lateral shift) beside the vendor dnr_mm; READ, not recomputed here",
+   "bytes": 37806,
+   "mtime": "2026-08-26T17:17:53",
+   "digest": "f5e1089b718c"
+  }
+ ],
+ "params": [
+  {
+   "name": "site",
+   "value": "('Elba', 578762.8, 4884487.6)",
+   "src": "andy",
+   "why": ""
+  },
+  {
+   "name": "sign_tol_m",
+   "value": "1e-09",
+   "src": "MINE",
+   "why": "tolerance for calling the Control-minus-Surface identity exact; it excludes nothing from any estimate, it only sets when the identity is declared to hold, and the max residual is printed beside it"
+  },
+  {
+   "name": "band_radii_km",
+   "value": "[5.0, 10.0]",
+   "src": "MINE",
+   "why": "the radii at which the sample-mean-and-SE table is re-derived; they select nothing downstream, the whole field fit uses every mark, and the point of the table is that the mean MOVES with this parameter"
+  },
+  {
+   "name": "max_lag_m",
+   "value": "[20000.0, 60000.0]",
+   "src": "MINE",
+   "why": "swept, not chosen: the variogram range is known to track max_lag when a field has long-wavelength structure, so every value is fitted and every resulting site prediction is printed"
+  },
+  {
+   "name": "n_lags / n_pairs / seeds",
+   "value": "([30], [400000], [0])",
+   "src": "MINE",
+   "why": "nuisance grid of the binning and random-pair sampling; results are reported as median and full min-max across this grid so no single setting is privileged"
+  },
+  {
+   "name": "estimators",
+   "value": "['dowd']",
+   "src": "andy",
+   "why": ""
+  },
+  {
+   "name": "block_m",
+   "value": "[50000.0]",
+   "src": "MINE",
+   "why": "swept block sides for spatially blocked cross-validation; each is run and printed, and no mark is dropped at any of them"
+  },
+  {
+   "name": "loo_verify_idx",
+   "value": "[0, 3]",
+   "src": "MINE",
+   "why": "marks at which the leave-one-out shortcut is checked against a full refit; it verifies arithmetic and excludes nothing"
+  }
+ ],
+ "masks": [
+  {
+   "name": "deduped",
+   "kept": 963,
+   "total": 1004,
+   "frac": 0.9591633466135459,
+   "defn": "rows of the control CSV kept after dropping exact repeats of (easting, northing, elevation) -- the same physical mark printed in two counties' validation reports",
+   "warn": true
+  },
+  {
+   "name": "open",
+   "kept": 230,
+   "total": 963,
+   "frac": 0.23883696780893043,
+   "defn": "marks whose point_type is in ('L1O',)",
+   "warn": false
+  },
+  {
+   "name": "open+urban",
+   "kept": 397,
+   "total": 963,
+   "frac": 0.4122533748701973,
+   "defn": "marks whose point_type is in ('L1O', 'L5U')",
+   "warn": false
+  },
+  {
+   "name": "cover-covariate",
+   "kept": 963,
+   "total": 963,
+   "frac": 1.0,
+   "defn": "marks whose point_type is in ('L1O', 'L2T', 'L3B', 'L4F', 'L5U', 'other')",
+   "warn": true
+  }
+ ],
+ "columns": {
+  "what": "name of the row's quantity or stratum",
+  "value": "the number, units named in the row",
+  "radius_km": "radius about the site within which marks are counted, km",
+  "n_all": "marks of ANY cover class inside the radius",
+  "mean_all_mm": "mean of dnr_error_m over those marks, mm",
+  "se_all_mm": "sd/sqrt(n) of that mean, mm -- an SE OF A SAMPLE MEAN, not a prediction sd",
+  "n_ou": "marks of cover class L1O or L5U inside the radius",
+  "mean_ou_mm": "mean of dnr_error_m over the L1O+L5U marks, mm",
+  "se_ou_mm": "sd/sqrt(n) of that mean, mm",
+  "cover": "MnDNR land-cover class from the CSV point_type column",
+  "meaning": "what that class code denotes in the validation reports",
+  "n": "number of de-duplicated marks in the row",
+  "mean_mm": "mean of dnr_error_m over the row's marks, mm",
+  "median_mm": "median of dnr_error_m over the row's marks, mm",
+  "sd_mm": "sample sd of dnr_error_m over the row's marks, mm",
+  "se_mm": "sd/sqrt(n) of the row's mean, mm",
+  "variant": "cover treatment: which marks enter and whether cover is a drift term",
+  "estimator": "empirical-variogram estimator: dowd (robust) or matheron (classical)",
+  "max_lag_m": "largest separation entering the empirical variogram, m",
+  "nugget_mm2": "fitted spherical nugget, mm^2 (median over the nuisance grid)",
+  "sill_mm2": "fitted spherical PARTIAL sill (correlated variance), mm^2, median over the nuisance grid",
+  "range_m": "fitted spherical range (correlation length), m, median over the nuisance grid",
+  "sqrt_tot_mm": "sqrt(nugget+partial sill), mm -- the modelled total sd of the field",
+  "pred_mm": "kriged residual at the site, mm, median over the nuisance grid; positive = the delivered 2008 surface reads LOW",
+  "pred_lo_mm": "minimum kriged residual at the site across the nuisance grid, mm",
+  "pred_hi_mm": "maximum kriged residual at the site across the nuisance grid, mm",
+  "sd_field_mm": "kriging sd of the CORRELATED field component at the site (nugget filtered out), mm, median over the nuisance grid",
+  "sd_mark_mm": "kriging sd for the residual A NEW CONTROL MARK at the site would show (nugget included), mm, median over the nuisance grid",
+  "lag_m": "centre of the empirical-variogram lag bin, m",
+  "gamma_mm2": "empirical semivariance in that bin, mm^2",
+  "pairs": "random pairs falling in that bin",
+  "rmse_krige_mm": "root-mean-square cross-validation error of the kriged field, mm",
+  "rmse_null_mm": "root-mean-square cross-validation error of one global constant (fold mean), mm",
+  "mae_krige_mm": "mean absolute cross-validation error of the kriged field, mm",
+  "mae_null_mm": "mean absolute cross-validation error of one global constant (fold median), mm",
+  "skill": "1 - rmse_krige/rmse_null; positive = the field model beats the constant",
+  "block_m": "side of the square spatial block held out as one CV fold, m",
+  "n_blocks": "number of occupied blocks, i.e. folds",
+  "county": "MnDNR county whose validation report the mark came from",
+  "F": "one-way ANOVA F statistic across the grouping",
+  "p": "ANOVA p value",
+  "sd_group_means_mm": "sd of the group means, mm",
+  "sd_within_mm": "pooled within-group sd, mm",
+  "set": "which committed per-mark table the row summarises",
+  "dmean_mm": "mean of (our tie_mm - vendor dnr_mm) over the set, mm",
+  "dmedian_mm": "median of (our tie_mm - vendor dnr_mm), mm",
+  "dsd_mm": "sample sd of (our tie_mm - vendor dnr_mm), mm",
+  "dse_mm": "sd/sqrt(n) of dmean_mm, mm",
+  "r": "Pearson correlation of our tie_mm against the vendor dnr_mm over the set",
+  "sel_mean_mm": "mean vendor residual of the SELECTED marks, mm",
+  "field_at_sel_mm": "mean of the leave-one-out kriged field at those same locations, mm",
+  "excess_mm": "sel_mean_mm - field_at_sel_mm, mm: how far the selected marks sit above their own local field",
+  "max_abs_err_mm": "largest absolute disagreement between the LOO shortcut and a full refit, mm",
+  "max_abs_var_mm2": "largest absolute disagreement in LOO kriging variance, mm^2",
+  "n_counties": "counties with more than one mark in the stratum",
+  "set2": "which committed per-mark table the selected marks come from",
+  "pop_mean_mm": "mean vendor residual of ALL marks within radius_km of the site, mm"
+ },
+ "notes": [],
+ "headline": "control residual field kriged to Elba",
+ "unasked": [
+  "sign_tol_m",
+  "band_radii_km",
+  "max_lag_m",
+  "n_lags / n_pairs / seeds",
+  "block_m",
+  "loo_verify_idx"
+ ],
+ "session": ""
+}

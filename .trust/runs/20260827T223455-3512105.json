@@ -1,0 +1,71 @@
+{
+ "question": "What is the site's OPEN-ground datum if cover is a covariate to be removed and every flight line keeps its own offset?",
+ "started": "2026-08-27T22:34:55+02:00",
+ "argv": [
+  "ground_control/run_line_cover_model.py",
+  "--product",
+  "ground_control/products/gen1_datum_by_returns_elba_ALL.json",
+  "--weights",
+  "/tmp/claude-1000/-home-awickert-projects-lidar-diff-icp-ground-control/ecf79f4c-3c28-466b-aa7e-a241bc03d28b/scratchpad/weights.json",
+  "--reference-cover",
+  "L1O",
+  "--out",
+  "ground_control/products/gen1_line_cover_model_elba.json"
+ ],
+ "seconds": 0.0,
+ "cwd": "/home/awickert/projects/lidar-diff-icp",
+ "inputs": [
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/ground_control/products/gen1_datum_by_returns_elba_ALL.json",
+   "role": "per-mark ties with the line their returns assign and their MnDNR cover class",
+   "bytes": 2846,
+   "mtime": "2026-08-27T22:29:21",
+   "digest": "29d52e243ada"
+  },
+  {
+   "path": "/tmp/claude-1000/-home-awickert-projects-lidar-diff-icp-ground-control/ecf79f4c-3c28-466b-aa7e-a241bc03d28b/scratchpad/weights.json",
+   "role": "each line's share of the ground cells the pipeline built for this tile",
+   "bytes": 167,
+   "mtime": "2026-08-27T22:14:52",
+   "digest": "f5231253cf26"
+  }
+ ],
+ "params": [
+  {
+   "name": "model",
+   "value": "'tie ~ line + cover, additive, no interaction'",
+   "src": "MINE",
+   "why": "an interaction would need a mark in every line x cover cell; there are 6 lines and 6 covers against 25 marks, so it is not estimable"
+  },
+  {
+   "name": "reference_cover",
+   "value": "'L1O'",
+   "src": "andy",
+   "why": "set to zero, so the intercept plus each line effect IS that line's OPEN-ground level and the datum is read out there"
+  },
+  {
+   "name": "max_km",
+   "value": "None",
+   "src": "MINE",
+   "why": "optional restriction to the near field; None uses every mark"
+  }
+ ],
+ "masks": [],
+ "columns": {
+  "term": "model coefficient: the intercept (reference line at reference cover), a line offset, or a cover effect relative to the reference cover; all in mm",
+  "estimate_mm": "its fitted value, mm",
+  "se_mm": "its standard error, mm",
+  "line": "flight line point_source_id",
+  "w": "that line's share of the tile's ground cells, 0-1",
+  "open_level_mm": "mu + L_i, that line's OPEN-ground datum, mm",
+  "stat": "name of the statistic",
+  "value": "its value; mm unless stated"
+ },
+ "notes": [],
+ "headline": "open-ground datum +72.08 +/- 36.99 mm from 25 marks, cover removed as a covariate",
+ "unasked": [
+  "model",
+  "max_km"
+ ],
+ "session": ""
+}

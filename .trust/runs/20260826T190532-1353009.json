@@ -1,0 +1,168 @@
+{
+ "question": "what uniform vertical raise of gen1 does routed sediment continuity demand, on the hillslopes only?",
+ "started": "2026-08-26T19:03:34+02:00",
+ "argv": [
+  "analysis/mass_balance/datum_from_mass_balance.py",
+  "--n-boot",
+  "10",
+  "--null-real",
+  "4"
+ ],
+ "seconds": 118.4,
+ "cwd": "/home/awickert/projects/lidar-diff-icp",
+ "inputs": [
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elba_fulldensity/z_after.npy",
+   "role": "DEM routed (gen2 ground surface, m)",
+   "bytes": 2844928,
+   "mtime": "2026-08-21T11:53:20",
+   "digest": "d014cef67453"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elba_fulldensity/dod_cover_q2.npy",
+   "role": "DEM of Difference, gen2 - gen1, m (+ = rose)",
+   "bytes": 2844928,
+   "mtime": "2026-08-26T17:39:28",
+   "digest": "91c7360d33bd"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elba_fulldensity/lod_cover_q2.npy",
+   "role": "level of detection, 1.96 sigma, m",
+   "bytes": 2844928,
+   "mtime": "2026-08-26T18:51:04",
+   "digest": "88d8f7d0fc65"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elba_fulldensity/floodplain_mask.npy",
+   "role": "floodplain cells excluded from the hillslope budget (STANDING PROJECT RULE)",
+   "bytes": 355728,
+   "mtime": "2026-08-21T13:36:10",
+   "digest": "ab2e518432c7"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elba_fulldensity/corrections.json",
+   "role": "pipeline metadata: res_m, stable_1sigma_m",
+   "bytes": 18763,
+   "mtime": "2026-08-26T17:16:57",
+   "digest": "94343ea435f4"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elba_fulldensity/canopy_cover_pfs.npy",
+   "role": "gen2 canopy cover fraction (PyForestScan), for the residual-structure table",
+   "bytes": 2844928,
+   "mtime": "2026-08-23T23:55:32",
+   "digest": "369e75660f46"
+  }
+ ],
+ "params": [
+  {
+   "name": "res_m",
+   "value": "5.0",
+   "src": "repo",
+   "why": ""
+  },
+  {
+   "name": "z",
+   "value": "1.0",
+   "src": "andy",
+   "why": "the edge of 1 sigma, asked for 2026-08-26; mass_balance ships 1.96"
+  },
+  {
+   "name": "channel_area_m2",
+   "value": "10000.0",
+   "src": "repo",
+   "why": "catchment-dod-balance offmap default, as used in its own validation run"
+  },
+  {
+   "name": "variogram_max_lag_m",
+   "value": "600.0",
+   "src": "repo",
+   "why": "validate_site.py default"
+  },
+  {
+   "name": "floodplain_mode",
+   "value": "'routing'",
+   "src": "repo",
+   "why": "standing project rule: floodplain_mask cells out of hillslope mass balance"
+  },
+  {
+   "name": "envelope",
+   "value": "'correlated'",
+   "src": "repo",
+   "why": "catchment-dod-balance README: independent is a documented LOWER BOUND"
+  },
+  {
+   "name": "n_boot",
+   "value": "10",
+   "src": "MINE",
+   "why": "block-bootstrap replicates for the SE; raise it if the SE is not stable"
+  }
+ ],
+ "masks": [
+  {
+   "name": "floodplain",
+   "kept": 136361,
+   "total": 355600,
+   "frac": 0.3834673790776153,
+   "defn": "floodplain_mask.npy as shipped (TPI over an 800 m window < -2 m; analysis/ridgelines/convexity_dod_landcover.py)",
+   "warn": false
+  },
+  {
+   "name": "routed",
+   "kept": 217609,
+   "total": 355600,
+   "frac": 0.6119488188976377,
+   "defn": "D-infinity graph after breaching, floodplain cells REMOVED",
+   "warn": false
+  },
+  {
+   "name": "variogram_cells",
+   "kept": 285746,
+   "total": 355600,
+   "frac": 0.8035601799775028,
+   "defn": "|dod| <= lod (insignificant change), the validate_site.py selection",
+   "warn": false
+  },
+  {
+   "name": "evaluable",
+   "kept": 214562,
+   "total": 217609,
+   "frac": 0.9859978217812683,
+   "defn": "routed & finite V_acc & not off-map-contaminated & N_up > 0",
+   "warn": true
+  }
+ ],
+ "columns": {
+  "f_flagged": "fraction of evaluable cells still flagged as unphysical deposition (V_acc - V_in > z*sigma) after the raise, dimensionless",
+  "keep": "1 - f_flagged; the balancing_offset 'keep' quantile that returns this delta",
+  "delta_mm": "uniform raise of gen1 (mm) = quantile(S, keep); = -1000 * balancing_offset(keep)['offset']",
+  "se_mm": "SE of delta_mm: SD over block-bootstrap replicates of the same quantile, blocks of side L (mm)",
+  "net_vol_m3": "sum over KNOWN evaluable cells of (dod - delta)*area, m^3; negative = the hillslope exports sediment",
+  "L_m": "side of the square spatial block resampled by the bootstrap, m",
+  "n_blocks": "number of blocks holding at least one evaluable cell",
+  "band": "drainage-area band of the evaluable cells, ha",
+  "n": "count of evaluable cells in the band",
+  "median_S_mm": "median over the band of S = the raise each cell demands, mm",
+  "f0": "fraction of the band flagged at delta = 0, dimensionless",
+  "quantity": "name of the reported scalar",
+  "value": "its value, units given in the name",
+  "delta_api_mm": "the same delta from catchment_dod_balance.balancing_offset, mm",
+  "binding_cell": "(row, col) of the cell that sets it",
+  "cover": "evaluable_fraction: share of the routed tile the datum rests on",
+  "se_f0025_mm": "SE of delta_mm at f_flagged = 0.025, mm",
+  "se_f005_mm": "SE of delta_mm at f_flagged = 0.05, mm",
+  "se_f010_mm": "SE of delta_mm at f_flagged = 0.10, mm",
+  "stat": "name of the null-calibration quantity",
+  "val": "its value, units in the name",
+  "stratum": "the cells the row is measured over",
+  "f_res": "fraction of them still flagged after the raise, dimensionless",
+  "mean_block_dod_mm": "mean over blocks of the block-mean DoD, mm",
+  "se_mean_mm": "SE of that mean of block means = SD/sqrt(n_blocks), mm"
+ },
+ "notes": [],
+ "headline": "delta(f=0.05) = +31.2 mm on dod_cover_q2.npy, correlated envelope, floodplain routing",
+ "unasked": [
+  "n_boot"
+ ],
+ "session": ""
+}

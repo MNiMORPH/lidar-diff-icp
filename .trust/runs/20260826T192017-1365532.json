@@ -1,0 +1,119 @@
+{
+ "question": "is a gen1 flight-line vertical tie a property of the LINE, or of the place it was fitted?",
+ "started": "2026-08-26T19:19:13+02:00",
+ "argv": [
+  "analysis/local_tie_chaining.py",
+  "--section",
+  "repeat"
+ ],
+ "seconds": 64.2,
+ "cwd": "/home/awickert/projects/lidar-diff-icp",
+ "inputs": [
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-29-64.laz",
+   "role": "gen1 tile over the Elba study area, for the window ladder and the within-tile repeat",
+   "bytes": 27153945,
+   "mtime": "2026-08-15T14:33:13",
+   "digest": "436012d25b08"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-28-64.laz",
+   "role": "gen1 tile over the Elba study area, for the window ladder and the within-tile repeat",
+   "bytes": 28042351,
+   "mtime": "2026-08-22T09:19:13",
+   "digest": "24646accb38c"
+  }
+ ],
+ "params": [
+  {
+   "name": "res_m",
+   "value": "2.0",
+   "src": "repo",
+   "why": "coreg.coregister_swaths / align_swaths default grid resolution (2.0 m)"
+  },
+  {
+   "name": "exclude",
+   "value": "(5, 6, 9)",
+   "src": "repo",
+   "why": "coreg.coregister_swaths terrain proxy ~isin(classification,(5,6,9)) -- the VENDOR classes, so no CSF run is needed"
+  },
+  {
+   "name": "tie_modes",
+   "value": "('overlap_median', 'intercept')",
+   "src": "repo",
+   "why": "the two estimators coreg.coregister_swaths supports; corrections_geoid.json records swath_tie='intercept' as the pipeline's"
+  },
+  {
+   "name": "half_width_m",
+   "value": "400.0",
+   "src": "MINE",
+   "why": "window half-width for the along-track sweep and the chains. There is NO library default and none is invented here; 400 m is one rung of the ladder in section 2, chosen so the window fits inside a single 2.5 km tile at every along-track sample. Section 2 measures what the choice costs; section 3 is re-runnable at any other rung with --half-width-m"
+  },
+  {
+   "name": "ladder_half_widths_m",
+   "value": "(100.0, 200.0, 400.0, 800.0, 1200.0)",
+   "src": "MINE",
+   "why": "the window sizes reported in section 2. Chosen to span a factor of 12, from below one flight-line sidelap width to a whole tile; nothing is excluded on their basis, the whole ladder is printed"
+  },
+  {
+   "name": "shape",
+   "value": "'square'",
+   "src": "MINE",
+   "why": "square window. A disk would give a ragged grid edge and fewer cells for the same half-width; localtie supports both and --shape switches it"
+  },
+  {
+   "name": "mark_radius_m",
+   "value": "25.0",
+   "src": "MINE",
+   "why": "radius within which a mark's flight line is identified by return count (groundtruth.chain.covering_lines). It selects WHICH LINE the mark is on, not which marks are used; every mark is reported"
+  },
+  {
+   "name": "repeat_step_m",
+   "value": "300.0",
+   "src": "MINE",
+   "why": "along-track spacing of the within-tile repeat windows in section 3c. 300 m so that neighbouring 400 m-half-width windows overlap and neighbouring 800 m ones overlap heavily; it sets the SAMPLING of the short-range scatter, and excludes nothing"
+  },
+  {
+   "name": "repeat_half_widths_m",
+   "value": "(400.0, 800.0)",
+   "src": "MINE",
+   "why": "the two window sizes section 3c repeats at, so that scatter which is estimator noise (shrinks with window) can be told from scatter which is local structure (does not)"
+  },
+  {
+   "name": "centre",
+   "value": "('strip', 'tile')",
+   "src": "MINE",
+   "why": "where each along-track window sits across the overlap strip. 'strip' is the strip's own median easting -- the sidelap middle, where the intercept tie is an interpolation; 'tile' is the overlap cell nearest the tile centre, which on a N-S strip is its western EDGE. Both are run and both are reported; neither is used to exclude anything"
+  },
+  {
+   "name": "target_line",
+   "value": "137",
+   "src": "MINE",
+   "why": "the frame the marks are carried into. 137 is the middle Elba line and the one the brief names; --target-line changes it"
+  }
+ ],
+ "masks": [],
+ "columns": {
+  "half_width_m": "window half-width about each sample location, m",
+  "tie_mode": "which coreg tie estimator produced the number, overlap_median or intercept",
+  "n_windows": "windows tied along the 136-137 overlap inside 4342-29-64.laz",
+  "mean_mm": "mean of the tie over those windows, mm",
+  "sd_mm": "standard deviation of the tie between those windows, mm",
+  "min_mm": "smallest tie among those windows, mm",
+  "max_mm": "largest tie among those windows, mm",
+  "span_km": "along-track distance from the first window centre to the last, km"
+ },
+ "notes": [],
+ "headline": "",
+ "unasked": [
+  "half_width_m",
+  "ladder_half_widths_m",
+  "shape",
+  "mark_radius_m",
+  "repeat_step_m",
+  "repeat_half_widths_m",
+  "centre",
+  "target_line"
+ ],
+ "session": ""
+}

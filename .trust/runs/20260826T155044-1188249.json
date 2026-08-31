@@ -1,0 +1,140 @@
+{
+ "question": "does the 2021 gen2 surface hit its own surveyed QA checkpoints, and by how much does it sit low or high at each one?",
+ "started": "2026-08-26T15:50:37+02:00",
+ "argv": [
+  "analysis/groundtruth/gen2_checkpoint_tie.py",
+  "--json",
+  "data/derived/groundtruth/elba_gen2_ties.json"
+ ],
+ "seconds": 6.6,
+ "cwd": "/home/awickert/projects/lidar-diff-icp",
+ "inputs": [
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/src/lidar_diff_icp/groundtruth/data/mn_se_driftless_2021_ql1_near_elba.csv",
+   "role": "surveyed 3DEP QA checkpoints near Elba, NAVD88(GEOID18) -- the SAME datum as gen2, so no geoid term is applied",
+   "bytes": 1738,
+   "mtime": "2026-08-26T14:49:14",
+   "digest": "8a290a446353"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/after/checkpoints/cp2210_gen2.laz",
+   "role": "gen2 2021 3DEP full-density box around checkpoint 2210_2021_MN (fetched at EPT depth 12)",
+   "bytes": 9095383,
+   "mtime": "2026-08-26T15:29:08",
+   "digest": "31a0f4e0d268"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/after/checkpoints/cp3056_gen2.laz",
+   "role": "gen2 2021 3DEP full-density box around checkpoint 3056_2021_MN (fetched at EPT depth 12)",
+   "bytes": 13554149,
+   "mtime": "2026-08-26T15:29:24",
+   "digest": "3acdd8139444"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/after/checkpoints/cp2024_gen2.laz",
+   "role": "gen2 2021 3DEP full-density box around checkpoint 2024_2021_MN (fetched at EPT depth 12)",
+   "bytes": 10062750,
+   "mtime": "2026-08-26T15:29:32",
+   "digest": "506e265efc6d"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/after/checkpoints/cp2036_gen2.laz",
+   "role": "gen2 2021 3DEP full-density box around checkpoint 2036_2021_MN (fetched at EPT depth 12)",
+   "bytes": 11132159,
+   "mtime": "2026-08-26T15:29:40",
+   "digest": "75667e0acf70"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/after/checkpoints/cp2099_gen2.laz",
+   "role": "gen2 2021 3DEP full-density box around checkpoint 2099_2021_MN (fetched at EPT depth 12)",
+   "bytes": 5324851,
+   "mtime": "2026-08-26T15:29:47",
+   "digest": "0b97fbef8a96"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/after/checkpoints/cp3089_gen2.laz",
+   "role": "gen2 2021 3DEP full-density box around checkpoint 3089_2021_MN (fetched at EPT depth 12)",
+   "bytes": 7647532,
+   "mtime": "2026-08-26T15:29:53",
+   "digest": "a237378a1c94"
+  }
+ ],
+ "params": [
+  {
+   "name": "checkpoint_set",
+   "value": "'mn_se_driftless_2021_ql1_near_elba.csv'",
+   "src": "repo",
+   "why": "the six 3DEP vertical-accuracy marks within ~12 km of Elba"
+  },
+  {
+   "name": "ground_source",
+   "value": "'class2'",
+   "src": "repo",
+   "why": "pipeline.read_after_ground default mode='class2' -- gen2's own vendor bare earth, the ground the product is built from"
+  },
+  {
+   "name": "geoid_shift_mm",
+   "value": "0.0",
+   "src": "repo",
+   "why": "checkpoints are NAVD88(GEOID18) and gen2 is NAVD88(GEOID18) (ABSOLUTE_ELEVATION_REFS.md section 1a, verified from the shapefile .prj and the project report), so NO geoid term applies on this side. The measurement below is itself the check on that claim: a wrong geoid model would show as a ~70 mm offset at every mark."
+  },
+  {
+   "name": "swath_shift_m",
+   "value": "(0.0, 0.0, 0.0)",
+   "src": "repo",
+   "why": "gen2 is the frame gen1 was registered INTO; it carries no chain, no internal swath alignment and no lateral shift of its own"
+  },
+  {
+   "name": "box_half_width_m",
+   "value": "200.0",
+   "src": "MINE",
+   "why": "the fetched gen2 box around each mark. The widest fitting radius on the ladder is 25 m, so this excludes nothing from any estimate; it is sized so the 3DEP node tiles fetch in seconds."
+  },
+  {
+   "name": "nva_tolerance_mm",
+   "value": "35.0",
+   "src": "repo",
+   "why": "USGS project report / VA text files for the QL1 block covering Winona County: NVA 3.5 cm RMSEz, VVA 27 cm at the 95th percentile; quoted in analysis/ridgelines/ABSOLUTE_ELEVATION_REFS.md section 1b"
+  },
+  {
+   "name": "vva_tolerance_mm",
+   "value": "270.0",
+   "src": "repo",
+   "why": "USGS project report / VA text files for the QL1 block covering Winona County: NVA 3.5 cm RMSEz, VVA 27 cm at the 95th percentile; quoted in analysis/ridgelines/ABSOLUTE_ELEVATION_REFS.md section 1b"
+  },
+  {
+   "name": "gen1_ties_for_comparison_mm",
+   "value": "{'2210_2021_MN': (21.3, 12.4), '2036_2021_MN': (28.9, 27.0), '3056_2021_MN': (-103.2, 52.3), '2024_2021_MN': (156.6, 54.5)}",
+   "src": "repo",
+   "why": "analysis/groundtruth/elba_absolute_tie.py, csf ground, run 2026-08-26; docs/groundtruth.md section 6"
+  }
+ ],
+ "masks": [],
+ "columns": {
+  "R_m": "radius of the fitting window about the checkpoint, m",
+  "n": "gen2 ground returns inside the report radius, count",
+  "tie_mm": "surveyed elevation minus lidar ground at the mark, after the swath and geoid terms; the constant to ADD to gen1, mm",
+  "fit_rms_mm": "RMS of z_i - S(x_i,y_i) for the local surface fit S, mm",
+  "medres_mm": "median of those residuals -- the slope-normal quantile term, mm",
+  "slope_deg": "|grad S| at the checkpoint, degrees",
+  "relief_m": "p95 - p05 of return elevations inside the radius, m",
+  "n_lines": "distinct flight lines contributing returns inside the radius, count",
+  "scan_deg": "|scan angle| p05/p50/p95 of those returns, degrees (0 = nadir)",
+  "checkpoint": "surveyed 3DEP QA mark id",
+  "type": "NVA = open ground, VVA = under vegetation (3DEP convention)",
+  "gen2_mm": "surveyed minus gen2 ground at the mark -- the constant to ADD to gen2; POSITIVE means gen2 sits LOW, mm",
+  "sigma_mm": "half the tie's spread across the pipeline-scale radii, mm",
+  "gen2_med_mm": "the same tie taken as the median over the pipeline-scale radii, mm",
+  "gen1_mm": "gen1's tie at the same mark, for comparison, mm",
+  "epoch_mm": "gen1 tie minus gen2 tie: how much MORE the 2008 surface sits low than the 2021 one at this mark, mm",
+  "usable": "does the radius spread fall inside 3DEP's own accuracy for the point's class",
+  "note": "why a mark has no gen2 tie, where it has none",
+  "density": "gen2 ground returns per square metre inside the box"
+ },
+ "notes": [],
+ "headline": "gen2 vs its own checkpoints: 2210=-1mm, 3056=+28mm, 2024=+35mm, 2036=+59mm, 2099=-44mm, 3089=-109mm",
+ "unasked": [
+  "box_half_width_m"
+ ],
+ "session": ""
+}

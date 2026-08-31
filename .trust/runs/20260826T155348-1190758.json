@@ -1,0 +1,118 @@
+{
+ "question": "what single constant places gen1 at Elba on the surveyed datum, how well is it known, and what does that fix in the DoD?",
+ "started": "2026-08-26T15:53:48+02:00",
+ "argv": [
+  "analysis/groundtruth/elba_datum_constant.py"
+ ],
+ "seconds": 0.1,
+ "cwd": "/home/awickert/projects/lidar-diff-icp",
+ "inputs": [
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/groundtruth/elba_gen1_ties.json",
+   "role": "gen1 checkpoint ties, chained into the elbaext swath frame and geoid-shifted",
+   "bytes": 4874,
+   "mtime": "2026-08-26T15:50:02",
+   "digest": "3ed1fc52e011"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/groundtruth/elba_gen2_ties.json",
+   "role": "gen2 checkpoint ties, direct: no chain, no geoid, no lateral term",
+   "bytes": 3554,
+   "mtime": "2026-08-26T15:50:44",
+   "digest": "2d9577f1b489"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elba_fulldensity/corrections.json",
+   "role": "elba_fulldensity pipeline corrections: datum method, per-swath alignment, grid definition",
+   "bytes": 18646,
+   "mtime": "2026-08-25T18:42:16",
+   "digest": "e19161542e9d"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elbaext/corrections_geoid.json",
+   "role": "elbaext pipeline corrections: the SAME swaths aligned from a different extent -- the repeatability measurement",
+   "bytes": 27568,
+   "mtime": "2026-08-23T14:01:04",
+   "digest": "f6dd581a3a43"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elba_fulldensity/z_after.npy",
+   "role": "gen2 gridded ground, 5 m -- the surface dod is measured from",
+   "bytes": 2844928,
+   "mtime": "2026-08-21T11:53:20",
+   "digest": "d014cef67453"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elba_fulldensity/dod.npy",
+   "role": "gen2 minus gen1 on the 5 m grid; gen1 = z_after - dod",
+   "bytes": 2844928,
+   "mtime": "2026-08-25T18:42:16",
+   "digest": "60689d837d20"
+  }
+ ],
+ "params": [
+  {
+   "name": "band_km",
+   "value": "1.0",
+   "src": "repo",
+   "why": "the on-band stratum elba_absolute_tie.py declares before any tie is computed; off-band marks carry unmodelled along-track drift at the measured 15.5 mm/km"
+  },
+  {
+   "name": "anchor_types",
+   "value": "('NVA',)",
+   "src": "repo",
+   "why": "3DEP's own accuracy classes: NVA is open ground at 3.5 cm RMSEz, VVA is under vegetation at 27 cm @95%. Both are reported; only NVA anchors."
+  },
+  {
+   "name": "block_m",
+   "value": "500.0",
+   "src": "MINE",
+   "why": "block size for the spatially varying residual. Chosen to be far larger than the 5 m grid and far smaller than the 2.5 x 3.5 km tile so there are tens of blocks; the result is reported with its block count and its sampling-noise correction so the choice is visible."
+  },
+  {
+   "name": "ref_slope_max_deg",
+   "value": "12.0",
+   "src": "repo",
+   "why": "refcells.reference_cells slope_max default"
+  },
+  {
+   "name": "datum_method",
+   "value": "'geoid_difference'",
+   "src": "repo",
+   "why": "elba_fulldensity/corrections.json -- the geoid-only datum the product was built on; the tie constant is applied ON TOP of it, not instead"
+  },
+  {
+   "name": "grid_bounds",
+   "value": "[577492.8, 4882737.6, 580032.8, 4886237.6]",
+   "src": "repo",
+   "why": "elba_fulldensity corrections.json"
+  }
+ ],
+ "masks": [],
+ "columns": {
+  "term": "what the uncertainty term is",
+  "kind": "random = independent between marks (averages down); common = shared by every tie (does NOT average down); unmodelled = a bound with no measured distribution (reported, never added in)",
+  "mm": "1-sigma-equivalent magnitude, mm",
+  "applies_to": "which ties the term acts on",
+  "source": "the array, mask or formula the value was computed from",
+  "mark": "surveyed 3DEP QA mark id",
+  "type": "NVA = open ground, VVA = under vegetation",
+  "tie_mm": "constant to ADD to gen1 from this mark, mm",
+  "sig_mm": "half its spread across the pipeline-scale radii, mm",
+  "links": "cross-swath links from the covering line to the elbaext frame",
+  "dN_km": "distance from the corridor band the links were solved in, km",
+  "role": "anchor, or the reason this mark does not anchor",
+  "swath": "gen1 flight line whose two independent alignments are compared",
+  "nlink": "links from the comparison reference swath",
+  "disagree_mm": "elbaext minus elba_fulldensity alignment for that swath, mm",
+  "per_link_mm": "that disagreement divided by sqrt(nlink), mm",
+  "quantity": "what is being reported about the spatially varying residual",
+  "value": "its value, with its own units stated in the cell (mm, or a count)"
+ },
+ "notes": [],
+ "headline": "gen1 datum constant at Elba = +22.7 mm +/- 39.7 mm (random 34.0, common 20.5), unmodelled bound 43 mm; spatial residual sd 31.7 mm is untouched by it",
+ "unasked": [
+  "block_m"
+ ],
+ "session": ""
+}

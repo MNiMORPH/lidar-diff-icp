@@ -1,0 +1,282 @@
+{
+ "question": "is a gen1 flight-line vertical tie a property of the LINE, or of the place it was fitted?",
+ "started": "2026-08-26T19:44:30+02:00",
+ "argv": [
+  "analysis/local_tie_chaining.py",
+  "--section",
+  "all"
+ ],
+ "seconds": 513.6,
+ "cwd": "/home/awickert/projects/lidar-diff-icp",
+ "inputs": [
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elba/corrections.json",
+   "role": "elba product: per-swath constants fitted on the 2.54 x 3.50 km elba footprint",
+   "bytes": 19178,
+   "mtime": "2026-08-19T08:41:41",
+   "digest": "be4c64a8d46b"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elbaext/corrections.json",
+   "role": "elbaext product: the SAME swaths fitted on the 4.45 x 4.05 km elbaext footprint",
+   "bytes": 27909,
+   "mtime": "2026-08-22T11:41:33",
+   "digest": "caa9d2f619bc"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elbaext/corrections_geoid.json",
+   "role": "the per-swath constants actually applied to the control marks today, and the swath_tie mode they were fitted with",
+   "bytes": 27679,
+   "mtime": "2026-08-26T17:24:39",
+   "digest": "12bb6df04808"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/src/lidar_diff_icp/groundtruth/data/mn_dnr_2008_control_semn.csv",
+   "role": "the 1004 MnDNR 2008 ground control points -- gen1's own control; used here only for their POSITIONS",
+   "bytes": 313278,
+   "mtime": "2026-08-26T16:58:09",
+   "digest": "9792fcd677e7"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-29-64.laz",
+   "role": "gen1 tile over the Elba study area, for the window ladder and the within-tile repeat",
+   "bytes": 27153945,
+   "mtime": "2026-08-15T14:33:13",
+   "digest": "436012d25b08"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-28-64.laz",
+   "role": "gen1 tile over the Elba study area, for the window ladder and the within-tile repeat",
+   "bytes": 28042351,
+   "mtime": "2026-08-22T09:19:13",
+   "digest": "24646accb38c"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-20-63.laz",
+   "role": "gen1 tile on the lines 133-138 corridor, an along-track sample of their overlaps and a holder of control marks",
+   "bytes": 19950022,
+   "mtime": "2026-08-26T18:25:21",
+   "digest": "59ca7348e547"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-21-63.laz",
+   "role": "gen1 tile on the lines 133-138 corridor, an along-track sample of their overlaps and a holder of control marks",
+   "bytes": 24219191,
+   "mtime": "2026-08-26T18:25:26",
+   "digest": "fbee92d83ffc"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-22-63.laz",
+   "role": "gen1 tile on the lines 133-138 corridor, an along-track sample of their overlaps and a holder of control marks",
+   "bytes": 24355090,
+   "mtime": "2026-08-26T18:25:37",
+   "digest": "f54929161818"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-25-63.laz",
+   "role": "gen1 tile on the lines 133-138 corridor, an along-track sample of their overlaps and a holder of control marks",
+   "bytes": 21483318,
+   "mtime": "2026-08-26T18:22:46",
+   "digest": "c13b9495aab1"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-27-63.laz",
+   "role": "gen1 tile on the lines 133-138 corridor, an along-track sample of their overlaps and a holder of control marks",
+   "bytes": 22424577,
+   "mtime": "2026-08-26T18:22:25",
+   "digest": "8aa0483f06c0"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-28-63.laz",
+   "role": "gen1 tile on the lines 133-138 corridor, an along-track sample of their overlaps and a holder of control marks",
+   "bytes": 22761742,
+   "mtime": "2026-08-22T09:19:19",
+   "digest": "0fc935e1790d"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-29-63.laz",
+   "role": "gen1 tile on the lines 133-138 corridor, an along-track sample of their overlaps and a holder of control marks",
+   "bytes": 22473227,
+   "mtime": "2026-08-22T09:18:55",
+   "digest": "ab1ef1217a25"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-30-63.laz",
+   "role": "gen1 tile on the lines 133-138 corridor, an along-track sample of their overlaps and a holder of control marks",
+   "bytes": 24409455,
+   "mtime": "2026-08-22T09:19:07",
+   "digest": "d3397f2cbed1"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/5142-15-63.laz",
+   "role": "gen1 tile on the lines 133-138 corridor, an along-track sample of their overlaps and a holder of control marks",
+   "bytes": 18641992,
+   "mtime": "2026-08-26T18:25:56",
+   "digest": "a3045417b3fb"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-21-64.laz",
+   "role": "gen1 tile on the lines 133-138 corridor, an along-track sample of their overlaps and a holder of control marks",
+   "bytes": 19634710,
+   "mtime": "2026-08-26T18:25:32",
+   "digest": "5565dfa312dd"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-30-64.laz",
+   "role": "gen1 tile on the lines 133-138 corridor, an along-track sample of their overlaps and a holder of control marks",
+   "bytes": 24356647,
+   "mtime": "2026-08-22T09:19:01",
+   "digest": "a787a1181f2e"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/5142-14-64.laz",
+   "role": "gen1 tile on the lines 133-138 corridor, an along-track sample of their overlaps and a holder of control marks",
+   "bytes": 19617946,
+   "mtime": "2026-08-26T18:25:48",
+   "digest": "31e8e937f72d"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/5142-15-64.laz",
+   "role": "gen1 tile on the lines 133-138 corridor, an along-track sample of their overlaps and a holder of control marks",
+   "bytes": 20424892,
+   "mtime": "2026-08-26T18:26:05",
+   "digest": "08d30e44eaf0"
+  }
+ ],
+ "params": [
+  {
+   "name": "res_m",
+   "value": "2.0",
+   "src": "repo",
+   "why": "coreg.coregister_swaths / align_swaths default grid resolution (2.0 m)"
+  },
+  {
+   "name": "exclude",
+   "value": "(5, 6, 9)",
+   "src": "repo",
+   "why": "coreg.coregister_swaths terrain proxy ~isin(classification,(5,6,9)) -- the VENDOR classes, so no CSF run is needed"
+  },
+  {
+   "name": "tie_modes",
+   "value": "('overlap_median', 'intercept')",
+   "src": "repo",
+   "why": "the two estimators coreg.coregister_swaths supports; corrections_geoid.json records swath_tie='intercept' as the pipeline's"
+  },
+  {
+   "name": "half_width_m",
+   "value": "400.0",
+   "src": "MINE",
+   "why": "window half-width for the along-track sweep and the chains. There is NO library default and none is invented here; 400 m is one rung of the ladder in section 2, chosen so the window fits inside a single 2.5 km tile at every along-track sample. Section 2 measures what the choice costs; section 3 is re-runnable at any other rung with --half-width-m"
+  },
+  {
+   "name": "ladder_half_widths_m",
+   "value": "(100.0, 200.0, 400.0, 800.0, 1200.0)",
+   "src": "MINE",
+   "why": "the window sizes reported in section 2. Chosen to span a factor of 12, from below one flight-line sidelap width to a whole tile; nothing is excluded on their basis, the whole ladder is printed"
+  },
+  {
+   "name": "shape",
+   "value": "'square'",
+   "src": "MINE",
+   "why": "square window. A disk would give a ragged grid edge and fewer cells for the same half-width; localtie supports both and --shape switches it"
+  },
+  {
+   "name": "mark_radius_m",
+   "value": "25.0",
+   "src": "MINE",
+   "why": "radius within which a mark's flight line is identified by return count (groundtruth.chain.covering_lines). It selects WHICH LINE the mark is on, not which marks are used; every mark is reported"
+  },
+  {
+   "name": "repeat_step_m",
+   "value": "300.0",
+   "src": "MINE",
+   "why": "along-track spacing of the within-tile repeat windows in section 3c. 300 m so that neighbouring 400 m-half-width windows overlap and neighbouring 800 m ones overlap heavily; it sets the SAMPLING of the short-range scatter, and excludes nothing"
+  },
+  {
+   "name": "repeat_half_widths_m",
+   "value": "(400.0, 800.0)",
+   "src": "MINE",
+   "why": "the two window sizes section 3c repeats at, so that scatter which is estimator noise (shrinks with window) can be told from scatter which is local structure (does not)"
+  },
+  {
+   "name": "centre",
+   "value": "('strip', 'tile')",
+   "src": "MINE",
+   "why": "where each along-track window sits across the overlap strip. 'strip' is the strip's own median easting -- the sidelap middle, where the intercept tie is an interpolation; 'tile' is the overlap cell nearest the tile centre, which on a N-S strip is its western EDGE. Both are run and both are reported; neither is used to exclude anything"
+  },
+  {
+   "name": "target_line",
+   "value": "137",
+   "src": "MINE",
+   "why": "the frame the marks are carried into. 137 is the middle Elba line and the one the brief names; --target-line changes it"
+  }
+ ],
+ "masks": [],
+ "columns": {
+  "line": "flight line with the most terrain returns within 25.0 m of the mark",
+  "links": "steps from the gauge line along the adjacent-overlap chain",
+  "disagree_mm": "elba minus elbaext for that line's constant, mm",
+  "per_link_mm": "that disagreement divided by sqrt(links), mm",
+  "pair": "flight-line pair, ref-src; dz is added to src to reach ref's frame",
+  "tie_mode": "which coreg tie estimator both scatters were measured with",
+  "half_width_m": "window half-width about each sample location, m",
+  "dz_mm": "the tie, from coreg.coregister_swaths in the stated tie mode, mm",
+  "dz_sig_mm": "coreg's formal 1-sigma, nmad_after/sqrt(n_cells), mm -- optimistic",
+  "dz_median_mm": "independent check: median of the UNSHIFTED overlap difference, mm",
+  "nk_cells": "cells the Nuth & Kaeaeb fit used; 0 means the fit was abandoned",
+  "ovl_cells": "cells where both lines have terrain returns in that window",
+  "ovl_km2": "that overlap's area, km^2",
+  "nmad1_mm": "robust scatter left in the overlap after the tie, mm",
+  "dtan_lo": "smallest across-track coordinate tan(scan_ref)-tan(scan_src) in the window, dimensionless; the intercept tie is read at dtan = 0",
+  "dtan_hi": "largest across-track coordinate in the window, dimensionless (a difference of tangents)",
+  "c_mm_tan": "across-track slope fitted with the intercept there, mm per unit tangent",
+  "extrap": "YES/blank flag: YES when dtan = 0 lies OUTSIDE [dtan_lo, dtan_hi], i.e. the intercept tie is an extrapolation here",
+  "degenerate": "YES/blank flag: YES when the Nuth & Kaeaeb fit used zero cells, in which case dz is coreg's abandoned-fit 0.0 m",
+  "tile": "the gen1 tile the window was cut from",
+  "northing": "northing of the window centre (nearest overlap cell to tile centre), m",
+  "d_elba_km": "signed along-track distance from the Elba centroid, km",
+  "easting": "easting of the window centre, m",
+  "dz_med_mm": "tie for the pair (ref=136, src=137) in that window with tie='overlap_median' -- what to ADD to line 137 to bring it into line 136's frame there, mm",
+  "sig_med_mm": "coreg's formal 1-sigma for it, mm",
+  "flag_med": "D if the Nuth & Kaeaeb fit used zero cells there, X if the window does not sample dtan = 0",
+  "dz_int_mm": "the same tie with tie='intercept' (LAD intercept at across-track position zero), mm",
+  "sig_int_mm": "coreg's formal 1-sigma for it, mm",
+  "flag_int": "same two flags for the intercept run",
+  "dz_plain_mm": "median of the UNSHIFTED overlap difference z(136) - z(137) in that window -- no horizontal solution applied, mm",
+  "n_windows": "windows tied along the (ref=136, src=137) overlap inside 4342-29-64.laz, count",
+  "mean_mm": "mean of the tie over those windows, mm",
+  "sd_mm": "standard deviation of the tie between those windows, mm",
+  "min_mm": "smallest tie among those windows, mm",
+  "max_mm": "largest tie among those windows, mm",
+  "span_km": "along-track distance from the first window centre to the last, km",
+  "n_long": "along-track samples, one window per tile over the corridor, count",
+  "sd_long_mm": "standard deviation of the tie between them, mm",
+  "n_short": "windows inside ONE tile, a few hundred metres apart, count",
+  "sd_short_mm": "standard deviation of the tie between THOSE, mm",
+  "F": "variance ratio, long-range over short-range, dimensionless",
+  "p": "one-sided p for that ratio, F(n_long-1, n_short-1)",
+  "n_pairs": "pairs of along-track samples used for the correlation, count",
+  "r_sep_vs_diff": "Pearson r between the separation of two samples and the absolute difference of their ties, dimensionless",
+  "mark": "MnDNR 2008 control point id",
+  "n_near": "how many of its returns are within 25.0 m",
+  "path": "lines walked from that line to line 137; a single entry means the mark is ALREADY on the target line and no transfer is needed",
+  "local_mm": "constant to ADD to the mark's line to put it into line 137's frame, measured AT THE MARK, mm",
+  "sig_formal_mm": "coreg's per-link sigmas in quadrature, mm -- known optimistic",
+  "sig_window_mm": "per-link window-ladder spreads in quadrature, mm",
+  "imported_mm": "the same constant implied by elbaext's fitted set (dz[line] - dz[137]), mm",
+  "diff_mm": "local minus imported, mm -- what the extrapolation costs here"
+ },
+ "notes": [],
+ "headline": "",
+ "unasked": [
+  "half_width_m",
+  "ladder_half_widths_m",
+  "shape",
+  "mark_radius_m",
+  "repeat_step_m",
+  "repeat_half_widths_m",
+  "centre",
+  "target_line"
+ ],
+ "session": ""
+}

@@ -1,0 +1,124 @@
+{
+ "question": "How far is the surface our DoD runs on from the surface the 2008 control actually measured?",
+ "started": "2026-08-27T19:23:05+02:00",
+ "argv": [
+  "ground_control/run_bridge.py",
+  "--easting",
+  "578762.8",
+  "--northing",
+  "4884487.6",
+  "--tracks",
+  "ground_control/data/gen1_line_tracks.json",
+  "--psids",
+  "133",
+  "134",
+  "135",
+  "136",
+  "137",
+  "138",
+  "--covers",
+  "L1O",
+  "L5U",
+  "L2T",
+  "--tiles",
+  "data/before",
+  "--res",
+  "5.0",
+  "--grid-sites",
+  "data/derived/elbaext",
+  "--dod-name",
+  "dod_geoid",
+  "--window-cells",
+  "1",
+  "3",
+  "5",
+  "7",
+  "9",
+  "11"
+ ],
+ "seconds": 32.4,
+ "cwd": "/home/awickert/projects/lidar-diff-icp",
+ "inputs": [
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/src/lidar_diff_icp/groundtruth/data/mn_dnr_2008_control_semn.csv",
+   "role": "gen1's own 2008 control; dnr_surface_z_m is the vendor's DELIVERED surface elevation at the mark",
+   "bytes": 313278,
+   "mtime": "2026-08-26T16:58:09",
+   "digest": "9792fcd677e7"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/ground_control/data/gen1_line_tracks.json",
+   "role": "flight-line tracks, to find the site's own-line marks",
+   "bytes": 362313,
+   "mtime": "2026-08-27T17:57:25",
+   "digest": "9ac0db133b79"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elbaext/z_after.npy",
+   "role": "gen2 gridded surface at elbaext",
+   "bytes": 5767328,
+   "mtime": "2026-08-22T11:41:33",
+   "digest": "0e91639d5253"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elbaext/dod_geoid.npy",
+   "role": "DoD at elbaext; gen1's grid is recovered as z_after - this",
+   "bytes": 5767328,
+   "mtime": "2026-08-26T17:24:39",
+   "digest": "250686f69d9d"
+  }
+ ],
+ "params": [
+  {
+   "name": "site",
+   "value": "(578762.8, 4884487.6)",
+   "src": "andy",
+   "why": ""
+  },
+  {
+   "name": "psids",
+   "value": "(133, 134, 135, 136, 137, 138)",
+   "src": "andy",
+   "why": ""
+  },
+  {
+   "name": "covers",
+   "value": "('L1O', 'L5U', 'L2T')",
+   "src": "andy",
+   "why": ""
+  },
+  {
+   "name": "dod_name",
+   "value": "('dod_geoid',)",
+   "src": "MINE",
+   "why": "which DoD product recovers gen1 at each site; verified on elba_fulldensity against an independent gen1 grid to median +0.489 mm, NMAD 0.391 mm over 341,239 cells"
+  },
+  {
+   "name": "window_cells",
+   "value": "(1, 3, 5, 7, 9, 11)",
+   "src": "MINE",
+   "why": "side of the square whose median is taken at the mark; SWEPT, because a single 5 m cell is one noisy sample and a single window size would hide how much the answer depends on it"
+  }
+ ],
+ "masks": [],
+ "columns": {
+  "point_id": "control mark id",
+  "cover": "MnDNR land-cover class of the mark, unitless code: L1O open, L2T tall weeds/crops, L3B brush, L4F forest, L5U urban",
+  "gap": "A = estimator gap (our reduction of the DELIVERED cloud vs the vendor's Surface Z). B = processing gap (our gridded CSF/aligned/geoid-shifted surface vs the vendor's Surface Z)",
+  "delivered_z_m": "the vendor's own dnr_surface_z_m at the mark",
+  "ours_z_m": "our surface at the mark: cloud reduction for A, grid for B",
+  "geoid_mm": "geoid conversion applied to gen1 at this mark to carry it onto gen2's GEOID18 frame, mm (references.geoid_difference); 0 for gap A, which is entirely within GEOID03",
+  "bridge_raw_mm": "z_delivered - z_ours, mm, WITHOUT undoing the geoid conversion; for gap B this differences two geoids and is reported only so the conversion's size is visible",
+  "bridge_mm": "z_delivered - z_ours with both on NAVD88(GEOID03), mm; ADD to a delivered-surface constant to carry it onto our surface"
+ },
+ "notes": [
+  "A and B are DIFFERENT quantities. A is not a proxy for B: it changes only the reduction, while B also changes the ground classification, the swath alignment and the vertical datum.",
+  "Gap B's raw value differences NAVD88(GEOID03) control against a GEOID18-framed surface. The geoid column undoes that; read bridge_mm, not bridge_raw_mm."
+ ],
+ "headline": "A n=11 mean -6.59 mm; B on 2 marks swept over 6 window sizes",
+ "unasked": [
+  "dod_name",
+  "window_cells"
+ ],
+ "session": ""
+}

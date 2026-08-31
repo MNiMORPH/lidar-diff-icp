@@ -1,0 +1,206 @@
+{
+ "question": "does the due-west cross line 10010 give each gen1 flight line its OWN across-track coefficient, and does the resulting network close?",
+ "started": "2026-08-26T17:35:37+02:00",
+ "argv": [
+  "analysis/crossline_fit.py"
+ ],
+ "seconds": 14.7,
+ "cwd": "/home/awickert/projects/lidar-diff-icp",
+ "inputs": [
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-28-64.laz",
+   "role": "raw 2008 gen1 LAZ tile carrying the cross line 10010 and the N-S lines 135-138, vendor classification",
+   "bytes": 28042351,
+   "mtime": "2026-08-22T09:19:13",
+   "digest": "24646accb38c"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/csf_cache/4342-28-64.las",
+   "role": "our CSF ground (class 2) for that tile, from analysis/slope_bias/csf_tiled.py at classify_ground_csf defaults",
+   "bytes": 249908091,
+   "mtime": "2026-08-26T17:14:01",
+   "digest": "c3adfbb20eb2"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/csf_cache/elbaext.las",
+   "role": "our CSF ground for elbaext -- the same cache the elbaext pipeline product was built from",
+   "bytes": 560937651,
+   "mtime": "2026-08-25T15:29:33",
+   "digest": "b9d1209cedd7"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elbaext/corrections.json",
+   "role": "elbaext grid geometry, so the two estimators index the SAME cells",
+   "bytes": 27909,
+   "mtime": "2026-08-22T11:41:33",
+   "digest": "caa9d2f619bc"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elba_fulldensity/corrections.json",
+   "role": "pipeline corrections: grid geometry, per-swath alignment, geoid datum, drift curves",
+   "bytes": 18763,
+   "mtime": "2026-08-26T17:16:57",
+   "digest": "94343ea435f4"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elba_fulldensity/z_after.npy",
+   "role": "gen2 gridded ground (the DoD reference surface), m",
+   "bytes": 2844928,
+   "mtime": "2026-08-21T11:53:20",
+   "digest": "d014cef67453"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elba_fulldensity/beam_offset_table.parquet",
+   "role": "per-return gen1 CSF ground offsets to the gen2 surface, slope-normal mm, with the four registration terms",
+   "bytes": 306565273,
+   "mtime": "2026-08-26T17:31:52",
+   "digest": "7ff14143f176"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elbaext/corrections.json",
+   "role": "pipeline corrections: grid geometry, per-swath alignment, geoid datum, drift curves",
+   "bytes": 27909,
+   "mtime": "2026-08-22T11:41:33",
+   "digest": "caa9d2f619bc"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elbaext/z_after.npy",
+   "role": "gen2 gridded ground (the DoD reference surface), m",
+   "bytes": 5767328,
+   "mtime": "2026-08-22T11:41:33",
+   "digest": "0e91639d5253"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elbaext/beam_offset_table.parquet",
+   "role": "per-return gen1 CSF ground offsets to the gen2 surface, slope-normal mm, with the four registration terms",
+   "bytes": 653585037,
+   "mtime": "2026-08-26T17:34:17",
+   "digest": "deb2a43d46fa"
+  }
+ ],
+ "params": [
+  {
+   "name": "res_m",
+   "value": "5.0",
+   "src": "repo",
+   "why": "corrections.json res_m = 5.0"
+  },
+  {
+   "name": "ground_q",
+   "value": "0.5",
+   "src": "repo",
+   "why": "pipeline.difference_dem default"
+  },
+  {
+   "name": "sn_smooth_cells",
+   "value": "1.2",
+   "src": "repo",
+   "why": "pipeline.difference_dem default"
+  },
+  {
+   "name": "block_m",
+   "value": "50.0",
+   "src": "repo",
+   "why": "the cluster block size of swath_across_track_test.py"
+  },
+  {
+   "name": "min_cell_line",
+   "value": "1",
+   "src": "MINE",
+   "why": "1 is the definitional floor -- a median needs one value, so it imposes NO cut. It is swath_across_track_test.py's own default; Sec 6 re-runs the cross-line fits at 3 and 5 and reports how far every coefficient moves."
+  },
+  {
+   "name": "reference surface for the cross tile",
+   "value": "'pooled gen1 ground of the same tile'",
+   "src": "MINE",
+   "why": "gen2 does not cover this tile, so the pipeline's gen2 Zreg cannot be formed. A common per-cell reference cancels in a between-line difference; Sec 2 measures the substitution on elbaext's N-S pairs instead of asserting it. It excludes nothing: every cell with ground in it keeps its ground."
+  },
+  {
+   "name": "last-return selection rn == nr",
+   "value": "True",
+   "src": "repo",
+   "why": "pipeline.difference_dem's `be` for ground_source='csf'"
+  }
+ ],
+ "masks": [
+  {
+   "name": "elba_fulldensity reference cells",
+   "kept": 27021,
+   "total": 355600,
+   "frac": 0.07598706411698537,
+   "defn": "refcells.reference_cells() at its repo defaults: divide cells, |curv|<=0.015, slope<12 deg, no building returns, not clear-cut, not blufftop margin, |DoD|<=500 mm",
+   "warn": false
+  },
+  {
+   "name": "elbaext reference cells",
+   "kept": 84478,
+   "total": 720900,
+   "frac": 0.11718407546122903,
+   "defn": "refcells.reference_cells() at its repo defaults: divide cells, |curv|<=0.015, slope<12 deg, no building returns, not clear-cut, not blufftop margin, |DoD|<=500 mm",
+   "warn": false
+  }
+ ],
+ "columns": {
+  "psid": "point_source_id, i.e. the flight line, dimensionless integer",
+  "n_raw": "returns of that line in the raw vendor tile, all classes",
+  "frac2": "fraction of them the VENDOR classified 2 (bare earth)",
+  "frac12": "fraction the vendor classified 12 (overlap/withheld)",
+  "n_csf": "returns of that line our CSF classified as ground (class 2)",
+  "n_csf_last": "of those, last returns (rn == nr) -- the pipeline's ground selection",
+  "csf_rate": "n_csf / n_raw: what fraction of the line's returns CSF calls ground",
+  "dens": "n_csf_last per square metre over the cells that line covers",
+  "cells": "5 m cells the pair shares, with >= min_cell_line ground returns each",
+  "area_ha": "area of those shared cells, hectares",
+  "pair": "unordered flight-line pair A-B (point_source_id), A < B",
+  "kind": "N-S/N-S = both lines fly the boustrophedon; CROSS = one is line 10010",
+  "tile": "derived-product directory or LAS the estimate comes from",
+  "estimator": "which per-(cell,line) ground quantity was differenced",
+  "corr_AB": "Pearson correlation of the two lines' per-cell tan(scan angle)",
+  "sd_sum": "standard deviation of tanA+tanB over the shared cells",
+  "sd_dif": "standard deviation of tanA-tanB over the shared cells",
+  "se_ratio": "SE(q)/SE(p) from the design matrix alone: how many times worse the ANTISYMMETRIC coefficient is determined than the symmetric one. 1 = the pair separates the two lines",
+  "blocks": "independent spatial blocks spanned by the shared cells",
+  "k_mm": "fitted intercept at tanA = tanB = 0, mm; + = line A reads above line B",
+  "k_se": "cluster-robust standard error of k_mm, mm",
+  "c_pair": "two-parameter coefficient on tanA-tanB = (c_A+c_B)/2, mm per unit tangent -- the SAME model and estimator as SWATH_ACROSS_TRACK_TEST Sec 2",
+  "c_pair_se": "cluster-robust standard error of c_pair, mm per unit tangent",
+  "p": "three-parameter coefficient on tanA-tanB, mm per unit tangent",
+  "p_se": "cluster-robust standard error of p, mm per unit tangent",
+  "q": "coefficient on tanA+tanB = (c_A-c_B)/2, the combination a N-S overlap CANNOT see, mm per unit tangent",
+  "q_se": "cluster-robust standard error of q, mm per unit tangent",
+  "c_A": "p+q: the lower-numbered line's OWN across-track coefficient, mm/unit tangent",
+  "c_A_se": "cluster-robust standard error of c_A, mm per unit tangent",
+  "c_B": "p-q: the higher-numbered line's OWN across-track coefficient, mm/unit tangent",
+  "c_B_se": "cluster-robust standard error of c_B, mm per unit tangent",
+  "r2": "coefficient of determination of that fit",
+  "t": "coefficient divided by its cluster-robust standard error",
+  "line": "flight line (point_source_id) whose own coefficient is being reported",
+  "c_own": "that line's own across-track coefficient, mm per unit tangent",
+  "c_own_se": "its standard error, mm per unit tangent",
+  "source": "how that line's coefficient was obtained: measured on a cross pair, or propagated along the N-S chain from a measured one",
+  "predicted": "the pair sum (c_A+c_B)/2 implied by the individually measured coefficients, mm per unit tangent",
+  "observed": "the pair sum measured directly on that N-S overlap, mm per unit tangent",
+  "resid": "predicted - observed, mm per unit tangent: the redundancy residual",
+  "resid_sig": "resid divided by the quadrature sum of the two standard errors",
+  "r_tA_E": "correlation of line A's per-cell tan(scan) with cell EASTING",
+  "r_tA_N": "correlation of line A's per-cell tan(scan) with cell NORTHING",
+  "r_tB_E": "correlation of line B's per-cell tan(scan) with cell EASTING",
+  "r_tB_N": "correlation of line B's per-cell tan(scan) with cell NORTHING",
+  "kind_check": "whether the row is a genuine redundancy check, i.e. whether both lines' coefficients were measured on the cross line rather than propagated from this very pair sum",
+  "variant": "which sensitivity run produced the row",
+  "d_c136": "change in c_136 from the headline run, mm per unit tangent",
+  "d_c137": "change in c_137 from the headline run, mm per unit tangent",
+  "d_c138": "change in c_138 from the headline run, mm per unit tangent",
+  "d_c10010": "change in the mean c_10010 from the headline run, mm per unit tangent"
+ },
+ "notes": [
+  "elba_fulldensity reference_cells cuts: start=355600, not a divide cell=243595, |curv| > 0.015=12788, slope >= 12 deg=37771, building returns=116, clear-cut (frac drop > 0.3)=1160, blufftop retreat margin=2738, floodplain mask=20335, below elevation antimode 267.3 m=10033, |DoD| > 500 mm=43, kept=27021",
+  "elbaext reference_cells cuts: start=720900, not a divide cell=507896, |curv| > 0.015=23160, slope >= 12 deg=58177, building returns=627, clear-cut (frac drop > 0.3)=1318, below elevation antimode 285.7 m=45023, |DoD| > 500 mm=221, kept=84478"
+ ],
+ "headline": "per-line across-track coefficients from the cross line, and the network",
+ "unasked": [
+  "min_cell_line",
+  "reference surface for the cross tile"
+ ],
+ "session": ""
+}

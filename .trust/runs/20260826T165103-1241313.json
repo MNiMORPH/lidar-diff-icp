@@ -1,0 +1,188 @@
+{
+ "question": "where do the stable cells behind the reported DoD tilt come from, and is the tilt a property of the tile or of that population and of the registration?",
+ "started": "2026-08-26T16:50:58+02:00",
+ "argv": [
+  "analysis/stable_point_tilt_audit.py",
+  "--dod",
+  "dod_cover_q2_tie_gauge.npy"
+ ],
+ "seconds": 5.0,
+ "cwd": "/home/awickert/projects/lidar-diff-icp",
+ "inputs": [
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elba_fulldensity/corrections.json",
+   "role": "pipeline corrections: grid geometry, per-swath constants, geoid datum (const + tilt), drift curves",
+   "bytes": 18646,
+   "mtime": "2026-08-25T18:42:16",
+   "digest": "e19161542e9d"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elba_fulldensity/dod_cover_q2_tie_gauge.npy",
+   "role": "DoD under audit: gen2 at the cover-dependent percentile minus gen1's registered median, m, + = elevation rose",
+   "bytes": 2844928,
+   "mtime": "2026-08-26T16:49:09",
+   "digest": "dd352f9ac980"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elba_fulldensity/z_after.npy",
+   "role": "gen2 gridded ground, the DoD reference surface, m",
+   "bytes": 2844928,
+   "mtime": "2026-08-21T11:53:20",
+   "digest": "d014cef67453"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elba_fulldensity/canopy_cover_pfs.npy",
+   "role": "PyForestScan canopy cover from the gen2 cloud, plant-area based, min_height 2 m",
+   "bytes": 2844928,
+   "mtime": "2026-08-23T23:55:32",
+   "digest": "369e75660f46"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elba_fulldensity/floodplain_mask.npy",
+   "role": "floodplain cells, excluded from the population",
+   "bytes": 355728,
+   "mtime": "2026-08-21T13:36:10",
+   "digest": "ab2e518432c7"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elba_fulldensity/ag_region.npy",
+   "role": "agricultural region: penetration >= 0.45, eroded 6 cells off the cover boundary, channel buffer removed (analysis/ridgelines/hillslope_regions_K.py)",
+   "bytes": 355728,
+   "mtime": "2026-08-21T15:12:34",
+   "digest": "c6913de3842a"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elba_fulldensity/beam_offset_table.parquet",
+   "role": "per-return gen1 CSF ground offsets to the gen2 surface, slope-normal mm, with the four registration terms and point_source_id / gps_time / scan_angle per return",
+   "bytes": 306344161,
+   "mtime": "2026-08-25T18:44:27",
+   "digest": "6f437488d069"
+  }
+ ],
+ "params": [
+  {
+   "name": "cover_max",
+   "value": "0.02",
+   "src": "andy",
+   "why": "the population under audit was defined with this ceiling"
+  },
+  {
+   "name": "block_m ladder",
+   "value": "[50.0, 100.0, 250.0, 500.0, 1000.0]",
+   "src": "MINE",
+   "why": "50 m is the repo default used by offset_vs_angle.py and cover_offset_regression.py; the larger blocks are added because the semivariogram measured in section 2c shows the residual field is still correlated at 400 m, so a 50 m block treats correlated cells as independent. Nothing is excluded by this; it changes only the reported SE."
+  },
+  {
+   "name": "map_block_m",
+   "value": "250.0",
+   "src": "andy",
+   "why": "the coverage map was asked for in 250 m blocks"
+  },
+  {
+   "name": "n_boot",
+   "value": "500",
+   "src": "MINE",
+   "why": "block-bootstrap replicates, used only to check the sandwich SE against the bootstrap the original claim quoted. No data are dropped."
+  },
+  {
+   "name": "n_elev_bins",
+   "value": "8",
+   "src": "MINE",
+   "why": "equal-count elevation bins via binstats.quantile_edges, which spans the full observed range so no elevation is truncated. The count sets resolution only."
+  },
+  {
+   "name": "reference_cells defaults",
+   "value": "'curv_max=0.015, slope_max=12, gross_change_mm=500, clearcut_drop=0.30, require_ridge=True'",
+   "src": "repo",
+   "why": ""
+  },
+  {
+   "name": "minimum counts imposed",
+   "value": "'none'",
+   "src": "repo",
+   "why": ""
+  },
+  {
+   "name": "z_split",
+   "value": "320.0",
+   "src": "MINE",
+   "why": "the antimode of the population's OWN elevation histogram (5 m bins), used only to name the two limbs the data already show; every fit is also reported over equal-count elevation bins spanning the full range, which uses no threshold."
+  }
+ ],
+ "masks": [
+  {
+   "name": "stable open cells under audit",
+   "kept": 19683,
+   "total": 355600,
+   "frac": 0.055351518560179974,
+   "defn": "refcells.reference_cells() at repo defaults, then canopy_cover_pfs <= 0.02, floodplain_mask removed, finite dod_cover_q2_tie_gauge.npy",
+   "warn": false
+  }
+ ],
+ "columns": {
+  "what": "the quantity or subset the row describes",
+  "n": "cells (or cell-flightline rows, where stated) entering the fit",
+  "blocks": "independent spatial blocks the fit's cluster-robust SE counts",
+  "mean_mm": "mean DoD in the band, mm (+ = elevation rose)",
+  "mean_se": "cluster-robust standard error of mean_mm, mm",
+  "dE": "fitted easting gradient of the DoD, mm per km east",
+  "dE_se": "cluster-robust standard error of dE, mm/km",
+  "dN": "fitted northing gradient of the DoD, mm per km north",
+  "dN_se": "cluster-robust standard error of dN, mm/km",
+  "dE_lad": "the same easting gradient from a least-absolute-deviations fit, mm/km",
+  "dN_lad": "the same northing gradient from a least-absolute-deviations fit, mm/km",
+  "block_m": "size of the spatial block the cluster-robust SE is computed over, m",
+  "t_dE": "dE / dE_se, cluster-robust",
+  "t_dN": "dN / dN_se, cluster-robust",
+  "term": "regressor in the nested model",
+  "coef": "fitted coefficient in the units named by term",
+  "se": "cluster-robust standard error of coef",
+  "model": "the set of regressors fitted jointly",
+  "z_term": "coefficient on gen2 ground elevation z_after, mm per 100 m of elevation",
+  "z_se": "cluster-robust standard error of z_term",
+  "d_term": "coefficient on distance to the nearest floodplain cell, mm per km",
+  "d_se": "cluster-robust standard error of d_term",
+  "ag_term": "coefficient on the agricultural-region mask, mm (ag minus non-ag)",
+  "ag_se": "cluster-robust standard error of ag_term",
+  "lag_lo": "lower edge of the separation-distance bin, m",
+  "lag_hi": "upper edge of the separation-distance bin, m",
+  "pairs": "randomly drawn cell pairs in the lag bin",
+  "gamma_rms": "sqrt of the semivariance in the bin, mm (the rms difference / sqrt2)",
+  "rho": "implied correlation 1 - gamma/variance of the residual field",
+  "swath": "gen1 flight line (point_source_id)",
+  "rows": "cell-flightline ground estimates for that line on the stable cells",
+  "E_span": "easting extent of that line's stable cells, km -- its leverage on dE",
+  "h_m": "fitted flying height from x = a + b*y + h*tan(scan) within the line, m; the sign alternates because scan_angle is body-fixed and the aircraft turns",
+  "dir": "corr(gps_time, northing) within the line: -1 = flown south, +1 = flown north",
+  "mm_per_s": "OLS slope of the DoD on gps_time within the line, mm per second of mission time -- a residual along-track drift alternates its sign in northing between lines, a ground-fixed field does not",
+  "mm_per_s_se": "cluster-robust standard error of mm_per_s",
+  "c_tan": "dE re-expressed in the line's own body frame, mm per unit tan(scan) (= dE * h): the across-track coefficient this line's easting gradient would imply",
+  "elev_lo": "lower edge of the elevation bin, m",
+  "elev_hi": "upper edge of the elevation bin, m",
+  "median_mm": "median DoD in the bin, mm",
+  "frac": "fraction of the stated total",
+  "z_p": "elevation percentile, m",
+  "pop": "which population the percentiles describe",
+  "band_lo": "lower edge of the northing band, m above the tile's southern limit",
+  "band_hi": "upper edge of the northing band, m",
+  "removed": "which registration term was subtracted back out before refitting",
+  "p0": "minimum elevation of the population, m",
+  "p5": "5th percentile of elevation, m",
+  "p25": "25th percentile of elevation, m",
+  "p50": "50th percentile of elevation, m",
+  "p75": "75th percentile of elevation, m",
+  "p95": "95th percentile of elevation, m",
+  "p100": "maximum elevation of the population, m"
+ },
+ "notes": [
+  "elba_fulldensity reference_cells cuts: start=355600, not a divide cell=243595, |curv| > 0.015=12788, slope >= 12 deg=37771, building returns=116, clear-cut (frac drop > 0.3)=1160, blufftop retreat margin=2738, floodplain mask=20335, below elevation antimode 267.3 m=10033, |DoD| > 500 mm=43, kept=27021"
+ ],
+ "headline": "the easting tilt is landform, not registration: dE +2.51 mm/km tile-wide becomes +2.34 +- 6.59 on the upland limb; the northing tilt survives every control at -17.64 +- 3.93 mm/km (250 m blocks) and is NOT along-track drift (its sign in gps_time alternates with flight direction while its sign in northing does not)",
+ "unasked": [
+  "block_m ladder",
+  "n_boot",
+  "n_elev_bins",
+  "z_split"
+ ],
+ "session": ""
+}

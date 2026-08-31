@@ -1,0 +1,96 @@
+{
+ "question": "does the due-west cross line 10010 share ground with the N-S lines at across-track positions that separate their individual across-track coefficients?",
+ "started": "2026-08-26T16:48:11+02:00",
+ "argv": [
+  "analysis/degeneracy_crossline_geometry.py",
+  "--tile",
+  "data/before/4358-26-03.laz"
+ ],
+ "seconds": 3.8,
+ "cwd": "/home/awickert/projects/lidar-diff-icp",
+ "inputs": [
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4358-26-03.laz",
+   "role": "raw 2008 gen1 LAZ tile containing the cross line 10010 and N-S lines 135-138, vendor classification",
+   "bytes": 23902428,
+   "mtime": "2026-08-18T07:46:07",
+   "digest": "905bc2844edf"
+  }
+ ],
+ "params": [
+  {
+   "name": "res_m",
+   "value": "5.0",
+   "src": "repo",
+   "why": "the pipeline grid, corrections.json res_m = 5.0"
+  },
+  {
+   "name": "exclude_classes",
+   "value": "(5, 6, 9)",
+   "src": "repo",
+   "why": "coreg.coregister_swaths selects ~isin(classification,(5,6,9))"
+  },
+  {
+   "name": "min_per_cellline",
+   "value": "3",
+   "src": "repo",
+   "why": "boresight.estimate_boresight's own min_cell_line = 3"
+  },
+  {
+   "name": "block_m",
+   "value": "50.0",
+   "src": "repo",
+   "why": "the 50 m cluster-robust block size used by swath_across_track_test.py"
+  },
+  {
+   "name": "open_vegfrac",
+   "value": "0.05",
+   "src": "repo",
+   "why": "cover < 0.05 is the 'open' stratum boundary of swath_across_track_test.py; here it is the per-cell fraction of returns the VENDOR classified 5, the only cover proxy available in this tile (no gen2, no PyForestScan cover)"
+  },
+  {
+   "name": "chunk",
+   "value": "2000000",
+   "src": "MINE",
+   "why": "points per streamed read, a memory ceiling only; it changes no result because the per-cell reduction is done after the whole tile is assembled"
+  }
+ ],
+ "masks": [],
+ "columns": {
+  "pair": "unordered flight-line pair (point_source_id)",
+  "kind": "N-S/N-S = both lines fly the boustrophedon; CROSS = one is the due-west line",
+  "cells": "5 m cells covered by BOTH lines with >= 3 returns each",
+  "area_ha": "area of those shared cells, hectares",
+  "tanA_lo": "minimum per-cell mean tan(scan angle) of the lower-numbered line",
+  "tanA_hi": "maximum of the same",
+  "tanB_lo": "minimum per-cell mean tan(scan angle) of the higher-numbered line",
+  "tanB_hi": "maximum of the same",
+  "corr_AB": "Pearson correlation of the two lines' per-cell tan(scan angle)",
+  "sd_sum": "standard deviation of tanA+tanB over the shared cells",
+  "sd_dif": "standard deviation of tanA-tanB over the shared cells",
+  "se_ratio": "SE(q)/SE(p) from the design matrix [1, tanA-tanB, tanA+tanB]: how many times worse the ANTISYMMETRIC coefficient is determined than the symmetric one. 1 = the pair separates the two lines",
+  "cond": "condition number of that design matrix, column-standardised",
+  "cls": "vendor LAS classification code",
+  "count": "returns of the line carrying that classification in the tile",
+  "psid": "point_source_id, i.e. the flight line, dimensionless integer",
+  "n_ret": "returns of that line in the tile after the (5,6,9) exclusion",
+  "frac2": "fraction of that line's returns classified 2 (vendor bare earth)",
+  "frac12": "fraction classified 12 (vendor overlap/withheld)",
+  "stratum": "all = every shared cell; open = cells whose vendor class-5 return fraction is below open_vegfrac",
+  "k_mm": "fitted intercept at tanA=tanB=0, mm; positive = line A reads above line B",
+  "p": "fitted coefficient on tanA-tanB = (c_A+c_B)/2, mm per unit tangent",
+  "p_se": "cluster-robust standard error of p, mm per unit tangent",
+  "q": "fitted coefficient on tanA+tanB = (c_A-c_B)/2, mm per unit tangent: the combination a N-S overlap CANNOT see",
+  "q_se": "cluster-robust standard error of q, mm per unit tangent",
+  "c_A": "p+q, the lower-numbered line's own across-track coefficient, mm per unit tangent",
+  "c_A_se": "cluster-robust standard error of c_A, mm per unit tangent",
+  "c_B": "p-q, the higher-numbered line's own across-track coefficient, mm per unit tangent",
+  "c_B_se": "cluster-robust standard error of c_B, mm per unit tangent"
+ },
+ "notes": [],
+ "headline": "cross-line 10010 overlap geometry against the N-S lines",
+ "unasked": [
+  "chunk"
+ ],
+ "session": ""
+}

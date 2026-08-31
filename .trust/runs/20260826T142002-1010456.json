@@ -1,0 +1,92 @@
+{
+ "question": "does classifying BOTH epochs with our CSF close the gen1-gen2 cover-dependent gap?",
+ "started": "2026-08-26T14:20:02+02:00",
+ "argv": [
+  "trust/example_instrumented.py"
+ ],
+ "seconds": 0.4,
+ "cwd": "/home/awickert/projects/lidar-diff-icp",
+ "inputs": [
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elba_fulldensity/corrections.json",
+   "role": "pipeline registration: bounds, resolution, applied shifts",
+   "bytes": 18646,
+   "mtime": "2026-08-25T18:42:16",
+   "digest": "e19161542e9d"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elba_fulldensity/z_after.npy",
+   "role": "gen2 ground surface as the pipeline has it = per-cell median of the VENDOR class-2 points (NOT our CSF)",
+   "bytes": 2844928,
+   "mtime": "2026-08-21T11:53:20",
+   "digest": "d014cef67453"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/csf_cache/elba_gen2_patch.las",
+   "role": "gen2 returns classified by OUR CSF, same parameters as gen1",
+   "bytes": 54491307,
+   "mtime": "2026-08-26T03:06:08",
+   "digest": "b013419d7bd1"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elba_fulldensity/canopy_cover_pfs.npy",
+   "role": "per-cell canopy cover fraction from PyForestScan plant-area density",
+   "bytes": 2844928,
+   "mtime": "2026-08-23T23:55:32",
+   "digest": "369e75660f46"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elba_fulldensity/dod.npy",
+   "role": "DEM of difference, gen2 minus gen1, metres; + = elevation rose",
+   "bytes": 2844928,
+   "mtime": "2026-08-25T18:42:16",
+   "digest": "60689d837d20"
+  }
+ ],
+ "params": [
+  {
+   "name": "min_pts",
+   "value": "5",
+   "src": "repo",
+   "why": ""
+  },
+  {
+   "name": "slope_max",
+   "value": "90.0",
+   "src": "MINE",
+   "why": "opened the slope cut from the repo default of 12 deg to take the whole CSF patch; this admits steep mass-wasting cells that the reference population is defined to exclude"
+  }
+ ],
+ "masks": [
+  {
+   "name": "stable",
+   "kept": 92404,
+   "total": 355600,
+   "frac": 0.2598537682789651,
+   "defn": "reference_cells(slope_max=90.0) -- divide/curvature/building/clearcut cuts, slope cut effectively DISABLED",
+   "warn": false
+  },
+  {
+   "name": "ok",
+   "kept": 1697,
+   "total": 355600,
+   "frac": 0.004772215973003375,
+   "defn": "stable AND all three fields finite AND >=min_pts CSF ground points",
+   "warn": false
+  }
+ ],
+ "columns": {
+  "stratum": "canopy cover bin, dimensionless fraction of PyForestScan cover",
+  "cells": "number of cells in the stratum, count",
+  "z_csf-z_after": "median over cells of (our CSF ground - vendor class-2 ground), mm, slope-normal",
+  "DoD_now": "median DoD as the pipeline reports it, mm, gen2-gen1"
+ },
+ "notes": [
+  "reference_cells cuts: start=355600, not a divide cell=243595, |curv| > 0.015=12788, slope >= 90 deg=0, building returns=138, clear-cut (frac drop > 0.3)=1439, blufftop retreat margin=3262, |DoD| > 500 mm=1974, kept=92404"
+ ],
+ "headline": "cover-stratified CSF-minus-vendor gen2 ground offset",
+ "unasked": [
+  "slope_max"
+ ],
+ "session": ""
+}
