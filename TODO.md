@@ -60,3 +60,56 @@ correction needs the slope dependence separated first.
 
 **Still to do.** Confirm the high-lift cells coincide with the 2008 open meadow; choose
 between correction and masking; re-run the floodplain DoD against whichever is chosen.
+
+---
+
+# Decisions
+
+Closed questions, with the reasoning and the conditions that would reopen them.
+
+## gen2's horizontal accuracy is not checked, and does not need to be
+
+**Decided 2026-08-31 (Andy).** Closes next-action 3 of
+`ground_control/HANDOFF_FROM_GROUND_CONTROL.md`, which listed gen2's unchecked horizontal
+accuracy as an open item on the grounds that step 4 registers gen1 *to* gen2, so a lateral
+error in gen2 propagates into gen1 invisibly and becomes a vertical error on a slope.
+
+**Why it is closed, and it is not "3DEP is probably fine".** The DoD is invariant to it.
+Registration applies a Nuth-Kaab lateral shift that moves gen1 onto gen2, so a UNIFORM
+horizontal error in gen2 is absorbed: both epochs end up in the same frame and the
+difference of two clouds that agree with each other does not depend on where that shared
+frame sits. The quantity we compute cannot see the error.
+
+**Where it does not cancel** is the tie to control, because the marks carry independently
+surveyed horizontal coordinates, so a lateral error samples gen2 at the wrong place. The
+geometry makes that cheap, because control is sited flat by design:
+
+```
+  slope at the 389 gen2 control marks (deg): p50=2.6  p90=6.5  p99=15.5
+
+  vertical error produced by a lateral error, at those marks (mm)
+     lateral      p50      p90      p99
+       10 cm      4.5     11.4     27.8
+       20 cm      9.0     22.9     55.6
+       50 cm     22.6     57.2    139.0
+
+  for scale: the gen1 Elba datum SE is +/- 23.38 mm
+```
+
+A 20 cm lateral error costs 9 mm at the median mark. It also averages down over 389 marks,
+because a fixed lateral shift produces vertical errors whose sign follows local aspect, so
+with mixed aspects it behaves as noise rather than as an offset.
+
+**Two conditions that would reopen it.**
+
+1. *Non-uniform lateral error.* The cancellation assumes one shift fits the whole tile. A
+   per-swath or along-track lateral drift would not be absorbed, and this acquisition has
+   already required a per-swath VERTICAL tie, so a lateral analogue is not far-fetched. It
+   would appear as edge-of-swath artefacts, not as a whole-tile offset.
+2. *Comparing gen2 to anything it has not been registered to.* The flatness that makes the
+   error cheap holds at the marks, NOT on the tile: Elba slope is p50 9.2 deg, p90 28.6, so
+   a 20 cm lateral error there is 32.5 mm at the median and 108.9 mm at p90. Those numbers
+   are harmless only while the error cancels.
+
+Numbers from `analysis/control_lowveg_offset.py` mark slopes and
+`data/derived/elba_fulldensity/slope.npy`.
