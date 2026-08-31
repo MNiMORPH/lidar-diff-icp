@@ -31,10 +31,21 @@ system-driven from the navigation logs.
 
 ## What gen1 needs, in order
 
-Seven steps turn a delivered 2008 tile into a surface comparable with 3DEP. Steps 1–4
-and 7 make the two epochs **internally consistent** – self-consistent surfaces that can be
-differenced. Steps 5 and 6 make them **externally consistent** – tied to the same absolute
-vertical frame, which no amount of internal alignment can supply.
+Seven steps turn a delivered 2008 tile into a surface comparable with 3DEP. They fall
+into three tiers, and the distinction matters because each tier is blind to the errors of
+the one below it:
+
+| tier | steps | uses | what it cannot catch |
+|---|---|---|---|
+| **within-epoch** | 1, 2, 3, 7 | only that epoch's own data | anything shared by every swath |
+| **between-epoch registration** | 4 | both clouds, no outside information | an error common to both epochs |
+| **external tie** | 5, 6 | PROJ geoid grids; surveyed control | – |
+
+Step 4 registers gen1 **to gen2**, so it is not internal to gen1: it makes the pair
+mutually consistent, and if gen2 is itself laterally displaced then gen1 is displaced with
+it, the DoD looks clean, and no amount of data-driven work will reveal it. Step 5 is also a
+between-epoch correction, but computed from external geodetic grids rather than fitted to
+gen2. Only steps 5 and 6 bring in information from outside the two point clouds.
 
 1. **Classify ground with CSF, not the vendor class.** gen1's delivered bare earth is cut
    at the class-12 overlap seam, at half the line spacing (measured 462–506 m), so one
@@ -62,7 +73,8 @@ vertical frame, which no amount of internal alignment can supply.
 Skipping step 5 leaves a ~67 mm epoch offset. Skipping step 6 leaves an arbitrary,
 site-dependent level that no amount of alignment can detect from the data alone – the
 overlaps are blind to it, because a constant common to every swath cancels in every
-between-swath difference.
+between-swath difference. The same logic applies horizontally to step 4: registering *to*
+a dataset is not the same as registering to the world.
 
 ## The workflow, and why each step is what it is
 
