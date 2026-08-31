@@ -210,7 +210,7 @@ re-gauging by `d` shifts `z` by `+d` and `c` by `-d`, and they cancel.
 `ground_control/tests/test_apply_datum.py` demonstrates this rather than asserting it –
 uncorrected spread 44.60 mm across the six gauges, corrected spread below 1e-9.
 
-### The relation that governs it
+### The relation that governs it, as a closed level circuit
 
 **Definitions.** Every constant below is a *tie*, `c = surveyed − z_lidar`, so **positive
 means the surface reads LOW and the constant is what you ADD**.
@@ -224,6 +224,50 @@ means the surface reads LOW and the constant is what you ADD**.
 
 `c1` and `c2` are *not* interchangeable: each is measured against **its own epoch's**
 control, and each describes that epoch's **delivered** product, not ours.
+
+**The relation is a level circuit.** Walk from surveyed NAVD88 onto gen1, across to gen2,
+and back to surveyed NAVD88. If every leg is right, the walk closes on zero.
+
+```
+            surveyed NAVD88  ......... START and END, the same datum both epochs
+                   |                                              ^
+       +c1 = +62.74|  2008 control                                | -c2 = +6.56
+                   v                                              |  2021 held-out control
+          gen1 DELIVERED                                   gen2 DELIVERED
+                   |                                              ^
+   +bridge1 = -4.04|  our reconstruction                          | +bridge2 = 0 +/- 26
+                   v                                              |    ** UNMEASURED LEG **
+            our gen1  (gen1's own geoid frame)                our gen2
+                   |                                              ^
+        -g = -67.38|  undo the geoid carry                        |
+                   v                                              |
+            our gen1  (gen2's frame) --- -DoD = +2.12 ------------+
+                                          measured on 116,507 stable open cells
+
+    leg                                                   mm
+    +c1        2008 control -> gen1 delivered          +62.74
+    +bridge1   gen1 delivered -> our gen1               -4.04
+    -g         undo the geoid carry                    -67.38
+    -DoD       our gen1 -> our gen2 (measured)          +2.12
+    +bridge2   our gen2 -> gen2 delivered  UNMEASURED   +0.00
+    -c2        gen2 delivered -> 2021 control           +6.56
+    -------------------------------------------------------
+    MISCLOSURE                                          0.0050
+    expected from the legs' own uncertainties            26.06
+```
+
+Three things follow, and they are ordinary surveying practice:
+
+1. **A misclosure far larger than the legs' combined uncertainty means a blunder or a
+   mis-modelled circuit, not bad measurements.** An earlier version of this analysis missed
+   by 71.42 mm because `g` had been left out of the relation. The measurements were fine;
+   the *model of the traverse* was wrong.
+2. **A misclosure far smaller than expected is luck, not precision.** 0.0050 mm against an
+   expected 26.06 mm is a coincidence. The circuit confirms there is no gross error; it does
+   not establish agreement to microns.
+3. **Closure does not validate an individual leg.** With a 26 mm tolerance, a 26 mm error in
+   `bridge2` is invisible — which is exactly why gen2's bridge remains open even though the
+   circuit closes.
 
 Because the constants come from three unrelated sources — two survey networks, the PROJ
 geoid grids, and the point clouds — one relation among them closing to 1.92 mm on the
