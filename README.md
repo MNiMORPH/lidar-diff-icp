@@ -29,6 +29,41 @@ We have no raw trajectory for the delivered clouds (a constraint DeLong et al.,
 2022, also faced), so the correction is **data-driven against 3DEP** rather than
 system-driven from the navigation logs.
 
+## What gen1 needs, in order
+
+Seven steps turn a delivered 2008 tile into a surface comparable with 3DEP. Steps 1–4
+and 7 make the two epochs **internally consistent** – self-consistent surfaces that can be
+differenced. Steps 5 and 6 make them **externally consistent** – tied to the same absolute
+vertical frame, which no amount of internal alignment can supply.
+
+1. **Classify ground with CSF, not the vendor class.** gen1's delivered bare earth is cut
+   at the class-12 overlap seam, at half the line spacing (measured 462–506 m), so one
+   line's returns are dropped wherever two swaths see the same ground. CSF recovers them
+   and matches how gen2's ground is built.
+2. **Align the swaths to each other** (`coreg.align_swaths`, free network, extent-invariant
+   intercept tie). This removes the per-line offsets – about 20 mm between adjacent lines,
+   accumulating to a few tens of centimetres across the acquisition.
+3. **Correct along-track drift** per swath as a function of `gps_time`. The dominant
+   residual navigation error follows the flight path.
+4. **Register laterally to gen2** (Nuth & Kääb *x, y*). Get the horizontal right before
+   touching the vertical, or terrain slope leaks into the elevation difference.
+5. **Convert the geoid, GEOID03 → GEOID18.** gen1's orthometric heights were computed with
+   a different model than gen2's; at Elba that is **+67.38 mm**, the single largest term in
+   the comparison. Without it the two epochs sit on different vertical frames.
+6. **Apply the absolute datum to both epochs**, each from its own contemporaneous control
+   (`ground_control/run_site_datum.py` → `difference_dem(absolute_datum=...)`). Until it is
+   applied, the surface's absolute level is whichever flight line `align_swaths` happened
+   to pin, which is worth **44.60 mm** at Elba. Applying it makes the elevation
+   gauge-invariant. Three rules govern it: epoch-matched control, open ground only, and the
+   flight line as the unit of replication.
+7. **Grid at the working resolution with the slope-normal estimator**, identically for both
+   epochs, then difference.
+
+Skipping step 5 leaves a ~67 mm epoch offset. Skipping step 6 leaves an arbitrary,
+site-dependent level that no amount of alignment can detect from the data alone – the
+overlaps are blind to it, because a constant common to every swath cancels in every
+between-swath difference.
+
 ## The workflow, and why each step is what it is
 
 `lidar_diff_icp.pipeline.difference_dem` runs the whole thing. Every choice below
