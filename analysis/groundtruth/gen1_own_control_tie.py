@@ -52,7 +52,14 @@ REF = (579705.72, 4883677.71)            # the Elba reference point
 ELBAEXT = "data/derived/elbaext/corrections_geoid.json"
 CACHE = "data/derived/groundtruth"
 CONTROL = "mn_dnr_2008_control_semn"
+# The 2021 anchor this script exists to ARGUE AGAINST. It is read deliberately, not by
+# oversight: the comparison IS the point, so it must keep reading the anchor's own numbers.
+# That anchor was subsequently RETRACTED (z_before_absolute.RETRACTED.md, 2026-08-28) and
+# the conclusion below is what replaced it -- gen1 measured against its OWN 2008 control,
+# adopted in ground_control/products/ANSWER_gen1_elba.json (+62.74 +/- 23.38 mm delivered).
+# Do NOT repoint this to the adopted product: it would compare that product with itself.
 SIDECAR = "data/derived/elba_fulldensity/z_before_absolute.json"
+ADOPTED = "ground_control/products/ANSWER_gen1_elba.json"
 COVER_NAME = {"L1O": "open terrain", "L2T": "tall weeds/crops", "L3B": "brush/low trees",
               "L4F": "forested", "L5U": "urban", "other": "unclassed"}
 
@@ -378,7 +385,10 @@ def main():
           "so both are POSITIVE when gen1 reads below the mark, and the geoid cancels "
           "out of the comparison (the anchor subtracts the shift it adds):")
     side = json.load(open(SIDECAR))
-    R.input(SIDECAR, role="the +22.7 mm datum constant and its budget, as shipped")
+    R.input(SIDECAR, role="the +22.7 mm 2021-anchor constant, as shipped and since RETRACTED "
+                          "-- read deliberately, as the thing this script compares against")
+    print(f"    NOTE: the +22.7 mm anchor was RETRACTED on 2026-08-28. This comparison is "
+          f"the argument that retired it; the adopted answer now lives in {ADOPTED}.")
     o = [r for r in recs if r["cp"].point_type == "L1O"]
     t = np.array([r["est"].tie_mm for r in o])
     sg = np.array([r["est"].sigma_mm for r in o])

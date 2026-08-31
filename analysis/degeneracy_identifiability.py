@@ -321,10 +321,17 @@ def main():
 
     # ------------------------------------------------- 4. gen2 as external reference
     print("## 4. gen2 as the external reference: the size of its own tilt confound")
-    tilt = json.load(open(R.input("data/derived/elba_fulldensity/z_before_absolute.json",
-                                  role="the gen1 absolute datum product and its budget")))
+    # Was z_before_absolute.json, RETRACTED 2026-08-28: it tied gen1 at two 2021 marks
+    # chained through five and six flight lines, so it carried thirteen years of real
+    # ground change. The adopted product measures gen1 against its OWN 2008 control.
+    # (The old call also filtered on "constant_mm", which that file does not contain --
+    # it keys the value as "datum_constant_mm" -- so the number silently never printed.)
+    tilt = json.load(open(R.input("ground_control/products/ANSWER_gen1_elba.json",
+                                  role="the adopted gen1 absolute datum at Elba")))
     print(json.dumps({k: v for k, v in tilt.items()
-                      if k in ("constant_mm", "sign_convention")}, indent=1))
+                      if k in ("delivered_mm", "delivered_se_mm", "our_surface_mm",
+                               "our_surface_se_mm", "dod_absolute_correction_mm",
+                               "sign_convention", "STATUS")}, indent=1))
     for name, val, sd in (("DoD tilt dE, stable ground (ADDITIONAL_GROUND_CONTROL.md)",
                            -14.19, 5.15),):
         print(f"{name}: {val:+.2f} +- {sd:.2f} mm/km")
