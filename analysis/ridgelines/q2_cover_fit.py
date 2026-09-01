@@ -28,6 +28,10 @@ _ap = argparse.ArgumentParser()
 _ap.add_argument("--tile", default="data/derived/elba_fulldensity",
                  help="tile directory; the fit is PER SITE because the relation depends on "
                       "each pair's phenology, so there is no site-invariant slope to reuse")
+_ap.add_argument("--include-valley", action="store_true",
+                 help="restore the PRE-2026-08-26-16:49 reference-cell population, before "
+                      "refcells.py started excluding the valley floor by default (commit "
+                      "7701383). Needed to reconstruct the original q2 = 0.5 - 0.1922*cover.")
 _ap.add_argument("--weight", choices=["se", "cells"], default="se",
                  help="se = cluster-robust SE per bin; cells = weight by cell count")
 _ap.add_argument("--binw", type=float, default=None,
@@ -64,7 +68,8 @@ ce = t["cell"].to_numpy()[g]; dc = t["d_mm_corr"].to_numpy()[g].astype(float)
 vs, off, n1 = ragged_sorted(ce, dc, N)
 sp = np.load(f"{D}/nearground_gen2_class_split.npz"); Hg = sp["Hg"]
 Cg = np.cumsum(Hg, 1).astype(float); ng = Cg[:, -1]
-stable, _ = reference_cells(D, cells=cells, slope_max=90.0)
+stable, _ = reference_cells(D, cells=cells, slope_max=90.0,
+                            exclude_valley=not ARGS.include_valley)
 ok = (stable & (n1[cells] >= max(1, ARGS.min_gen1)) & (ng >= max(1, ARGS.min_gen2))
       & np.isfinite(cover))
 print(f"cells: {ok.sum():,} of {stable.sum():,} stable "
@@ -84,6 +89,16 @@ for lo, hi in zip(EDGES[:-1], EDGES[1:]):
     if m.sum() < ARGS.minn:
         continue
     f = lambda q: float(np.median(g1[m] - hist_quantile(Cs[m], ns[m], q, zlo, dz)))
+    fa, fb = f(1e-4), f(1 - 1e-4)
+    if fa * fb > 0:
+        # No percentile of gen2 matches gen1's median in this bin: gen1's median lies
+        # OUTSIDE gen2's whole near-ground column. The matching relation is undefined
+        # here -- report it rather than crash, because which bins fail and by how much
+        # is the diagnostic.
+        print(f"  UNMATCHABLE bin {lo:.2f}-{hi:.2f}  n={int(m.sum()):,}  "
+              f"gen1 median is {'ABOVE' if fa > 0 else 'BELOW'} gen2's entire column; "
+              f"residual at q=0.0001 {fa:+.1f} mm, at q=0.9999 {fb:+.1f} mm")
+        continue
     q = brentq(f, 1e-4, 1 - 1e-4, xtol=1e-6)
     s = (f(max(q - 0.05, 0.01)) - f(min(q + 0.05, 0.99))) / 10.0     # mm per 0.01 rank
     r = g1[m] - hist_quantile(Cs[m], ns[m], q, zlo, dz)
