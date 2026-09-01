@@ -17,7 +17,7 @@ This run implements the two changes that report proposes, WITHOUT changing any d
    -- the middle of the sidelap, a fixed geometric position -- instead of the unweighted
    overlap median. LAD is used so the estimator reduces exactly to the shipped median when
    the across-track slope is zero, which is what makes the two numbers comparable.
-2. **A gauge that is not an edge-cut swath.** ``pipeline.py:670`` pins the network to
+2. **A zero line that is not an edge-cut swath.** ``pipeline.py:670`` pins the network to
    ``int(ps8.min())``, the lowest-numbered line, which at both Elba tiles is the one whose
    nadir track falls outside the tile (elba/135 at mean scan -11.79 deg, elbaext/133 at
    -12.64 deg, against interior lines near 0). Its constant and its across-track slope
@@ -178,9 +178,10 @@ def main():
         ("ext_new", "elbaext's constant, intercept tie, ref 135, mm"),
         ("dis_new", "elba_new - ext_new: the same disagreement, intercept tie, mm"),
         ("removed", "dis_old - dis_new, mm, and as a percentage of dis_old"),
-        ("gauge", "which flight line the network is pinned to, and with which tie"),
-        ("level", "point-count-weighted mean vertical shift of the gen1 cloud under that "
-                  "gauge, mm: the level the tile's whole DoD inherits"),
+        ("line", "which flight line the level is expressed against -- the tile's own "
+                 "ZERO LINE, the proposed COMMON LINE, or zero-mean -- and with which tie"),
+        ("level", "point-count-weighted mean vertical shift of the gen1 cloud against that "
+                  "line, mm: the level the tile's whole DoD inherits"),
         ("raster", "DoD raster file this run wrote"),
         ("md_mm", "median change in the DoD against the shipped raster, mm"),
         ("lo_mm", "most negative change in the DoD, mm"),
@@ -197,12 +198,12 @@ def main():
                                            "tile: grid geometry and the per-swath constants "
                                            "this run must reproduce before changing them")))
         pc, ps = load_pc(TILES[name], R)
-        gauge0 = int(ps.min())                       # pipeline.py:670
+        zero_line = int(ps.min())                    # pipeline.py:670
         out, zeromean = {}, {}
         for tie in ("overlap_median", "intercept"):
-            corr, edges, _ = coreg.align_swaths(pc, ref=gauge0, tie=tie)
+            corr, edges, _ = coreg.align_swaths(pc, ref=zero_line, tie=tie)
             out[tie] = (corr, edge_map(edges))
-            # align_swaths' other gauge, already supported: zero-mean over the swaths
+            # align_swaths' other origin, already supported: zero-mean over the swaths
             # present, i.e. no line is privileged. Solved rather than derived so the
             # level below is the function's own answer.
             zm, _, _ = coreg.align_swaths(pc, ref=None, tie=tie)
@@ -234,7 +235,7 @@ def main():
             f"{name}: the shipped VERTICAL tie ({shipped_tie}) was NOT reproduced "
             f"(worst {worst[2]:.3g} m against a {REPRO_TOL_M:g} m tolerance) -- "
             f"nothing below is comparable")
-        sol[name] = dict(meta=meta, gauge0=gauge0, out=out, worst=worst, mech=mech,
+        sol[name] = dict(meta=meta, zero_line=zero_line, out=out, worst=worst, mech=mech,
                          zeromean=zeromean, shipped_tie=shipped_tie)
 
     R.banner()
@@ -276,8 +277,8 @@ def main():
 
     # ------------------------------- 2. extent-invariance, in measurement
     print("\n## 2. The elba / elbaext disagreement about the SAME flight lines\n")
-    print("  Both tiles carry swaths 135-138, so their constants can be put on a common\n"
-          "  gauge (swath 135) and compared. Under the shipped tie they disagree; an\n"
+    print("  Both tiles carry swaths 135-138, so their constants can be put on a COMMON\n"
+          "  LINE (swath 135) and compared. Under the shipped tie they disagree; an\n"
           "  extent-dependent tie is what predicts that disagreement, so an extent-invariant\n"
           "  one must remove it.\n")
     e_old = reref({s: v[2] * 1000 for s, v in
@@ -296,16 +297,16 @@ def main():
                      f"{do - dn:+.2f} ({100 * (1 - abs(dn) / abs(do)):.0f}%)"])
     R.table(["swath", "elba_old", "ext_old", "dis_old", "elba_new", "ext_new", "dis_new",
              "removed"], rows)
-    print("\n  Re-referencing to 135 is itself a gauge, so the disagreements are only "
-          "determined\n  up to a common constant. The gauge-free statement is their spread "
+    print("\n  Re-referencing to 135 is itself a choice of origin, so the disagreements are "
+          "only determined\n  up to a common constant. The origin-free statement is their spread "
           "over the four\n  shared lines, and their RMS after the best common constant is "
           "removed:\n")
     R.column("subset", "which shared flight lines the summary is taken over")
     R.column("spread_old", "max - min of the tile-to-tile disagreement over those lines, "
-                           "shipped tie, mm (independent of the gauge)")
+                           "shipped tie, mm (independent of the common line)")
     R.column("spread_new", "the same spread with the intercept tie, mm")
     R.column("rms_old", "RMS of the disagreement after removing its mean over those lines, "
-                        "shipped tie, mm (independent of the gauge)")
+                        "shipped tie, mm (independent of the common line)")
     R.column("rms_new", "the same RMS with the intercept tie, mm")
     rows = []
     for lab, ss in (("135-138 (all shared)", (135, 136, 137, 138)),
@@ -319,8 +320,9 @@ def main():
     print("\n  Dropping 138 is NOT a filter on the result -- both rows are shown, and the "
           "whole\n  point of the second is that everything left after the fix is swath 138.")
 
-    # ------------------------------------------------- 3. the gauge
-    print("\n## 3. The gauge: how each tile samples the line its whole network is pinned to\n")
+    # ------------------------------------------------- 3. the common line
+    print("\n## 3. The common line: how each tile samples the line it is re-expressed "
+          "against\n")
     scan = {}
     rows = []
     for name in A.tiles:
@@ -349,20 +351,20 @@ def main():
                   & set(scan["elbaext"].point_source_id.unique()))
     worst_asym = {int(s): max(abs(scan[n][scan[n].point_source_id == s].scan_angle.mean())
                               for n in A.tiles) for s in both}
-    gauge = int(min(worst_asym, key=worst_asym.get))
-    R.param("gauge swath", gauge, src="MINE",
+    common = int(min(worst_asym, key=worst_asym.get))
+    R.param("common line", common, src="MINE",
             why=f"chosen by a stated rule on measured quantities, not by taste: of the lines "
                 f"BOTH tiles carry ({', '.join(str(s) for s in both)}), the one whose worst "
                 f"|mean scan angle| across the two tiles is smallest -- the line both tiles "
                 f"sample most symmetrically about nadir. Its effect is measured below and is "
-                f"a LEVEL shift only (tests/test_coreg.py proves the gauge changes no "
+                f"a LEVEL shift only (tests/test_coreg.py proves the choice changes no "
                 f"swath-to-swath difference), so it excludes no data and moves no gradient.")
     print(f"\n  lines carried by both tiles: {both}")
     print("  worst |mean scan| across the two tiles: "
           + ", ".join(f"{s}: {v:.2f} deg" for s, v in sorted(worst_asym.items())))
-    print(f"  -> gauge on swath {gauge}; the shipped gauge is "
-          + ", ".join(f"{n}: {sol[n]['gauge0']}" for n in A.tiles))
-    print("\n  what the gauge is worth: the point-count-weighted mean shift of the gen1\n"
+    print(f"  -> common line = swath {common}; each tile's shipped ZERO LINE is "
+          + ", ".join(f"{n}: {sol[n]['zero_line']}" for n in A.tiles))
+    print("\n  what the choice is worth: the point-count-weighted mean shift of the gen1\n"
           "  cloud, which is the level the tile's whole DoD inherits.\n")
     rows = []
     for name in A.tiles:
@@ -370,13 +372,13 @@ def main():
         lev = lambda d: sum(d[int(s)] * n for s, n in w.items()) / w.sum()
         for tie in ("overlap_median", "intercept"):
             dz = {s: v[2] * 1000 for s, v in sol[name]["out"][tie][0].items()}
-            for g_ in (sol[name]["gauge0"], gauge):
-                rows.append([name, f"{tie}, gauge {g_}", f2(lev(reref(dz, g_)))])
+            for g_ in (sol[name]["zero_line"], common):
+                rows.append([name, f"{tie}, line {g_}", f2(lev(reref(dz, g_)))])
             rows.append([name, f"{tie}, zero-mean (ref=None)",
                          f2(lev({s: v[2] * 1000 for s, v in
                                  sol[name]["zeromean"][tie].items()}))])
-    R.table(["tile", "gauge", "level"], rows)
-    print("\n  The gauge is a LEVEL choice and nothing else -- it changes no swath-to-swath\n"
+    R.table(["tile", "line", "level"], rows)
+    print("\n  The line is a LEVEL choice and nothing else -- it changes no swath-to-swath\n"
           "  difference (tests/test_coreg.py). But the level is the DoD's datum: gen1 has no\n"
           "  vertical tie to gen2 anywhere in the pipeline (only the geoid constant), so the\n"
           "  tile's whole DoD sits wherever the pinned line's raw z sits.")
@@ -425,15 +427,15 @@ def main():
     dz_old = {s: v[2] for s, v in sol[name]["out"]["overlap_median"][0].items()}
     dz_new = {s: v[2] for s, v in sol[name]["out"]["intercept"][0].items()}
     d_tie = {s: dz_new[s] - dz_old[s] for s in dz_old}
-    d_all = {s: reref(dz_new, gauge)[s] - reref(dz_old, sol[name]["gauge0"])[s] for s in dz_old}
+    d_all = {s: reref(dz_new, common)[s] - reref(dz_old, sol[name]["zero_line"])[s] for s in dz_old}
 
-    print(f"  per-swath constant, mm, on the shipped gauge ({sol[name]['gauge0']}):\n")
+    print(f"  per-swath constant, mm, on the shipped zero line ({sol[name]['zero_line']}):\n")
     R.table(["swath", "dz_old", "dz_new", "delta"],
             [[str(s), f2(dz_old[s] * 1000), f2(dz_new[s] * 1000), f2(d_tie[s] * 1000)]
              for s in sorted(dz_old)])
-    print(f"\n  and re-referenced to the proposed gauge (swath {gauge}):\n")
+    print(f"\n  and re-referenced to the proposed common line (swath {common}):\n")
     R.table(["swath", "dz_old", "dz_new", "delta"],
-            [[str(s), f2(reref(dz_old, gauge)[s] * 1000), f2(reref(dz_new, gauge)[s] * 1000),
+            [[str(s), f2(reref(dz_old, common)[s] * 1000), f2(reref(dz_new, common)[s] * 1000),
               f2(d_all[s] * 1000)] for s in sorted(dz_old)])
 
     nnc = nn[cell]
@@ -445,6 +447,11 @@ def main():
         # check that this re-reduction is the pipeline's estimator and not a look-alike.
         "noswath": -df.dz_swath_mm.to_numpy(float),
         "tie": np.array([1000.0 * d_tie[int(s)] for s in ps]) / nnc,
+        # NOTE: this key becomes the raster filename suffix, so it still reads
+        # "gauge" -- the retired word -- in dod_cover_q2_tie_gauge.npy, which is on
+        # disk and cited twice in analysis/SWATH_TIE_INTERCEPT.md. Renaming the key
+        # renames the product and orphans those references, so that is a separate
+        # decision, not a side effect of fixing the vocabulary.
         "tie_gauge": np.array([1000.0 * d_all[int(s)] for s in ps]) / nnc,
     }
     rows = []
