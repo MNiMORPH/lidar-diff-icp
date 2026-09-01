@@ -227,9 +227,35 @@ the "unknown producer" of `ridge_mask.npy` listed below as a loose end),
 `curvature_diffusion.py`, `cover_offset_reference.py`, `dod_cover_attribution.py`,
 `q2_cover_fit.py`, `dod_cover_corrected.py`, `lod_cover_q2.py`, `scripts/make_penetration.py`.
 
-### What actually stops a new region, in priority order
+### DONE 2026-09-01 (1), (2), (3) and the packaging question
 
-1. **`dod_cover_corrected.py --slope` defaults to `-0.1922`** -- Elba's own q2 slope, as a
+* **(1) `08e7513`** -- the q2 slope is read from the tile's own `q2_cover_fit.json`, which
+  `q2_cover_fit.py` now writes, and refuses when absent. Three values were in play:
+  `-0.1922` typed in the code, `-0.1835` in the shipped product, `-0.1792` from today's
+  refit -- and the JSON records its inputs' mtimes, so the consumer warns that the refit
+  itself read a `beam_offset_table` older than `corrections.json`.
+* **(2) canopy_struct.npz was NOT an orphan.** `analysis/ridgelines/canopy_struct.py`
+  produces it; my write-form search missed it because the path is a module constant. It was
+  hardcoded to elba. Parameterized; all six fields byte-identical on elba.
+* **(3) `97c0001`** -- `src/lidar_diff_icp/workflow.py` declares the 15-step graph and
+  derives the order. `--check` reports MISSING / STALE / OK per step; `--plan` prints the
+  commands in order. It runs nothing.
+* **Packaging (`977352c`)** -- four runtime deps the LIBRARY imports were undeclared
+  (`pyarrow`, `requests`, `pyshp`, `shapely`), so a fresh `pip install` produced a package
+  that failed on import. `testpaths = ["tests"]` turns a bare `pytest` from a 25-minute
+  abort into 8 s. `lidar-diff-workflow` is a console script.
+
+### The chain is STALE on both tiles, and that is the finding
+
+`lidar-diff-workflow --check` on elba_fulldensity reports `beam_table` STALE against
+`corrections.json`, and everything downstream of it inherits that. So the adopted
+`dod_cover_q2` rests on registration that has since been superseded. Regenerating it is a
+decision, not a chore, and is NOT taken here.
+
+### What still stops a new region
+
+1. ~~**`dod_cover_corrected.py --slope` defaults to `-0.1922`**~~ FIXED, see (1) above.
+   Original note kept for the reasoning: -- Elba's own q2 slope, as a
    DEFAULT. Run it on another region without noticing and it applies ELBA's cover correction
    and writes a `dod_cover_q2` that looks finished. This is worse than the `k = 49.6` case
    that was fixed today, because the number IS the correction rather than an attribution
