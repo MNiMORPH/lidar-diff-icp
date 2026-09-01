@@ -18,7 +18,6 @@ __pycache__/
 !/data/derived/
 /data/derived/*
 !/data/derived/control_cover.csv
-!/data/derived/control_ngv_exact.csv
 !/data/derived/control_structure/
 !/data/derived/control_structure/*.npz
 # ------------------------------------------------------------------------------------------
