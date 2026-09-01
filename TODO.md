@@ -65,35 +65,53 @@ between correction and masking; re-run the floodplain DoD against whichever is c
 
 ## Generalization: what stops a second tile running end to end
 
-**State as of 2026-09-01.** elba_fulldensity has every layer; elbaext is missing five.
-Audited by listing each layer, checking presence per tile, and searching the tracked source
-for anything that writes it.
+**State as of 2026-09-01, after the two producers were parameterized.** elbaext now has
+`floodplain_mask.npy` and `crest_mask.npy`; it is still missing `penetration.npy`,
+`canopy_struct.npz`, `core_forest.npy` and `core_open.npy`.
 
-### 1. DECIDE FIRST: retire `penetration.npy`, or give it a producer
+### 1. DONE: both producers are parameterized by tile
+
+`convexity_dod_landcover.py` (commit `94a3833`) and `strata_core.py` (commit `3f051d3`).
+Grid origin and resolution are read from each tile's own `corrections.json`; every output
+path is built from `--tile`. Both reproduce elba **byte-identically** (`floodplain_mask`,
+`crest_mask`, `kappa_L10/20/30`, `core_forest`, `core_open`; `ridgecrest_pixels.npz` matches
+in column order and in every column but `dod_m`, which differs because
+`elba_refdatum/dod_geoid.npy` was regenerated after that table was written).
+
+**The blocking gate is now clear.** `reference_cells` runs on both tiles: 28,533 cells at
+elba_fulldensity, 78,270 at elbaext.
+
+Two things this turned up, both recorded and neither acted on:
+
+- **elbaext's DoD was chosen, not given.** The elbaext run read
+  `data/derived/elbaext/dod_geoid.npy` -- the only `dod_geoid` on that tile and the
+  name-for-name analogue of elba's `elba_refdatum/dod_geoid.npy`. `--dod` is required with
+  no default precisely so this choice is visible. **Confirm it is the intended grid.**
+- **`curvature_diffusion.py` has the same defect**, out of scope here: it takes a tile
+  argument but hardcodes `data/derived/elba_refdatum/dod_geoid.npy` in two places, and it
+  `sys.exit(0)`s silently when `penetration.npy` is absent. It also AUGMENTS
+  `ridgecrest_pixels.npz` in place with `curv_xx`/`curv_yy`/`curv_laplacian`, so it must be
+  re-run after the convexity producer or those three columns are silently dropped.
+
+### 2. STILL OPEN: retire `penetration.npy`, or give it a producer
 
 `penetration.npy` has **no producer anywhere in the repo** — every write form was searched,
-twice. It exists only for elba, dated 2026-08-21. Two producers depend on it, and both are
-hardcoded to elba:
+twice. It exists only for elba, dated 2026-08-21. `src/lidar_diff_icp/canopy.py:19`
+`ground_penetration()` computes exactly this quantity from the gen2 cloud, so writing a
+producer is a short script, not research; the objection to it is scientific, not effort.
 
-    convexity_dod_landcover.py  -> floodplain_mask.npy, crest_mask.npy, kappa_L*.npy
-    strata_core.py              -> core_forest.npy, core_open.npy
+**`canopy_struct.npz` is a second orphan of the same kind** — no producer either, read by six
+files, present only for elba. `strata_core.py` needs BOTH, so it is blocked twice over.
 
-So all five layers are missing for elbaext, and `floodplain_mask.npy` now makes
-`reference_cells` REFUSE (it no longer skips the cut silently), which gates
-`q2cover.fit_tile` and everything behind it.
+What is still gated on the decision: the forest/open crest split (step 4 of the convexity
+producer) and `core_forest`/`core_open`. Nothing else.
 
 **Recommendation: retire it.** `analysis/ridgelines/AUDIT_findings.md` flags `penetration.npy`
-as a gen2-derived variable contaminating gen1-internal conclusions and lists twelve files
-using it. The floodplain mask does not need it -- it is `tpi_large < -2.0` from `z_after.npy`
-alone -- and `canopy_cover_pfs` already replaced it as the cover measure. Retiring unblocks
-the floodplain and crest layers without reviving a variable the audit says should not drive
-gen1 conclusions. Twelve files is the cost; Andy's call, not mine.
-
-### 2. Then parameterize the two producers
-
-`convexity_dod_landcover.py` (10 hardcoded elba paths) and `strata_core.py`. Verify each
-reproduces elba byte-identically before running it on elbaext -- the standard that caught
-the q2 default change.
+as a gen2-derived variable contaminating gen1-internal conclusions; it is referenced by 34
+tracked files. `canopy_cover_pfs.npy`, `forest_pfs.npy` and `open_pfs.npy` already exist for
+BOTH tiles and are the cover measure meant to replace it. The cost is not free: swapping the
+crest split to the PFS layers CHANGES elba's step-4 answer, so it needs the two cover
+definitions measured against each other on elba first, not substituted. Andy's call.
 
 ### 3. Then produce elbaext's cover-corrected products
 
@@ -103,10 +121,11 @@ the relation is per-site (it depends on each pair's phenology and undergrowth).
 
 ### 4. Loose end, not blocking
 
-`curv_laplacian.npy`, `nearground_cells_sn.npz`, `gen1_canopy_frac.npz` and `ridge_mask.npy`
-showed no producer in the scan, but the scan cannot see filenames built from flags
-(`nearground_cells.py --out ..._sn.npz` is invisible to it). All four exist for BOTH tiles,
-so they do not block; the producers just are not identified.
+`nearground_cells_sn.npz`, `gen1_canopy_frac.npz` and `ridge_mask.npy` showed no producer in
+the scan, but the scan cannot see filenames built from flags (`nearground_cells.py --out
+..._sn.npz` is invisible to it). All exist for BOTH tiles, so they do not block; the
+producers just are not identified. `curv_laplacian.npy` IS identified —
+`curvature_diffusion.py` writes it, along with `curv_xx` and `curv_yy`.
 
 ### The rule these now follow
 
