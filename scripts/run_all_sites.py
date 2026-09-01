@@ -132,11 +132,21 @@ def run_site(name, figdir="figures/rerun_class2"):
         from scipy.ndimage import distance_transform_edt as _edt
         _Zf = _Zf[tuple(_edt(_nm, return_distances=False, return_indices=True))]
     _sl = np.degrees(np.arctan(np.hypot(*np.gradient(_Zf, res)[::-1])))
-    leafon = leafon_slope_flag(ground_penetration(after, r["bounds"], res, nx, ny), _sl)
-    lod = inflate_lod(lod, leafon)
+    # These three set the detection bar and none of them is derived (see canopy.py):
+    # 12 deg is the repo-wide gentle-ground cut, 0.25 mirrors the forest strata cut, and
+    # 2.0 has no source at all. Stated in the run's own output rather than left implicit,
+    # so a reader of these results can see the bar that produced them.
+    PEN_MAX, SLOPE_MIN, LOD_FACTOR = 0.25, 12.0, 2.0
+    pen = ground_penetration(after, r["bounds"], res, nx, ny)
+    leafon = leafon_slope_flag(pen, _sl, min_penetration=PEN_MAX, min_slope=SLOPE_MIN)
+    lod = inflate_lod(lod, leafon, factor=LOD_FACTOR)
     np.save(f"{outdir}/leafon_flag.npy", leafon)
+    np.save(f"{outdir}/penetration.npy", pen)
     print(f"[{name}] leaf-on/forest-slope flag: {int(leafon.sum())} cells "
-          f"({100*leafon.mean():.0f}%) -- LoD widened there", flush=True)
+          f"({100*leafon.mean():.0f}%) -- LoD x{LOD_FACTOR:g} there; flagged where "
+          f"penetration < {PEN_MAX:g} AND slope > {SLOPE_MIN:g} deg "
+          f"(conventions, not derivations); {int((~np.isfinite(pen)).sum())} cells have no "
+          f"gen2 returns and are NaN, not flagged", flush=True)
 
     det = detect_change_standard(dod, lod, stable, res)
     change = det["change"]; regions = det["regions"]

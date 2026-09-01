@@ -48,14 +48,34 @@ def ground_penetration(after_laz, bounds, res, nx, ny, *, ground_class=2, noise_
 def leafon_slope_flag(penetration, slope_deg, *, min_penetration=0.25, min_slope=12.0):
     """Boolean flag: cells where ground penetration is poor AND the slope is steep
     enough that sparse ground biases the surface -- the leaf-on-under-forest zone whose
-    bare-earth DoD should be treated as low-confidence."""
+    bare-earth DoD should be treated as low-confidence.
+
+    An unmeasured cell (``penetration`` NaN) is NOT flagged: absent data is not evidence
+    of closed canopy.
+
+    BOTH thresholds are conventions, not derivations. ``min_slope=12.0`` is the repo-wide
+    gentle-ground cut -- the same 12 deg used by ``refcells.reference_cells`` and by the
+    cover and near-ground drivers -- so it is at least consistent, though no source in
+    this repo derives it. ``min_penetration=0.25`` is the same 0.25 as the forest side of
+    the strata cut (``pen < 0.25`` forest, ``>= 0.45`` open); whether that reuse is
+    deliberate is not recorded. Pass them explicitly if a site needs a different bar.
+    """
     return (np.isfinite(penetration) & (penetration < min_penetration)
             & (slope_deg > min_slope))
 
 
 def inflate_lod(lod, flag, *, factor=2.0):
     """Widen the level-of-detection on flagged (leaf-on-forest-slope) cells so change
-    there is held to a higher bar. Returns a copy; flagged cells' LoD *= factor."""
+    there is held to a higher bar. Returns a copy; flagged cells' LoD *= factor.
+
+    ``factor=2.0`` HAS NO DERIVATION anywhere in this repo -- searched. It is a round
+    number, and it sets what counts as detected change on every flagged cell at every
+    site ``scripts/run_all_sites.py`` runs, since that caller does not override it. Doubling
+    the detection limit roughly quarters the area that can register significant change
+    there, so this is a load-bearing choice presented as a default. It should either be
+    calibrated against measured stable-ground scatter under closed canopy, or passed
+    explicitly per site with the value stated in the run's output.
+    """
     out = lod.copy()
     out[flag] = out[flag] * factor
     return out
