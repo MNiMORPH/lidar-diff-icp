@@ -281,6 +281,65 @@ chain and asserts it still lands on elba's shipped products, so the "does it sti
 elba" half of the question has no automated answer. An ordered driver (3) would give that
 test something to invoke.
 
+## First end-to-end run on a new site: Carlton, 2026-09-02
+
+Andy's instruction: run the chain on Carlton, EXCLUDING the forest-elevation adjustment,
+which was fitted to gen2 undergrowth at Elba and is phenology-specific. So `q2_fit`,
+`dod_cover`, `lod_cover` and `cover_calibration` were out of scope, and with them
+`gen1_angles` and `beam_table`, which in this graph feed only those -- and which could not
+have run regardless, since `data/csf_cache/carlton.las` does not exist.
+
+**Five steps, all succeeded, every script unmodified on a tile it had never seen:**
+
+    slope        698 x 484 at 5 m, 12,455 gap cells filled; slope median 6.43 deg
+    ridge_mask   99,097 ridge cells, 49% on highs (threshold 200, the script's default)
+    convexity    17,769 crest cells of 99,097 divide cells; 36,269 divide cells floodplain
+    curvature    crest Laplacian median -0.0112 1/m
+    pfs_cover    337,310 of 337,832 cells carry a cover value
+
+Three optional pieces declined and each NAMED what it lacked rather than substituting: the
+ridge tracer's furrow/forest QC, the convexity producer's step 4, and the curvature
+producer's diffusion part.
+
+### What the run found that reasoning had not
+
+1. **`slope.npy` was not a base input** (`61cb160`). I had declared it as one; nothing
+   produced it but a script hardcoded to elba, which is why carlton held every other base
+   product and none of the chain could start. Now `scripts/make_slope.py`, bit-identical to
+   the shipped elba file.
+2. **`curvature` reported STALE the moment it succeeded** (`3523732`) -- on carlton AND on
+   elba. It augments `ridgecrest_pixels.npz` in place, so declaring that file a REQUIREMENT
+   made its own write invalidate it. `Step.mutates` now models in-place augmentation.
+
+Both were defects in the graph declared the day before, and neither would have surfaced
+without running it.
+
+### Two measurements to carry forward, NOT interpreted
+
+**Carlton's DoD has no cross-epoch datum at all:** `cross_epoch_datum: None`,
+`swath_tie: None`, `zero_line: 86`. No geoid, no control tie -- its absolute level is
+wherever line 86 sits. This is exactly the per-region frame question, met on the first new
+site.
+
+**The crest DoD is opposite in sign to Elba's at steep slopes:**
+
+    carlton  all crests n=16,927  median -3.6 mm   15-90 deg: -27.7 mm
+    elba     all crests n=12,459  median +2.4 mm   15-90 deg:  +8.7 mm
+
+The two are NOT comparable as they stand -- different datum treatment (carlton has none),
+different acquisitions, and carlton carries no cover correction while Elba's shipped product
+does. Do not read this as a site difference until those are matched.
+
+**The declared cover thresholds classify almost nothing at Carlton:**
+
+    forest (cover >= 0.5)    13,575    4.0%
+    open   (cover <= 0.1)   108,082   32.0%
+    NEITHER                 215,653   63.9%
+
+Two thirds of the tile falls between thresholds that the module already states are declared
+rather than calibrated. At Elba that mattered less; here it would dominate any stratified
+result, so the thresholds need attention before this cover is used to split anything.
+
 # Decisions
 
 Closed questions, with the reasoning and the conditions that would reopen them.
