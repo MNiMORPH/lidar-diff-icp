@@ -35,7 +35,7 @@ PY = "env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python"
 #: ``scripts/run_all_sites.py``). Everything below builds on these; the workflow treats them
 #: as given rather than pretending to schedule the DoD itself, whose vertical frame is a
 #: per-region decision (see ``analysis/slope_bias/elbaext_geoid_regrid.py``).
-BASE_INPUTS = ("corrections.json", "z_after.npy", "slope.npy", "dod.npy", "lod.npy")
+BASE_INPUTS = ("corrections.json", "z_after.npy", "dod.npy", "lod.npy")
 
 
 @dataclass(frozen=True)
@@ -50,6 +50,14 @@ class Step:
 
 
 STEPS: tuple[Step, ...] = (
+    Step("slope",
+         produces=("slope.npy",),
+         requires=("z_after.npy",),
+         command=f"{PY} scripts/make_slope.py --tile {{tile_name}}",
+         note="Surface slope from the gap-filled gen2 grid. It was NOT a base input: "
+              "difference_dem does not write it, and its only producer was hardcoded to "
+              "elba, which is why carlton and cook have every other base product but no "
+              "slope."),
     Step("ridge_mask",
          produces=("ridge_mask.npy",),
          requires=("z_after.npy",),
