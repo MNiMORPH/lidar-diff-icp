@@ -19,6 +19,12 @@ dependencies = [
     "rasterio",
     "matplotlib",
     "scikit-image",        # ridge/vesselness filter (Sato 1998) for linear-feature detection
+    # These four are imported by the LIBRARY and were previously undeclared, so a fresh
+    # `pip install` produced a package that failed on import of the modules named:
+    "pyarrow",             # q2cover.py -- the per-return beam-offset table is parquet
+    "requests",            # references.py -- fetches the PROJ geoid grids when absent
+    "pyshp",               # groundtruth/checkpoints.py -- reads control shapefiles
+    "shapely",             # threedep.py -- 3DEP coverage geometry
     "catchment-dod-balance @ git+https://github.com/MNiMORPH/catchment-dod-balance.git",  # routed sediment mass-balance (own repo; edit there, consumed here)
 ]
 
@@ -31,3 +37,10 @@ Repository = "https://github.com/MNiMORPH/lidar-diff-icp"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.pytest.ini_options]
+# Without this, a bare `pytest` collects from the repo root and IMPORTS every analysis
+# script matching test_*.py / *_test.py under analysis/ and scratchpad/. Those load derived
+# data at import, so collection took 25 minutes and then aborted on two FileNotFoundErrors
+# before a single test ran. Scoped here, the suite is ~10 s.
+testpaths = ["tests"]
