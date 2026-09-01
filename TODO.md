@@ -316,29 +316,51 @@ without running it.
 
 ### Two measurements to carry forward, NOT interpreted
 
-**Carlton's DoD has no cross-epoch datum at all:** `cross_epoch_datum: None`,
-`swath_tie: None`, `zero_line: 86`. No geoid, no control tie -- its absolute level is
-wherever line 86 sits. This is exactly the per-region frame question, met on the first new
-site.
+**CORRECTED.** I first reported "carlton has no cross-epoch datum at all". That was wrong,
+and it was a reading error: I called `.get("cross_epoch_datum", {}).get("method")`, got
+`None`, and read absence of that KEY as absence of a datum. Carlton carries one, under a
+different key -- `cross_epoch_tie_order2_coef`, the retired order-2 PARABOLA.
+
+**Only one derived tile is on the current datum method** (`analysis/datum_method_audit.py`):
+
+    elba_fulldensity    geoid: geoid_difference     <- the only one
+    elba_refdatum       geoid: reference_plane      (also retired)
+    elbaext             geoid: reference_plane      (also retired)
+    elba, final, carlton, carlton_density, cook, mnrv, ne,
+    whitewater, battlecreek                         order-2 PARABOLA (retired)
+
+Retiring a method from the code did not retire it from the products. Measured on carlton,
+its stored coefficients evaluated against the geoid plane over its own grid:
+
+    parabola (applied)   median  +93.82   ptp  51.77 mm
+    geoid plane          median  +78.10   ptp   5.17 mm
+    parabola - geoid     median  +15.91   range -19.89 .. +35.48 mm
+
+The applied datum imposes ~52 mm of spatial structure where the physical geoid difference
+has 5 mm, against carlton's `stable_1sigma` of 44.4 mm. That is precisely the
+fitted-surface-absorbs-real-signal failure the parabola was retired for, still in force.
 
 **The crest DoD is opposite in sign to Elba's at steep slopes:**
 
     carlton  all crests n=16,927  median -3.6 mm   15-90 deg: -27.7 mm
     elba     all crests n=12,459  median +2.4 mm   15-90 deg:  +8.7 mm
 
-The two are NOT comparable as they stand -- different datum treatment (carlton has none),
-different acquisitions, and carlton carries no cover correction while Elba's shipped product
-does. Do not read this as a site difference until those are matched.
+The two are NOT comparable as they stand, and the reason is now specific: they are on
+DIFFERENT DATUM METHODS -- carlton on the retired parabola, elba_fulldensity on the geoid --
+and carlton's parabola alone carries 52 mm of spatial structure. Add to that different
+acquisitions, and no cover correction on carlton by instruction. Do not read this as a site
+difference.
 
-**The declared cover thresholds classify almost nothing at Carlton:**
+**The cover thresholds classify little at Carlton, and that is EXPECTED, not a problem**
+(Andy, 2026-09-02): they are Elba-specific, and nothing at Carlton splits or corrects on
+them -- the cover grid is a measured layer here, nothing more.
 
     forest (cover >= 0.5)    13,575    4.0%
     open   (cover <= 0.1)   108,082   32.0%
     NEITHER                 215,653   63.9%
 
-Two thirds of the tile falls between thresholds that the module already states are declared
-rather than calibrated. At Elba that mattered less; here it would dominate any stratified
-result, so the thresholds need attention before this cover is used to split anything.
+Recorded as the measurement it is. My first note called for "attention to the thresholds",
+which was drift toward the cover-based adjustment that was explicitly excluded from this run.
 
 # Decisions
 
