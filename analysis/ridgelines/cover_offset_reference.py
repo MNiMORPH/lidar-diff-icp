@@ -148,6 +148,31 @@ if cc.size >= 3:
     print(f"   predicted offset at cover 0.1/0.3/0.5/0.7: "
           + ", ".join(f"{float((bestf[3](np.array([c])) @ bestf[2])[0]):+.0f}" for c in (.1,.3,.5,.7)) + " mm")
     b, pop, f = bestf[2], None, bestf[3]
+    # Emit the coefficients as DATA, not only as a figure and a printout. The k-per-cover
+    # constants consumed downstream were previously READ OFF a run and retyped into another
+    # script, which leaves no link from the number back to the code and the population that
+    # produced it. Every form is written, not just the selected one, so a consumer that wants
+    # the linear slope says so rather than silently assuming the selection was linear.
+    _cal = {
+        "tile": TILE, "offset_column": DCOL,
+        "population": {"ref": A.ref, "slope_max_deg": A.slope_max,
+                       "tpi_window_m": A.tpi_window, "include_divides": bool(A.ridge),
+                       "inc_max_deg": A.inc_max, "curv_max": A.curv_max,
+                       "min_n_per_bin": A.min_n, "n_cover_bins": int(cc.size),
+                       "n_returns": int(sum(nn))},
+        "selected_form": bestf[0],
+        "forms": {nm: [float(v) for v in np.linalg.lstsq(
+                      dsg(cc)*np.sqrt(w)[:, None], mm*np.sqrt(w), rcond=None)[0]]
+                  for nm, dsg in FORMS.items()},
+        "binned": {"cover": [float(v) for v in cc], "median_mm": [float(v) for v in mm],
+                   "robust_se_mm": [float(v) for v in se], "n": [int(v) for v in nn]},
+        "units": "coefficients are mm of offset (gen1 - gen2) per unit cover; a DoD GAIN "
+                 "constant of the kind dod_cover_attribution.py calls k is the NEGATIVE of "
+                 "the linear form's b",
+    }
+    _cp = f"{A.tile}/cover_offset_calibration{TAG}.json"
+    json.dump(_cal, open(_cp, "w"), indent=2)
+    print(f"   wrote {_cp}")
 else:
     b = None; pop = None; f = None; bestf = None
     print("\ntoo few populated cover bins to fit")
