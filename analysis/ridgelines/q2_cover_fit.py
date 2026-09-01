@@ -16,7 +16,7 @@ gen2 = the per-cell vendor class-2 near-ground column. Bins carry cluster-robust
 
     ./lidar-icp/bin/python analysis/ridgelines/q2_cover_fit.py
 """
-import argparse, os
+import argparse, json, os
 import numpy as np, pyarrow.parquet as pq
 import matplotlib; matplotlib.use("Agg"); import matplotlib.pyplot as plt
 from scipy.optimize import brentq, curve_fit
@@ -154,6 +154,43 @@ for i in range(len(X)):
     print(f"  {X[i]:6.3f} " + " ".join(
         (f"{(Y[i]-fits[n][2][i])*100*MM[i]:9.1f}" if np.isfinite(Y[i]) else f"{'--':>9s}")
         for n in FORMS))
+
+# Persist the fit as DATA. dod_cover_corrected.py carried the slope as a typed default
+# (-0.1922) which was both Elba-specific and stale -- the shipped dod_cover_q2.json records
+# -0.1835. A number read off this printout and retyped downstream has no link back to the
+# population it came from, so write every form, the bins, and the settings that selected the
+# population, and let the consumer read it.
+_cal = {
+    "tile": SITE,
+    "relation": "q2(cover); every form is pinned to q2(0) = 0.50 by construction",
+    "settings": {"weight": ARGS.weight, "bin_width": ARGS.binw, "min_n_per_bin": ARGS.minn,
+                 "min_gen1_returns": max(1, ARGS.min_gen1),
+                 "min_gen2_returns": max(1, ARGS.min_gen2),
+                 "include_valley": bool(ARGS.include_valley),
+                 "valley_top_m": ARGS.valley_top},
+    "population": {"cells_fitted": int(ok.sum()), "cells_stable": int(stable.sum()),
+                   "bins": int(len(X)), "bins_used_in_fit": int(FIT.sum())},
+    "forms": {n: {"parameters": [float(v) for v in fits[n][1]],
+                  "chi2_per_dof": float(fits[n][3])} for n in FORMS},
+    "linear_slope": float(fits["linear      0.5+b\u00b7c"][1][0]),
+    # Input mtimes, so a consumer can see whether this fit predates its own inputs. The
+    # chain is beam_offset_table <- gen1_csf_angles <- corrections.json; a table older than
+    # the corrections carries registration terms that are no longer the ones in force.
+    "inputs_mtime": {f: __import__("datetime").datetime.fromtimestamp(
+                        os.path.getmtime(f"{D}/{f}")).isoformat(timespec="seconds")
+                     for f in ("corrections.json", "beam_offset_table.parquet",
+                               "nearground_cells_sn.npz", "canopy_cover_pfs.npy",
+                               "nearground_gen2_class_split.npz")
+                     if os.path.exists(f"{D}/{f}")},
+    "bins_table": {"cover_mean": [float(v) for v in X], "cover_lo": [float(v) for v in LO],
+                   "cover_hi": [float(v) for v in HI], "q2": [float(v) for v in Y],
+                   "q2_se": [float(v) for v in S], "cells": [int(v) for v in W],
+                   "blocks": [int(v) for v in NB],
+                   "mm_per_0.01_rank": [float(v) for v in MM]},
+}
+_cp = f"{D}/q2_cover_fit.json"
+json.dump(_cal, open(_cp, "w"), indent=2)
+print(f"\nwrote {_cp}   linear slope {_cal['linear_slope']:+.4f}")
 
 xx = np.linspace(0, 0.8, 400)
 fig, ax = plt.subplots(figsize=(9, 5.6), dpi=150)

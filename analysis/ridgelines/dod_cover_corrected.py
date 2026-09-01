@@ -25,7 +25,12 @@ from scipy.ndimage import distance_transform_edt
 ap = argparse.ArgumentParser()
 ap.add_argument("--tile", default="data/derived/elba_fulldensity")
 ap.add_argument("--gen2", default="data/after/3dep2021_fulldensity.laz")
-ap.add_argument("--slope", type=float, default=-0.1922, help="q2 = 0.5 + slope * cover")
+ap.add_argument("--slope", type=float, default=None,
+                help="q2 = 0.5 + slope * cover. Default: READ from the tile's own "
+                     "q2_cover_fit.json (analysis/ridgelines/q2_cover_fit.py), never typed. "
+                     "It used to default to -0.1922, which was Elba's number AND stale -- "
+                     "the shipped dod_cover_q2.json records -0.1835 -- so on any other "
+                     "region it silently applied Elba's correction. Refuses if absent.")
 ap.add_argument("--chunk", type=int, default=3_000_000)
 ap.add_argument("--zlo", type=float, default=-1.0)
 ap.add_argument("--zhi", type=float, default=2.0)
@@ -33,6 +38,35 @@ ap.add_argument("--dz", type=float, default=0.02)
 A = ap.parse_args()
 
 D = A.tile
+
+
+def _q2_slope(tile_dir):
+    """The q2 slope from THIS tile's own fit. The relation is per-site -- it depends on each
+    pair's phenology and undergrowth -- so there is no site-invariant value to default to."""
+    p = os.path.join(tile_dir, "q2_cover_fit.json")
+    if not os.path.exists(p):
+        raise SystemExit(
+            f"no {p}. The q2 slope is NOT defaulted: it is per-site, and a value carried "
+            f"from another tile would be applied here without saying so. Produce it:\n"
+            f"    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python "
+            f"analysis/ridgelines/q2_cover_fit.py --tile {tile_dir}\n"
+            f"or state your own with --slope.")
+    j = json.load(open(p))
+    st, pop = j["settings"], j["population"]
+    print(f"q2 slope {j['linear_slope']:+.4f}, read from {p}")
+    print(f"  fitted on {pop['cells_fitted']:,} cells in {pop['bins_used_in_fit']} of "
+          f"{pop['bins']} cover bins; weight={st['weight']}, include_valley="
+          f"{st['include_valley']}, valley_top_m={st['valley_top_m']}")
+    mt = j.get("inputs_mtime", {})
+    if "corrections.json" in mt and "beam_offset_table.parquet" in mt:
+        if mt["beam_offset_table.parquet"] < mt["corrections.json"]:
+            print(f"  WARNING: that fit read a beam_offset_table ({mt['beam_offset_table.parquet']}) "
+                  f"OLDER than corrections.json ({mt['corrections.json']}), so its gen1 "
+                  f"offsets carry registration terms that are no longer in force.")
+    return float(j["linear_slope"])
+
+
+SLOPE = A.slope if A.slope is not None else _q2_slope(D)
 j = reg.read_corrections(D)   # geoid sidecar wins where a tile carries both;
                               # reading "corrections.json" by name picks elbaext's
                               # obsolete reference_plane product
@@ -79,7 +113,7 @@ print(f"gen1: ground on {int(np.isfinite(h1).sum()):,} cells", flush=True)
 
 # ---- gen2 at the cover-dependent percentile -----------------------------------------
 cover = np.load(f"{D}/canopy_cover_pfs.npy").ravel()
-q2 = 0.5 + A.slope * np.where(np.isfinite(cover), cover, 0.0)
+q2 = 0.5 + SLOPE * np.where(np.isfinite(cover), cover, 0.0)
 C = np.cumsum(H, 1).astype(float); ntot = C[:, -1]
 have = ntot > 0
 idx = np.arange(NC)
@@ -97,7 +131,7 @@ dod_med = (h2_med - h1) / 1000.0 * nnorm         # same but gen2 at its plain me
 np.save(f"{D}/dod_cover_q2.npy", dod_corr.reshape(NY, NX))
 np.save(f"{D}/dod_gen2_median.npy", dod_med.reshape(NY, NX))
 np.save(f"{D}/gen2_q2_used.npy", np.where(have, q2, np.nan).reshape(NY, NX))
-json.dump({"relation": "q2 = 0.5 + slope * cover", "slope": A.slope,
+json.dump({"relation": "q2 = 0.5 + slope * cover", "slope": SLOPE,
            "source": "analysis/ridgelines/Q2_COVER_RELATION.md",
            "gen1": "beam_offset_table.parquet median of d_mm_corr (4 registration terms)",
            "gen2": f"{A.gen2}, class-2, near-ground column {A.zlo}..{A.zhi} m, {A.dz} m bins",
