@@ -120,10 +120,34 @@ the crest suite should read from here.**
 
 ### 2. STILL OPEN: retire `penetration.npy`, or give it a producer
 
-`penetration.npy` has **no producer anywhere in the repo** — every write form was searched,
-twice. It exists only for elba, dated 2026-08-21. `src/lidar_diff_icp/canopy.py:19`
-`ground_penetration()` computes exactly this quantity from the gen2 cloud, so writing a
-producer is a short script, not research; the objection to it is scientific, not effort.
+**How it was produced -- established 2026-09-01, by reproducing it.** No tracked code writes
+the file, but `src/lidar_diff_icp/canopy.py:19` `ground_penetration()` does compute it, and it
+is the producer. Recomputing that function's arithmetic on
+`data/after/3dep2021_fulldensity.laz` (182,923,322 points) over elba's bounds, res 5.0,
+`ground_class=2`, `noise_class=7`, accumulating the bincounts in chunks so the computation is
+the same one rather than an approximation of it:
+
+    cells finite in BOTH                     354,923
+    of those, cells that DIFFER                    0
+    cells the recomputation calls NaN            677   <- the whole disagreement
+
+So the file is that function's output, and it is regenerable. Timing agrees: the file is
+dated 2026-08-21 13:13 and `canopy.py` was committed at 13:58 the same day (`dc3c667`), i.e.
+it was run interactively before the function was committed. `scripts/run_all_sites.py:135`
+calls `ground_penetration` but persists only the derived `leafon_flag.npy`, which is why no
+write of `penetration.npy` appears in the source.
+
+**The one deviation is a no-data-as-zero substitution.** The function returns NaN where a cell
+has no returns at all. The stored file holds `0.0` in all 677 such cells -- a single distinct
+value, so it was filled, not measured. Under the strata cut used across the repo
+(forest `pen < 0.25`), **all 677 are classified forest**: cells with no gen2 returns read as
+maximally closed canopy. They do NOT reach `core_forest` (0 of 677 survive the purity and
+cluster filters), so the contamination is confined to the raw `forest0` mask and anything
+built directly on `pen < 0.25`.
+
+This is the same defect class as the ones fixed this session, in the data rather than the
+code. Regenerating the file from `canopy.ground_penetration` would fix it by construction,
+because the NaN is already what the function returns.
 
 **`canopy_struct.npz` is a second orphan of the same kind** — no producer either, read by six
 files, present only for elba. `strata_core.py` needs BOTH, so it is blocked twice over.
