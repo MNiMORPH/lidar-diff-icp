@@ -16,18 +16,31 @@ from __future__ import annotations
 import numpy as np
 
 
-def ground_penetration(after_laz, bounds, res, nx, ny, *, ground_class=2, noise_class=7):
+def ground_penetration(after_laz, bounds, res, nx, ny, *, ground_class=2, noise_class=7,
+                       chunk_points=20_000_000):
     """Per-cell fraction of returns that reached the ground (class ``ground_class`` /
-    total non-noise). Low = closed/leaf-on canopy. Reads the full after cloud once."""
+    total non-noise). Low = closed/leaf-on canopy.
+
+    A cell with NO returns is ``nan``, NOT ``0.0``: zero means "measured, nothing reached
+    the ground", which every downstream cut of the form ``pen < 0.25`` reads as maximally
+    closed canopy. ``tests/test_canopy.py`` pins the distinction.
+
+    Read in chunks rather than whole. ``chunk_points`` is a MEMORY setting and cannot
+    change the answer: the per-cell counts are accumulated with ``bincount``, which is
+    additive, and the single division happens once at the end -- so any chunk size gives
+    bit-identical output. It matters because a full-density tile is ~1.8e8 points.
+    """
     import laspy
     X0, Y0, X1, Y1 = bounds
+    tot = np.zeros(nx * ny, float)
+    gnd = np.zeros(nx * ny, float)
     with laspy.open(str(after_laz)) as fh:
-        p = fh.read()
-    x = np.asarray(p.x); y = np.asarray(p.y); cl = np.asarray(p.classification)
-    m = (x >= X0) & (x < X1) & (y >= Y0) & (y < Y1) & (cl != noise_class)
-    cid = ((y[m] - Y0) / res).astype(int) * nx + ((x[m] - X0) / res).astype(int)
-    tot = np.bincount(cid, minlength=nx * ny).astype(float)
-    gnd = np.bincount(cid[cl[m] == ground_class], minlength=nx * ny).astype(float)
+        for p in fh.chunk_iterator(chunk_points):
+            x = np.asarray(p.x); y = np.asarray(p.y); cl = np.asarray(p.classification)
+            m = (x >= X0) & (x < X1) & (y >= Y0) & (y < Y1) & (cl != noise_class)
+            cid = ((y[m] - Y0) / res).astype(int) * nx + ((x[m] - X0) / res).astype(int)
+            tot += np.bincount(cid, minlength=nx * ny)
+            gnd += np.bincount(cid[cl[m] == ground_class], minlength=nx * ny)
     frac = np.where(tot > 0, gnd / np.maximum(tot, 1), np.nan)
     return frac.reshape(ny, nx)
 
