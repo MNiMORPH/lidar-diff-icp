@@ -76,7 +76,7 @@ measured at ~6.5 mm median absolute on the pilot.
    (`ground_control/run_site_datum.py` → `difference_dem(absolute_datum=...)`). Until it is
    applied, the surface's absolute level is whichever flight line `align_swaths` happened
    to pin, which is worth **44.60 mm** at Elba. Applying it makes the elevation
-   gauge-invariant. Three rules govern it: epoch-matched control, open ground only, and the
+   zero-line-invariant. Three rules govern it: epoch-matched control, open ground only, and the
    flight line as the unit of replication.
 7. **Grid at the working resolution with the slope-normal estimator**, identically for both
    epochs, then difference. This is a reduction, not a correction: it earns its place by
@@ -192,7 +192,7 @@ deposition; standard NW (315°/45°) hillshade.**
 
 Swath alignment makes the flight lines mutually consistent. It does not tell you where
 the resulting surface sits. `coreg.align_swaths` solves a free network and subtracts the
-reference swath's value afterwards, so the gauge touches no swath-to-swath difference –
+zero line's value afterwards, so the zero line touches no swath-to-swath difference –
 but the mosaic inherits **the reference line's own vertical error** as its absolute level.
 Measured on elbaext, the six per-swath `dz` span
 
@@ -204,11 +204,11 @@ uncorrected elevation is therefore an arbitrary implementation detail, not a mea
 **Ground control supplies the one number the network is blind to.** Each epoch is tied to
 its own contemporaneous control – the 2008 MnGeo/MnDNR validation checkpoints for gen1,
 the 2021 USGS held-out NVA/VVA checkpoints for gen2 – and the correction is applied to
-both, so the DoD moves by the difference. Applying it removes the gauge dependence
-exactly: with `corrected = z + c` and `c` measured against the same gauged product,
+both, so the DoD moves by the difference. Applying it removes the zero-line dependence
+exactly: with `corrected = z + c` and `c` measured against a product on the same zero line,
 re-gauging by `d` shifts `z` by `+d` and `c` by `-d`, and they cancel.
 `ground_control/tests/test_apply_datum.py` demonstrates this rather than asserting it –
-uncorrected spread 44.60 mm across the six gauges, corrected spread below 1e-9.
+uncorrected spread 44.60 mm across the six zero lines, corrected spread below 1e-9.
 
 ### The relation that governs it, as a closed level circuit
 
@@ -285,7 +285,7 @@ closure, not several.
 | geoid term added to gen1 | **+67.38 mm** |
 | **DoD shift** | **+2.18 mm**, and it puts stable open ground at **-0.003 mm** |
 
-The DoD shift is small, which is **not** a reason to skip it: the gauge choice it removes
+The DoD shift is small, which is **not** a reason to skip it: the zero-line choice it removes
 is 21× larger, and its smallness here is a property of line 133 having been a lucky pin.
 
 ### Four rules that changed the answer
@@ -327,7 +327,7 @@ env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python ground_control/run_site_dat
 ```
 
 `difference_dem` checks that the constant's `gauge_ref` matches the run's own
-`swath_gauge_ref` and raises on a mismatch, because a constant measured against one
+`zero_line` and raises on a mismatch, because a constant measured against one
 reference line belongs to that product and would silently mis-level another. Nothing is
 defaulted: `covers`, `gen2_surface`, `collinear_sigma` and the bridge are all required,
 and each of them moved the Elba answer by more than the correction itself.
@@ -465,7 +465,7 @@ Reference point 44.101944, −92.004137 (E 579705.72, N 4883677.71, EPSG:26915).
   `data/gen1_line_tracks.json`), `same_line` (the site's own lines, marks assigned by
   their returns), `our_surface` (local reconstruction of either epoch's surface anywhere a
   tile is on disk), `site_datum` + `run_site_datum` (both epochs' constants at any site),
-  `apply_datum` (gauge-invariant application). `FRAME.md` is the state anchor,
+  `apply_datum` (zero-line-invariant application). `FRAME.md` is the state anchor,
   `REPORT.md` the method record, `INTEGRATION.md` what belongs in `src/` on promotion.
 - `analysis/` — documented studies (density decimation, method comparisons).
 - `tests/` — regression tests (coreg sign conventions, correction surface,

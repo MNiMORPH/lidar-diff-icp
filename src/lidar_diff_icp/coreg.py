@@ -434,16 +434,18 @@ def align_swaths(pc, res: float = 2.0, exclude=(5, 6, 9), ref=None,
     consistent. The observation for edge (a, b) is ``c_b - c_a = s_ab`` where
     ``s_ab`` aligns b onto a.
 
-    Gauge (choice of datum; does not change the *relative* solution):
+    THE ZERO LINE (choice of origin; does not change the *relative* solution):
     ``ref=None`` -> zero-mean (group offset spread evenly, absolute frame free);
-    ``ref=<swath id>`` -> that swath is pinned to zero and becomes the local
-    reference (all others measured relative to it). Either way the group's
+    ``ref=<swath id>`` -> that swath becomes the tile's ZERO LINE: it is defined as
+    zero and every other line is measured relative to it. Either way the group's
     absolute offset from another epoch must be tied separately.
 
-    The gauge does not change any *difference* between swaths, but it does set the level
-    the whole group sits at, so it decides which line's own vertical solution the tile's
-    absolute DoD level inherits -- and two tiles gauged on different lines are not on a
-    common level. Pin a line the tile samples on BOTH sides of nadir; a line whose nadir
+    The zero line does not change any *difference* between swaths -- every line is still
+    used and its choice sets no goodness of fit -- but it does set the level the whole
+    group sits at, so it decides which line's own vertical solution the tile's absolute
+    DoD level inherits. Two tiles with different zero lines are not on a common level; to
+    compare them, re-express both against a COMMON LINE, meaning a flight line present in
+    both tiles. Choose a line the tile samples on BOTH sides of nadir; a line whose nadir
     track falls outside the tile is seen only obliquely, and its constant and its
     across-track slope are then nearly collinear (correlation 0.989/0.991 at Elba,
     ``analysis/SWATH_ACROSS_TRACK_TEST.md`` section 5).

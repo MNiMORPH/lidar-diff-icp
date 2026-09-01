@@ -45,7 +45,7 @@ def main(argv=None):
     a = p.parse_args(argv)
 
     corr = json.loads(Path(a.corrections).read_text())
-    gauge = corr.get("swath_gauge_ref")
+    gauge = corr.get("zero_line")
     if gauge is None:
         gauge = min(int(k) for k in corr["per_swath_internal_alignment_dxdydz_m"])
 
@@ -62,7 +62,7 @@ def main(argv=None):
             why="gen2 publishes four; the choice moved the Elba answer by 12.55 mm")
     R.param("collinear_sigma", a.collinear_sigma, src="andy")
     R.param("bridge_mm", a.bridge_mm, src="andy", why=f"supplied: {a.bridge_source}")
-    R.param("swath_gauge_ref", gauge, src="repo",
+    R.param("zero_line", gauge, src="repo",
             why="read from the corrections file; the gen1 constant is TIED to it and the "
                 "pipeline refuses a mismatch")
     R.column("quantity", "what is being reported")

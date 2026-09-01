@@ -411,23 +411,25 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
                       ``geoid_datum`` is supplied). No plane is fitted to "stable"
                       surfaces; residual offsets are left for later analysis. The
                       reference_plane fit and the parabola tie were removed (git history).
-    **The absolute level of the output is GAUGE-DEPENDENT and is not a measured
-    elevation.** ``align_swaths`` is gauged on the lowest-numbered flight line, so the
+    **The absolute level of the output depends on the ZERO LINE and is not a measured
+    elevation.** ``align_swaths`` uses the lowest-numbered flight line as the ZERO LINE, so the
     mosaic inherits that line's own vertical error; re-gauging on another line shifts every
     elevation (measured span 44.60 mm at elbaext). Swath-to-swath DIFFERENCES are
     unaffected. To obtain an absolute elevation, apply a ground-control datum constant
-    measured against this gauge -- ``ground_control/apply_datum.py``. The output records
-    ``swath_gauge_ref`` and leaves ``absolute_datum_mm`` None until one is supplied.
+    measured against this zero line -- ``ground_control/apply_datum.py``. The output records
+    ``zero_line`` and leaves ``absolute_datum_mm`` None until one is supplied.
 
     ``absolute_datum`` : optional dict placing BOTH epochs on surveyed NAVD88, making the
-                      output's elevation gauge-invariant. Keys:
+                      output's elevation independent of the zero line. Keys:
                       ``gen1_mm``  constant to ADD to gen1 **as it sits in this DoD**, i.e.
                                    AFTER the geoid shift (= c1_own_frame − geoid_mm);
                       ``gen2_mm``  constant to ADD to gen2;
-                      ``gauge_ref`` the flight line the gen1 constant was measured against
-                                   — CHECKED against this run's gauge and raises on a
+                      ``gauge_ref`` the ZERO LINE the gen1 constant was measured against -- the
+                      flight line defined as zero when that tile's swath network
+                      was solved (ground_control still names this key gauge_ref)
+                                   — CHECKED against this run's zero line and raises on a
                                    mismatch, because a constant measured against another
-                                   gauge belongs to a different product;
+                                   zero line belongs to a different product;
                       ``source``   where the constants came from.
                       Optional: ``gen1_sigma_mm``, ``gen2_sigma_mm``.
                       ``None`` (default) leaves the product exactly as before and records
@@ -703,16 +705,20 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
                           else coreg.estimate_boresight_roll(pc, res).b)
         z8 = z8 - boresight_used * sa8 / 1000.0      # mm/deg * deg -> mm -> m
         pc = io.PointCloud(x8, y8, z8, ps8, cl8, np.zeros_like(z8), sa8, before_crs)
-    # GAUGE. align_swaths solves a FREE NETWORK and only then subtracts the reference
+    # ZERO LINE. align_swaths solves a FREE NETWORK and only then subtracts the reference
     # swath's value, so this choice does not touch any swath-to-swath DIFFERENCE -- but it
     # DOES set the absolute level the whole mosaic inherits, because that level becomes the
     # reference line's own error. Measured on elbaext: the six per-swath dz span 44.60 mm
     # (-22.60 .. +22.00), so re-gauging on a different line moves every elevation by up to
-    # that much. The product is therefore GAUGE-DEPENDENT in its absolute level until a
-    # ground-control datum constant is applied; see `swath_gauge_ref` and
+    # that much. The product's absolute level therefore DEPENDS ON THE ZERO LINE until a
+    # ground-control datum constant is applied; see `zero_line` and
     # `absolute_datum_mm` in corrections.json, and ground_control/apply_datum.py.
-    swath_gauge_ref = int(ps8.min())
-    corr, _, _ = coreg.align_swaths(pc, ref=swath_gauge_ref, tie=swath_tie)
+    # The ZERO LINE: the flight line defined as zero when this tile's swath network
+    # is solved. Arbitrary and per-tile; it sets only the level the tile inherits,
+    # and an absolute datum cancels it exactly. Recorded so two products can be
+    # related: see scripts/backfill_zero_line.py.
+    zero_line = int(ps8.min())
+    corr, _, _ = coreg.align_swaths(pc, ref=zero_line, tie=swath_tie)
     xc, yc, zc = x8.copy(), y8.copy(), z8.copy()
     for s, (dx, dy, dz) in corr.items():
         m = ps8 == s; xc[m] += dx; yc[m] += dy; zc[m] += dz
@@ -823,7 +829,7 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
                              + np.nan_to_num(s21**2 / np.maximum(n21, 1)))
         lod_method = "within-cell spread proxy (fallback; relief-inflated on slopes)"
 
-    # ABSOLUTE DATUM. Placing each epoch on surveyed NAVD88 removes the gauge dependence
+    # ABSOLUTE DATUM. Placing each epoch on surveyed NAVD88 removes the zero-line dependence
     # exactly: re-gauging by d shifts z by +d and the measured constant by -d, so the
     # corrected surface is unchanged. Applied to BOTH epochs, so the DoD moves by the
     # DIFFERENCE of the two constants and true change on stable ground goes to zero.
@@ -833,11 +839,11 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
         missing = need - set(absolute_datum)
         if missing:
             raise ValueError(f"absolute_datum is missing {sorted(missing)}")
-        if int(absolute_datum["gauge_ref"]) != swath_gauge_ref:
+        if int(absolute_datum["gauge_ref"]) != zero_line:
             raise ValueError(
-                f"absolute_datum was measured against gauge line "
-                f"{absolute_datum['gauge_ref']} but this run is gauged on "
-                f"{swath_gauge_ref}. A constant belongs to the product it was measured "
+                f"absolute_datum was measured against zero line "
+                f"{absolute_datum['gauge_ref']} but this run's zero line is "
+                f"{zero_line}. A constant belongs to the product it was measured "
                 f"against; re-express it with ground_control apply_datum.regauged_to().")
         g1 = float(absolute_datum["gen1_mm"]); g2 = float(absolute_datum["gen2_mm"])
         Z21 = Z21 + g2 / 1000.0                      # gen2 onto NAVD88
@@ -847,7 +853,7 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
             "dod_shift_mm": round(g2 - g1, 3),
             "gen1_sigma_mm": absolute_datum.get("gen1_sigma_mm"),
             "gen2_sigma_mm": absolute_datum.get("gen2_sigma_mm"),
-            "gauge_ref": swath_gauge_ref, "source": absolute_datum["source"]}
+            "gauge_ref": zero_line, "source": absolute_datum["source"]}
 
     corrections = {
         "epochs": "after - before (positive = deposition)",
@@ -860,16 +866,16 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
         "boresight_roll_mm_per_deg": (round(float(boresight_used), 3)
                                       if boresight_used is not None else None),
         "swath_tie": swath_tie,
-        "swath_gauge_ref": swath_gauge_ref,
-        "absolute_level_is_gauge_dependent": True,
+        "zero_line": zero_line,
+        "absolute_level_depends_on_zero_line": True,
         "absolute_datum_mm": datum_applied,
         "absolute_datum_note": (
-            "The absolute level of this product is the reference line's own error, not a "
-            "measured elevation: re-gauging on another line shifts every elevation (44.60 "
+            "The absolute level of this product is the ZERO LINE's own error, not a "
+            "measured elevation: using another line as zero shifts every elevation (44.60 "
             "mm across the six lines at elbaext). Apply a ground-control datum constant "
-            "measured against THIS gauge to make the result gauge-invariant -- "
-            "corrected = z + c, and if the gauge moves by d then z moves by +d and c by "
-            "-d, so the corrected surface is unchanged. See ground_control/apply_datum.py "
+            "measured against THIS zero line to make the result independent of it -- "
+            "corrected = z + c, and if the zero line moves by d then z moves by +d and c "
+            "by -d, so the corrected surface is unchanged. See ground_control/apply_datum.py "
             "and ground_control/FRAME.md."),
         "per_swath_internal_alignment_dxdydz_m":
             {str(k): [round(float(v), 4) for v in val] for k, val in corr.items()},

@@ -15,6 +15,23 @@ Every input, parameter, mask and column is declared through `trust/provenance.py
 argument that defaults to the shipped estimator, and elba's re-derived constants still
 reproduce `corrections.json`.
 
+## Vocabulary note, 2026-09-01
+
+This report predates the rename and says "gauge" throughout. Two different things wear
+that word, and they are now named separately:
+
+* **zero line** -- the flight line defined as zero when ONE tile's swath network is
+  solved. Per-tile, arbitrary, sets only the level the tile inherits, cancelled exactly by
+  an absolute datum. Recorded as `zero_line` in each `corrections.json`
+  (`scripts/backfill_zero_line.py`). Where this report says "the shipped gauge" or
+  "gauged on", read *zero line*.
+* **common line** -- a flight line present in BOTH tiles, used to re-express each against
+  one reference so their constants can be compared. Where this report says "re-referenced
+  to 135" or "gauge 137", read *common line*.
+
+Neither changes any swath-to-swath difference, and neither sets goodness of fit: every
+line is used in the network solve regardless.
+
 ## What was implemented
 
 `analysis/SWATH_ACROSS_TRACK_TEST.md` established that the between-line height difference

@@ -1,22 +1,24 @@
 #!/usr/bin/env python3
-"""Record which flight line each shipped corrections.json was gauged on.
+"""Record each shipped corrections.json's ZERO LINE.
 
-`align_swaths` pins the swath network to one line, which therefore carries a zero shift
-and whose own vertical error becomes the level the whole tile inherits. `difference_dem`
-writes `swath_gauge_ref` now, but files written before that do not carry it -- so you
-cannot tell from a product which line it was gauged on without re-deriving it, and
+The ZERO LINE is the flight line defined as zero when a tile's swath network is solved.
+It therefore carries a zero shift, and its own vertical error becomes the level the
+whole tile inherits. It is arbitrary and per-tile, and an absolute datum cancels it
+exactly -- but two products are only relatable if each says which line it was.
+`difference_dem` writes `zero_line` now; files written before that do not carry it, so
+you cannot tell from a product which line it used without re-deriving it, and
 `difference_dem`'s guard (which refuses a datum constant measured against a different
-gauge) has nothing to check against.
+zero line) has nothing to check against.
 
-The gauge is NOT assumed from the rule. It is read from the constants themselves: the
-gauge is the swath whose shift is exactly zero on all three axes. That it also equals
+The zero line is NOT assumed from the rule. It is read from the constants themselves:
+it is the swath whose shift is exactly zero on all three axes. That it also equals
 `min(swaths)` -- the rule in pipeline.py:714 -- is then ASSERTED, so a file that
 disagrees is reported rather than quietly relabelled.
 
 Idempotent: a file that already records a matching value is left alone.
 
-    ./lidar-icp/bin/python scripts/backfill_swath_gauge_ref.py            # report only
-    ./lidar-icp/bin/python scripts/backfill_swath_gauge_ref.py --write
+    ./lidar-icp/bin/python scripts/backfill_zero_line.py            # report only
+    ./lidar-icp/bin/python scripts/backfill_zero_line.py --write
 """
 import argparse, glob, json, os
 
@@ -39,24 +41,24 @@ for p in sorted(glob.glob(A.glob)):
     zero = [s for s, v in items.items() if all(abs(c) < 1e-12 for c in v[:3])]
     if len(zero) != 1:
         print(f"  {p}: {len(zero)} all-zero swaths {sorted(zero)} -- cannot identify the "
-              f"gauge, NOT written")
+              f"zero line, NOT written")
         n_problem += 1; continue
-    gauge = zero[0]
-    if gauge != min(items):
-        print(f"  {p}: gauge {gauge} is NOT the lowest swath {min(items)} -- pipeline.py:714 "
-              f"gauges on the lowest, so this file was made some other way. NOT written.")
+    zero_line = zero[0]
+    if zero_line != min(items):
+        print(f"  {p}: zero line {zero_line} is NOT the lowest swath {min(items)} -- pipeline.py:714 "
+              f"uses the lowest, so this file was made some other way. NOT written.")
         n_problem += 1; continue
-    have = d.get("swath_gauge_ref")
+    have = d.get("zero_line")
     if have is not None:
-        if int(have) != gauge:
-            print(f"  {p}: records swath_gauge_ref={have} but the constants say {gauge}")
+        if int(have) != zero_line:
+            print(f"  {p}: records zero_line={have} but the constants say {zero_line}")
             n_problem += 1
         else:
             n_ok += 1
         continue
-    print(f"  {p}: gauge {gauge}  (swaths {sorted(items)})")
+    print(f"  {p}: zero line {zero_line}  (swaths {sorted(items)})")
     if A.write:
-        d["swath_gauge_ref"] = gauge
+        d["zero_line"] = zero_line
         with open(p, "w") as fh:
             json.dump(d, fh, indent=2)
             fh.write("\n")
