@@ -13,6 +13,7 @@ def tile(tmp_path):
     np.save(tmp_path / "ridge_mask.npy", np.ones((4, 4), bool))
     np.save(tmp_path / "curv_laplacian.npy", np.zeros((4, 4)))
     np.save(tmp_path / "dod.npy", np.zeros((4, 4)))
+    np.save(tmp_path / "floodplain_mask.npy", np.zeros((4, 4), bool))
     for g in ("gen1", "gen2"):
         np.savez(tmp_path / f"{g}_canopy_frac.npz", n_bldg=np.zeros((4, 4), int),
                  frac=np.full((4, 4), 0.5))
@@ -72,3 +73,19 @@ def test_cells_subset_and_report_order(tile):
     m, rep = reference_cells(tile, cells=np.array([4, 5, 6]))
     assert m.tolist() == [True, False, True]
     assert rep["start"] == 3 and rep["kept"] == 2
+
+
+def test_a_missing_floodplain_mask_refuses_rather_than_skipping_the_cut(tile):
+    """The defect this prevents: the cut was skipped in SILENCE when the file was absent,
+    so two tiles' reference populations differed by 39,038 cells with nothing to notice,
+    and every comparison between them was invalid without saying so."""
+    (tile / "floodplain_mask.npy").unlink()
+    with pytest.raises(FileNotFoundError, match="not comparable"):
+        reference_cells(tile)
+
+
+def test_working_without_the_mask_is_allowed_but_must_be_stated(tile):
+    (tile / "floodplain_mask.npy").unlink()
+    m, rep = reference_cells(tile, use_floodplain_mask=False)
+    assert m.sum() > 0
+    assert not any("floodplain" in k for k in rep)

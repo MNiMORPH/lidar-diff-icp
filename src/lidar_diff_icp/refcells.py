@@ -100,13 +100,19 @@ def reference_cells(tile_dir, *, cells=None, curv_max=0.015, slope_max=12.0,
     # ANTIMODE of this tile's own elevation histogram, computed here, which separates the
     # upland plateau from the valley terraces.
     if exclude_valley:
-        fld = _opt(tile_dir, "floodplain_mask.npy") if use_floodplain_mask else None
-        if fld is not None:
+        if use_floodplain_mask:
+            fld = _opt(tile_dir, "floodplain_mask.npy")
+            if fld is None:
+                # It does not run rather than running differently. Skipping this in silence
+                # made two tiles' populations differ by 39,038 cells with nothing to notice,
+                # and every comparison between them was invalid without saying so.
+                raise FileNotFoundError(
+                    f"{tile_dir}/floodplain_mask.npy is missing, so the floodplain cut "
+                    f"cannot be applied. A population WITHOUT it is not comparable with one "
+                    f"that has it. Either produce the mask for this tile, or pass "
+                    f"use_floodplain_mask=False to state that you are deliberately working "
+                    f"without it.")
             cut("floodplain mask", ~fld.astype(bool).ravel()[idx])
-        elif use_floodplain_mask:
-            # A MISSING input used to skip this cut in silence, which made two tiles'
-            # populations differ by 39,038 cells with nothing to notice it.
-            rep["floodplain mask MISSING -- cut NOT applied"] = 0
         zf = _opt(tile_dir, "z_after.npy")
         if zf is not None and valley_top_m == "antimode":   # explicit alias
             # LEGACY, and it is not comparable between tiles: the threshold is read off
