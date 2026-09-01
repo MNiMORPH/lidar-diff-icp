@@ -16,6 +16,33 @@ octree index makes each tile crop a fast indexed seek instead of a full-file sca
 LAZ still works via filters.crop, but re-reads the whole file per tile -> minutes each).
 Grid (origin, res) is read from the tile's corrections*/meta JSON; outputs
 canopy_cover_pfs.npy + pai_pfs.npy aligned to that grid, plus forest/open masks by threshold.
+
+WHAT THIS MEASURES, AND WHAT IT DOES NOT
+----------------------------------------
+Canopy cover is the fraction of plant area ABOVE ``--min-height`` (default 2.0 m). It is a
+CANOPY metric and it is BLIND TO UNDERGROWTH. Measured at Elba: of 52,674 cells with a
+near-ground vegetation fraction NGV > 0.25 -- thick understory -- 17.3% are labelled `open`
+by this filter. If the question is undergrowth, use NGV (``analysis/ngv.py``), not this.
+
+THE THRESHOLDS ARE DECLARED, NOT CALIBRATED
+-------------------------------------------
+``--forest-cover`` and ``--open-cover`` are choices. An attempt to calibrate them against
+the only epoch-matched ground truth available -- the 2021 survey's own NVA (non-vegetated)
+/ VVA (vegetated) checkpoint classes, 227 and 162 marks -- does NOT support any threshold:
+
+    canopy cover r10   AUC 0.548   NVA median 0.000   VVA median 0.000
+    NGV (0.15-4.0 m)   AUC 0.739   NVA median 0.022   VVA median 0.092
+    at the default 0.5: sensitivity 0.006, specificity 0.996
+
+AUC 0.548 is chance. The honest reading is NOT that cover is a bad canopy metric, but that
+control marks are sited in the open by design and contain almost no canopy (median 0.000 in
+BOTH classes), so this ground truth cannot calibrate a canopy threshold. No threshold is
+therefore proposed here, and the defaults are carried forward unchanged and unjustified.
+Anything downstream that depends on their exact value should say so.
+
+THE MASKS ARE NOT A PARTITION. ``forest`` and ``open`` leave a gap between them, and at
+Elba that gap is most of the tile (63.1% of cells with cover, against forest 1.5% and open
+35.4%). The run prints the unclassified fraction so it cannot be dropped silently.
 """
 import os, sys, json, argparse, subprocess, tempfile, numpy as np
 
@@ -121,6 +148,49 @@ def canopy_cover_raster(after_laz, bounds, res, *, crs="EPSG:26915", tile_m=400.
     return cover, pai
 
 
+def classify(cover, forest_cover, open_cover):
+    """forest / open masks and a full accounting of every cell.
+
+    The two masks are NOT complementary: cells between the thresholds belong to neither,
+    and cells without cover belong to nothing. Both counts are returned so a caller cannot
+    lose them by accident.
+    """
+    if not (open_cover < forest_cover):
+        raise ValueError(f"open_cover ({open_cover}) must be below forest_cover "
+                         f"({forest_cover}); otherwise the masks overlap and a cell is "
+                         f"both forest and open")
+    cover = np.asarray(cover, float)
+    fin = np.isfinite(cover)
+    forest = fin & (cover >= forest_cover)
+    openg = fin & (cover <= open_cover)
+    acct = dict(n_cells=int(cover.size), n_cover=int(fin.sum()),
+                n_forest=int(forest.sum()), n_open=int(openg.sum()),
+                n_between=int((fin & ~forest & ~openg).sum()),
+                n_nocover=int((~fin).sum()))
+    assert acct["n_forest"] + acct["n_open"] + acct["n_between"] == acct["n_cover"], \
+        "the accounting does not close: a cell is both forest and open"
+    return forest, openg, acct
+
+
+def report(acct, forest_cover, open_cover, cover=None):
+    n = max(acct["n_cover"], 1)
+    pct = lambda k: 100.0 * acct[k] / n
+    lines = [f"canopy cover: {acct['n_cover']:,} of {acct['n_cells']:,} cells carry a value"
+             f"  ({acct['n_nocover']:,} do not)"]
+    if cover is not None and acct["n_cover"]:
+        lines.append(f"  cover: median {np.nanmedian(cover):.3f}  p90 "
+                     f"{np.nanpercentile(cover, 90):.3f}  max {np.nanmax(cover):.3f}")
+    lines += [
+        f"  forest (cover >= {forest_cover:g}) {acct['n_forest']:8,d}  {pct('n_forest'):5.1f}%",
+        f"  open   (cover <= {open_cover:g}) {acct['n_open']:8,d}  {pct('n_open'):5.1f}%",
+        f"  NEITHER, between the thresholds {acct['n_between']:8,d}  {pct('n_between'):5.1f}%"
+        f"   <- classified by nothing; do not let this vanish",
+        "  thresholds are DECLARED, not calibrated -- see the module docstring.",
+        "  this is a CANOPY metric and is blind to undergrowth; for that use analysis/ngv.py.",
+    ]
+    return "\n".join(lines)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("tile_dir"); ap.add_argument("after_laz")
@@ -137,11 +207,9 @@ def main():
                                      tile_m=a.tile_m, min_height=a.min_height, dtm_path=dtm_tif)
     np.save(os.path.join(d, "canopy_cover_pfs.npy"), cover)
     np.save(os.path.join(d, "pai_pfs.npy"), pai)
-    forest = cover >= a.forest_cover; openg = cover <= a.open_cover
+    forest, openg, acct = classify(cover, a.forest_cover, a.open_cover)
     np.save(os.path.join(d, "forest_pfs.npy"), forest); np.save(os.path.join(d, "open_pfs.npy"), openg)
-    fin = np.isfinite(cover)
-    print(f"canopy_cover: {fin.sum()} cells  mean {np.nanmean(cover):.2f}  "
-          f"forest(>= {a.forest_cover}) {forest.sum()}  open(<= {a.open_cover}) {openg.sum()}")
+    print(report(acct, a.forest_cover, a.open_cover, cover))
     print(f"saved -> {d}/  (canopy_cover_pfs, pai_pfs, forest_pfs, open_pfs)")
 
 
