@@ -5,18 +5,36 @@ stratum), and (elba only) plot the SLOPE DEPENDENCY of the forest-floor elevatio
 
 Incidence reconstruction validated in incidence_angle.py (flat ground -> |scan angle|).
 Generalized over tiles: grid (origin/res) read from the tile's meta/corrections JSON; the
-old penetration/floodplain/core strata are OPTIONAL (zeros if absent). The incidence and
-d_mm math is identical across tiles. Writes data/derived/<tile>/gen1_csf_angles.npz.
+old penetration/floodplain/core strata are REQUIRED unless you say otherwise. The incidence
+and d_mm math is identical across tiles. Writes data/derived/<tile>/gen1_csf_angles.npz.
+
+A MISSING STRATUM REFUSES; it is not silently substituted. These layers used to default to
+zeros when absent, which turns "this tile has no forest_core layer" into a stratum that
+reads as MEASURED AND EMPTY -- a table that looks like a finding of "no forest". Running
+without them is allowed and often right, but it has to be stated:
+
+    --without penetration,core_forest,core_open      run without those strata
+    --without all                                    run with none of the optional strata
 
     env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/ridgelines/gen1_save_angles_slope.py \
-        [tile=elba_fulldensity] [csf=data/csf_cache/elba.las]
+        [tile=elba_fulldensity] [csf=data/csf_cache/elba.las] [--without ...]
 """
 import sys, os, json, numpy as np, laspy, math
 from scipy.ndimage import distance_transform_edt
 import matplotlib; matplotlib.use("Agg"); import matplotlib.pyplot as plt
 
-TILE = sys.argv[1] if len(sys.argv) > 1 else "elba_fulldensity"
-CSF  = sys.argv[2] if len(sys.argv) > 2 else "data/csf_cache/elba.las"
+# --without <list> may appear anywhere; strip it before reading positionals.
+_argv, _wo_vals = [], []
+_it = iter(sys.argv[1:])
+for _a in _it:
+    if _a == "--without":
+        _wo_vals.append(next(_it, ""))
+    elif _a.startswith("--without="):
+        _wo_vals.append(_a.split("=", 1)[1])
+    else:
+        _argv.append(_a)
+TILE = _argv[0] if len(_argv) > 0 else "elba_fulldensity"
+CSF  = _argv[1] if len(_argv) > 1 else "data/csf_cache/elba.las"
 D = f"data/derived/{TILE}"
 
 def _grid(tile):                                        # (X0,Y0,NX,NY,RES) from tile meta/corrections
@@ -34,8 +52,30 @@ if m.any(): Zf = Zf[tuple(distance_transform_edt(m, return_distances=False, retu
 gy, gx = np.gradient(Zf, RES); slope_deg = np.degrees(np.arctan(np.hypot(gx, gy)))
 gxf = gx.ravel(); gyf = gy.ravel(); nnorm = np.sqrt(gxf**2 + gyf**2 + 1.0); Zflat = Zf.ravel()
 
-def _opt(name, default):                                # optional strata inputs (elba has them; elbaext may not)
-    p = f"{D}/{name}.npy"; return np.load(p).ravel() if os.path.exists(p) else default
+OPTIONAL_STRATA = ("penetration", "floodplain_mask", "core_forest", "core_open",
+                   "forest_pfs", "open_pfs", "canopy_cover_pfs")
+WITHOUT = set()
+for _w in _wo_vals:
+    WITHOUT |= set(OPTIONAL_STRATA) if _w.strip() == "all" else {t.strip() for t in _w.split(",") if t.strip()}
+_bad = WITHOUT - set(OPTIONAL_STRATA)
+if _bad:
+    raise SystemExit(f"--without names layers that are not optional strata: {sorted(_bad)}; "
+                     f"choose from {list(OPTIONAL_STRATA)} or 'all'")
+if WITHOUT:
+    print(f"  running WITHOUT, as stated: {sorted(WITHOUT)}", flush=True)
+
+
+def _opt(name, default):
+    """A stratum is REQUIRED unless named in --without. Missing and unstated -> refuse."""
+    if name in WITHOUT:
+        return default
+    p = f"{D}/{name}.npy"
+    if not os.path.exists(p):
+        raise SystemExit(
+            f"{p} is missing. This stratum is required; substituting zeros would make an "
+            f"ABSENT layer read as a MEASURED EMPTY one. Produce it, or state that you are "
+            f"running without it: --without {name}")
+    return np.load(p).ravel()
 g2pen = _opt("penetration", None)
 fld   = _opt("floodplain_mask", None); fld = fld.astype(bool) if fld is not None else None
 core  = _opt("core_forest", None); copen = _opt("core_open", None)
