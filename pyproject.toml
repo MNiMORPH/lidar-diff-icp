@@ -32,6 +32,13 @@ dependencies = [
 uncertainty = ["xdem"]      # calibrated heteroscedastic LoD (Hugonnet 2022); import needs PROJ_DATA unset
 m3c2 = ["py4dgeo"]          # point-based M3C2 cross-check (scripts/m3c2_pointcloud.py) -- not needed for the gridded product
 
+[project.scripts]
+# The derived-product chain as a command: what to run, in what order, and what is out of
+# date. See src/lidar_diff_icp/workflow.py -- it prints, it does not execute, because
+# several steps read multi-gigabyte clouds and regenerating an adopted product is a
+# judgement rather than a scheduling detail.
+lidar-diff-workflow = "lidar_diff_icp.workflow:main"
+
 [project.urls]
 Repository = "https://github.com/MNiMORPH/lidar-diff-icp"
 
