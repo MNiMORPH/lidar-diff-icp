@@ -63,6 +63,61 @@ between correction and masking; re-run the floodplain DoD against whichever is c
 
 ---
 
+## Generalization: what stops a second tile running end to end
+
+**State as of 2026-09-01.** elba_fulldensity has every layer; elbaext is missing five.
+Audited by listing each layer, checking presence per tile, and searching the tracked source
+for anything that writes it.
+
+### 1. DECIDE FIRST: retire `penetration.npy`, or give it a producer
+
+`penetration.npy` has **no producer anywhere in the repo** — every write form was searched,
+twice. It exists only for elba, dated 2026-08-21. Two producers depend on it, and both are
+hardcoded to elba:
+
+    convexity_dod_landcover.py  -> floodplain_mask.npy, crest_mask.npy, kappa_L*.npy
+    strata_core.py              -> core_forest.npy, core_open.npy
+
+So all five layers are missing for elbaext, and `floodplain_mask.npy` now makes
+`reference_cells` REFUSE (it no longer skips the cut silently), which gates
+`q2cover.fit_tile` and everything behind it.
+
+**Recommendation: retire it.** `analysis/ridgelines/AUDIT_findings.md` flags `penetration.npy`
+as a gen2-derived variable contaminating gen1-internal conclusions and lists twelve files
+using it. The floodplain mask does not need it -- it is `tpi_large < -2.0` from `z_after.npy`
+alone -- and `canopy_cover_pfs` already replaced it as the cover measure. Retiring unblocks
+the floodplain and crest layers without reviving a variable the audit says should not drive
+gen1 conclusions. Twelve files is the cost; Andy's call, not mine.
+
+### 2. Then parameterize the two producers
+
+`convexity_dod_landcover.py` (10 hardcoded elba paths) and `strata_core.py`. Verify each
+reproduces elba byte-identically before running it on elbaext -- the standard that caught
+the q2 default change.
+
+### 3. Then produce elbaext's cover-corrected products
+
+`dod_cover_corrected.py` and `lod_cover_q2.py` are ALREADY tile-parameterized; they have
+simply never been run there. Two commands. The q2 slope must be elbaext's OWN fit, because
+the relation is per-site (it depends on each pair's phenology and undergrowth).
+
+### 4. Loose end, not blocking
+
+`curv_laplacian.npy`, `nearground_cells_sn.npz`, `gen1_canopy_frac.npz` and `ridge_mask.npy`
+showed no producer in the scan, but the scan cannot see filenames built from flags
+(`nearground_cells.py --out ..._sn.npz` is invisible to it). All four exist for BOTH tiles,
+so they do not block; the producers just are not identified.
+
+### The rule these now follow
+
+A missing input REFUSES; it does not run differently. Running without an optional layer is
+allowed and often right, but must be stated -- `use_floodplain_mask=False`,
+`--without penetration,core_forest`. Silent zero-fill turned an ABSENT layer into a
+MEASURED EMPTY one, which is how a table came to look like a finding of "no forest", and how
+two tiles' reference populations came to differ by 39,038 cells unnoticed.
+
+---
+
 # Decisions
 
 Closed questions, with the reasoning and the conditions that would reopen them.
