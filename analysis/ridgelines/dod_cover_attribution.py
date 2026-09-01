@@ -26,12 +26,52 @@ ap = argparse.ArgumentParser()
 ap.add_argument("--tile", default="data/derived/elba_fulldensity")
 ap.add_argument("--dod", default="dod.npy")
 ap.add_argument("--k-cover", type=float, default=None,
-                help="mm of apparent DoD GAIN per unit cover; default = the tile's own "
-                     "low-gradient-upland calibration (49.6 elba, 48.4 elbaext)")
+                help="mm of apparent DoD GAIN per unit cover. Default: READ from the tile's "
+                     "own cover_offset_calibration*.json, written by cover_offset_reference.py "
+                     "-- not a value typed here. Refuses if that file is absent.")
 ap.add_argument("--tpi-window", type=float, default=500.0)
 A = ap.parse_args()
 TILE = os.path.basename(A.tile.rstrip("/"))
-K = A.k_cover if A.k_cover is not None else (48.4 if TILE == "elbaext" else 49.6)
+
+
+def read_k(tile_dir, tile):
+    """k from the calibration this tile actually produced.
+
+    It used to be `48.4 if TILE == "elbaext" else 49.6`. Neither number appeared anywhere
+    else in the repo: both were read off a run of cover_offset_reference.py and retyped, so
+    nothing tied them to the population or the registration state that produced them -- and
+    the `else` branch silently handed EVERY other tile Elba's value. Now the producer writes
+    its coefficients and this reads them, so the number moves when the calibration does.
+    """
+    for fn in (f"cover_offset_calibration_{tile}.json", "cover_offset_calibration.json"):
+        p = os.path.join(tile_dir, fn)
+        if os.path.exists(p):
+            cal = json.load(open(p))
+            b = cal["forms"]["linear         d = a + b*cover"][1]
+            return -b, cal, p                     # DoD GAIN is the negative of the offset slope
+    raise SystemExit(
+        f"no cover_offset_calibration*.json under {tile_dir}. k is NOT defaulted -- a value "
+        f"carried over from another tile would be applied to this one without saying so. "
+        f"Produce it:\n    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python "
+        f"analysis/ridgelines/cover_offset_reference.py --tile {tile_dir}\n"
+        f"or state your own value with --k-cover.")
+
+
+if A.k_cover is not None:
+    K, CAL, CAL_PATH = A.k_cover, None, None
+    print(f"k = {K:.2f} mm per unit cover, given on the command line (no calibration read)")
+else:
+    K, CAL, CAL_PATH = read_k(A.tile, TILE)
+    _sel = CAL["selected_form"]
+    print(f"k = {K:.2f} mm per unit cover, read from {CAL_PATH}\n"
+          f"  population: {CAL['population']['ref']}, slope < "
+          f"{CAL['population']['slope_max_deg']} deg, {CAL['population']['n_returns']:,} "
+          f"returns in {CAL['population']['n_cover_bins']} cover bins")
+    if not _sel.startswith("linear"):
+        print(f"  NOTE: k is the LINEAR coefficient, but the calibration's own model "
+              f"selection preferred\n        '{_sel.split()[0]}' on this tile. The linear "
+              f"term is used here because that is what\n        this script's additive "
+              f"canopy model is; the mismatch is real and is not hidden.")
 
 
 def grid_meta(tile):
