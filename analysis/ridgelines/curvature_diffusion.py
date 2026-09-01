@@ -13,14 +13,34 @@ agricultural crests.
     dz/dt = DoD / dt, dt from the flight dates. Reported through-origin (as written),
     with-intercept (isolates any datum offset), and via the full Laplacian (physical form).
 
-    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/ridgelines/curvature_diffusion.py
+Part (1) needs only z_after and is written for any tile. Part (2) needs a DoD, a crest mask,
+a cover layer and the two flight dates; every one of those is per-tile, so none is defaulted
+to Elba's value -- a wrong dt or a wrong DoD would rescale K silently.
+
+NOTE ON ORDER: part (1) AUGMENTS ridgecrest_pixels.npz in place with curv_xx / curv_yy /
+curv_laplacian. convexity_dod_landcover.py rewrites that file from scratch, so run this
+AFTER it, or those three columns are dropped.
+
+    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/ridgelines/curvature_diffusion.py \
+        --tile elba_fulldensity --dod data/derived/elba_refdatum/dod_geoid.npy \
+        --gen1-date 2008-11-21 --gen2-date 2021-05-01
 """
 import numpy as np
 from datetime import date
 from scipy.ndimage import correlate, distance_transform_edt
 
-import sys, os, json
-TILE = sys.argv[1] if len(sys.argv) > 1 else "elba_fulldensity"
+import argparse, sys, os, json
+_ap = argparse.ArgumentParser()
+_ap.add_argument("--tile", default="elba_fulldensity",
+                 help="tile name under data/derived/; resolution is read from its own meta")
+_ap.add_argument("--dod", default=None,
+                 help="DoD grid for parts (1)-(2) (m, + = elevation rose). Not defaulted: "
+                      "Elba's shipped run reads data/derived/elba_refdatum/dod_geoid.npy, "
+                      "outside the tile directory. Omit to run part (1) only.")
+_ap.add_argument("--gen1-date", default=None, help="gen1 flight date, ISO (Elba: 2008-11-21)")
+_ap.add_argument("--gen2-date", default=None, help="gen2 flight date, ISO (Elba: 2021-05-01)")
+ARGS = _ap.parse_args()
+TILE = ARGS.tile
 D = f"data/derived/{TILE}"
 def _res(tile):
     for fn in ("meta.json", "corrections_geoid.json", "corrections.json"):
@@ -50,28 +70,47 @@ for nm_, arr in [("curv_xx", zxx), ("curv_yy", zyy), ("curv_laplacian", lap)]:
     np.save(f"{D}/{nm_}.npy", arr)
 print(f"saved {D}/curv_xx/curv_yy/curv_laplacian (L=+/-{L*RES:.0f} m)")
 
-# elba-only: add curvature to the ridgecrest table + report crest diffusion (needs crest/dod/pen)
+# add curvature to the ridgecrest table + report crest curvature (needs the crest table)
 if os.path.exists(f"{D}/ridgecrest_pixels.npz") and os.path.exists(f"{D}/crest_mask.npy"):
-    dod = np.load("data/derived/elba_refdatum/dod_geoid.npy"); crest = np.load(f"{D}/crest_mask.npy")
+    crest = np.load(f"{D}/crest_mask.npy")
     R = dict(np.load(f"{D}/ridgecrest_pixels.npz", allow_pickle=True))
     rr = R["row"].astype(int); cci = R["col"].astype(int)
     R["curv_xx"] = zxx[rr, cci]; R["curv_yy"] = zyy[rr, cci]; R["curv_laplacian"] = lap[rr, cci]
     np.savez(f"{D}/ridgecrest_pixels.npz", **R)
-    cmask = crest & np.isfinite(dod)
+    if ARGS.dod is None:
+        cmask = crest
+        print("  no --dod given: crest curvature is summarised over ALL crest cells, not "
+              "over the DoD-finite subset the Elba run reported")
+    else:
+        dod = np.load(ARGS.dod)
+        if dod.shape != z.shape:
+            raise SystemExit(f"--dod {ARGS.dod} is {dod.shape} but {TILE}'s grid is "
+                             f"{z.shape}; these are different grids")
+        cmask = crest & np.isfinite(dod)
     print(f"crest curvature (1/m): d2z/dx2 med={np.median(zxx[cmask]):+.4f}  "
           f"d2z/dy2 med={np.median(zyy[cmask]):+.4f}  Laplacian med={np.median(lap[cmask]):+.4f}")
+else:
+    print(f"  no ridgecrest table or crest mask under {D}: curvature columns NOT added "
+          f"(run convexity_dod_landcover.py --tile {TILE} first)")
 
-# --- (2) diffusion K on agricultural (open) crests (elba only; needs crest/pen/dod) ------
-if not (os.path.exists(f"{D}/crest_mask.npy") and os.path.exists(f"{D}/penetration.npy")):
-    import sys; sys.exit(0)
+# --- (2) diffusion K on agricultural (open) crests (needs crest + cover + DoD + dates) ---
+_missing = [n for n in ("crest_mask.npy", "penetration.npy") if not os.path.exists(f"{D}/{n}")]
+if ARGS.dod is None: _missing.append("--dod")
+if not ARGS.gen1_date or not ARGS.gen2_date: _missing.append("--gen1-date/--gen2-date")
+if _missing:
+    print(f"\n=== PART 2 SKIPPED: {', '.join(_missing)} not available for {TILE} ===")
+    print("  K is NOT reported for this tile; it is absent, not zero. The flight dates are "
+          "per-acquisition and are never defaulted -- a wrong dt rescales K directly.")
+    sys.exit(0)
 crest = np.load(f"{D}/crest_mask.npy"); pen = np.load(f"{D}/penetration.npy")
-dod = np.load("data/derived/elba_refdatum/dod_geoid.npy")
-dt_yr = (date(2021, 5, 1) - date(2008, 11, 21)).days / 365.25   # flight-date span
+dod = np.load(ARGS.dod)
+_d1 = date.fromisoformat(ARGS.gen1_date); _d2 = date.fromisoformat(ARGS.gen2_date)
+dt_yr = (_d2 - _d1).days / 365.25                               # flight-date span
 dzdt = dod / dt_yr                                       # m/yr per cell
 ag = crest & (pen >= 0.45) & np.isfinite(dod)
 xx = zxx[ag]; rate = dzdt[ag]; lp = lap[ag]
 print(f"\n=== diffusion on AGRICULTURAL crests (open, pen>=0.45): dz/dt = K d2z/dx2 ===")
-print(f"  dt = {dt_yr:.2f} yr (2008-11-21 -> 2021-05-01)   n = {ag.sum()} ag-crest cells")
+print(f"  dt = {dt_yr:.2f} yr ({_d1} -> {_d2})   n = {ag.sum()} ag-crest cells")
 print(f"  median dz/dt = {np.median(rate)*1000:+.2f} mm/yr   median d2z/dx2 = {np.median(xx):+.4f} 1/m")
 
 K_orig = np.sum(rate*xx) / np.sum(xx*xx)                 # least-squares through origin
