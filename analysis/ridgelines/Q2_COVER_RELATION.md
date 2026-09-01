@@ -13,6 +13,38 @@ true ground, so their medians must agree.
 Fitted on uniform 0.05 cover bins, weighted by cell count, all 91,121 stable reference
 cells, no count threshold. chi2/dof = 0.72.
 
+## Refit 2026-09-01 after the swath-tie re-registration
+
+The fit above was made at 13:11 on 2026-08-26. At 17:16 the tile was rebuilt with the
+extent-invariant swath tie (`swath_tie="intercept"`, now the pipeline default) and
+`beam_offset_table.parquet` -- this fit's gen1 input -- was regenerated under it at 17:31.
+The shipped product was written at 17:39 and so paired the NEW gen1 data with the OLD
+slope.
+
+Refitting on the data actually in use, same configuration and same recipe
+(`q2cover.fit_tile(tile, exclude_valley=False)`):
+
+    q2(c) = 0.5 - 0.1835 * c        +/- 0.0109,  91,101 cells,  free intercept 0.5006
+
+**-0.1835 against -0.1922 is 0.8 sigma** -- the same result. The tie moves per-swath
+LEVELS, not the shape of either epoch's near-ground column, and q2 matches shapes, so the
+relation is largely insensitive to it. Effect on the product: median +0.65 mm per cell,
+p99 10.6 mm.
+
+`dod_cover_q2.npy` and `lod_cover_q2.npy` are regenerated at -0.1835 so the product matches
+the registration it is built on. The statistics barely move:
+
+    product              cells   stable  sigma  LoD med
+    -0.1922 (as shipped) 341,174 159,224   59.8    116.1
+    -0.1835 (current)    341,174 159,248   59.8    116.2
+
+Either version is one deterministic command away -- the slope is recorded here, the
+producer is `analysis/ridgelines/dod_cover_corrected.py --slope`, and its inputs are
+unchanged since 17:31:
+
+    ./lidar-icp/bin/python analysis/ridgelines/dod_cover_corrected.py \
+        --tile data/derived/elba_fulldensity --slope -0.1922
+
 ## Why linear, and why one parameter
 
 Four forms were fitted, all pinned to 0.5 at c = 0:
