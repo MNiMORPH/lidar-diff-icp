@@ -214,6 +214,47 @@ the data does not favour without comment. Whether the attribution should move to
 form -- and it is a DIFFERENT form on each tile, which is itself worth explaining before
 adopting either -- is not decided here.
 
+## Can the WHOLE pipeline run on a new region? Audited 2026-09-01
+
+**Core DoD: yes, already.** `scripts/run_all_sites.py` carries a `SITES` dict and runs
+`difference_dem` + `detect_change_standard` per site, persisting every output.
+
+**Optional pieces: all parameterized now, but not wired together.** Every producer takes a
+tile: `trace_ridgelines.py` (positional `tile_dir`, `--out ridge_mask.npy` -- this identifies
+the "unknown producer" of `ridge_mask.npy` listed below as a loose end),
+`forest_metrics_pfs.py` (`tile_dir`, `after_laz`), `beam_offset_table.py` and
+`gen1_save_angles_slope.py` (positional), `convexity_dod_landcover.py`, `strata_core.py`,
+`curvature_diffusion.py`, `cover_offset_reference.py`, `dod_cover_attribution.py`,
+`q2_cover_fit.py`, `dod_cover_corrected.py`, `lod_cover_q2.py`, `scripts/make_penetration.py`.
+
+### What actually stops a new region, in priority order
+
+1. **`dod_cover_corrected.py --slope` defaults to `-0.1922`** -- Elba's own q2 slope, as a
+   DEFAULT. Run it on another region without noticing and it applies ELBA's cover correction
+   and writes a `dod_cover_q2` that looks finished. This is worse than the `k = 49.6` case
+   that was fixed today, because the number IS the correction rather than an attribution
+   term. It must be required, or read from that tile's own `q2cover.fit_tile`. `--gen2`
+   likewise defaults to Elba's cloud.
+2. **`canopy_struct.npz` has no producer** -- blocks `strata_core.py` on any new tile, the
+   same way `penetration.npy` did until today.
+3. **No driver runs the optional chain in order.** The dependencies are real --
+   ridge_mask -> convexity -> floodplain/crest; PFS cover -> beam_offset_table -> q2 fit ->
+   dod_cover_corrected -> lod_cover_q2 -- and nothing encodes them, so the order lives only
+   in whoever remembers it.
+4. **The shared vertical frame is a per-region decision, not a rule.** elba came from
+   `run_elba_dod.py` (geoid auto-computed on its own bounds); elbaext from
+   `elbaext_geoid_regrid.py`, which deliberately fits the plane on ELBA's bounds and
+   re-expresses it, because "both auto-computed" is the same METHOD but not the same FRAME.
+   A third region needs that choice made explicitly; there is no generic answer.
+5. **gen1's absolute datum statewide** is unresolved (task #11).
+
+### And there is no reproduce-elba test
+
+Every reproduction this session was verified by hand, artifact by artifact. Nothing runs the
+chain and asserts it still lands on elba's shipped products, so the "does it still reproduce
+elba" half of the question has no automated answer. An ordered driver (3) would give that
+test something to invoke.
+
 # Decisions
 
 Closed questions, with the reasoning and the conditions that would reopen them.
