@@ -21,7 +21,7 @@ import numpy as np
 from scipy.ndimage import gaussian_filter, distance_transform_edt as edt
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
-from detect_change_ngv import stable_mask, clip_stable, nmad
+from stable_mask_repro import stable_mask, clip_stable, nmad
 from lidar_diff_icp.pipeline import heteroscedastic_lod
 from lidar_diff_icp.detect import detect_change_standard
 
@@ -31,7 +31,7 @@ ap.add_argument("--tile", default="data/derived/elba_fulldensity")
 A = ap.parse_args()
 T = A.tile
 cfg = json.load(open(f"{T}/corrections.json")); res = float(cfg["res_m"])
-dod = np.load(f"{T}/dod.npy"); corr = np.load(f"{T}/dod_ngv.npy")
+dod = np.load(f"{T}/dod.npy")
 Z21 = np.load(f"{T}/z_after.npy"); slope = np.load(f"{T}/slope.npy")
 lod_pipe = np.load(f"{T}/lod.npy")
 steady = np.load(f"{T}/steady_state_divides.npy")
@@ -75,7 +75,7 @@ if len(out) == 2:
     print(f"\nDETECTION with each LoD (same DoD, same detector, same stable set for tau_sys)")
     print(f"  {'LoD from':16s} {'DoD':14s} {'regions':>8} {'cells':>9} {'%':>7} {'net m3':>13}")
     for lnm, L in out.items():
-        for dnm, d_, s_ in (("uncorrected", dod, st_pipe), ("NGV-corrected", corr, st_pipe)):
+        for dnm, d_, s_ in (("dod.npy", dod, st_pipe),):
             det = detect_change_standard(d_, L, s_, res)
             ch = det["change"]
             print(f"  {lnm:16s} {dnm:14s} {len(det['regions']):8d} {int(ch.sum()):9,d} "

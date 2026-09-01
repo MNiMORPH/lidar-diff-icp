@@ -20,9 +20,9 @@ canopy_cover_pfs.npy + pai_pfs.npy aligned to that grid, plus forest/open masks 
 WHAT THIS MEASURES, AND WHAT IT DOES NOT
 ----------------------------------------
 Canopy cover is the fraction of plant area ABOVE ``--min-height`` (default 2.0 m). It is a
-CANOPY metric and it is BLIND TO UNDERGROWTH. Measured at Elba: of 52,674 cells with a
-near-ground vegetation fraction NGV > 0.25 -- thick understory -- 17.3% are labelled `open`
-by this filter. If the question is undergrowth, use NGV (``analysis/ngv.py``), not this.
+CANOPY metric and it is BLIND TO UNDERGROWTH: measured at Elba, 17.3% of the cells whose
+near-ground return fraction (0.15-4 m) exceeds 0.25 -- thick understory -- are labelled
+`open` by this filter. If the question is undergrowth, this is the wrong instrument.
 
 THE THRESHOLDS ARE DECLARED, NOT CALIBRATED
 -------------------------------------------
@@ -30,8 +30,8 @@ THE THRESHOLDS ARE DECLARED, NOT CALIBRATED
 the only epoch-matched ground truth available -- the 2021 survey's own NVA (non-vegetated)
 / VVA (vegetated) checkpoint classes, 227 and 162 marks -- does NOT support any threshold:
 
-    canopy cover r10   AUC 0.548   NVA median 0.000   VVA median 0.000
-    NGV (0.15-4.0 m)   AUC 0.739   NVA median 0.022   VVA median 0.092
+    canopy cover r10                 AUC 0.548   NVA median 0.000   VVA median 0.000
+    near-ground fraction 0.15-4.0 m  AUC 0.739   NVA median 0.022   VVA median 0.092
     at the default 0.5: sensitivity 0.006, specificity 0.996
 
 AUC 0.548 is chance. The honest reading is NOT that cover is a bad canopy metric, but that
@@ -186,7 +186,7 @@ def report(acct, forest_cover, open_cover, cover=None):
         f"  NEITHER, between the thresholds {acct['n_between']:8,d}  {pct('n_between'):5.1f}%"
         f"   <- classified by nothing; do not let this vanish",
         "  thresholds are DECLARED, not calibrated -- see the module docstring.",
-        "  this is a CANOPY metric and is blind to undergrowth; for that use analysis/ngv.py.",
+        "  this is a CANOPY metric and is blind to undergrowth.",
     ]
     return "\n".join(lines)
 

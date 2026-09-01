@@ -5,7 +5,7 @@ gen1's per-cell ground elevation is the MEDIAN of its CSF-classified ground retu
 dense sward puts returns above true ground, that median floats up, and DoD = gen2 - gen1
 reads as EROSION. gen2 has ~12x the ground-return density (5.78 vs 0.49 pts/m^2), so far
 more of its shots reach the true surface through the same grass -- this is a SAMPLING
-argument, not a leaf-state one, and it is independent of the NGV/canopy work.
+argument, not a leaf-state one, and it is independent of the canopy-cover work.
 
 The diagnostic is gen1-INTERNAL, as it must be: p50 - p10 of each cell's OWN gen1 ground
 returns (`d_mm` in gen1_csf_angles.npz). A surface read cleanly gives a small lift; returns
