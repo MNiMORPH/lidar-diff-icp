@@ -10,22 +10,61 @@ Keeps the original per-cell masks (forest pen<0.25, open pen>=0.45) and ADDS cor
   3. Keep only connected components >= A_MIN cells -> significant clusters only.
 Saves core_forest.npy / core_open.npy; maps core vs original; validates purity.
 
-    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/ridgelines/strata_core.py
+Grid geometry comes from the tile's own corrections.json. Neither input is optional:
+`penetration.npy` DEFINES the two classes (forest pen<0.25, open pen>=0.45) and
+`canopy_struct.npz` DEFINES the tree-in-open demotion, so a run missing either would
+produce masks that are not the masks this script names. Both refuse rather than default.
+
+    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/ridgelines/strata_core.py \
+        --tile elba_fulldensity
 """
+import argparse, json, os
 import numpy as np
 from scipy.ndimage import distance_transform_edt, label as cclabel
 import matplotlib; matplotlib.use("Agg"); import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 from lidar_diff_icp.viz import hillshade
 
-D = "data/derived/elba_fulldensity/"; RES = 5.0; X0, Y0 = 577492.8, 4882737.6
+_ap = argparse.ArgumentParser()
+_ap.add_argument("--tile", default="elba_fulldensity",
+                 help="tile name under data/derived/; grid geometry is read from its "
+                      "corrections.json, so no origin is hardcoded")
+ARGS = _ap.parse_args()
+TILE = ARGS.tile
+D = f"data/derived/{TILE}/"
+
+
+def _grid(tile):                                    # (X0,Y0,RES) from the tile's own meta
+    for fn in ("meta.json", "corrections_geoid.json", "corrections.json"):
+        p = f"data/derived/{tile}/{fn}"
+        if os.path.exists(p):
+            j = json.load(open(p)); b = j["bounds"]
+            return b[0], b[1], float(j.get("res") or j.get("res_m"))
+    raise SystemExit(f"no grid meta for {tile}: none of meta.json, corrections_geoid.json, "
+                     f"corrections.json exists under data/derived/{tile}")
+
+
+def _req(name, why):
+    """Both inputs DEFINE the strata, so neither has a run-without form: a substitute would
+    silently rename the product rather than reproduce it."""
+    p = D + name
+    if not os.path.exists(p):
+        raise SystemExit(f"{p} is missing. {why} There is no --without for it, because the "
+                         f"core masks are DEFINED by it; produce it for {TILE} first.")
+    return p
+
+
+X0, Y0, RES = _grid(TILE)
 R_CELLS = 3          # 15 m purity radius: all cells within R must be same cover
 A_MIN   = 50         # >= 50 cells (1250 m^2) connected -> a significant cluster
 VEG_MAX = 0.02       # open cells with veg_frac above this = tree/structure -> demote
 
 z = np.load(D + "z_after.npy"); ny, nx = z.shape
-pen = np.load(D + "penetration.npy"); fld = np.load(D + "floodplain_mask.npy").astype(bool)
-veg = np.load(D + "canopy_struct.npz")["veg_frac"]
+pen = np.load(_req("penetration.npy", "It sets the forest/open cut (pen<0.25 / pen>=0.45)."))
+fld = np.load(_req("floodplain_mask.npy",
+                   "It removes valley-bottom cells from both classes.")).astype(bool)
+veg = np.load(_req("canopy_struct.npz",
+                   "Its veg_frac demotes trees embedded in fields."))["veg_frac"]
 fin = np.isfinite(pen)
 
 forest0 = (pen < 0.25) & ~fld & fin                       # original masks (kept)
@@ -81,5 +120,7 @@ axes[1].legend(handles=[Patch(facecolor=(0.05,0.45,0.05,.85),label="core FOREST"
                         Patch(facecolor=(0.6,0.6,0.6,.4),label="original (trimmed away)")],
                loc="upper right", fontsize=10)
 fig.suptitle("Robust core strata: pure interior of significant homogeneous clusters", y=0.99)
-fig.savefig("figures/refdatum/strata_core.png", dpi=130, bbox_inches="tight"); plt.close(fig)
-print("\nwrote figures/refdatum/strata_core.png ; saved core_forest.npy, core_open.npy")
+_fig = ("figures/refdatum/strata_core.png" if TILE == "elba_fulldensity"
+        else f"figures/refdatum/strata_core_{TILE}.png")
+fig.savefig(_fig, dpi=130, bbox_inches="tight"); plt.close(fig)
+print(f"\nwrote {_fig} ; saved {D}core_forest.npy, {D}core_open.npy")
