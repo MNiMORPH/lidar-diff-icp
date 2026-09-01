@@ -162,6 +162,34 @@ two tiles' reference populations came to differ by 39,038 cells unnoticed.
 
 ---
 
+## The canopy k is now read, not typed -- and its form is wrong
+
+**Closed 2026-09-01** (`c99c141`, `97798e4`). `dod_cover_attribution.py` carried
+`k = 48.4 if TILE == "elbaext" else 49.6`; neither number existed anywhere else in the repo,
+both were read off a run and retyped, and the `else` branch handed every other tile Elba's
+value silently. `cover_offset_reference.py` now writes its coefficients as JSON and the
+consumer reads them, prints the population behind the fit, and refuses when it is absent.
+
+Re-running the calibration on the current registration:
+
+    tile               typed     read now
+    elba_fulldensity    49.6       48.73
+    elbaext             48.4       48.62
+
+The typed pair differed by 1.2 mm between tiles; measured, they differ by 0.11 -- the
+tile-to-tile difference that pair implied was an artefact of when each was typed.
+
+**Still open, and larger.** Neither tile's own model selection picks the LINEAR form that the
+additive canopy model `pred = k * cover` requires:
+
+    elba_fulldensity   selects quadratic      AIC 108.7  vs linear 372.6
+    elbaext            selects optical depth  AIC  86.8  vs linear 152.5
+
+The run now says so whenever the selected form is not linear, instead of using a coefficient
+the data does not favour without comment. Whether the attribution should move to the selected
+form -- and it is a DIFFERENT form on each tile, which is itself worth explaining before
+adopting either -- is not decided here.
+
 # Decisions
 
 Closed questions, with the reasoning and the conditions that would reopen them.
