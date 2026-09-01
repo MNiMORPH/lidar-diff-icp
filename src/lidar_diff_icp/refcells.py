@@ -48,7 +48,8 @@ def _opt(d, name):
 
 def reference_cells(tile_dir, *, cells=None, curv_max=0.015, slope_max=12.0,
                     gross_change_mm=500.0, clearcut_drop=0.30, require_ridge=True,
-                    exclude_valley=True):
+                    exclude_valley=True, valley_top_m=None,
+                    use_floodplain_mask=True):
     """Boolean mask of stable reference cells, plus a report of what each cut removed.
 
     ``cells`` is an optional array of flat cell indices (e.g. the near-ground cube's
@@ -99,11 +100,24 @@ def reference_cells(tile_dir, *, cells=None, curv_max=0.015, slope_max=12.0,
     # ANTIMODE of this tile's own elevation histogram, computed here, which separates the
     # upland plateau from the valley terraces.
     if exclude_valley:
-        fld = _opt(tile_dir, "floodplain_mask.npy")
+        fld = _opt(tile_dir, "floodplain_mask.npy") if use_floodplain_mask else None
         if fld is not None:
             cut("floodplain mask", ~fld.astype(bool).ravel()[idx])
+        elif use_floodplain_mask:
+            # A MISSING input used to skip this cut in silence, which made two tiles'
+            # populations differ by 39,038 cells with nothing to notice it.
+            rep["floodplain mask MISSING -- cut NOT applied"] = 0
         zf = _opt(tile_dir, "z_after.npy")
-        if zf is not None:
+        if zf is not None and valley_top_m is not None:
+            # An EXPLICIT valley top, so tiles of the same landscape share one threshold.
+            # The per-tile antimode below does not: elba computes 228.9 m and elbaext
+            # 237.1 m on overlapping ground, a difference of 31,242 cells at elbaext.
+            # 230 m is the established Elba value (analysis/steady_state/
+            # run_steady_state_strata.py VALLEY_TOP, and ALLFOREST_BLUFFLAND.md).
+            z = zf.ravel()[idx]
+            cut(f"below valley top {float(valley_top_m):.1f} m (explicit)",
+                ~(np.isfinite(z) & (z < float(valley_top_m))))
+        elif zf is not None:
             z = zf.ravel()[idx]
             zc = z[m & np.isfinite(z)]
             if zc.size > 100:

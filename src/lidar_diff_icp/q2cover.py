@@ -158,7 +158,8 @@ def free_intercept(bins):
     return float(beta[0]), float(beta[1]), float(err[0]), float(err[1])
 
 
-def fit_tile(tile_dir, *, exclude_valley=True, bin_width=BIN_WIDTH,
+def fit_tile(tile_dir, *, exclude_valley=True, valley_top_m=None,
+             use_floodplain_mask=True, bin_width=BIN_WIDTH,
              min_gen1=MIN_GEN1_RETURNS, min_gen2=MIN_GEN2_RETURNS, slope_max=90.0):
     """Fit q2(cover) for one tile, from that tile's own derived products.
 
@@ -195,8 +196,10 @@ def fit_tile(tile_dir, *, exclude_valley=True, bin_width=BIN_WIDTH,
     Hg = np.load(f"{D}/nearground_gen2_class_split.npz")["Hg"]
     Cg = np.cumsum(Hg, 1).astype(float); ng = Cg[:, -1]
 
-    stable, _ = reference_cells(D, cells=cells, slope_max=slope_max,
-                               exclude_valley=exclude_valley)
+    stable, cuts = reference_cells(D, cells=cells, slope_max=slope_max,
+                                   exclude_valley=exclude_valley,
+                                   valley_top_m=valley_top_m,
+                                   use_floodplain_mask=use_floodplain_mask)
     ok = (stable & (n1[cells] >= min_gen1) & (ng >= min_gen2) & np.isfinite(cover_all))
     sel = cells[ok]
     g1 = ragged_quantile(vs, off, n1, Q1, sel)
@@ -212,7 +215,9 @@ def fit_tile(tile_dir, *, exclude_valley=True, bin_width=BIN_WIDTH,
         bins=bins, unmatchable=unmatchable,
         free_intercept=dict(a=a, b=b, se_a=sa, se_b=sb,
                             sigma_from_imposed=(a - Q2_AT_ZERO) / sa if sa == sa else float("nan")),
+        cuts=cuts,
         cells=dict(stable=int(stable.sum()), used=int(ok.sum()),
-                   exclude_valley=bool(exclude_valley),
+                   exclude_valley=bool(exclude_valley), valley_top_m=valley_top_m,
+                   use_floodplain_mask=bool(use_floodplain_mask),
                    min_gen1=min_gen1, min_gen2=min_gen2, bin_width=bin_width),
     )
