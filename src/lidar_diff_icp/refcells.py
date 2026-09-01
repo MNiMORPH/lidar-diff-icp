@@ -108,7 +108,7 @@ def reference_cells(tile_dir, *, cells=None, curv_max=0.015, slope_max=12.0,
             # populations differ by 39,038 cells with nothing to notice it.
             rep["floodplain mask MISSING -- cut NOT applied"] = 0
         zf = _opt(tile_dir, "z_after.npy")
-        if zf is not None and valley_top_m == "antimode":
+        if zf is not None and valley_top_m == "antimode":   # explicit alias
             # LEGACY, and it is not comparable between tiles: the threshold is read off
             # each tile's OWN elevation histogram, giving 228.9 m at elba and 237.1 m at
             # elbaext on overlapping ground. Kept only to reproduce older results.
@@ -123,16 +123,20 @@ def reference_cells(tile_dir, *, cells=None, curv_max=0.015, slope_max=12.0,
                     cut(f"below elevation antimode {zthr:.1f} m (LEGACY, per-tile)",
                         ~(np.isfinite(z) & (z < zthr)))
         elif zf is not None and valley_top_m is None:
-            raise ValueError(
-                "exclude_valley=True needs an explicit valley_top_m (metres). The valley "
-                "top is a property of the LANDSCAPE, not of the tile, so it must be the "
-                "same for tiles that overlap -- a per-tile value computed from the tile's "
-                "own elevation histogram gave 228.9 m at elba and 237.1 m at elbaext, a "
-                "31,242-cell difference. The established Elba value is 230.0 m "
-                "(analysis/steady_state/run_steady_state_strata.py VALLEY_TOP; "
-                "analysis/steady_state/ALLFOREST_BLUFFLAND.md). Pass valley_top_m=230.0, "
-                "or valley_top_m='antimode' for the legacy per-tile behaviour, or "
-                "exclude_valley=False.")
+            # DEFAULT = the behaviour every existing caller was written against. The
+            # threshold is read off this tile's own elevation histogram, so it is NOT
+            # comparable between tiles (228.9 m at elba, 237.1 m at elbaext on overlapping
+            # ground). Pass valley_top_m=230.0 when tiles must share one threshold.
+            z = zf.ravel()[idx]
+            zc = z[m & np.isfinite(z)]
+            if zc.size > 100:
+                h, e = np.histogram(zc, bins=60)
+                lo, hi = int(np.argmax(h[:30])), 30 + int(np.argmax(h[30:]))
+                if hi > lo + 2:                      # bimodal: cut at the antimode
+                    anti = lo + int(np.argmin(h[lo:hi]))
+                    zthr = 0.5 * (e[anti] + e[anti + 1])
+                    cut(f"below elevation antimode {zthr:.1f} m",
+                        ~(np.isfinite(z) & (z < zthr)))
         elif zf is not None:
             # An EXPLICIT valley top, so tiles of the same landscape share one threshold.
             # The per-tile antimode below does not: elba computes 228.9 m and elbaext
