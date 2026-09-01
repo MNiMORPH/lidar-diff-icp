@@ -83,15 +83,40 @@ elba_fulldensity, 78,270 at elbaext.
 
 Two things this turned up, both recorded and neither acted on:
 
-- **elbaext's DoD was chosen, not given.** The elbaext run read
-  `data/derived/elbaext/dod_geoid.npy` -- the only `dod_geoid` on that tile and the
-  name-for-name analogue of elba's `elba_refdatum/dod_geoid.npy`. `--dod` is required with
-  no default precisely so this choice is visible. **Confirm it is the intended grid.**
-- **`curvature_diffusion.py` has the same defect**, out of scope here: it takes a tile
-  argument but hardcodes `data/derived/elba_refdatum/dod_geoid.npy` in two places, and it
-  `sys.exit(0)`s silently when `penetration.npy` is absent. It also AUGMENTS
-  `ridgecrest_pixels.npz` in place with `curv_xx`/`curv_yy`/`curv_laplacian`, so it must be
-  re-run after the convexity producer or those three columns are silently dropped.
+- **`curvature_diffusion.py` had the same defect; fixed** in commit `86beb3b`. `--dod`,
+  `--gen1-date` and `--gen2-date` are now explicit (a wrong dt rescales K directly), the
+  silent `sys.exit(0)` states what it lacks, and the in-place augmentation of
+  `ridgecrest_pixels.npz` with `curv_xx`/`curv_yy`/`curv_laplacian` is documented as an
+  ORDERING requirement: run it AFTER the convexity producer or the three columns vanish.
+
+### The DoD grids are NOT on one frame -- OPEN
+
+Checked because the elbaext run needed a `--dod` and I picked one. The pairing I used is
+wrong, and not in the way expected: `elbaext/dod_geoid.npy` is fine; the ELBA grid it was
+compared against is the odd one out. What each shipped grid actually applied, read from its
+own `corrections*.json`:
+
+    grid                             method            const   tilt mm/km      swath_tie
+    elba_refdatum/dod_geoid.npy      geoid, HARDCODED  67.000  +0.610 -0.730   None
+    elba_fulldensity/dod.npy         geoid, auto       67.281  +0.778 -0.568   intercept
+    elbaext/dod_geoid.npy            geoid, elba plane 66.701  +0.778 -0.568   intercept
+    elbaext/dod.npy                  reference_plane  -84.930  +6.940 +3.540   None
+
+`elbaext/dod_geoid.npy` was built by `elbaext_geoid_regrid.py` to share ONE frame with elba:
+it fits the geoid plane on ELBA's bounds and re-expresses it about elbaext's centroid, which
+is why the tilt matches `elba_fulldensity/dod.npy` exactly and the constant differs by the
+0.580 mm the re-centring implies. Both carry `swath_tie: intercept`.
+
+`elba_refdatum/dod_geoid.npy` is the outlier: `run_elba_dod.py`'s own docstring says it
+SUPERSEDES it, for passing a hardcoded geoid triple. Recomputing the planes now,
+`geoid_difference` gives elba (+0.778, -0.568) and elbaext (+0.353, -1.031) mm/km, so the
+hardcoded (+0.610, -0.730) matches NEITHER tile's own-bounds fit.
+
+**Consequence:** the two crest tables produced on 2026-09-01 are not comparable across tiles.
+The same-method pair is `elba_fulldensity/dod.npy` with `elbaext/dod_geoid.npy`; better still,
+once #19 lands, both tiles' `dod_cover_q2`. The elba crest run was left on the superseded grid
+deliberately, because reproducing it byte-identically was the check. **Andy's call which grid
+the crest suite should read from here.**
 
 ### 2. STILL OPEN: retire `penetration.npy`, or give it a producer
 
