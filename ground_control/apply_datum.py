@@ -36,7 +36,7 @@ class DatumApplication:
 
     constant_mm: float
     sigma_mm: float
-    gauge_ref: int
+    zero_line: int
     source: str
     note: str = ""
 
@@ -44,7 +44,7 @@ class DatumApplication:
         """Return ``z`` on absolute NAVD88. Positive constant = the surface reads LOW."""
         return np.asarray(z, float) + self.constant_mm / 1000.0
 
-    def regauged_to(self, new_ref: int, per_swath_dz_mm: dict) -> "DatumApplication":
+    def on_zero_line(self, new_ref: int, per_swath_dz_mm: dict) -> "DatumApplication":
         """The same datum expressed against a DIFFERENT reference line.
 
         Re-gauging shifts the product by ``-dz[new_ref]`` relative to the current gauge, so
@@ -52,11 +52,11 @@ class DatumApplication:
         unchanged. This is arithmetic, not a re-measurement -- but it MUST be done, or the
         constant silently belongs to the wrong product.
         """
-        d = float(per_swath_dz_mm[new_ref]) - float(per_swath_dz_mm[self.gauge_ref])
+        d = float(per_swath_dz_mm[new_ref]) - float(per_swath_dz_mm[self.zero_line])
         return DatumApplication(
             constant_mm=self.constant_mm + d, sigma_mm=self.sigma_mm,
-            gauge_ref=int(new_ref), source=self.source,
-            note=f"re-gauged from line {self.gauge_ref} to {new_ref} ({d:+.2f} mm)")
+            zero_line=int(new_ref), source=self.source,
+            note=f"re-expressed from zero line {self.zero_line} to {new_ref} ({d:+.2f} mm)")
 
 
 def gauge_invariance_residual(z_mm, per_swath_dz_mm, datum: DatumApplication):
@@ -69,14 +69,14 @@ def gauge_invariance_residual(z_mm, per_swath_dz_mm, datum: DatumApplication):
     refs = sorted(per_swath_dz_mm)
     unc, cor = [], []
     for r in refs:
-        shift = float(per_swath_dz_mm[r]) - float(per_swath_dz_mm[datum.gauge_ref])
+        shift = float(per_swath_dz_mm[r]) - float(per_swath_dz_mm[datum.zero_line])
         z_r = float(z_mm) - shift                     # the product re-gauged onto line r
         unc.append(z_r)
-        cor.append(z_r + datum.regauged_to(r, per_swath_dz_mm).constant_mm)
+        cor.append(z_r + datum.on_zero_line(r, per_swath_dz_mm).constant_mm)
     return np.array(unc), np.array(cor)
 
 
-def datum_for_pipeline(gen1_own_frame_mm, geoid_mm, gen2_mm, gauge_ref, source, *,
+def datum_for_pipeline(gen1_own_frame_mm, geoid_mm, gen2_mm, zero_line, source, *,
                        gen1_sigma_mm=None, gen2_sigma_mm=None):
     """Build the ``absolute_datum`` dict ``pipeline.difference_dem`` accepts.
 
@@ -86,5 +86,5 @@ def datum_for_pipeline(gen1_own_frame_mm, geoid_mm, gen2_mm, gauge_ref, source, 
     subtraction wrong is the exact error that once made a correct result look contradicted.
     """
     return {"gen1_mm": float(gen1_own_frame_mm) - float(geoid_mm),
-            "gen2_mm": float(gen2_mm), "gauge_ref": int(gauge_ref), "source": str(source),
+            "gen2_mm": float(gen2_mm), "zero_line": int(zero_line), "source": str(source),
             "gen1_sigma_mm": gen1_sigma_mm, "gen2_sigma_mm": gen2_sigma_mm}

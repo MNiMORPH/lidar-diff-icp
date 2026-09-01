@@ -424,9 +424,9 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
                       ``gen1_mm``  constant to ADD to gen1 **as it sits in this DoD**, i.e.
                                    AFTER the geoid shift (= c1_own_frame − geoid_mm);
                       ``gen2_mm``  constant to ADD to gen2;
-                      ``gauge_ref`` the ZERO LINE the gen1 constant was measured against -- the
+                      ``zero_line`` the ZERO LINE the gen1 constant was measured against -- the
                       flight line defined as zero when that tile's swath network
-                      was solved (ground_control still names this key gauge_ref)
+                      was solved (ground_control still names this key zero_line)
                                    — CHECKED against this run's zero line and raises on a
                                    mismatch, because a constant measured against another
                                    zero line belongs to a different product;
@@ -835,16 +835,16 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
     # DIFFERENCE of the two constants and true change on stable ground goes to zero.
     datum_applied = None
     if absolute_datum is not None:
-        need = {"gen1_mm", "gen2_mm", "gauge_ref", "source"}
+        need = {"gen1_mm", "gen2_mm", "zero_line", "source"}
         missing = need - set(absolute_datum)
         if missing:
             raise ValueError(f"absolute_datum is missing {sorted(missing)}")
-        if int(absolute_datum["gauge_ref"]) != zero_line:
+        if int(absolute_datum["zero_line"]) != zero_line:
             raise ValueError(
                 f"absolute_datum was measured against zero line "
-                f"{absolute_datum['gauge_ref']} but this run's zero line is "
+                f"{absolute_datum['zero_line']} but this run's zero line is "
                 f"{zero_line}. A constant belongs to the product it was measured "
-                f"against; re-express it with ground_control apply_datum.regauged_to().")
+                f"against; re-express it with ground_control apply_datum.on_zero_line().")
         g1 = float(absolute_datum["gen1_mm"]); g2 = float(absolute_datum["gen2_mm"])
         Z21 = Z21 + g2 / 1000.0                      # gen2 onto NAVD88
         dod = dod + (g2 - g1) / 1000.0               # DoD moves by the DIFFERENCE
@@ -853,7 +853,7 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
             "dod_shift_mm": round(g2 - g1, 3),
             "gen1_sigma_mm": absolute_datum.get("gen1_sigma_mm"),
             "gen2_sigma_mm": absolute_datum.get("gen2_sigma_mm"),
-            "gauge_ref": zero_line, "source": absolute_datum["source"]}
+            "zero_line": zero_line, "source": absolute_datum["source"]}
 
     corrections = {
         "epochs": "after - before (positive = deposition)",

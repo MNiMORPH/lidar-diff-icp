@@ -72,10 +72,10 @@ by `-d` and they cancel. `tests/test_apply_datum.py` demonstrates this — uncor
 spread 44.60 mm across the six gauges, corrected spread < 1e-9.
 
 **This is now a required pipeline step.** `pipeline.difference_dem` records
-`swath_gauge_ref` and leaves `absolute_datum_mm` None until a constant is supplied, and
+`zero_line` and leaves `absolute_datum_mm` None until a constant is supplied, and
 its docstring states that the absolute level is gauge-dependent. Applier:
 `ground_control/apply_datum.py`; a constant is tied to its gauge and must be re-expressed
-via `regauged_to()` if `ref` changes.
+via `on_zero_line()` if the zero line changes.
 
 ### The relation that governs it, as a closed level circuit
 

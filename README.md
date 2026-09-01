@@ -326,7 +326,7 @@ env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python ground_control/run_site_dat
 #    difference_dem(..., absolute_datum=json.load(open("SITE_DATUM_elbaext.json"))["absolute_datum"])
 ```
 
-`difference_dem` checks that the constant's `gauge_ref` matches the run's own
+`difference_dem` checks that the constant's `zero_line` matches the run's own
 `zero_line` and raises on a mismatch, because a constant measured against one
 reference line belongs to that product and would silently mis-level another. Nothing is
 defaulted: `covers`, `gen2_surface`, `collinear_sigma` and the bridge are all required,

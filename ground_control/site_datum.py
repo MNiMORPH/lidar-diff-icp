@@ -14,7 +14,7 @@ run at Elba:
 and returns the ``absolute_datum`` dict ``pipeline.difference_dem`` accepts.
 
 Nothing here has a default that could silently set the answer. ``covers``,
-``collinear_sigma``, ``gen2_surface``, ``bridge_mm`` and ``gauge_ref`` are all required:
+``collinear_sigma``, ``gen2_surface``, ``bridge_mm`` and ``zero_line`` are all required:
 each of them moved the Elba answer by more than the correction itself.
 
 **The bridge is the caller's.** Measuring it needs CSF at every mark (~9 min at Elba), so
@@ -57,7 +57,7 @@ class SiteDatum:
     gen2_delivered_mm: float
     gen2_surface: str
     geoid_mm: float
-    gauge_ref: int
+    zero_line: int
     dod_shift_mm: float
     params: dict = field(default_factory=dict)
     warnings: list = field(default_factory=list)
@@ -65,7 +65,7 @@ class SiteDatum:
     def to_pipeline(self, source: str) -> dict:
         return AD.datum_for_pipeline(
             self.gen1_our_surface_mm, self.geoid_mm, self.gen2_delivered_mm,
-            self.gauge_ref, source, gen1_sigma_mm=self.gen1_delivered_se_mm)
+            self.zero_line, source, gen1_sigma_mm=self.gen1_delivered_se_mm)
 
     def to_dict(self):
         return asdict(self)
@@ -73,7 +73,7 @@ class SiteDatum:
 
 def measure_site_datum(*, easting, northing, bounds, crs, psids, tile_dirs, tracks_path,
                        covers, collinear_sigma, res, gen2_surface, bridge_mm,
-                       bridge_source, gauge_ref, max_lags_m, n_lags, n_pairs, estimators,
+                       bridge_source, zero_line, max_lags_m, n_lags, n_pairs, estimators,
                        seed) -> SiteDatum:
     """Measure gen1's and gen2's constants at a site. Every argument is required."""
     ts = L.load_tracks(tracks_path)
@@ -110,7 +110,7 @@ def measure_site_datum(*, easting, northing, bounds, crs, psids, tile_dirs, trac
         bridge_mm=float(bridge_mm), bridge_source=str(bridge_source),
         gen1_our_surface_mm=float(c1_ours),
         gen2_delivered_mm=float(g2.constant_mm), gen2_surface=str(gen2_surface),
-        geoid_mm=float(geoid_mm), gauge_ref=int(gauge_ref),
+        geoid_mm=float(geoid_mm), zero_line=int(zero_line),
         dod_shift_mm=float(g2.constant_mm - (c1_ours - geoid_mm)),
         params=dict(covers=list(covers), collinear_sigma=collinear_sigma, res_m=res,
                     psids=list(psids), gen2_surface=gen2_surface,

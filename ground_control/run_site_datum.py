@@ -73,7 +73,7 @@ def main(argv=None):
         easting=a.easting, northing=a.northing, bounds=corr["bounds"], crs=corr["crs"],
         psids=a.psids, tile_dirs=a.tiles, tracks_path=a.tracks, covers=a.covers,
         collinear_sigma=a.collinear_sigma, res=a.res, gen2_surface=a.gen2_surface,
-        bridge_mm=a.bridge_mm, bridge_source=a.bridge_source, gauge_ref=gauge,
+        bridge_mm=a.bridge_mm, bridge_source=a.bridge_source, zero_line=gauge,
         max_lags_m=a.max_lags_m, n_lags=a.n_lags, n_pairs=a.n_pairs,
         estimators=a.estimators, seed=a.seed)
 

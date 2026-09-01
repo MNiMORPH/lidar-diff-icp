@@ -91,3 +91,13 @@ settle it in the commit message.
 
 Both corrections in this note came from Andy pushing on the word "independent". It is
 worth applying to your own results: shared inputs make agreement cheap.
+
+---
+
+**Vocabulary note, 2026-09-01.** This document predates a rename and refers to
+`swath_gauge_ref` / `gauge_ref` / `regauged_to()`. Those are now `zero_line` and
+`on_zero_line()`. The concept is unchanged: the ZERO LINE is the flight line defined as
+zero when a tile's swath network is solved. A COMMON LINE is a line present in two tiles,
+used to re-express both against one reference before comparing. Neither changes any
+swath-to-swath difference or sets goodness of fit. The wording above is left as written,
+because it is a record of what was reported at the time.
