@@ -16,7 +16,7 @@ gen2 = the per-cell vendor class-2 near-ground column. Bins carry cluster-robust
 
     ./lidar-icp/bin/python analysis/ridgelines/q2_cover_fit.py
 """
-import argparse
+import argparse, os
 import numpy as np, pyarrow.parquet as pq
 import matplotlib; matplotlib.use("Agg"); import matplotlib.pyplot as plt
 from scipy.optimize import brentq, curve_fit
@@ -25,6 +25,9 @@ from lidar_diff_icp.binstats import block_ids
 from lidar_diff_icp.refcells import reference_cells
 
 _ap = argparse.ArgumentParser()
+_ap.add_argument("--tile", default="data/derived/elba_fulldensity",
+                 help="tile directory; the fit is PER SITE because the relation depends on "
+                      "each pair's phenology, so there is no site-invariant slope to reuse")
 _ap.add_argument("--weight", choices=["se", "cells"], default="se",
                  help="se = cluster-robust SE per bin; cells = weight by cell count")
 _ap.add_argument("--binw", type=float, default=None,
@@ -48,7 +51,8 @@ ARGS = _ap.parse_args()
 exec(open("analysis/ridgelines/percentile_float_fit.py").read().split("D = A.tile")[0]
      .replace("ap.parse_args()", "ap.parse_args([])"))
 
-D = "data/derived/elba_fulldensity"
+D = ARGS.tile.rstrip("/")
+SITE = os.path.basename(D)
 cube = np.load(f"{D}/nearground_cells_sn.npz"); cells = cube["cells"]
 dz = float(cube["dz"]); zlo = float(cube["zlo"])
 zf = np.load(f"{D}/z_after.npy"); N = zf.size; NX = zf.shape[1]
@@ -148,13 +152,13 @@ for (n, (fn, par, pred, chi2)), (ls, lw, col) in zip(fits.items(), styles):
             label=f"{n}   ($\\chi^2$/dof {chi2:.2f})")
 ax.set_xlabel("canopy cover fraction (PyForestScan, >2 m, gen2)")
 ax.set_ylabel("$q_2^*$ : gen2 percentile matching gen1's median")
-ax.set_title(f"gen2 percentile vs canopy cover, pinned to the median at bare ground — elba "
+ax.set_title(f"gen2 percentile vs canopy cover, pinned to the median at bare ground — {SITE} "
              f"(weights: {ARGS.weight})\n"
              "labels = cells per bin; error bars = cluster-robust SE and bin span", fontsize=10)
 ax.set_xlim(-0.02, 0.80); ax.set_ylim(0.10, 0.56)
 ax.legend(loc="lower left", fontsize=8.5); ax.grid(alpha=0.25)
 fig.tight_layout()
-tag = f"{ARGS.weight}" + (f"_w{ARGS.binw:g}" if ARGS.binw else "")
+tag = f"{SITE}_{ARGS.weight}" + (f"_w{ARGS.binw:g}" if ARGS.binw else "")
 out = f"analysis/ridgelines/q2_vs_cover_fits_{tag}.png"
 fig.savefig(out)
 print("\nwrote", out)
