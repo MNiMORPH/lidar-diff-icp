@@ -10,6 +10,27 @@ a griddable artifact, so we FLAG it (widen the level-of-detection) rather than c
 The covariate is per-cell GROUND PENETRATION = ground returns / total returns. Low
 penetration on a slope = leaf-on-under-forest = unreliable bare-earth. See
 analysis/slope_bias/ and mn-3dep-audit (which flags the acquisition itself from its date).
+
+STATUS OF THAT MECHANISM -- read before citing it (2026-09-01)
+--------------------------------------------------------------
+The flag itself stands: it is a conservative widening, and the OBSERVATION behind it -- a
+slope-dependent DoD bias concentrated in forest -- has held. The MECHANISM in the first
+paragraph, gen2 ground starvation under leaf-on canopy, has not:
+
+* `analysis/slope_bias/README.md` has read OPEN since 2026-08-21: the best-motivated
+  mechanism "is not proven; a competing vegetation-penetration mechanism is now in play."
+* gen2 is not ground-starved in absolute terms. `analysis/gen1_grass_lift.py` records
+  5.78 gen2 against 0.49 gen1 ground returns per m^2 -- about 12x MORE ground, not less.
+* `analysis/ridgelines/FRAME_2026-08-26.md` finds the offset "tracks the 2008 canopy, not
+  2021 cover", with phenology refuted as the driver, which points the mechanism at gen1
+  rather than at gen2 leaf-on.
+* `analysis/ridgelines/AUDIT_findings.md` puts `penetration.npy` in Tier 1 as a
+  gen2-derived variable and warns against binning any gen1 quantity against it;
+  `gen1_own_penetration.py` is the gen1-internal counterpart.
+
+So: use this to WIDEN a detection limit, which is what it does. Do not cite it as the
+explanation of the slope bias, and do not use `penetration` as a canopy measure --
+`canopy_cover_pfs` is the cover measure, computed identically on every tile.
 """
 from __future__ import annotations
 
