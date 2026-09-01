@@ -28,6 +28,10 @@ _ap = argparse.ArgumentParser()
 _ap.add_argument("--tile", default="data/derived/elba_fulldensity",
                  help="tile directory; the fit is PER SITE because the relation depends on "
                       "each pair's phenology, so there is no site-invariant slope to reuse")
+_ap.add_argument("--valley-top", default="230.0",
+                 help="valley-top elevation in metres, EXPLICIT. The established Elba value "
+                      "is 230.0 (run_steady_state_strata.py VALLEY_TOP). Pass 'antimode' for "
+                      "the legacy per-tile threshold, which is NOT comparable between tiles.")
 _ap.add_argument("--include-valley", action="store_true",
                  help="restore the PRE-2026-08-26-16:49 reference-cell population, before "
                       "refcells.py started excluding the valley floor by default (commit "
@@ -68,8 +72,9 @@ ce = t["cell"].to_numpy()[g]; dc = t["d_mm_corr"].to_numpy()[g].astype(float)
 vs, off, n1 = ragged_sorted(ce, dc, N)
 sp = np.load(f"{D}/nearground_gen2_class_split.npz"); Hg = sp["Hg"]
 Cg = np.cumsum(Hg, 1).astype(float); ng = Cg[:, -1]
+_vt = ARGS.valley_top if ARGS.valley_top == "antimode" else float(ARGS.valley_top)
 stable, _ = reference_cells(D, cells=cells, slope_max=90.0,
-                            exclude_valley=not ARGS.include_valley)
+                            exclude_valley=not ARGS.include_valley, valley_top_m=_vt)
 ok = (stable & (n1[cells] >= max(1, ARGS.min_gen1)) & (ng >= max(1, ARGS.min_gen2))
       & np.isfinite(cover))
 print(f"cells: {ok.sum():,} of {stable.sum():,} stable "
