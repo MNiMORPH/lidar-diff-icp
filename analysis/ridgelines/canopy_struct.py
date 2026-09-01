@@ -6,20 +6,44 @@ Streams the 183 M-point cloud in chunks, accumulating per-cell counts and a
 per-cell height histogram (for the p95). Excludes class-7 noise. Height above
 ground = z - z_after[row,col], with z_after gap-filled by nearest neighbour.
 
+Grid geometry comes from the tile's own corrections.json, so nothing here is tied to Elba.
+The AFTER cloud must be the FULL-RETURN one, not a class-2 extract, and is required rather
+than guessed because it is not derivable from the tile directory.
+
 Run:
   cd /home/awickert/projects/lidar-diff-icp
-  env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/ridgelines/canopy_struct.py
+  env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/ridgelines/canopy_struct.py \
+      --tile elba_fulldensity --after data/after/3dep2021_fulldensity.laz
 """
+import argparse, json, os
+
 import numpy as np
 import laspy
 from scipy import ndimage
 
-LAZ = "data/after/3dep2021_fulldensity.laz"
-DERIVED = "data/derived/elba_fulldensity"
-OUT = f"{DERIVED}/canopy_struct.npz"
+_ap = argparse.ArgumentParser()
+_ap.add_argument("--tile", default="elba_fulldensity", help="tile name under data/derived/")
+_ap.add_argument("--after", default="data/after/3dep2021_fulldensity.laz",
+                 help="FULL-RETURN gen2 cloud (a class-2 extract gives veg_frac 0 everywhere)")
+_ap.add_argument("--out", default=None, help="default <tile>/canopy_struct.npz")
+_A = _ap.parse_args()
 
-NY, NX = 700, 508
-X0, Y0, RES = 577492.8, 4882737.6, 5.0
+LAZ = _A.after
+DERIVED = f"data/derived/{_A.tile}"
+OUT = _A.out or f"{DERIVED}/canopy_struct.npz"
+
+
+def _grid(tile):                                    # (X0, Y0, NX, NY, RES) from tile meta
+    for fn in ("meta.json", "corrections_geoid.json", "corrections.json"):
+        q = f"data/derived/{tile}/{fn}"
+        if os.path.exists(q):
+            j = json.load(open(q)); b = j["bounds"]
+            r = float(j.get("res") or j.get("res_m"))
+            return b[0], b[1], int(round((b[2]-b[0])/r)), int(round((b[3]-b[1])/r)), r
+    raise SystemExit(f"no grid meta for {tile}")
+
+
+X0, Y0, NX, NY, RES = _grid(_A.tile)
 CELL_AREA = RES * RES  # 25 m^2
 
 # Height histogram bins for p95: 0..40 m in 0.5 m bins, plus overflow.
