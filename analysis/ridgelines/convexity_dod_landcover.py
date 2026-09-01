@@ -12,19 +12,79 @@ Furrow-immune: tillage furrows are flat at +/-20 m -> kappa~0 -> rejected.
 Step 3 (DoD): a convex crest sheds -> real change <= 0, so any POSITIVE DoD is an artifact.
 Step 4 (land cover): forest (pen<0.25) vs open (pen>=0.45) crests, matched on slope.
 
-    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/ridgelines/convexity_dod_landcover.py
+Grid geometry comes from the tile's own corrections.json, so nothing here is tied to Elba.
+`penetration.npy` is REQUIRED for step 4 unless you state `--without penetration`, in which
+case steps 2-3 and the masks are still written and step 4 is skipped and said to be skipped.
+Steps 2-3 need no cover layer at all, so `floodplain_mask.npy` and `crest_mask.npy` are
+produced for any tile with z_after + slope + ridge_mask.
+
+    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/ridgelines/convexity_dod_landcover.py \
+        --tile elba_fulldensity --dod data/derived/elba_refdatum/dod_geoid.npy
 """
+import argparse, json, os
 import numpy as np
 from scipy.ndimage import gaussian_filter, uniform_filter, distance_transform_edt
 import matplotlib; matplotlib.use("Agg"); import matplotlib.pyplot as plt
 from lidar_diff_icp.viz import hillshade
 
-RES = 5.0; X0, Y0 = 577492.8, 4882737.6
-z = np.load("data/derived/elba_fulldensity/z_after.npy")
-dod = np.load("data/derived/elba_refdatum/dod_geoid.npy")
-slope = np.load("data/derived/elba_fulldensity/slope.npy")
-pen = np.load("data/derived/elba_fulldensity/penetration.npy")
-ridge = np.load("data/derived/elba_fulldensity/ridge_mask.npy")
+_ap = argparse.ArgumentParser()
+_ap.add_argument("--tile", default="elba_fulldensity",
+                 help="tile name under data/derived/; grid geometry is read from its "
+                      "corrections.json, so no origin is hardcoded")
+_ap.add_argument("--dod", required=True,
+                 help="path to the DoD grid to read (m, + = elevation rose). REQUIRED and "
+                      "not defaulted: Elba's shipped run used data/derived/elba_refdatum/"
+                      "dod_geoid.npy, which is NOT inside the tile directory, so no rule "
+                      "of the form <tile>/dod_*.npy reproduces it. Name the grid you mean.")
+_ap.add_argument("--without", default="",
+                 help="comma-separated optional layers to run without, stated explicitly; "
+                      "only 'penetration' is optional here (it drives step 4 alone)")
+ARGS = _ap.parse_args()
+
+TILE = ARGS.tile
+D = f"data/derived/{TILE}"
+OPTIONAL_STRATA = ("penetration",)
+WITHOUT = {t.strip() for t in ARGS.without.split(",") if t.strip()}
+_bad = WITHOUT - set(OPTIONAL_STRATA)
+if _bad:
+    raise SystemExit(f"--without names layers that are not optional here: {sorted(_bad)}; "
+                     f"choose from {list(OPTIONAL_STRATA)}")
+if WITHOUT:
+    print(f"  running WITHOUT, as stated: {sorted(WITHOUT)}", flush=True)
+
+
+def _grid(tile):                                    # (X0,Y0,RES) from the tile's own meta
+    for fn in ("meta.json", "corrections_geoid.json", "corrections.json"):
+        p = f"data/derived/{tile}/{fn}"
+        if os.path.exists(p):
+            j = json.load(open(p)); b = j["bounds"]
+            return b[0], b[1], float(j.get("res") or j.get("res_m"))
+    raise SystemExit(f"no grid meta for {tile}: none of meta.json, corrections_geoid.json, "
+                     f"corrections.json exists under data/derived/{tile}")
+
+
+def _opt(name):
+    """REQUIRED unless named in --without. Missing and unstated -> refuse, because a layer
+    that is absent must not read as one that was measured and came back empty."""
+    if name in WITHOUT:
+        return None
+    p = f"{D}/{name}.npy"
+    if not os.path.exists(p):
+        raise SystemExit(f"{p} is missing. It is required for step 4 (the forest/open crest "
+                         f"split). Produce it, or state that you are running without it: "
+                         f"--without {name}")
+    return np.load(p)
+
+
+X0, Y0, RES = _grid(TILE)
+z = np.load(f"{D}/z_after.npy")
+dod = np.load(ARGS.dod)
+slope = np.load(f"{D}/slope.npy")
+pen = _opt("penetration")
+ridge = np.load(f"{D}/ridge_mask.npy")
+if dod.shape != z.shape:
+    raise SystemExit(f"--dod {ARGS.dod} is {dod.shape} but {TILE}'s grid is {z.shape}; "
+                     f"these are different grids and must not be combined")
 ny, nx = z.shape
 zf = z.copy(); nm = ~np.isfinite(zf)
 if nm.any():
@@ -70,7 +130,7 @@ for L in [10, 20, 30]:
 # map convexity kappa (each L) and cross-slope b back to the grid (for per-pixel records)
 for L in (10, 20, 30):
     G = np.full((ny, nx), np.nan); G[rr, cc] = kap[L][0]
-    np.save(f"data/derived/elba_fulldensity/kappa_L{L}.npy", G)
+    np.save(f"{D}/kappa_L{L}.npy", G)
 L0 = 20; kappa, bslope = kap[L0]
 kappa_g = np.full((ny, nx), np.nan); b_g = np.full((ny, nx), np.nan)
 kappa_g[rr, cc] = kappa; b_g[rr, cc] = bslope
@@ -78,30 +138,37 @@ kappa_g[rr, cc] = kappa; b_g[rr, cc] = bslope
 # crude floodplain elevation mask (part of the suite; applied consistently). Crests sit on
 # topographic highs so this removes few, but we exclude valley-bottom cells for safety.
 floodplain = tpi_large < -2.0
-np.save("data/derived/elba_fulldensity/floodplain_mask.npy", floodplain)
+np.save(f"{D}/floodplain_mask.npy", floodplain)
 
 # crest = convex, near-crest, on a topographic high, NOT floodplain
 KMIN = 0.004                                          # ~ >=0.8 m of convex relief over +/-20 m
 crest_sel = (kappa > KMIN) & (np.abs(bslope) < 0.15) & (tpi_large[rr, cc] > 0) & (~floodplain[rr, cc])
 crest = np.zeros((ny, nx), bool); crest[rr[crest_sel], cc[crest_sel]] = True
-np.save("data/derived/elba_fulldensity/crest_mask.npy", crest)
+np.save(f"{D}/crest_mask.npy", crest)
 print(f"\ncrest cells (convex, near-crest, on high, non-floodplain): {int(crest.sum())} "
       f"of {len(rr)} divide cells ({int((tpi_large[rr,cc]<=-2.0).sum())} divide cells were floodplain)")
 
 # per-pixel record at every ridgecrest cell: slope AND curvature (+ DoD, land cover, coords)
 cr, cco = np.where(crest)
-lc = np.where(pen[cr, cco] < 0.25, "forest", np.where(pen[cr, cco] >= 0.45, "open", "mixed"))
 rec = dict(row=cr, col=cco, E=X0+(cco+0.5)*RES, N=Y0+(cr+0.5)*RES,
            slope_deg=slope[cr, cco], curvature_kappa=kappa_g[cr, cco], cross_slope=b_g[cr, cco],
-           dod_m=dod[cr, cco], penetration=pen[cr, cco], tpi=tpi_large[cr, cco], landcover=lc)
-np.savez("data/derived/elba_fulldensity/ridgecrest_pixels.npz", **rec)
+           dod_m=dod[cr, cco])
+# column ORDER is preserved from the single-tile version; the two cover columns are simply
+# absent when penetration is, rather than present and filled with a stand-in value
+if pen is not None:
+    rec["penetration"] = pen[cr, cco]
+rec["tpi"] = tpi_large[cr, cco]
+if pen is not None:
+    rec["landcover"] = np.where(pen[cr, cco] < 0.25, "forest",
+                                np.where(pen[cr, cco] >= 0.45, "open", "mixed"))
+np.savez(f"{D}/ridgecrest_pixels.npz", **rec)
 import csv
-with open("data/derived/elba_fulldensity/ridgecrest_pixels.csv", "w", newline="") as fh:
+with open(f"{D}/ridgecrest_pixels.csv", "w", newline="") as fh:
     w = csv.writer(fh); w.writerow(list(rec))
     for i in range(len(cr)):
         w.writerow([rec[k][i] for k in rec])
 print(f"saved per-pixel slope+curvature table: ridgecrest_pixels.npz/.csv ({len(cr)} pixels, "
-      f"cols: slope_deg, curvature_kappa, cross_slope, dod_m, penetration, tpi, landcover)")
+      f"cols: {', '.join(rec)})")
 
 # ---- STEP 3: DoD along the crests ------------------------------------------------------
 fin = np.isfinite(dod)
@@ -116,18 +183,22 @@ for lo,hi in [(0,3),(3,6),(6,10),(10,15),(15,90)]:
     if m.any(): print(f"    {lo:>2}-{hi:<2} deg: n={m.sum():>4}  medDoD={np.median(dod[m]*1000):+6.1f} mm")
 
 # ---- STEP 4: DoD on crests vs land cover ------------------------------------------------
-print(f"\n=== STEP 4: convex-crest DoD by land cover (forest vs open), matched on slope ===")
-print(f"{'slope':>8} | {'forest n':>8} {'forest mm':>9} | {'open n':>7} {'open mm':>8}")
-forest = pen < 0.25; openc = pen >= 0.45
-for lo,hi in [(0,3),(3,6),(6,10),(10,15)]:
-    s = cm & (slope>=lo)&(slope<hi)
-    fn = s & forest; on = s & openc
-    fm = np.median(dod[fn]*1000) if fn.any() else np.nan
-    om = np.median(dod[on]*1000) if on.any() else np.nan
-    print(f"{lo:>3}-{hi:<3} | {int(fn.sum()):>8} {fm:>+9.1f} | {int(on.sum()):>7} {om:>+8.1f}")
-mf = cm & forest; mo = cm & openc
-print(f"  ALL crests: forest n={int(mf.sum())} med={np.median(dod[mf]*1000):+.1f} mm  |  "
-      f"open n={int(mo.sum())} med={np.median(dod[mo]*1000):+.1f} mm")
+if pen is None:
+    print(f"\n=== STEP 4 SKIPPED: no penetration layer, stated via --without penetration ===")
+    print("  the forest/open crest split is NOT reported for this tile; it is absent, not null")
+else:
+    print(f"\n=== STEP 4: convex-crest DoD by land cover (forest vs open), matched on slope ===")
+    print(f"{'slope':>8} | {'forest n':>8} {'forest mm':>9} | {'open n':>7} {'open mm':>8}")
+    forest = pen < 0.25; openc = pen >= 0.45
+    for lo,hi in [(0,3),(3,6),(6,10),(10,15)]:
+        s = cm & (slope>=lo)&(slope<hi)
+        fn = s & forest; on = s & openc
+        fm = np.median(dod[fn]*1000) if fn.any() else np.nan
+        om = np.median(dod[on]*1000) if on.any() else np.nan
+        print(f"{lo:>3}-{hi:<3} | {int(fn.sum()):>8} {fm:>+9.1f} | {int(on.sum()):>7} {om:>+8.1f}")
+    mf = cm & forest; mo = cm & openc
+    print(f"  ALL crests: forest n={int(mf.sum())} med={np.median(dod[mf]*1000):+.1f} mm  |  "
+          f"open n={int(mo.sum())} med={np.median(dod[mo]*1000):+.1f} mm")
 
 # ---- figure: crests colored by DoD -----------------------------------------------------
 hs = hillshade(zf, RES, X0, Y0, fill_gaps=True)
@@ -140,5 +211,7 @@ fig.colorbar(im, ax=ax, shrink=0.6, label="DoD gen2-gen1 (m) on convex crests")
 ax.set_title(f"Steps 2-4: convex ridge crests (n={int(crest.sum())}), DoD.\n"
              "convex crest sheds -> blue (increase) = artifact")
 ax.set_xlabel("Easting (m)"); ax.set_ylabel("Northing (m)")
-fig.savefig("figures/ridgeline_crests_dod.png", dpi=130, bbox_inches="tight"); plt.close(fig)
-print("\nwrote figures/ridgeline_crests_dod.png")
+_fig = ("figures/ridgeline_crests_dod.png" if TILE == "elba_fulldensity"
+        else f"figures/ridgeline_crests_dod_{TILE}.png")
+fig.savefig(_fig, dpi=130, bbox_inches="tight"); plt.close(fig)
+print(f"\nwrote {_fig}")
