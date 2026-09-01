@@ -213,17 +213,29 @@ def main():
         del pc
         shipped = {int(k): v for k, v in
                    meta["per_swath_internal_alignment_dxdydz_m"].items()}
-        got = out["overlap_median"][0]
+        # Gate against the estimator the tile ACTUALLY shipped, read from its own
+        # corrections.json, not a hardcoded one. The intercept tie became the pipeline
+        # default on 2026-08-26 at 17:16, so a fixed "overlap_median" here compares two
+        # different estimators and fails by the size of the tie change itself (5.9 mm at
+        # elba) -- the gate asking the wrong question rather than catching a fault.
+        # Tiles whose corrections.json predates the change record no swath_tie; those
+        # shipped the overlap median.
+        shipped_tie = meta.get("swath_tie") or "overlap_median"
+        if shipped_tie not in out:
+            raise ValueError(f"{name}: corrections.json records swath_tie={shipped_tie!r}, "
+                             f"which this script does not solve for ({sorted(out)})")
+        got = out[shipped_tie][0]
         worst = [max(abs(got[s][k] - shipped[s][k]) for s in shipped) for k in range(3)]
         # The assertion is on dz, which is the axis this run changes and the axis every
         # number below is read from. The horizontal components are reported, not asserted:
         # elbaext's corrections.json predates the current cached cloud, so its dx/dy are
         # not expected to land on the same value and the size of that gap is printed.
         assert worst[2] <= REPRO_TOL_M, (
-            f"{name}: the shipped VERTICAL tie was NOT reproduced (worst {worst[2]:.3g} m "
-            f"against a {REPRO_TOL_M:g} m tolerance) -- nothing below is comparable")
+            f"{name}: the shipped VERTICAL tie ({shipped_tie}) was NOT reproduced "
+            f"(worst {worst[2]:.3g} m against a {REPRO_TOL_M:g} m tolerance) -- "
+            f"nothing below is comparable")
         sol[name] = dict(meta=meta, gauge0=gauge0, out=out, worst=worst, mech=mech,
-                         zeromean=zeromean)
+                         zeromean=zeromean, shipped_tie=shipped_tie)
 
     R.banner()
     print()
