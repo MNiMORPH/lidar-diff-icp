@@ -118,3 +118,26 @@ def test_plan_substitutes_the_tile_and_flags_unsupplied_clouds():
             assert "X.laz" in c and "gen2" not in m
             # a step needing BOTH clouds still flags the one still missing
             assert ("<--gen1 NOT GIVEN>" in c) == ("gen1" in s.needs)
+
+
+def test_an_in_place_augmentation_does_not_make_its_own_step_look_stale():
+    """curvature adds columns to ridgecrest_pixels.npz, which convexity owns.
+
+    Declaring that file as a REQUIREMENT made the step report STALE the moment it ran --
+    its own write made the input newer than its outputs. It is `mutates`, not `requires`.
+    """
+    curv = next(s for s in W.STEPS if s.name == "curvature")
+    assert "ridgecrest_pixels.npz" in curv.mutates
+    assert "ridgecrest_pixels.npz" not in curv.requires
+    assert "ridgecrest_pixels.npz" not in curv.produces
+
+
+def test_every_mutated_file_is_produced_by_an_earlier_step():
+    assert W.mutation_order_ok() == []
+
+
+def test_a_mutation_of_a_later_step_is_caught():
+    steps = (W.Step("first", produces=("a.npy",), requires=(), command="true",
+                    mutates=("b.npy",)),
+             W.Step("second", produces=("b.npy",), requires=("a.npy",), command="true"))
+    assert W.mutation_order_ok(steps) != []

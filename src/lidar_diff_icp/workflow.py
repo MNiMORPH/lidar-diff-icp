@@ -47,6 +47,12 @@ class Step:
     optional: bool = False
     note: str = ""
     needs: tuple[str, ...] = field(default=())     # external args the command needs
+    #: Files this step MODIFIES IN PLACE rather than creating -- it adds columns to a file
+    #: another step owns. They are not `produces` (the other step owns the file) and must
+    #: not be `requires` either, because running the step makes them newer than its own
+    #: outputs and it would then report itself STALE forever. Declared so the augmentation
+    #: is visible rather than implicit, and so the ordering it demands is documented.
+    mutates: tuple[str, ...] = field(default=())
 
 
 STEPS: tuple[Step, ...] = (
@@ -74,10 +80,13 @@ STEPS: tuple[Step, ...] = (
               "crest split."),
     Step("curvature",
          produces=("curv_xx.npy", "curv_yy.npy", "curv_laplacian.npy"),
-         requires=("z_after.npy", "ridgecrest_pixels.npz", "crest_mask.npy"),
+         requires=("z_after.npy", "crest_mask.npy"),
+         mutates=("ridgecrest_pixels.npz",),
          command=f"{PY} analysis/ridgelines/curvature_diffusion.py --tile {{tile_name}}",
-         note="MUST follow convexity: it augments ridgecrest_pixels.npz in place, and the "
-              "convexity producer rewrites that file from scratch."),
+         note="MUST follow convexity, which crest_mask.npy already enforces: this ADDS "
+              "curv_xx/curv_yy/curv_laplacian columns to ridgecrest_pixels.npz in place, "
+              "and the convexity producer rewrites that file from scratch, so the reverse "
+              "order drops the three columns silently."),
     Step("pfs_cover",
          produces=("canopy_cover_pfs.npy", "forest_pfs.npy", "open_pfs.npy", "pai_pfs.npy"),
          requires=("z_after.npy",),
@@ -168,6 +177,19 @@ STEPS: tuple[Step, ...] = (
          optional=True,
          note="BLOCKED: canopy_struct.npz has no producer in this repo."),
 )
+
+
+def mutation_order_ok(steps=STEPS):
+    """Every mutated file must be produced by a step that runs EARLIER."""
+    seq = [s.name for s in order(steps)]
+    made = {f: s.name for s in steps for f in s.produces}
+    bad = []
+    for s in steps:
+        for f in s.mutates:
+            owner = made.get(f)
+            if owner is None or seq.index(owner) >= seq.index(s.name):
+                bad.append((s.name, f, owner))
+    return bad
 
 
 def order(steps=STEPS):
