@@ -58,7 +58,8 @@ cc = np.load(_ccp) if os.path.exists(_ccp) else None
 if cc is None:
     print(f"  no {_ccp}: the canopy_cover COLUMN is omitted from this table. Nothing else "
           f"changes -- no offset or registration term uses it.", flush=True)
-assert cc.shape == (NY, NX), f"canopy raster {cc.shape} != {(NY, NX)}"
+if cc is not None:
+    assert cc.shape == (NY, NX), f"canopy raster {cc.shape} != {(NY, NX)}"
 canopy_cover = cc.ravel()[cell].astype(np.float32) if cc is not None else None
 
 # --- local surface curvature (Laplacian of gen2 elevation) at each return's cell ---
