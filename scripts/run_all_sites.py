@@ -125,8 +125,6 @@ def run_site(name, figdir=FIGDIR, *, skip_penetration=False,
         PEN_MAX, SLOPE_MIN = 0.25, 12.0
         pen = ground_penetration(after, r["bounds"], res, nx, ny)
         leafon = leafon_slope_flag(pen, _sl, min_penetration=PEN_MAX, min_slope=SLOPE_MIN)
-        np.save(f"{outdir}/leafon_flag.npy", leafon)
-        np.save(f"{outdir}/penetration.npy", pen)
         msg = (f"[{name}] leaf-on/forest-slope flag: {int(leafon.sum())} cells "
                f"({100*leafon.mean():.0f}%), flagged where penetration < {PEN_MAX:g} AND "
                f"slope > {SLOPE_MIN:g} deg (conventions, not derivations); "
@@ -156,6 +154,18 @@ def run_site(name, figdir=FIGDIR, *, skip_penetration=False,
         json.dump({**{k: det[k] for k in ("regions", "sigma", "corr_length_m",
                                           "tau_sys_m", "method")},
                    "gen2_null_cells": int((~np.isfinite(Z21)).sum())}, fh, indent=2)
+
+    # Written HERE, after the grid products, not where they are computed. penetration is
+    # built on this run's grid (bounds/res -> nx, ny) and the workflow graph says so, but
+    # saving it before corrections.json/z_after.npy made it one second OLDER than its own
+    # declared inputs -- so `lidar-diff-workflow` called it STALE the moment it was made,
+    # permanently, at every site. The dependency is real; only the write order was wrong.
+    # (Its VALUES do not come from z_after: make_penetration.py loads that array solely to
+    # assert the shape, and ground_penetration reads the gen2 cloud.) The computation stays
+    # above because --leafon-lod-factor must inflate `lod` before `lod` is persisted.
+    if not skip_penetration:
+        np.save(f"{outdir}/leafon_flag.npy", leafon)
+        np.save(f"{outdir}/penetration.npy", pen)
 
     # The figures read the products just saved above, via the library, so either can
     # be rebuilt later without re-running any point-cloud work.
