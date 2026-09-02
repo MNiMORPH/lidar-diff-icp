@@ -35,6 +35,20 @@ from dataclasses import dataclass, field
 
 PY = "env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python"
 
+#: PyForestScan is NOT installed in the venv that runs everything else, so `pfs_cover` --
+#: and only `pfs_cover` -- needs the conda environment. Until 2026-09-02 this step was
+#: printed with `PY` like every other, which meant `--plan` emitted a command that dies on
+#: `ModuleNotFoundError: No module named 'pyforestscan'` at every tile: a plan that cannot
+#: be run is worse than no plan, because it looks authoritative.
+#:
+#: PROJ_DATA/GDAL_DATA are SET here rather than unset (the inverse of `PY`): the conda
+#: env's own grids are needed, because the base proj.db it would otherwise find is stale.
+#: Override with LIDAR_DIFF_PFS_PYTHON if the environment lives elsewhere.
+_PFS_ENV = os.environ.get("LIDAR_DIFF_PFS_ENV", os.path.expanduser("~/anaconda3/envs/lidar-icp"))
+PY_PFS = os.environ.get(
+    "LIDAR_DIFF_PFS_PYTHON",
+    f"PROJ_DATA={_PFS_ENV}/share/proj GDAL_DATA={_PFS_ENV}/share/gdal {_PFS_ENV}/bin/python")
+
 #: Products of ``pipeline.difference_dem`` (via ``analysis/ridgelines/run_elba_dod.py`` or
 #: ``scripts/run_all_sites.py``). Everything below builds on these; the workflow treats them
 #: as given rather than pretending to schedule the DoD itself, whose vertical frame is a
@@ -104,7 +118,7 @@ STEPS: tuple[Step, ...] = (
     Step("pfs_cover",
          produces=("canopy_cover_pfs.npy", "forest_pfs.npy", "open_pfs.npy", "pai_pfs.npy"),
          requires=("z_after.npy",),
-         command=f"{PY} analysis/forest_metrics_pfs.py {{tile}} {{gen2}}",
+         command=f"{PY_PFS} analysis/forest_metrics_pfs.py {{tile}} {{gen2}}",
          optional=True, needs=("gen2",),
          note="PyForestScan cover. OPT-IN (Andy, 2026-09-02): run it only when a COVER "
               "CORRECTION is actually wanted at this site -- do not build it as a matter "
