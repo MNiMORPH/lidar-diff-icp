@@ -141,3 +141,54 @@ def test_a_mutation_of_a_later_step_is_caught():
                     mutates=("b.npy",)),
              W.Step("second", produces=("b.npy",), requires=("a.npy",), command="true"))
     assert W.mutation_order_ok(steps) != []
+
+
+def test_script_of_finds_the_producing_source_and_extras():
+    conv = next(s for s in W.STEPS if s.name == "convexity")
+    assert W.script_of(conv) == ("analysis/ridgelines/convexity_dod_landcover.py",)
+
+    s = W.Step("x", produces=("o.npy",), requires=(), command="python scripts/a.py --tile t",
+               code=("src/lidar_diff_icp/b.py",))
+    assert W.script_of(s) == ("scripts/a.py", "src/lidar_diff_icp/b.py")
+
+
+def test_every_step_resolves_at_least_one_source_file():
+    """A step whose command names no tracked script cannot be code-checked at all."""
+    for s in W.STEPS:
+        assert W.script_of(s), f"{s.name}: no source file parsed from its command"
+
+
+def test_code_state_flags_a_product_older_than_its_source(tmp_path, monkeypatch):
+    d = str(tmp_path)
+    src = tmp_path / "scripts" / "made_up.py"
+    src.parent.mkdir(parents=True)
+    src.write_text("# a producer\n")
+
+    step = W.Step("t", produces=("out.npy",), requires=(),
+                  command=f"python scripts/made_up.py")
+    steps = (step,)
+
+    _touch(d, "out.npy", when=1000)
+    monkeypatch.setattr(W, "code_time", lambda p: 500.0)     # source older than the product
+    assert W.code_state(d, steps) == {}
+
+    monkeypatch.setattr(W, "code_time", lambda p: 2000.0)    # source NEWER than the product
+    assert W.code_state(d, steps) == {"t": ["scripts/made_up.py"]}
+
+
+def test_a_missing_product_is_not_reported_as_code_stale(tmp_path, monkeypatch):
+    """MISSING is state()'s to report; code_state must not double up on it."""
+    step = W.Step("t", produces=("absent.npy",), requires=(), command="python scripts/x.py")
+    monkeypatch.setattr(W, "code_time", lambda p: 9e9)
+    assert W.code_state(str(tmp_path), (step,)) == {}
+
+
+def test_base_inputs_are_code_checked_too(tmp_path, monkeypatch):
+    """A pipeline.py change invalidates dod/lod at every tile, and no Step produces them."""
+    d = str(tmp_path)
+    for f in W.BASE_INPUTS:
+        _touch(d, f, when=1000)
+    monkeypatch.setattr(W, "code_time", lambda p: 500.0)
+    assert W.base_code_state(d) == []
+    monkeypatch.setattr(W, "code_time", lambda p: 2000.0)
+    assert W.base_code_state(d) == sorted(W.BASE_CODE)

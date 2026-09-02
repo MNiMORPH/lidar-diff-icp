@@ -27,6 +27,8 @@ from __future__ import annotations
 import argparse
 import datetime as _dt
 import os
+import re
+import subprocess
 from dataclasses import dataclass, field
 
 PY = "env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python"
@@ -36,6 +38,13 @@ PY = "env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python"
 #: as given rather than pretending to schedule the DoD itself, whose vertical frame is a
 #: per-region decision (see ``analysis/slope_bias/elbaext_geoid_regrid.py``).
 BASE_INPUTS = ("corrections.json", "z_after.npy", "dod.npy", "lod.npy")
+
+
+#: What produces the base inputs, for the code-vs-product check. difference_dem writes
+#: them; run_all_sites.py is the driver. A change to either invalidates every tile's DoD and
+#: LoD at once -- the failure this check exists for, since nothing inside a tile directory
+#: shows it.
+BASE_CODE = ("src/lidar_diff_icp/pipeline.py", "scripts/run_all_sites.py")
 
 
 @dataclass(frozen=True)
@@ -53,6 +62,9 @@ class Step:
     #: outputs and it would then report itself STALE forever. Declared so the augmentation
     #: is visible rather than implicit, and so the ordering it demands is documented.
     mutates: tuple[str, ...] = field(default=())
+    #: Extra source files whose change invalidates this step's outputs, beyond the script
+    #: named in `command` (which is parsed out automatically). Library modules go here.
+    code: tuple[str, ...] = field(default=())
 
 
 STEPS: tuple[Step, ...] = (
@@ -226,6 +238,80 @@ def _mtime(path):
     return os.path.getmtime(path) if os.path.exists(path) else None
 
 
+_SCRIPT_RE = re.compile(r"(?:^|\s)((?:analysis|scripts|src)/[\w/]+\.py)")
+
+
+def script_of(step):
+    """Source files whose change should invalidate this step's outputs."""
+    found = tuple(_SCRIPT_RE.findall(step.command))
+    return tuple(dict.fromkeys(found + tuple(step.code)))
+
+
+def _git_commit_time(path):
+    try:
+        out = subprocess.run(["git", "log", "-1", "--format=%ct", "--", path],
+                             capture_output=True, text=True, timeout=10)
+        return float(out.stdout.strip()) if out.stdout.strip() else None
+    except Exception:
+        return None
+
+
+def _is_dirty(path):
+    try:
+        out = subprocess.run(["git", "status", "--porcelain", "--", path],
+                             capture_output=True, text=True, timeout=10)
+        return bool(out.stdout.strip())
+    except Exception:
+        return False
+
+
+def code_time(path):
+    """When this source last CHANGED, in a way that survives a fresh checkout.
+
+    The last commit that touched it, because a clone or a branch switch rewrites every
+    working-tree mtime and would otherwise mark the whole world stale. If the file is
+    modified against HEAD, its working-tree mtime is used instead -- an uncommitted edit is
+    a real change.
+    """
+    if not os.path.exists(path):
+        return None
+    if _is_dirty(path):
+        return os.path.getmtime(path)
+    return _git_commit_time(path) or os.path.getmtime(path)
+
+
+def code_state(tile_dir, steps=STEPS):
+    """Per step: source files that changed AFTER the step's outputs were written.
+
+    The blind spot this closes: comparing product mtimes only against each other cannot see
+    that the CODE moved on. A tile reports every step OK while its products are several
+    commits behind, and a code change invalidates every tile at once, so nothing inside one
+    tile directory reveals it.
+    """
+    out = {}
+    for s in steps:
+        outs = [_mtime(os.path.join(tile_dir, f)) for f in s.produces]
+        if any(m is None for m in outs):
+            continue                                   # MISSING is state()'s to report
+        oldest = min(outs)
+        newer = [(c, code_time(c)) for c in script_of(s)]
+        hits = sorted(c for c, t in newer if t is not None and t > oldest)
+        if hits:
+            out[s.name] = hits
+    return out
+
+
+def base_code_state(tile_dir):
+    """The same check for the base inputs, which no Step produces."""
+    outs = [_mtime(os.path.join(tile_dir, f)) for f in BASE_INPUTS]
+    present = [m for m in outs if m is not None]
+    if not present:
+        return []
+    oldest = min(present)
+    return sorted(c for c in BASE_CODE
+                  if (code_time(c) or 0) > oldest)
+
+
 def state(tile_dir, steps=STEPS):
     """Per step: ('MISSING'|'STALE'|'OK', detail). STALE = an output older than an input."""
     res = {}
@@ -280,16 +366,28 @@ def main(argv=None):
 
     if a.check:
         st = state(a.tile)
+        cs = code_state(a.tile)
         base = [f for f in BASE_INPUTS if not os.path.exists(os.path.join(a.tile, f))]
         print(f"{a.tile}")
         if base:
             print(f"  BASE INPUTS ABSENT: {', '.join(base)} -- run difference_dem first")
-        print(f"  {'step':<20} {'state':<8} detail")
+        print(f"  {'step':<20} {'state':<12} detail")
         for s in order():
             k, d = st[s.name]
+            if s.name in cs:                       # code moved on, whatever the files say
+                k = "CODE-STALE" if k == "OK" else k + "+CODE"
+                d = (d + "; " if d else "") + "changed since: " + ", ".join(
+                    os.path.basename(c) for c in cs[s.name])
             tag = s.name + (" *" if s.optional else "")
-            print(f"  {tag:<20} {k:<8} {d}")
-        print("  * = optional. STALE means an output is older than one of its own inputs.")
+            print(f"  {tag:<20} {k:<12} {d}")
+        bc = base_code_state(a.tile)
+        if bc:
+            print(f"  {'(base inputs)':<20} {'CODE-STALE':<12} "
+                  f"dod/lod/z_after predate: {', '.join(os.path.basename(c) for c in bc)}")
+        print("  * = optional. STALE = an output older than one of its own inputs.")
+        print("  CODE-STALE = the SOURCE that produced it changed since. A code change "
+              "invalidates every")
+        print("  tile at once, so nothing inside one tile directory reveals it.")
 
     if a.plan:
         print(f"\n# {a.tile} -- in dependency order")
