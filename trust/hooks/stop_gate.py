@@ -216,6 +216,24 @@ def session_ledgers(bash_text, cwd):
     return out
 
 
+def names_parameter(name, reply):
+    """Does `reply` actually name this parameter?
+
+    NOT `\\b{name}\\b`. A word boundary is only a boundary when a word character sits on
+    one side of it, so a parameter name ending in a non-word character -- the real case
+    `reproduction tolerance (vertical)` -- can NEVER satisfy the trailing `\\b`: the
+    assistant names it verbatim, the check still fires, and the only way out is to
+    invent a new name or drop a parameter that was correctly declared. The gate then
+    punishes disclosure, which is the opposite of its purpose.
+
+    Anchor each side only where the name itself starts or ends with a word character.
+    This does not loosen the check: the literal name must still appear.
+    """
+    left = r"(?<!\w)" if name[:1].isalnum() or name[:1] == "_" else ""
+    right = r"(?!\w)" if name[-1:].isalnum() or name[-1:] == "_" else ""
+    return re.search(left + re.escape(name) + right, reply) is not None
+
+
 def check(reply, results, cwd):
     v = []
     bash = "\n".join(results.get("Bash", []))
@@ -261,7 +279,7 @@ def check(reply, results, cwd):
 
     for path, led in session_ledgers(bash, cwd):
         for name in led.get("unasked", []):
-            if not re.search(rf"\b{re.escape(name)}\b", reply):
+            if not names_parameter(name, reply):
                 v.append(f"P  UNDISCLOSED INVENTED PARAMETER -- run {os.path.basename(path)} "
                          f"used `{name}`, which you chose unasked, and the reply does not "
                          f"mention it. State it and what it excluded, or drop the parameter.")
@@ -349,6 +367,18 @@ def main():
 def _selftest():
     import tempfile
     ok = True
+
+    # The P check must accept a parameter name that ends in a non-word character. Before
+    # names_parameter() existed this fired forever on `reproduction tolerance (vertical)`
+    # however the reply was worded, so the gate blocked the very disclosure it demanded.
+    for _n, _r, _want in [
+        ("reproduction tolerance (vertical)", "the reproduction tolerance (vertical) was 1 mm", True),
+        ("reproduction tolerance (vertical)", "no mention of it", False),
+        ("gauge swath", 'name: "gauge swath"', True),
+        ("gauge swath", "gauge swathe", False),      # substring must not count
+    ]:
+        if names_parameter(_n, _r) is not _want:
+            print(f"FAIL names_parameter({_n!r}, {_r!r}) != {_want}"); ok = False
 
     def mk(reply, bash="", agent=""):
         recs = []
