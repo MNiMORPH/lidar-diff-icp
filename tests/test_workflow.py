@@ -6,6 +6,7 @@ place, so running them in the wrong order silently drops three columns. And a q2
 from a beam_offset_table older than corrections.json carries superseded registration --
 which no amount of reading the file tells you, because the file looks fine.
 """
+import json
 import os
 import time
 
@@ -61,9 +62,16 @@ def test_a_cycle_is_rejected():
         W.order(cyc)
 
 
-def _touch(d, name, when=None):
+def _touch(d, name, when=None, content=b""):
+    """Write a file with given CONTENT and mtime.
+
+    Content matters now: the staleness check arbitrates with a hash, so bumping an mtime
+    without changing bytes is deliberately NOT a change. A test that means "this input
+    changed" must write different bytes.
+    """
     p = os.path.join(d, name)
-    open(p, "wb").close()
+    with open(p, "wb") as fh:
+        fh.write(content)
     if when is not None:
         os.utime(p, (when, when))
     return p
@@ -74,13 +82,14 @@ def test_state_reports_missing_stale_and_ok(tmp_path):
     step = W.Step("t", produces=("out.npy",), requires=("in.npy",), command="true")
     steps = (step,)
 
-    _touch(d, "in.npy", when=1000)
+    _touch(d, "in.npy", when=1000, content=b"v1")
     assert W.state(d, steps)["t"][0] == "MISSING"
 
-    _touch(d, "out.npy", when=2000)
+    _touch(d, "out.npy", when=2000, content=b"out")
     assert W.state(d, steps)["t"][0] == "OK"
 
-    os.utime(os.path.join(d, "in.npy"), (3000, 3000))
+    # a REAL change: new bytes and a newer mtime
+    _touch(d, "in.npy", when=3000, content=b"v2 -- different")
     kind, detail = W.state(d, steps)["t"]
     assert kind == "STALE" and "in.npy" in detail
 
@@ -90,13 +99,14 @@ def test_stale_is_detected_across_the_real_chain(tmp_path):
     d = str(tmp_path)
     now = time.time()
     for f in W.BASE_INPUTS:
-        _touch(d, f, when=now - 100)
+        _touch(d, f, when=now - 100, content=f.encode())
     for s in W.order():
         for f in s.produces:
-            _touch(d, f, when=now - 50)
+            _touch(d, f, when=now - 50, content=f.encode())
     assert all(k == "OK" for k, _ in W.state(d).values())
 
-    os.utime(os.path.join(d, "corrections.json"), (now, now))
+    # corrections.json genuinely re-solved: new bytes, newer mtime
+    _touch(d, "corrections.json", when=now, content=b"re-solved constants")
     st = W.state(d)
     assert st["beam_table"][0] == "STALE"
     assert "corrections.json" in st["beam_table"][1]
@@ -192,3 +202,53 @@ def test_base_inputs_are_code_checked_too(tmp_path, monkeypatch):
     assert W.base_code_state(d) == []
     monkeypatch.setattr(W, "code_time", lambda p: 2000.0)
     assert W.base_code_state(d) == sorted(W.BASE_CODE)
+
+
+def test_an_identical_rewrite_does_not_cascade_staleness(tmp_path):
+    """A producer that re-runs and writes the SAME bytes must not invalidate the world.
+
+    At Carlton this was not hypothetical: re-running the DoD rewrote a byte-identical
+    z_after, and a plain mtime check then demanded a six-minute PyForestScan rebuild that
+    would have changed nothing.
+    """
+    d = str(tmp_path)
+    step = W.Step("t", produces=("out.npy",), requires=("in.npy",), command="python x.py")
+    steps = (step,)
+
+    inp = tmp_path / "in.npy"
+    inp.write_bytes(b"the same content")
+    os.utime(inp, (1000, 1000))
+    _touch(d, "out.npy", when=2000)
+
+    assert W.state(d, steps)["t"][0] == "OK"          # bootstraps the manifest
+
+    inp.write_bytes(b"the same content")              # rewritten, identical, mtime bumped
+    os.utime(inp, (3000, 3000))
+    assert W.state(d, steps)["t"][0] == "OK", "identical bytes must not read as a change"
+
+
+def test_genuinely_new_content_still_reports_stale(tmp_path):
+    d = str(tmp_path)
+    step = W.Step("t", produces=("out.npy",), requires=("in.npy",), command="python x.py")
+    steps = (step,)
+
+    inp = tmp_path / "in.npy"
+    inp.write_bytes(b"first")
+    os.utime(inp, (1000, 1000))
+    _touch(d, "out.npy", when=2000)
+    assert W.state(d, steps)["t"][0] == "OK"
+
+    inp.write_bytes(b"DIFFERENT content")
+    os.utime(inp, (3000, 3000))
+    kind, detail = W.state(d, steps)["t"]
+    assert kind == "STALE" and "in.npy" in detail
+
+
+def test_the_manifest_is_written_beside_the_products(tmp_path):
+    d = str(tmp_path)
+    step = W.Step("t", produces=("out.npy",), requires=("in.npy",), command="python x.py")
+    _touch(d, "in.npy", when=1000)
+    _touch(d, "out.npy", when=2000)
+    W.state(d, (step,))
+    man = json.load(open(os.path.join(d, W.MANIFEST)))
+    assert "in.npy" in man and "sha256" in man["in.npy"] and "content_time" in man["in.npy"]

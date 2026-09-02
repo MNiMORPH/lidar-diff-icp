@@ -26,6 +26,8 @@ from __future__ import annotations
 
 import argparse
 import datetime as _dt
+import hashlib
+import json
 import os
 import re
 import subprocess
@@ -234,8 +236,66 @@ def order(steps=STEPS):
     return out
 
 
+#: Where a tile's content hashes are remembered between checks.
+MANIFEST = ".workflow_hashes.json"
+
+
 def _mtime(path):
     return os.path.getmtime(path) if os.path.exists(path) else None
+
+
+def _sha256(path, _chunk=1 << 20):
+    h = hashlib.sha256()
+    with open(path, "rb") as fh:
+        for blk in iter(lambda: fh.read(_chunk), b""):
+            h.update(blk)
+    return h.hexdigest()
+
+
+def _load_manifest(tile_dir):
+    p = os.path.join(tile_dir, MANIFEST)
+    try:
+        return json.load(open(p))
+    except Exception:
+        return {}
+
+
+def _save_manifest(tile_dir, man):
+    try:
+        json.dump(man, open(os.path.join(tile_dir, MANIFEST), "w"), indent=1, sort_keys=True)
+    except OSError:
+        pass
+
+
+def effective_mtime(tile_dir, name, man, *, update=True):
+    """The time this file's CONTENT last changed, not the time it was last written.
+
+    A producer that re-runs and writes a byte-identical file bumps its mtime, and a
+    plain mtime comparison then cascades false staleness through everything downstream --
+    at Carlton that meant a six-minute PyForestScan rebuild that would have changed
+    nothing. So: mtime is the cheap trigger, the hash is the arbiter. When a file's
+    (size, mtime) has moved but its sha256 has not, the recorded content-time is kept.
+
+    LIMIT, stated because it is easy to over-read: this cannot tell that two files written
+    seconds apart in the SAME run belong together. It forgives an identical rewrite; it
+    does not reconstruct provenance the producers never recorded.
+    """
+    p = os.path.join(tile_dir, name)
+    if not os.path.exists(p):
+        return None
+    st = os.stat(p)
+    rec = man.get(name)
+    if rec and rec.get("size") == st.st_size and rec.get("mtime") == st.st_mtime:
+        return rec.get("content_time", st.st_mtime)      # unchanged since last seen
+    digest = _sha256(p)
+    if rec and rec.get("sha256") == digest:              # rewritten, byte-identical
+        content_time = rec.get("content_time", st.st_mtime)
+    else:
+        content_time = st.st_mtime                       # genuinely new content
+    if update:
+        man[name] = {"size": st.st_size, "mtime": st.st_mtime,
+                     "sha256": digest, "content_time": content_time}
+    return content_time
 
 
 _SCRIPT_RE = re.compile(r"(?:^|\s)((?:analysis|scripts|src)/[\w/]+\.py)")
@@ -314,10 +374,11 @@ def base_code_state(tile_dir):
 
 def state(tile_dir, steps=STEPS):
     """Per step: ('MISSING'|'STALE'|'OK', detail). STALE = an output older than an input."""
+    man = _load_manifest(tile_dir)
     res = {}
     for s in steps:
-        outs = {f: _mtime(os.path.join(tile_dir, f)) for f in s.produces}
-        ins = {f: _mtime(os.path.join(tile_dir, f)) for f in s.requires}
+        outs = {f: effective_mtime(tile_dir, f, man) for f in s.produces}
+        ins = {f: effective_mtime(tile_dir, f, man) for f in s.requires}
         absent_in = [f for f, m in ins.items() if m is None]
         absent_out = [f for f, m in outs.items() if m is None]
         if absent_out:
@@ -331,6 +392,7 @@ def state(tile_dir, steps=STEPS):
             res[s.name] = ("STALE", f"input(s) newer than output: {', '.join(newer)}")
         else:
             res[s.name] = ("OK", "")
+    _save_manifest(tile_dir, man)
     return res
 
 
