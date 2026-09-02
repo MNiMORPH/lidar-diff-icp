@@ -815,9 +815,23 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
     # bin space and the Delaunay fit fails on small stable sets). Roughness is
     # detrended (cell_plane_roughness), so this is the principled form of the old
     # relief-inflated within-cell-spread proxy.
-    stderr = np.sqrt(np.nan_to_num(r08) ** 2 / np.maximum(n08, 1.0)
-                     + np.nan_to_num(r21) ** 2 / np.maximum(n21, 1.0))
-    stderr[~(np.isfinite(r08) | np.isfinite(r21))] = np.nan
+    # SE^2 = SE08^2 + SE21^2. An UNMEASURABLE term is not a zero one: nan_to_num used to
+    # set a missing epoch's variance to 0, which is the most optimistic value available, and
+    # it landed precisely on the cells that deserve the widest limit -- cell_plane_roughness
+    # returns NaN where a cell holds fewer than min_n=6 ground points, so the zeroed term was
+    # assigned exactly where that epoch's sampling was thinnest. At elba that is 7,608 of
+    # 341,239 DoD-bearing cells (2.23%) on the gen1 side alone.
+    #
+    # Plain arithmetic propagates it correctly -- NaN in either term gives NaN -- so the
+    # right code is shorter than the wrong code. A cell whose error cannot be measured gets
+    # no detection limit, rather than an optimistic one.
+    stderr = np.sqrt(r08 ** 2 / np.maximum(n08, 1.0)
+                     + r21 ** 2 / np.maximum(n21, 1.0))
+    _no_se = int(np.sum(~np.isfinite(stderr) & np.isfinite(dod)))
+    if _no_se:
+        print(f"  {_no_se:,} DoD cells have no measurable standard error (one or both epochs "
+              f"below cell_plane_roughness min_n); they get NO LoD rather than an optimistic "
+              f"one", flush=True)
     lod = heteroscedastic_lod(dod, sdeg, abs_curv, stable_rep, stderr=stderr)
     lod_method = ("xdem heteroscedastic (slope,curv,standard-error[roughness/sqrt(density)]), "
                   "calibrated on stable ground")
