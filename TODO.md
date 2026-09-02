@@ -362,6 +362,49 @@ them -- the cover grid is a measured layer here, nothing more.
 Recorded as the measurement it is. My first note called for "attention to the thresholds",
 which was drift toward the cover-based adjustment that was explicitly excluded from this run.
 
+## Six sites re-run onto the geoid datum, 2026-09-02
+
+Andy's instruction after the Carlton run exposed that only `elba_fulldensity` was on the
+current datum. Snapshot first: `data/derived/_parabola_era_snapshot/` (383 MB, all six,
+with a README recording why the old products cannot simply be corrected).
+
+**Why re-running was the only option.** The parabola fits `dx`, `dy` AND `dz`, and the
+horizontal part was applied by RESAMPLING, so it is not invertible on the grid. Measured on
+carlton: horizontal field median `|dxy|` 103 mm, max 304 mm, which on that tile's own slopes
+implies a vertical error of median 10.4 / p90 48.4 / max 219.2 mm -- against a
+`stable_1sigma` of 44.4 mm. Undoing it costs about the whole detection limit.
+
+**No new flags were needed.** `difference_dem` no longer implements the parabola and
+`run_all_sites.py` passes none of the datum arguments, so the re-run took the current
+defaults: `tie="reference"`, `geoid_datum=None` (auto per site), `swath_tie="intercept"`,
+`along_track_drift=True`. Postcondition checked with `analysis/datum_method_audit.py`: all
+six now record `geoid: geoid_difference` with `swath_tie: intercept`.
+
+**What changed (new minus snapshot, on cells finite in both):**
+
+    site           n both    median    NMAD      p1      p99   sigma old  sigma new
+    battlecreek    20,375     -10.5    34.3  -293.8    297.5      0.0322     0.0305
+    carlton       305,799      -1.3    46.8  -271.7    561.2      0.0444     0.0391
+    cook          287,900     -23.5    75.4  -598.4    375.9      0.0705     0.0828
+    mnrv          242,935     -42.8    58.8  -757.1    640.7      0.0606     0.0652
+    whitewater    282,959     -28.6    64.8  -321.6    406.0      0.0804     0.0863
+    elba          339,829       1.2    52.3  -469.5    312.5      0.0599     0.0550
+
+The DoD moved by tens of millimetres in the median at four sites, and the NMAD of the change
+is 34-75 mm, so this is not a level shift -- the spatial structure changed, which is what
+replacing a fitted surface with a derived one should do.
+
+Stable-ground sigma fell at three sites and rose at three. INTERPRETATION, flagged as such:
+a rise is what removing a FITTED surface should produce, because the parabola was fitted to
+minimise residuals on stable ground and the geoid cannot flatter itself that way. A lower
+sigma under the parabola was never evidence it was right. The three sites where sigma
+IMPROVED are not explained by that argument and are not explained here.
+
+**Still on a retired method, and NOT re-run** (not in the `SITES` registry): `carlton_density`
+and `final` and `ne` on the parabola; `elba_refdatum` and `elbaext` on `reference_plane`.
+`elbaext` matters most -- it is the elba-overlapping tile and shares elba's frame by
+construction.
+
 # Decisions
 
 Closed questions, with the reasoning and the conditions that would reopen them.
