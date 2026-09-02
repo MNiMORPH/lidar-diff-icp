@@ -377,8 +377,19 @@ def state(tile_dir, steps=STEPS):
     man = _load_manifest(tile_dir)
     res = {}
     for s in steps:
-        outs = {f: effective_mtime(tile_dir, f, man) for f in s.produces}
+        # ASYMMETRIC, and it has to be. An OUTPUT is judged by when it was last PRODUCED
+        # (its mtime): re-running a step against changed inputs clears its staleness even
+        # if the bytes come out identical -- which is the normal case for a step the change
+        # does not reach. An INPUT is judged by when its CONTENT last changed, so a
+        # producer that rewrites a file identically does not cascade.
+        #
+        # Using content_time on both sides was the bug: gen1_csf_angles.npz was rebuilt
+        # after corrections.json changed, came out byte-identical, kept its old
+        # content_time, and so could never stop reporting stale however often it was run.
+        outs = {f: _mtime(os.path.join(tile_dir, f)) for f in s.produces}
         ins = {f: effective_mtime(tile_dir, f, man) for f in s.requires}
+        for f in s.produces:                       # keep the manifest current for consumers
+            effective_mtime(tile_dir, f, man)
         absent_in = [f for f, m in ins.items() if m is None]
         absent_out = [f for f, m in outs.items() if m is None]
         if absent_out:

@@ -252,3 +252,28 @@ def test_the_manifest_is_written_beside_the_products(tmp_path):
     W.state(d, (step,))
     man = json.load(open(os.path.join(d, W.MANIFEST)))
     assert "in.npy" in man and "sha256" in man["in.npy"] and "content_time" in man["in.npy"]
+
+
+def test_rerunning_a_step_clears_its_staleness_even_if_the_bytes_match(tmp_path):
+    """Outputs are judged by when they were PRODUCED, inputs by when their content changed.
+
+    Using content_time on both sides was a real bug, found by using the tool: Battle
+    Creek's gen1_csf_angles.npz was rebuilt after corrections.json changed, came out
+    byte-identical because the change did not reach it, kept its old content_time, and so
+    reported stale forever however many times it was regenerated.
+    """
+    d = str(tmp_path)
+    step = W.Step("t", produces=("out.npy",), requires=("in.npy",), command="python x.py")
+    steps = (step,)
+
+    _touch(d, "in.npy", when=1000, content=b"v1")
+    _touch(d, "out.npy", when=2000, content=b"result")
+    assert W.state(d, steps)["t"][0] == "OK"
+
+    _touch(d, "in.npy", when=3000, content=b"v2 -- changed")     # a real input change
+    assert W.state(d, steps)["t"][0] == "STALE"
+
+    # re-run the step: same bytes out, but produced NOW
+    _touch(d, "out.npy", when=4000, content=b"result")
+    assert W.state(d, steps)["t"][0] == "OK", \
+        "a step re-run against the new input is current, whatever bytes it produced"
