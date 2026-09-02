@@ -106,10 +106,14 @@ STEPS: tuple[Step, ...] = (
          requires=("z_after.npy",),
          command=f"{PY} analysis/forest_metrics_pfs.py {{tile}} {{gen2}}",
          optional=True, needs=("gen2",),
-         note="PyForestScan cover -- the cover measure computed identically on every tile. "
-              "OPTIONAL: the core DoD does not use it, and the beam table only CARRIES it "
-              "as a column. It is required only by the cover-adjustment family (q2_fit, "
-              "dod_cover, cover_calibration), where it is definitional."),
+         note="PyForestScan cover. OPT-IN (Andy, 2026-09-02): run it only when a COVER "
+              "CORRECTION is actually wanted at this site -- do not build it as a matter "
+              "of course. Nothing else needs it: slope, ridge_mask, convexity and curvature "
+              "never read it, and gen1_angles and beam_table only CARRY it as a column, "
+              "omitting that column cleanly when it is absent. Its real consumers are "
+              "q2_fit / dod_cover / cover_calibration, where it is definitional. Building "
+              "it anyway is not free -- a large tile needs an untwine COPC first, ~14 GB of "
+              "scratch for a 1 GB cloud."),
     Step("penetration",
          produces=("penetration.npy",),
          requires=("z_after.npy",),

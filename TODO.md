@@ -420,6 +420,27 @@ and `final` and `ne` on the parabola; `elba_refdatum` and `elbaext` on `referenc
 `elbaext` matters most -- it is the elba-overlapping tile and shares elba's frame by
 construction.
 
+## Canopy cover is OPT-IN, not part of a standard run
+
+**Decided 2026-09-02 (Andy).** "In future pipelines it should be opt-in, depending on
+whether a cover correction is needed."
+
+The trigger: I ran `pfs_cover` at all six sites because I pictured a uniform layer set,
+not because anything needed it, and then reported the resulting 29-column beam tables as a
+CAVEAT -- as though the absent `canopy_cover` / `pfs_forest` / `pfs_open` columns were a gap
+to close. They are the optional-column mechanism working as designed.
+
+Checked, not assumed: `slope`, `ridge_mask`, `convexity` and `curvature` never read
+`canopy_cover_pfs`; `gen1_angles` and `beam_table` carry it as a COLUMN only and both ran
+clean without it at four sites. Its only real consumers are `q2_fit`, `dod_cover` and
+`cover_calibration` -- the cover-adjustment family -- where it is definitional.
+
+It is not free: a large tile needs an `untwine` COPC first, and cook's took ~14 GB of
+scratch for a 0.98 GB output.
+
+**So: build cover when a cover correction is wanted at that site, and not otherwise.** A
+tile without it is complete, not deficient.
+
 # Decisions
 
 Closed questions, with the reasoning and the conditions that would reopen them.
