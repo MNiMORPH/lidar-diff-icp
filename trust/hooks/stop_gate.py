@@ -216,6 +216,33 @@ def session_ledgers(bash_text, cwd):
     return out
 
 
+def _superseded(led, path, ledgers, digest):
+    """Has the re-run that S demands ALREADY HAPPENED for this input?
+
+    S fires on a ledger whose input has since changed on disk, and says "re-run before
+    reporting". But the old ledger stays in the session transcript for the rest of the
+    session, so doing the re-run does not clear it: every later reply is blocked by a run
+    that has already been redone, and the only exit is the human's TRUST_OFF -- which
+    disables N1/N2/P/I/V too. Compliance then costs more than evasion, which is the one
+    thing a trust gate must never do.
+
+    This is NOT a way to dismiss a stale run. The item is suppressed only when a LATER
+    run of the SAME script (argv) read the SAME path and recorded a digest matching the
+    file as it stands NOW -- i.e. the demanded re-run demonstrably happened and its
+    numbers are current. Without that re-run nothing is suppressed, and a stale input
+    that no re-run has covered still blocks exactly as before.
+    """
+    for _p, other in ledgers:
+        if other is led or other.get("argv") != led.get("argv"):
+            continue
+        if str(other.get("started", "")) <= str(led.get("started", "")):
+            continue
+        for j in other.get("inputs", []):
+            if j["path"] == path and os.path.exists(path) and digest(path) == j["digest"]:
+                return True
+    return False
+
+
 def names_parameter(name, reply):
     """Does `reply` actually name this parameter?
 
@@ -277,7 +304,8 @@ def check(reply, results, cwd):
                  "    Re-run through trust/provenance.py so the inputs, the selection and "
                  "the column definition are printed with the number.")
 
-    for path, led in session_ledgers(bash, cwd):
+    ledgers = session_ledgers(bash, cwd)
+    for path, led in ledgers:
         for name in led.get("unasked", []):
             if not names_parameter(name, reply):
                 v.append(f"P  UNDISCLOSED INVENTED PARAMETER -- run {os.path.basename(path)} "
@@ -288,6 +316,8 @@ def check(reply, results, cwd):
                 sys.path.insert(0, os.path.dirname(HERE))
                 from provenance import _digest
                 if os.path.exists(i["path"]) and _digest(i["path"]) != i["digest"]:
+                    if _superseded(led, i["path"], ledgers, _digest):
+                        continue
                     v.append(f"S  STALE INPUT -- {i['path']} has changed since the run that "
                              f"produced these numbers. Re-run before reporting.")
             except Exception:
@@ -367,6 +397,24 @@ def main():
 def _selftest():
     import tempfile
     ok = True
+
+    # _superseded() must fire ONLY for a later run of the same script that read the same
+    # path and whose digest matches the file now. Everything else must still block.
+    _dg = {"/x/a.json": "NOW"}.get
+    _old = {"argv": ["s.py"], "started": "1", "inputs": [{"path": "/x/a.json", "digest": "THEN"}]}
+    _new = lambda **kw: {**{"argv": ["s.py"], "started": "2",
+                            "inputs": [{"path": "/x/a.json", "digest": "NOW"}]}, **kw}
+    _os_exists, os.path.exists = os.path.exists, lambda p: True
+    for _label, _others, _want in [
+        ("re-run of same script, digest current", [_new()], True),
+        ("re-run recorded a DIFFERENT digest", [_new(inputs=[{"path": "/x/a.json", "digest": "OTHER"}])], False),
+        ("later run of a DIFFERENT script", [_new(argv=["t.py"])], False),
+        ("same script but EARLIER", [_new(started="0")], False),
+        ("no other run at all", [], False),
+    ]:
+        if _superseded(_old, "/x/a.json", [("p", _old)] + [("q", o) for o in _others], _dg) is not _want:
+            print(f"FAIL _superseded: {_label} -> expected {_want}"); ok = False
+    os.path.exists = _os_exists
 
     # The P check must accept a parameter name that ends in a non-word character. Before
     # names_parameter() existed this fired forever on `reproduction tolerance (vertical)`
