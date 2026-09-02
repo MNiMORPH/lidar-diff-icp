@@ -68,12 +68,32 @@ uncorrectable, and visibly so -- and the count is printed.
 
 ## STILL OPEN
 
-### `beam_offset_table.py:106` -- `overlap` and `scanner_channel`
+### `beam_offset_table.py:106` -- `overlap` and `scanner_channel`: LATENT, not firing
 
-`_opt(name, dt)` returns zeros for LAS dimensions absent in PF<=5. On gen1 every point then
-reads `overlap = 0`, "measured, not in overlap". Unlike the cases above, REFUSING is wrong:
-PF<=5 genuinely cannot record it. It needs a representation -- a NaN column, or a
-`has_overlap: false` flag in the table's metadata. **Andy's call; not decided.**
+I listed this as a live defect. Measured, it is not. What the two fields are:
+
+* **`overlap`** -- a LAS 1.4 (PF6+) classification-flag BIT meaning the return lies in the
+  sidelap, where two flight lines both covered that ground. PF<=5 has no such bit; the spec
+  uses **classification 12** instead. It matters here because flight-line overlap density is
+  one of the two things gen2 ground-return fraction actually tracks.
+* **`scanner_channel`** -- a PF6+ 2-bit field naming which scanner head produced the return,
+  for multi-head sensors.
+
+What our files carry:
+
+    4342-29-64.laz    PF1   overlap dim: no    class 12: 2,287,133  (29.6% of the tile)
+    elba.las          PF7   overlap dim: YES   overlap bit set: 1,970,354 of 6,771,612 (29.1%)
+                            classifications: {2: 6,771,612}   class 12: 0
+                            scanner_channel values: [0]
+
+PDAL migrates class-12 to the overlap BIT when it writes PF7, so the information survives
+into the CSF cache intact -- and the cache is what `beam_offset_table.py` reads. The
+`_opt` zero-fill would only fire on a PF<=5 cache, which we do not produce. `scanner_channel`
+is a single value 0 because the 2008 sensors are single-channel; that is correct, not missing.
+
+So: latent, worth fixing for the PF<=5 case (read classification 12 as the overlap flag), but
+it is NOT corrupting any current product. Downgraded from "Andy's call" to a small
+robustness item.
 
 ### `pipeline.py:818-820` -- a half-measured cell gets a half-sized standard error
 
