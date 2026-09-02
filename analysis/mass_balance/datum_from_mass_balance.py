@@ -109,7 +109,17 @@ R.param("n_boot", A.n_boot, src="MINE", why="block-bootstrap replicates for the 
         "raise it if the SE is not stable")
 
 z_dem = np.load(dem_p); dod = np.load(dod_p); lod = np.load(lod_p)
-flood = np.load(fld_p).astype(bool) if fld_p else np.zeros(dod.shape, bool)
+# An all-False mask is "measured, no floodplain anywhere", which is a claim. The standing
+# project rule is that floodplain cells stay OUT of hillslope mass balance, so a run without
+# the mask is a DIFFERENT population and must not be produced by accident.
+# refcells.reference_cells refuses on exactly this; so does this.
+if not fld_p:
+    raise SystemExit(
+        "no floodplain mask given. An empty one is not the same thing: it asserts that no "
+        "cell is floodplain, and the standing rule keeps floodplain cells out of hillslope "
+        "mass balance, so the two populations are not comparable. Pass the mask, or state "
+        "that you mean to run over ALL cells.")
+flood = np.load(fld_p).astype(bool)
 
 props, valid_all = dinf_proportions(z_dem, breach=True)
 carea_all = contributing_area(props, valid_all, RES)

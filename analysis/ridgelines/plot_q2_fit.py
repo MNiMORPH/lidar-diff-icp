@@ -43,6 +43,8 @@ for j, T in enumerate(A.tiles):
     Z = np.load(f"{T}/z_after.npy")
     fp = f"{T}/floodplain_mask.npy"
     has_fld = os.path.exists(fp)
+    # No mask means nothing is DRAWN as floodplain -- which looks identical to a tile that
+    # genuinely has none. has_fld is carried into the panel title so the figure says which.
     fld = np.load(fp).astype(bool) if has_fld else np.zeros(Z.shape, bool)
     ny, nx = Z.shape
     ext = (b[0], b[0] + nx * res, b[1], b[1] + ny * res)

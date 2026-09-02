@@ -42,7 +42,13 @@ if APPLY_VEG_OFFSET:                                # remove veg-dependent fores
     A = np.c_[veg[fin], np.ones(fin.sum())]
     m_, a_ = np.linalg.lstsq(A, d[fin], rcond=None)[0]
     print(f"  f(veg): slope m={m_*1000:+.1f} mm per unit veg_frac (removing m*veg_frac)")
-    d = d - m_*np.nan_to_num(veg)
+    # nan_to_num(veg) gave cells with UNMEASURED vegetation a zero correction while leaving
+    # them in the product, so "not measured" and "no vegetation" became the same cell. Those
+    # cells are set NaN instead: uncorrectable, and visibly so.
+    _corr = m_ * veg
+    d = np.where(np.isfinite(veg), d - _corr, np.nan)
+    print(f"  {int((~np.isfinite(veg)).sum()):,} cells have no veg_frac and are set NaN "
+          f"(uncorrectable), not left uncorrected")
     contrast(d, "- veg offset")
 
 np.save("data/derived/elba_refdatum/dod_corrected.npy", d)
