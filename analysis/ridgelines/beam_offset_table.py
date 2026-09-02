@@ -96,10 +96,15 @@ dz_lateral = _terms["lateral"].astype(np.float32)
 dz_swath   = _terms["swath"].astype(np.float32)
 dz_drift   = _terms["drift"].astype(np.float32)
 d_corr     = _terms["d_corr"].astype(np.float32)
-def _nmad(a): return 1.4826*np.median(np.abs(a-np.median(a)))
-print("registration terms (median / NMAD, mm):")
+def _nmad(a): return 1.4826*np.nanmedian(np.abs(a-np.nanmedian(a)))
+# nan-SAFE, and the NaN count is shown rather than swallowed: a term that is uncomputable
+# for a handful of returns used to print as "+nan" for the whole column, which reads as a
+# total failure of that correction instead of a 0.002% gap.
+print("registration terms (median / NMAD, mm; NaN = uncomputable for those returns):")
 for _k, _v in (("geoid", dz_geoid), ("lateral", dz_lateral), ("swath", dz_swath), ("drift", dz_drift)):
-    print(f"   {_k:8s} {np.median(_v):+8.1f} / {_nmad(_v):7.1f}")
+    _nn = int(np.isnan(np.asarray(_v, float)).sum())
+    _tag = f"   {_nn:,} of {len(_v):,} NaN" if _nn else ""
+    print(f"   {_k:8s} {np.nanmedian(_v):+8.1f} / {_nmad(_v):7.1f}{_tag}")
 assert len(las.x) == n, f"LAS {len(las.x):,} != npz {n:,} -- alignment broken"
 _dims = set(las.point_format.dimension_names)
 def _opt(name, dt):        # optional LAS dim (PF6+ fields absent in PF<=5) -> zeros

@@ -200,11 +200,29 @@ def along_track_drift_term(psid, gps_time, nnorm_pt, curves):
     """
     psid = np.asarray(psid); gps_time = np.asarray(gps_time, float)
     nnorm_pt = np.asarray(nnorm_pt, float)
-    missing = set(np.unique(psid).tolist()) - set(curves)
+    # A swath with no curve gets NaN, not zero and not an exception.
+    #
+    # Zero would be the old zero-fill in its purest form: "this line drifted by nothing",
+    # asserted about a line the fitter explicitly declined to model. Raising was the first
+    # correction to that, and it was too blunt -- at Battle Creek swath 1102 is 89 of
+    # 4,166,880 returns (0.0021%), and refusing the whole table for them threw away the
+    # 99.998% that ARE computable. A curve is declined when the swath cannot support one:
+    # 1102 crosses that tile as a 2.8 m by 67.3 m sliver spanning 0.98 s of gps_time, and
+    # the drift model is a long-wavelength trajectory bias fitted over >=10 time bins.
+    #
+    # NaN is the honest third answer: those returns keep their place in the table, and
+    # every quantity derived from them -- d_mm_corr above all -- is NaN, so nothing
+    # downstream can mistake an uncomputable correction for a zero one.
+    missing = sorted(set(np.unique(psid).tolist()) - set(curves))
+    dz = np.full(psid.shape, np.nan)
     if missing:
-        raise KeyError(f"no drift curve for point_source_id {sorted(missing)}; "
-                       f"known: {sorted(curves)}")
-    dz = np.zeros(psid.shape, float)
+        import warnings
+        n_missing = int(np.isin(psid, missing).sum())
+        warnings.warn(
+            f"no along-track drift curve for point_source_id {missing} "
+            f"(known: {sorted(curves)}); their {n_missing:,} returns of {psid.size:,} "
+            f"({100 * n_missing / psid.size:.4f}%) get a NaN drift term, so their "
+            f"d_mm_corr is NaN -- uncomputable, not zero")
     for s, (t, d) in curves.items():
         m = psid == s
         if m.any():

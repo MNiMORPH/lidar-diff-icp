@@ -203,9 +203,27 @@ def test_drift_clamps_outside_the_curve_span():
     assert t[0] == pytest.approx(0.0) and t[1] == pytest.approx(20.0)
 
 
-def test_drift_raises_on_a_swath_without_a_curve():
-    with pytest.raises(KeyError, match="999"):
-        reg.along_track_drift_term(np.array([999]), np.array([100.0]), 1.0, CURVES)
+def test_a_swath_without_a_curve_gets_nan_not_zero_and_not_an_exception():
+    """Three possible answers, and only one of them is honest.
+
+    ZERO would assert that a line the fitter explicitly declined to model drifted by
+    nothing. RAISING was the first correction to that and is too blunt: at Battle Creek the
+    swath in question is 89 of 4,166,880 returns (0.0021%), and refusing the whole table
+    for them discards the 99.998% that are computable. NaN keeps those returns in place and
+    makes every quantity derived from them -- d_mm_corr above all -- NaN, so nothing
+    downstream can read an uncomputable correction as a zero one.
+    """
+    with pytest.warns(UserWarning, match="999"):
+        out = reg.along_track_drift_term(np.array([999]), np.array([100.0]), 1.0, CURVES)
+    assert np.isnan(out).all(), "unmodellable is NaN, never 0.0"
+
+    # a mixed set: the modelled swath is unaffected by its neighbour's absence
+    psid = np.array([135, 999, 135])
+    with pytest.warns(UserWarning, match="999"):
+        mixed = reg.along_track_drift_term(psid, np.array([200.0, 200.0, 200.0]), 1.0, CURVES)
+    assert np.isfinite(mixed[0]) and np.isfinite(mixed[2])
+    assert np.isnan(mixed[1])
+    assert mixed[0] == mixed[2]
 
 
 def test_drift_is_slope_normalised():
