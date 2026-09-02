@@ -390,9 +390,24 @@ six now record `geoid: geoid_difference` with `swath_tie: intercept`.
     whitewater    282,959     -28.6    64.8  -321.6    406.0      0.0804     0.0863
     elba          339,829       1.2    52.3  -469.5    312.5      0.0599     0.0550
 
-The DoD moved by tens of millimetres in the median at four sites, and the NMAD of the change
-is 34-75 mm, so this is not a level shift -- the spatial structure changed, which is what
-replacing a fitted surface with a derived one should do.
+**CORRECTION -- that table is NOT the datum change alone.** The old products also predate
+`ed8ab82` (2026-08-20), which made the MEDIAN the default ground estimator. Read from the
+products themselves: carlton's snapshot records `ground_percentile=0.1`, the new run records
+`0.5`. So the re-run changed TWO things at once, and the difference above is their combined
+effect:
+
+    1. cross-epoch datum:  parabola -> geoid
+    2. ground estimator:   p10 -> median (ground_q 0.1 -> 0.5), BOTH epochs
+
+The second is much the larger. Carlton's gen2 ground surface alone moved by
+
+    z_after new - old:  n=325,377   median +244.69 mm   NMAD 258.43 mm   max|d| 6157.7 mm
+
+which is why the DoD moved only tens of millimetres: two large shifts, one per epoch, that
+largely cancel in the difference. Do not attribute the DoD table to the datum. Separating
+them would need a re-run holding `ground_q=0.1`, which is not worth doing -- the median is
+the adopted estimator and the geoid the adopted datum, so the new products are the right
+ones on both counts.
 
 Stable-ground sigma fell at three sites and rose at three. INTERPRETATION, flagged as such:
 a rise is what removing a FITTED surface should produce, because the parabola was fitted to
