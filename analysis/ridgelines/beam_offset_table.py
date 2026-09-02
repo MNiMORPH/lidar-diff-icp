@@ -139,9 +139,9 @@ cols = {
     "aspect_deg":   aspect_deg,                 # downslope azimuth (deg CW from N); NaN on flat cells
     # pfs_forest / pfs_open are inserted below only when the angles archive carries them;
     # gen1_save_angles_slope.py omits them rather than writing all-False
-    "core_forest":  ang["core_forest"],         # bool, forest-core stratum (penetration-derived,
-    "core_open":    ang["core_open"],           # bool, open-core stratum   -- elba only, ALL FALSE
-    "stratum":      ang["stratum"],             # 1 forest / 2 open / 0 other  elsewhere; see pfs_*
+    # core_forest / core_open / stratum are inserted below only when the angles archive
+    # carries them. gen1_save_angles_slope.py omits them where they were not computed,
+    # rather than writing all-False / all-zero as it used to.
     # per-return beam characteristics (from LAS)
     "intensity":    np.asarray(las.intensity, np.uint16),      # raw, uncalibrated return intensity
     "return_number":     np.asarray(las.return_number, np.uint8),
@@ -169,12 +169,16 @@ def _insert_before(d, key, extra):
 
 if canopy_cover is not None:
     cols = _insert_before(cols, "curv_laplacian", {"canopy_cover": canopy_cover})
-_pfs = {k: ang[k] for k in ("pfs_forest", "pfs_open") if k in ang.files}
-if _pfs:
-    cols = _insert_before(cols, "core_forest", _pfs)      # their original position
-else:
-    print("  pfs_forest / pfs_open are absent from the angles archive; those columns are "
-          "omitted, not filled with False.", flush=True)
+# The cover/stratum columns, restored to their original positions when present.
+_strata = {k: ang[k] for k in ("pfs_forest", "pfs_open", "core_forest", "core_open",
+                               "stratum") if k in ang.files}
+if _strata:
+    cols = _insert_before(cols, "intensity", _strata)
+_missing = [k for k in ("pfs_forest", "pfs_open", "core_forest", "core_open", "stratum")
+            if k not in _strata]
+if _missing:
+    print(f"  absent from the angles archive, so omitted here too (not filled): {_missing}",
+          flush=True)
 
 df = pd.DataFrame(cols)
 

@@ -54,6 +54,7 @@ gxf = gx.ravel(); gyf = gy.ravel(); nnorm = np.sqrt(gxf**2 + gyf**2 + 1.0); Zfla
 
 OPTIONAL_STRATA = ("penetration", "floodplain_mask", "core_forest", "core_open",
                    "forest_pfs", "open_pfs", "canopy_cover_pfs")
+_ABSENT = []
 WITHOUT = set()
 for _w in _wo_vals:
     WITHOUT |= set(OPTIONAL_STRATA) if _w.strip() == "all" else {t.strip() for t in _w.split(",") if t.strip()}
@@ -66,15 +67,20 @@ if WITHOUT:
 
 
 def _opt(name, default):
-    """A stratum is REQUIRED unless named in --without. Missing and unstated -> refuse."""
+    """An absent stratum yields None, and the arrays that depend on it are OMITTED from the
+    archive. It used to REFUSE unless named in --without, because absence was zero-filled --
+    the requirement was compensating for the defect rather than fixing it. With the zero-fill
+    gone, absence cannot manufacture a measurement, so it no longer needs announcing: a tile
+    without cover simply produces a file without the cover arrays.
+
+    --without still means something: exclude a layer that IS present, deliberately.
+    """
     if name in WITHOUT:
         return default
     p = f"{D}/{name}.npy"
     if not os.path.exists(p):
-        raise SystemExit(
-            f"{p} is missing. This stratum is required; substituting zeros would make an "
-            f"ABSENT layer read as a MEASURED EMPTY one. Produce it, or state that you are "
-            f"running without it: --without {name}")
+        _ABSENT.append(name)
+        return default
     return np.load(p).ravel()
 g2pen = _opt("penetration", None)
 fld   = _opt("floodplain_mask", None); fld = fld.astype(bool) if fld is not None else None
@@ -110,13 +116,17 @@ slp = slope_deg.ravel()[cell]
 xc = X0 + ((cell % NX)+0.5)*RES; yc = Y0 + ((cell // NX)+0.5)*RES
 d = (z - (Zflat[cell] + gxf[cell]*(x-xc) + gyf[cell]*(y-yc))) * (1.0/nnorm[cell]) * 1000  # mm
 
-# stratum code: 1 forest, 2 farmland(open), 0 other ; plus core flags (all 0/False if inputs absent)
-strat = np.zeros(len(x), np.int8)
+# stratum code: 1 forest, 2 farmland(open), 0 other. When penetration or the floodplain mask
+# is absent this used to be written as ALL ZEROS -- i.e. "every return is 'other'", a claim,
+# where the truth is "not computed". Same for the two core flags as ALL FALSE. Those arrays
+# are now OMITTED instead, so a consumer raises KeyError naming the key.
+strat = None
 if g2pen is not None and fld is not None:
+    strat = np.zeros(len(x), np.int8)
     strat[ing & ((g2pen[cell] < 0.25) & ~fld[cell])] = 1
     strat[ing & ((g2pen[cell] >= 0.45) & ~fld[cell])] = 2
-cf = (core[cell] & ing) if core is not None else np.zeros(len(x), bool)
-co = (copen[cell] & ing) if copen is not None else np.zeros(len(x), bool)
+cf = (core[cell] & ing) if core is not None else None
+co = (copen[cell] & ing) if copen is not None else None
 # A boolean has no "unmeasured" value, so an ABSENT pfs mask must not be written as all
 # False -- that is a claim of "no forest here" where the truth is "not measured", the same
 # zero-fill defect as penetration.npy's 677 no-return cells. Absent masks are OMITTED from
@@ -125,16 +135,20 @@ co = (copen[cell] & ing) if copen is not None else np.zeros(len(x), bool)
 _out = dict(
     incidence=inc.astype(np.float32), scan_angle=sa.astype(np.float32), slope=slp.astype(np.float32),
     d_mm=d.astype(np.float32), cell=cell.astype(np.int32), point_source_id=psid.astype(np.int32),
-    stratum=strat, core_forest=cf, core_open=co, in_grid=ing,
+    in_grid=ing,
     canopy_cover_pfs=(np.where(ing, pfsc[cell], np.nan) if pfsc is not None
                       else np.full(len(x), np.nan)).astype(np.float32))
-if pfsf is not None:
-    _out["pfs_forest"] = pfsf[cell].astype(bool) & ing
-if pfso is not None:
-    _out["pfs_open"] = pfso[cell].astype(bool) & ing
-_absent = [k for k in ("pfs_forest", "pfs_open") if k not in _out]
-if _absent:
-    print(f"  OMITTED from the archive (absent, not empty): {_absent}", flush=True)
+for _k, _v in (("stratum", strat), ("core_forest", cf), ("core_open", co),
+               ("pfs_forest", pfsf[cell].astype(bool) & ing if pfsf is not None else None),
+               ("pfs_open", pfso[cell].astype(bool) & ing if pfso is not None else None)):
+    if _v is not None:
+        _out[_k] = _v
+_omitted = [k for k in ("stratum", "core_forest", "core_open", "pfs_forest", "pfs_open")
+            if k not in _out]
+if _ABSENT:
+    print(f"  layers absent in this tile: {sorted(set(_ABSENT))}", flush=True)
+if _omitted:
+    print(f"  OMITTED from the archive (not computed, NOT empty): {_omitted}", flush=True)
 np.savez_compressed(f"{D}/gen1_csf_angles.npz", **_out)
 print(f"saved {D}/gen1_csf_angles.npz  (n=%d returns, grid {NX}x{NY})" % len(x))
 

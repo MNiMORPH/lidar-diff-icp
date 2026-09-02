@@ -107,11 +107,11 @@ STEPS: tuple[Step, ...] = (
     Step("gen1_angles",
          produces=("gen1_csf_angles.npz",),
          requires=("z_after.npy", "corrections.json"),
-         command=f"{PY} analysis/ridgelines/gen1_save_angles_slope.py {{tile_name}} {{gen1}} "
-                 f"--without penetration,core_forest,core_open,floodplain_mask",
+         command=f"{PY} analysis/ridgelines/gen1_save_angles_slope.py {{tile_name}} {{gen1}}",
          needs=("gen1",),
-         note="Per-return gen1 CSF ground offsets with beam geometry. Drop the --without "
-              "list for whichever strata the tile actually has."),
+         note="Per-return gen1 CSF ground offsets with beam geometry. No flags needed: a "
+              "stratum the tile lacks is simply omitted from the archive and said to be "
+              "omitted. --without is for EXCLUDING a layer that is present."),
     Step("beam_table",
          produces=("beam_offset_table.parquet", "beam_offset_table.head.csv"),
          requires=("gen1_csf_angles.npz", "corrections.json", "curv_laplacian.npy"),
