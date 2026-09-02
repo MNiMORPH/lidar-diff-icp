@@ -78,8 +78,7 @@ def _tif(arr, res, x0, y0, ny, out):
         d.write(np.flipud(arr).astype("float32"), 1)
 
 
-def run_site(name, figdir=FIGDIR, *, skip_penetration=False,
-             leafon_lod_factor=None):
+def run_site(name, figdir=FIGDIR, *, skip_penetration=False):
     before, after, bounds, stream = SITES[name]
     res = 5.0
     if bounds is None:
@@ -104,46 +103,26 @@ def run_site(name, figdir=FIGDIR, *, skip_penetration=False,
           "dropouts, interpolated in the shaded-relief backdrop ONLY, never on the map "
           "or in the DoD (recorded in regions.json)", flush=True)
 
-    # gen2 ground penetration, and the leaf-on/forest-slope flag derived from it.
+    # gen2 ground penetration. OPTIONAL, and it drives nothing -- it is saved for
+    # inspection only.
     #
-    # BOTH ARE OPTIONAL, and the LoD widening they used to drive is now OFF unless asked
-    # for. It was applied at every site with factor 2.0, a number with no derivation
-    # anywhere in this repo, on 5.8-40% of each tile -- so it silently set what counts as
-    # detected change over a large fraction of every product. The mechanism it rested on
-    # (gen2 ground STARVED under leaf-on canopy) is also contradicted by later work in this
-    # repo: gen2 carries ~12x MORE ground than gen1, and the offset tracks the 2008 canopy
-    # rather than 2021 cover. See canopy.py's status section.
-    #
-    # The flag is still computed and SAVED when penetration is available, because it is a
-    # reasonable thing to look at. It just no longer changes the LoD behind the reader's
-    # back.
+    # The leaf-on/forest-slope flag that used to be derived here was RETIRED on 2026-09-02
+    # (Andy). It combined two undefended thresholds, penetration < 0.25 AND slope > 12 deg,
+    # and once its LoD widening was switched off it changed no output: nothing in the
+    # library, the scripts or analysis/ read leafon_flag.npy, and the detector takes no
+    # vegetation term. It was 98,143 cells (28%) at Elba that looked like a filter and was
+    # not one. The mechanism it rested on (gen2 ground STARVED under leaf-on canopy) is
+    # also contradicted by later work here: gen2 carries ~12x MORE ground than gen1, and
+    # the offset tracks the 2008 canopy rather than 2021 cover. See canopy.py's status
+    # section. Vegetation belongs in the cover-matched q2 chain, not in a flag on the LoD.
     if skip_penetration:
-        print(f"[{name}] penetration: SKIPPED as stated (--no-penetration); no leaf-on "
-              f"flag, and the LoD is the heteroscedastic one alone", flush=True)
+        print(f"[{name}] penetration: SKIPPED as stated (--no-penetration)", flush=True)
     else:
-        from lidar_diff_icp.canopy import (ground_penetration, leafon_slope_flag,
-                                           inflate_lod)
-        _Zf = Z21.copy(); _nm = ~np.isfinite(_Zf)
-        if _nm.any():
-            from scipy.ndimage import distance_transform_edt as _edt
-            _Zf = _Zf[tuple(_edt(_nm, return_distances=False, return_indices=True))]
-        _sl = np.degrees(np.arctan(np.hypot(*np.gradient(_Zf, res)[::-1])))
-        # Neither threshold is derived: 12 deg is the repo-wide gentle-ground cut and 0.25
-        # mirrors the forest strata cut. Stated in the run's own output, not left implicit.
-        PEN_MAX, SLOPE_MIN = 0.25, 12.0
+        from lidar_diff_icp.canopy import ground_penetration
         pen = ground_penetration(after, r["bounds"], res, nx, ny)
-        leafon = leafon_slope_flag(pen, _sl, min_penetration=PEN_MAX, min_slope=SLOPE_MIN)
-        msg = (f"[{name}] leaf-on/forest-slope flag: {int(leafon.sum())} cells "
-               f"({100*leafon.mean():.0f}%), flagged where penetration < {PEN_MAX:g} AND "
-               f"slope > {SLOPE_MIN:g} deg (conventions, not derivations); "
-               f"{int((~np.isfinite(pen)).sum())} cells have no gen2 returns and are NaN, "
-               f"not flagged")
-        if leafon_lod_factor is None:
-            msg += " -- LoD NOT widened (pass --leafon-lod-factor to widen it)"
-        else:
-            lod = inflate_lod(lod, leafon, factor=leafon_lod_factor)
-            msg += f" -- LoD x{leafon_lod_factor:g} there, AS REQUESTED on the command line"
-        print(msg, flush=True)
+        print(f"[{name}] gen2 ground penetration: "
+              f"{int((~np.isfinite(pen)).sum())} cells have no gen2 returns and are NaN, "
+              f"not zero", flush=True)
 
     det = detect_change_standard(dod, lod, stable, res)
     change = det["change"]; regions = det["regions"]
@@ -170,9 +149,8 @@ def run_site(name, figdir=FIGDIR, *, skip_penetration=False,
     # permanently, at every site. The dependency is real; only the write order was wrong.
     # (Its VALUES do not come from z_after: make_penetration.py loads that array solely to
     # assert the shape, and ground_penetration reads the gen2 cloud.) The computation stays
-    # above because --leafon-lod-factor must inflate `lod` before `lod` is persisted.
+    # above so that `pen` is computed while the gen2 cloud context is still open.
     if not skip_penetration:
-        np.save(f"{outdir}/leafon_flag.npy", leafon)
         np.save(f"{outdir}/penetration.npy", pen)
 
     # The figures read the products just saved above, via the library, so either can
@@ -192,21 +170,14 @@ def main():
                     help="skip the gen2 ground-penetration layer entirely. It is flagged by "
                          "analysis/ridgelines/AUDIT_findings.md as a gen2-derived variable "
                          "that should not drive gen1-internal conclusions, and "
-                         "canopy_cover_pfs is the cover measure. Without it there is no "
-                         "leaf-on flag.")
-    ap.add_argument("--leafon-lod-factor", type=float, default=None,
-                    help="multiply the LoD by this on leaf-on/forest-slope cells. NOT "
-                         "applied unless given. It used to default to 2.0, which has no "
-                         "derivation in this repo and silently set the detection bar on "
-                         "5.8-40%% of every tile.")
+                         "canopy_cover_pfs is the cover measure.")
     a = ap.parse_args()
     names = a.only if a.only else list(SITES)
     summary = []
     for nm in names:
         try:
             summary.append(run_site(nm, figdir=a.figdir,
-                                    skip_penetration=a.no_penetration,
-                                    leafon_lod_factor=a.leafon_lod_factor))
+                                    skip_penetration=a.no_penetration))
         except Exception as exc:
             import traceback; traceback.print_exc()
             print(f"[{nm}] FAILED: {exc}", flush=True)
