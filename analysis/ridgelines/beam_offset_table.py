@@ -49,9 +49,17 @@ cell = ang["cell"].astype(np.int64)
 print(f"gen1_csf_angles.npz: {n:,} returns")
 
 # --- continuous forest cover at each return's cell (PyForestScan) ---
-cc = np.load(f"{TILE}/canopy_cover_pfs.npy")
+# Canopy cover is CARRIED here, not used: nothing in d_mm, d_mm_corr, the four
+# registration terms, scan angle or incidence depends on it. It was nonetheless a hard
+# np.load, which made a registration/geometry product require a cover layer. Optional now:
+# absent -> the column is ABSENT, not zero-filled, and the run says so.
+_ccp = f"{TILE}/canopy_cover_pfs.npy"
+cc = np.load(_ccp) if os.path.exists(_ccp) else None
+if cc is None:
+    print(f"  no {_ccp}: the canopy_cover COLUMN is omitted from this table. Nothing else "
+          f"changes -- no offset or registration term uses it.", flush=True)
 assert cc.shape == (NY, NX), f"canopy raster {cc.shape} != {(NY, NX)}"
-canopy_cover = cc.ravel()[cell].astype(np.float32)
+canopy_cover = cc.ravel()[cell].astype(np.float32) if cc is not None else None
 
 # --- local surface curvature (Laplacian of gen2 elevation) at each return's cell ---
 # per-cell covariate: ~0 on planar ridgetops/hillslopes, signed on convex/concave forms.
@@ -123,13 +131,13 @@ cols = {
     "dz_swath_mm":   dz_swath,                  # mm, per-swath internal alignment
     "dz_drift_mm":   dz_drift,                  # mm, per-swath along-track drift
     "d_mm_corr":     d_corr,                    # mm, d_mm + all four terms
-    # forest cover
-    "canopy_cover": canopy_cover,               # PyForestScan cover fraction at the cell
+    # forest cover -- "canopy_cover" is inserted after this dict, keeping its position,
+    # only when the layer exists
     # local surface form
     "curv_laplacian": curv_laplacian,           # Laplacian of gen2 elevation at the cell (curvature)
     "aspect_deg":   aspect_deg,                 # downslope azimuth (deg CW from N); NaN on flat cells
-    "pfs_forest":   ang["pfs_forest"],          # bool, PyForestScan forest mask -- the cross-tile
-    "pfs_open":     ang["pfs_open"],            # bool, PyForestScan open mask    -- cover definition
+    # pfs_forest / pfs_open are inserted below only when the angles archive carries them;
+    # gen1_save_angles_slope.py omits them rather than writing all-False
     "core_forest":  ang["core_forest"],         # bool, forest-core stratum (penetration-derived,
     "core_open":    ang["core_open"],           # bool, open-core stratum   -- elba only, ALL FALSE
     "stratum":      ang["stratum"],             # 1 forest / 2 open / 0 other  elsewhere; see pfs_*
@@ -147,6 +155,25 @@ cols = {
     "cell":         ang["cell"],
     "in_grid":      ang["in_grid"],                            # bool, return falls in the analysis grid
 }
+
+# Optional columns, re-inserted at their original positions so the table's column ORDER is
+# unchanged when the layers are present.
+def _insert_before(d, key, extra):
+    out = {}
+    for k, v in d.items():
+        if k == key:
+            out.update(extra)
+        out[k] = v
+    return out
+
+if canopy_cover is not None:
+    cols = _insert_before(cols, "curv_laplacian", {"canopy_cover": canopy_cover})
+_pfs = {k: ang[k] for k in ("pfs_forest", "pfs_open") if k in ang.files}
+if _pfs:
+    cols = _insert_before(cols, "core_forest", _pfs)      # their original position
+else:
+    print("  pfs_forest / pfs_open are absent from the angles archive; those columns are "
+          "omitted, not filled with False.", flush=True)
 
 df = pd.DataFrame(cols)
 
@@ -192,8 +219,8 @@ for k, v in cols.items():
 # --- a few sample rows ---
 print("\nsample rows (in-grid):")
 idx = np.where(ing)[0][:: max(1, ing.sum() // 5)][:5]
-show = ["scan_angle", "slope", "incidence", "d_mm", "d_mm_corr", "canopy_cover", "intensity",
-        "return_number", "number_of_returns", "overlap"]
+show = [c for c in ["scan_angle", "slope", "incidence", "d_mm", "d_mm_corr", "canopy_cover",
+                    "intensity", "return_number", "number_of_returns", "overlap"] if c in cols]
 print("  " + " ".join(f"{c:>10s}" for c in show))
 for i in idx:
     print("  " + " ".join(f"{float(np.asarray(cols[c])[i]):10.3f}" for c in show))

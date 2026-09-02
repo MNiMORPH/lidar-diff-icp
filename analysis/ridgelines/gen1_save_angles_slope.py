@@ -117,15 +117,25 @@ if g2pen is not None and fld is not None:
     strat[ing & ((g2pen[cell] >= 0.45) & ~fld[cell])] = 2
 cf = (core[cell] & ing) if core is not None else np.zeros(len(x), bool)
 co = (copen[cell] & ing) if copen is not None else np.zeros(len(x), bool)
-pf = (pfsf[cell].astype(bool) & ing) if pfsf is not None else np.zeros(len(x), bool)
-po = (pfso[cell].astype(bool) & ing) if pfso is not None else np.zeros(len(x), bool)
-cc = (np.where(ing, pfsc[cell], np.nan) if pfsc is not None
-      else np.full(len(x), np.nan)).astype(np.float32)
-np.savez_compressed(f"{D}/gen1_csf_angles.npz",
+# A boolean has no "unmeasured" value, so an ABSENT pfs mask must not be written as all
+# False -- that is a claim of "no forest here" where the truth is "not measured", the same
+# zero-fill defect as penetration.npy's 677 no-return cells. Absent masks are OMITTED from
+# the archive, so a consumer raises KeyError naming the key instead of reading False.
+# canopy_cover_pfs stays as NaN: for a float, NaN IS the unmeasured value.
+_out = dict(
     incidence=inc.astype(np.float32), scan_angle=sa.astype(np.float32), slope=slp.astype(np.float32),
     d_mm=d.astype(np.float32), cell=cell.astype(np.int32), point_source_id=psid.astype(np.int32),
     stratum=strat, core_forest=cf, core_open=co, in_grid=ing,
-    pfs_forest=pf, pfs_open=po, canopy_cover_pfs=cc)
+    canopy_cover_pfs=(np.where(ing, pfsc[cell], np.nan) if pfsc is not None
+                      else np.full(len(x), np.nan)).astype(np.float32))
+if pfsf is not None:
+    _out["pfs_forest"] = pfsf[cell].astype(bool) & ing
+if pfso is not None:
+    _out["pfs_open"] = pfso[cell].astype(bool) & ing
+_absent = [k for k in ("pfs_forest", "pfs_open") if k not in _out]
+if _absent:
+    print(f"  OMITTED from the archive (absent, not empty): {_absent}", flush=True)
+np.savez_compressed(f"{D}/gen1_csf_angles.npz", **_out)
 print(f"saved {D}/gen1_csf_angles.npz  (n=%d returns, grid {NX}x{NY})" % len(x))
 
 # --- SLOPE DEPENDENCY plot (elba only; needs the penetration strata) ---

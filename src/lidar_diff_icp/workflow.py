@@ -91,8 +91,11 @@ STEPS: tuple[Step, ...] = (
          produces=("canopy_cover_pfs.npy", "forest_pfs.npy", "open_pfs.npy", "pai_pfs.npy"),
          requires=("z_after.npy",),
          command=f"{PY} analysis/forest_metrics_pfs.py {{tile}} {{gen2}}",
-         needs=("gen2",),
-         note="PyForestScan cover -- the cover measure computed identically on every tile."),
+         optional=True, needs=("gen2",),
+         note="PyForestScan cover -- the cover measure computed identically on every tile. "
+              "OPTIONAL: the core DoD does not use it, and the beam table only CARRIES it "
+              "as a column. It is required only by the cover-adjustment family (q2_fit, "
+              "dod_cover, cover_calibration), where it is definitional."),
     Step("penetration",
          produces=("penetration.npy",),
          requires=("z_after.npy",),
@@ -111,12 +114,13 @@ STEPS: tuple[Step, ...] = (
               "list for whichever strata the tile actually has."),
     Step("beam_table",
          produces=("beam_offset_table.parquet", "beam_offset_table.head.csv"),
-         requires=("gen1_csf_angles.npz", "corrections.json", "canopy_cover_pfs.npy",
-                   "curv_laplacian.npy"),
+         requires=("gen1_csf_angles.npz", "corrections.json", "curv_laplacian.npy"),
          command=f"{PY} analysis/ridgelines/beam_offset_table.py {{tile}} {{gen1}}",
          needs=("gen1",),
-         note="Applies the four registration terms. If corrections.json is newer than this "
-              "table, every q2 number downstream is on superseded registration."),
+         note="Applies the four registration terms. Does NOT require canopy cover: it only "
+              "carries it as a column, omitted when the layer is absent. If corrections.json "
+              "is newer than this table, every q2 number downstream is on superseded "
+              "registration."),
     Step("nearground",
          produces=("nearground_cells_sn.npz",),
          requires=("z_after.npy", "curv_laplacian.npy"),
