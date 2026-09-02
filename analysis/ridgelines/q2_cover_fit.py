@@ -52,6 +52,13 @@ _ap.add_argument("--minn", type=int, default=1,
 # and at values that did not even match percentile_float_fit.py's 3 and 5 on the same cells.
 _ap.add_argument("--min-gen1", type=int, default=1,
                  help="gen1 returns needed per cell (1 = definitional: a median needs a point)")
+_ap.add_argument("--cover-layer", default="canopy_cover_pfs.npy",
+                 help="the .npy in the tile dir to use as the COVER covariate. Default is "
+                      "PyForestScan canopy cover (plant area above 2 m). lowveg.npy is the "
+                      "near-ground COMPOSITION of analysis/CONTROL_LOWVEG_OFFSET.md, which "
+                      "was fitted against surveyed control and outperformed canopy cover "
+                      "there; it also lives in the same -1..+2 m band as the q2 percentile "
+                      "itself, whereas canopy cover measures only above 2 m.")
 _ap.add_argument("--min-gen2", type=int, default=1,
                  help="gen2 class-2 near-ground points needed per cell (1 = definitional)")
 ARGS = _ap.parse_args()
@@ -64,7 +71,14 @@ SITE = os.path.basename(D)
 cube = np.load(f"{D}/nearground_cells_sn.npz"); cells = cube["cells"]
 dz = float(cube["dz"]); zlo = float(cube["zlo"])
 zf = np.load(f"{D}/z_after.npy"); N = zf.size; NX = zf.shape[1]
-cover = np.load(f"{D}/canopy_cover_pfs.npy").ravel()[cells]
+_cov_path = f"{D}/{ARGS.cover_layer}"
+if not os.path.exists(_cov_path):
+    raise SystemExit(f"{_cov_path} is missing. It does not run with a different covariate "
+                     f"than the one asked for: a fit on canopy cover and a fit on lowveg are "
+                     f"not comparable, so the substitution must be deliberate. Produce it "
+                     f"(scripts/make_lowveg.py for lowveg.npy) or name another --cover-layer.")
+cover = np.load(_cov_path).ravel()[cells]
+print(f"cover covariate: {ARGS.cover_layer}")
 t = pq.read_table(f"{D}/beam_offset_table.parquet",
                   columns=["cell", "d_mm_corr", "in_grid"])
 g = t["in_grid"].to_numpy().astype(bool)
@@ -162,7 +176,8 @@ for i in range(len(X)):
 # population, and let the consumer read it.
 _cal = {
     "tile": SITE,
-    "relation": "q2(cover); every form is pinned to q2(0) = 0.50 by construction",
+    "relation": f"q2({ARGS.cover_layer}); every form is pinned to q2(0) = 0.50 by construction",
+    "cover_layer": ARGS.cover_layer,
     "settings": {"weight": ARGS.weight, "bin_width": ARGS.binw, "min_n_per_bin": ARGS.minn,
                  "min_gen1_returns": max(1, ARGS.min_gen1),
                  "min_gen2_returns": max(1, ARGS.min_gen2),
@@ -179,7 +194,7 @@ _cal = {
     "inputs_mtime": {f: __import__("datetime").datetime.fromtimestamp(
                         os.path.getmtime(f"{D}/{f}")).isoformat(timespec="seconds")
                      for f in ("corrections.json", "beam_offset_table.parquet",
-                               "nearground_cells_sn.npz", "canopy_cover_pfs.npy",
+                               "nearground_cells_sn.npz", ARGS.cover_layer,
                                "nearground_gen2_class_split.npz")
                      if os.path.exists(f"{D}/{f}")},
     "bins_table": {"cover_mean": [float(v) for v in X], "cover_lo": [float(v) for v in LO],
@@ -188,7 +203,12 @@ _cal = {
                    "blocks": [int(v) for v in NB],
                    "mm_per_0.01_rank": [float(v) for v in MM]},
 }
-_cp = f"{D}/q2_cover_fit.json"
+# The default covariate keeps the canonical name, because dod_cover_corrected.py reads it.
+# Any OTHER covariate writes beside it rather than over it: a lowveg fit and a canopy fit are
+# different relations, and silently replacing one with the other would leave every downstream
+# product claiming a provenance it does not have.
+_cp = (f"{D}/q2_cover_fit.json" if ARGS.cover_layer == "canopy_cover_pfs.npy"
+       else f"{D}/q2_cover_fit_{os.path.splitext(ARGS.cover_layer)[0]}.json")
 json.dump(_cal, open(_cp, "w"), indent=2)
 print(f"\nwrote {_cp}   linear slope {_cal['linear_slope']:+.4f}")
 
@@ -215,7 +235,10 @@ ax.set_title(f"gen2 percentile vs canopy cover, pinned to the median at bare gro
 ax.set_xlim(-0.02, 0.80); ax.set_ylim(0.10, 0.56)
 ax.legend(loc="lower left", fontsize=8.5); ax.grid(alpha=0.25)
 fig.tight_layout()
-tag = f"{SITE}_{ARGS.weight}" + (f"_w{ARGS.binw:g}" if ARGS.binw else "")
+# The covariate goes in the filename. Without it a lowveg fit silently overwrites the canopy
+# fit for the same tile and weighting, and the two are not comparable.
+_cov_tag = os.path.splitext(ARGS.cover_layer)[0].replace("canopy_cover_pfs", "canopy")
+tag = f"{SITE}_{_cov_tag}_{ARGS.weight}" + (f"_w{ARGS.binw:g}" if ARGS.binw else "")
 out = f"analysis/ridgelines/q2_vs_cover_fits_{tag}.png"
 fig.savefig(out)
 print("\nwrote", out)
