@@ -719,6 +719,20 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
     # related: see scripts/backfill_zero_line.py.
     zero_line = int(ps8.min())
     corr, _, _ = coreg.align_swaths(pc, ref=zero_line, tie=swath_tie)
+    # What each flight line uniquely contributes ON THIS GRID. A swath already covered by
+    # another adds overlap but no new information, so whether its constant is right cannot
+    # move that cell -- which is how Battle Creek shipped 1102 dz=+0.0137 m from a tie no
+    # estimator produced, and it mattered on ONE cell by 4.9 mm. Recorded, not acted on:
+    # exclusivity is grid-dependent and a swath can be a shared cell's MAJORITY, so the cut
+    # is a judgement about how far a product may move. See analysis/SWATH_TIE_DEGENERACY.md.
+    swath_cov = coreg.swath_coverage(x8, y8, ps8, bounds, res)
+    _no_new = sorted(k for k, v in swath_cov.items() if v["exclusive"] == 0)
+    if _no_new:
+        print(f"  swaths adding NO exclusive coverage at {res} m: "
+              + ", ".join(f"{k} (max share {swath_cov[k]['max_share']*100:.1f}%, "
+                          f"{swath_cov[k]['cells']} cells)" for k in _no_new)
+              + " -- their alignment constants are recorded but cannot be checked against "
+                "any cell they alone determine", flush=True)
     xc, yc, zc = x8.copy(), y8.copy(), z8.copy()
     for s, (dx, dy, dz) in corr.items():
         m = ps8 == s; xc[m] += dx; yc[m] += dy; zc[m] += dz
@@ -891,6 +905,10 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
             "corrected = z + c, and if the zero line moves by d then z moves by +d and c "
             "by -d, so the corrected surface is unchanged. See ground_control/apply_datum.py "
             "and ground_control/FRAME.md."),
+        "per_swath_coverage_on_this_grid": {
+            str(k): {"cells": v["cells"], "exclusive_cells": v["exclusive"],
+                     "max_share_of_a_cell": round(v["max_share"], 4)}
+            for k, v in sorted(swath_cov.items())},
         "per_swath_internal_alignment_dxdydz_m":
             {str(k): [round(float(v), 4) for v in val] for k, val in corr.items()},
         "cross_epoch_datum": tie_info,

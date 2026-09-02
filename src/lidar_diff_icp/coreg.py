@@ -536,6 +536,50 @@ def align_swaths(pc, res: float = 2.0, exclude=(5, 6, 9), ref=None,
     return corrections, edges, mis
 
 
+def swath_coverage(x, y, point_source_id, bounds, res, *, exclude_mask=None):
+    """Per-swath coverage on the ANALYSIS grid: what each flight line uniquely contributes.
+
+    Andy's criterion, 2026-09-02: a swath whose ground is already covered by another swath
+    adds overlap but no new information, so whether its alignment constant is right cannot
+    change any cell's ground elevation. That is a statement about CONSEQUENCE, and it
+    settles cases no fit diagnostic could -- four were tested against real sites and each
+    misclassified a real one (see analysis/SWATH_TIE_DEGENERACY.md).
+
+    THE GRID MATTERS, so this takes the analysis grid rather than assuming one. Exclusivity
+    is not scale-free: mnrv swath 6251 has 165 exclusive cells at 1 m, 2 at 2 m and 0 at
+    5 m. The grid to ask on is the one where the per-cell ground median is actually formed
+    -- exclusivity at 1 m is irrelevant to a 5 m product.
+
+    Returns ``{swath: {"cells": int, "exclusive": int, "max_share": float}}``:
+    cells it touches, cells where it is the ONLY source, and its largest share of any cell.
+    Both numbers are needed: zero exclusive cells does NOT by itself mean the constant is
+    inconsequential, because a swath can be the MAJORITY of a shared cell (6251 reaches
+    62.5%) and still shift that cell's median.
+
+    This RECORDS; it does not exclude. Turning it into a rule is a judgement about how much
+    a product may move, and belongs to whoever is making the product.
+    """
+    x = np.asarray(x); y = np.asarray(y); ps = np.asarray(point_source_id)
+    X0, Y0, X1, Y1 = bounds
+    nx = int(round((X1 - X0) / res)); ny = int(round((Y1 - Y0) / res))
+    m = (x >= X0) & (x < X1) & (y >= Y0) & (y < Y1)
+    if exclude_mask is not None:
+        m &= ~np.asarray(exclude_mask)
+    cell = ((y[m] - Y0) / res).astype(int) * nx + ((x[m] - X0) / res).astype(int)
+    psm = ps[m]
+    tot = np.bincount(cell, minlength=nx * ny)
+    out = {}
+    for s in np.unique(psm):
+        ns = np.bincount(cell[psm == s], minlength=nx * ny)
+        touched = ns > 0
+        out[int(s)] = {
+            "cells": int(touched.sum()),
+            "exclusive": int(((ns == tot) & touched).sum()),
+            "max_share": float((ns[touched] / tot[touched]).max()) if touched.any() else 0.0,
+        }
+    return out
+
+
 def apply_alignment(pc, corrections):
     """Return copies of (x, y, z) with each swath shifted by its correction."""
     x = pc.x.copy(); y = pc.y.copy(); z = pc.z.copy()

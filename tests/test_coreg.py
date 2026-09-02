@@ -410,3 +410,39 @@ def test_the_rigid_fallback_is_kept_but_its_protection_is_nominal(monkeypatch):
     e = next(x for x in edges if (x[0], x[1]) == (1, 2))
     assert e[5] == 0.0, "its weight is sqrt(n) = 0 -- it enters, but constrains nothing"
     assert corr[2][2] == 0.0, "so swath 2 is left where the minimum-norm solution puts it"
+
+
+def test_swath_coverage_finds_the_line_that_adds_nothing():
+    """A swath entirely inside another's footprint contributes no cell of its own.
+
+    Measured on the real sites, every swath has exclusive cells EXCEPT the two whose ties
+    were fabricated: Battle Creek 1102 (0 exclusive, max share 6.2%) and mnrv 6251 (0
+    exclusive at 5 m, max share 62.5%). Carlton 90 -- which a `converged`-based rule would
+    have wrongly discarded -- has 54 exclusive cells and reaches 100%.
+    """
+    # swath 1 covers a 4x4 block of 1 m cells; swath 2 sits inside it, sharing every cell
+    gx, gy = np.meshgrid(np.arange(4) + 0.5, np.arange(4) + 0.5)
+    x = np.r_[gx.ravel(), gx.ravel()[:4]]
+    y = np.r_[gy.ravel(), gy.ravel()[:4]]
+    ps = np.r_[np.ones(16, int), np.full(4, 2)]
+    cov = coreg.swath_coverage(x, y, ps, (0.0, 0.0, 4.0, 4.0), 1.0)
+
+    assert cov[1]["exclusive"] == 12, "the 12 cells swath 2 never reaches"
+    assert cov[2]["exclusive"] == 0, "swath 2 adds no cell of its own"
+    assert cov[2]["cells"] == 4
+    assert cov[2]["max_share"] == pytest.approx(0.5)
+
+
+def test_swath_coverage_is_reported_on_the_grid_it_is_given():
+    """Exclusivity is NOT scale-free, so the grid is an argument, not an assumption.
+
+    mnrv 6251 has 165 exclusive cells at 1 m, 2 at 2 m and 0 at 5 m. The grid to ask on is
+    the one where the per-cell ground median is formed.
+    """
+    x = np.array([0.4, 0.6, 1.4])      # 1 m: cells 0, 0, 1 -- 2 m: all cell 0
+    y = np.array([0.5, 0.5, 0.5])
+    ps = np.array([1, 2, 2])
+    fine = coreg.swath_coverage(x, y, ps, (0.0, 0.0, 4.0, 2.0), 1.0)
+    coarse = coreg.swath_coverage(x, y, ps, (0.0, 0.0, 4.0, 2.0), 2.0)
+    assert fine[2]["exclusive"] == 1, "at 1 m swath 2 owns a cell of its own"
+    assert coarse[2]["exclusive"] == 0, "at 2 m it shares every cell it touches"
