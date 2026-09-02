@@ -1,14 +1,20 @@
 #!/usr/bin/env python3
 """q2*(cover): the gen2 percentile whose elevation matches gen1's median ground.
 
-PHYSICAL CONSTRAINT: at zero canopy cover both epochs see the true ground, so the two
-medians must agree and q2(0) = 0.50 exactly. Every form here is written to satisfy that
-by construction, leaving only the shape of the decline to be fitted.
+THE INTERCEPT IS FITTED, NOT PINNED (2026-09-02). It used to be forced to 0.50 on the
+argument that at zero cover both epochs see true ground, so their medians must agree. The
+data resist it: Elba's best-determined bin -- 22,732 cells at cover 0.001 -- reads
+q2* = 0.549 +- 0.025 on lowveg and 0.569 +- 0.028 on canopy, both ~2 SE above 0.50. And
+analysis/CONTROL_LOWVEG_OFFSET.md, working from surveyed control, says why it matters:
+"Forcing the origin would ABSORB a real datum offset into the slope if one existed" -- so
+pinning does not merely discard the intercept, it corrupts the coefficient that gets used.
 
-    q2 = 0.5 + b*c                    linear      (1 parameter)
-    q2 = 0.5 + b*c + d*c^2            quadratic   (2)
-    q2 = 0.5 - b*c^k                  power       (2)
-    q2 = 0.5 - b*(1 - exp(-k*c))      saturating  (2)
+    q2 = a + b*c                      linear      (2 parameters)
+    q2 = a + b*c + d*c^2              quadratic   (3)
+    q2 = a - b*c^k                    power       (3)
+    q2 = a - b*(1 - exp(-k*c))        saturating  (3)
+
+Pass --pin-intercept to reproduce fits made before that date.
 
 Inputs: gen1 = per-cell median of `d_mm_corr` (CSF ground + the four registration terms);
 gen2 = the per-cell vendor class-2 near-ground column. Bins carry cluster-robust SEs from
@@ -52,6 +58,9 @@ _ap.add_argument("--minn", type=int, default=1,
 # and at values that did not even match percentile_float_fit.py's 3 and 5 on the same cells.
 _ap.add_argument("--min-gen1", type=int, default=1,
                  help="gen1 returns needed per cell (1 = definitional: a median needs a point)")
+_ap.add_argument("--pin-intercept", action="store_true",
+                 help="force q2(0)=0.50 instead of fitting the intercept. The old default; "
+                      "kept only to reproduce fits made before 2026-09-02.")
 _ap.add_argument("--cover-layer", default="canopy_cover_pfs.npy",
                  help="the .npy in the tile dir to use as the COVER covariate. Default is "
                       "PyForestScan canopy cover (plant area above 2 m). lowveg.npy is the "
@@ -135,13 +144,32 @@ FIT = np.isfinite(Y) & np.isfinite(S) & (S > 0)      # bins usable in the fit
 SIG = S if ARGS.weight == "se" else 1.0 / np.sqrt(W.astype(float))
 Xf, Yf, SIGf = X[FIT], Y[FIT], SIG[FIT]
 
-FORMS = {
-    "linear      0.5+b·c":        (lambda c, b: 0.5 + b * c, [-0.25]),
-    "quadratic   0.5+b·c+d·c²":   (lambda c, b, d: 0.5 + b * c + d * c**2, [-0.1, -0.2]),
-    "power       0.5−b·cᵏ":       (lambda c, b, k: 0.5 - b * np.power(np.clip(c, 0, None), k),
-                                   [0.34, 1.5]),
-    "saturating  0.5−b(1−e^−kc)": (lambda c, b, k: 0.5 - b * (1 - np.exp(-k * c)), [0.4, 2.0]),
-}
+# The intercept is FITTED, not pinned (Andy, 2026-09-02). It used to be forced to 0.50 on
+# the argument that bare ground gives good returns so the median should be true ground. The
+# data resist it: Elba's best-determined bin -- 22,732 cells at cover 0.001 -- reads
+# q2* = 0.549 +- 0.025 on lowveg and 0.569 +- 0.028 on canopy, both about 2 SE above 0.50.
+# analysis/CONTROL_LOWVEG_OFFSET.md reaches the same conclusion from surveyed control and
+# says why it matters: "Forcing the origin would ABSORB a real datum offset into the slope
+# if one existed" -- so a pinned fit does not merely lose the intercept, it corrupts the
+# coefficient we actually use. Its own free intercept came out -5.7 +/- 4.3 mm.
+# --pin-intercept restores the old behaviour for reproducing earlier fits.
+_PIN = 0.5
+if ARGS.pin_intercept:
+    FORMS = {
+        "linear      0.5+b·c":        (lambda c, b: _PIN + b * c, [-0.25]),
+        "quadratic   0.5+b·c+d·c²":   (lambda c, b, d: _PIN + b * c + d * c**2, [-0.1, -0.2]),
+        "power       0.5−b·cᵏ":       (lambda c, b, k: _PIN - b * np.power(np.clip(c, 0, None), k),
+                                       [0.34, 1.5]),
+        "saturating  0.5−b(1−e^−kc)": (lambda c, b, k: _PIN - b * (1 - np.exp(-k * c)), [0.4, 2.0]),
+    }
+else:
+    FORMS = {
+        "linear      a+b·c":          (lambda c, a, b: a + b * c, [0.5, -0.25]),
+        "quadratic   a+b·c+d·c²":     (lambda c, a, b, d: a + b * c + d * c**2, [0.5, -0.1, -0.2]),
+        "power       a−b·cᵏ":         (lambda c, a, b, k: a - b * np.power(np.clip(c, 0, None), k),
+                                       [0.5, 0.34, 1.5]),
+        "saturating  a−b(1−e^−kc)":   (lambda c, a, b, k: a - b * (1 - np.exp(-k * c)), [0.5, 0.4, 2.0]),
+    }
 fits = {}
 for name, (fn, p0) in FORMS.items():
     par, _ = curve_fit(fn, Xf, Yf, p0=p0, sigma=SIGf, absolute_sigma=(ARGS.weight=='se'), maxfev=200000)
@@ -149,7 +177,9 @@ for name, (fn, p0) in FORMS.items():
     chi2 = float(np.sum(((Yf - fn(Xf, *par)) / SIGf) ** 2) / (FIT.sum() - len(par)))
     fits[name] = (fn, par, pred, chi2)
 
-print(f"q2* per cover bin, fits constrained to q2(0)=0.50, weighting = {ARGS.weight}\n")
+print(f"q2* per cover bin, intercept "
+      + ("PINNED to 0.50" if ARGS.pin_intercept else "FITTED (not pinned)")
+      + f", weighting = {ARGS.weight}\n")
 print(f"  {'cover bin':13s} {'cells':>7s} {'blk':>5s} {'mean c':>7s} | {'q2*':>6s} {'+-':>5s} | "
       + " ".join(f"{n.split()[0][:9]:>9s}" for n in FORMS))
 for i in range(len(X)):
@@ -176,7 +206,10 @@ for i in range(len(X)):
 # population, and let the consumer read it.
 _cal = {
     "tile": SITE,
-    "relation": f"q2({ARGS.cover_layer}); every form is pinned to q2(0) = 0.50 by construction",
+    "relation": (f"q2({ARGS.cover_layer}); intercept "
+                 + ("pinned to 0.50 by construction" if ARGS.pin_intercept
+                    else "fitted, not pinned")),
+    "intercept_pinned": bool(ARGS.pin_intercept),
     "cover_layer": ARGS.cover_layer,
     "settings": {"weight": ARGS.weight, "bin_width": ARGS.binw, "min_n_per_bin": ARGS.minn,
                  "min_gen1_returns": max(1, ARGS.min_gen1),
@@ -187,7 +220,10 @@ _cal = {
                    "bins": int(len(X)), "bins_used_in_fit": int(FIT.sum())},
     "forms": {n: {"parameters": [float(v) for v in fits[n][1]],
                   "chi2_per_dof": float(fits[n][3])} for n in FORMS},
-    "linear_slope": float(fits["linear      0.5+b\u00b7c"][1][0]),
+    # The slope is the LAST linear parameter either way: [b] when pinned, [a, b] when free.
+    "linear_slope": float(fits[[n for n in FORMS if n.startswith("linear")][0]][1][-1]),
+    "linear_intercept": (0.5 if ARGS.pin_intercept else
+                         float(fits[[n for n in FORMS if n.startswith("linear")][0]][1][0])),
     # Input mtimes, so a consumer can see whether this fit predates its own inputs. The
     # chain is beam_offset_table <- gen1_csf_angles <- corrections.json; a table older than
     # the corrections carries registration terms that are no longer the ones in force.
