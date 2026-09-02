@@ -45,8 +45,16 @@ def header_bounds(before, res):
 FIGDIR = figures.DEFAULT_FIGDIR
 
 SITES = {
-    "elba": ("data/before/4342-29-64.laz", "data/after/3dep2021_fulltile.laz",
-             (577492.8, 4882737.6, 580032.8, 4886237.6), False),
+    # gen2 was 3dep2021_fulltile.laz until 2026-09-02: 16,785,971 points, 1.89 pts/m2,
+    # against 182,923,322 (20.55 pts/m2) sitting beside it in the same extent -- a 10.90x
+    # thinning, and 19.27x on the ground class (0.30 vs 5.78 pts/m2). Every other site
+    # already read its full cloud, so Elba alone was differenced from something 6.03-27.53x
+    # thinner than its peers: a cross-site method artifact before it is an uncertainty
+    # problem. It also put 109,894 of 339,950 DoD cells (32.33%) below cell_plane_roughness
+    # min_n=6, so they lost their LoD entirely. stream=True because 182.9M points will not
+    # fit in memory whole; it is the same path the other four large sites use.
+    "elba": ("data/before/4342-29-64.laz", "data/after/3dep2021_fulldensity.laz",
+             (577492.8, 4882737.6, 580032.8, 4886237.6), True),
     "whitewater": ("data/before/4358-26-03.laz", "data/after/3dep_4358_fulltile.laz",
                    None, True),
     "mnrv": ("data/before_mnrv/4342-23-01.laz", "data/after_mnrv/mnrv_3dep2021.laz",
