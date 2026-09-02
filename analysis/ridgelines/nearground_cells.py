@@ -28,7 +28,16 @@ ap.add_argument("--chunk", type=int, default=3_000_000)
 ap.add_argument("--out", default=None)
 A = ap.parse_args()
 TILE = os.path.basename(A.tile.rstrip("/"))
-OUT = A.out or f"{A.tile}/nearground_cells.npz"
+# --out names a PRODUCT OF THIS TILE, so a bare filename resolves inside the tile
+# directory -- the same place the default goes. It used to be handed to np.savez_compressed
+# verbatim, so `--out nearground_cells_sn.npz` (exactly what lidar-diff-workflow --plan
+# prints) wrote 5 MB into the current working directory, and every consumer then failed
+# with FileNotFoundError looking in the tile. The command succeeded and the product went
+# somewhere nothing reads: worse than an error. Pass a path with a directory component to
+# put it anywhere else.
+OUT = A.out or "nearground_cells.npz"
+if not os.path.dirname(OUT):
+    OUT = os.path.join(A.tile, OUT)
 
 
 def grid(tile):
