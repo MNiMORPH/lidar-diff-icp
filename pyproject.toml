@@ -38,6 +38,8 @@ m3c2 = ["py4dgeo"]          # point-based M3C2 cross-check (scripts/m3c2_pointcl
 # several steps read multi-gigabyte clouds and regenerating an adopted product is a
 # judgement rather than a scheduling detail.
 lidar-diff-workflow = "lidar_diff_icp.workflow:main"
+# The two standard per-site figures, rebuildable from the saved products alone.
+lidar-diff-figures = "lidar_diff_icp.figures:main"
 
 [project.urls]
 Repository = "https://github.com/MNiMORPH/lidar-diff-icp"

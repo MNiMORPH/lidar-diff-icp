@@ -23,6 +23,7 @@ import matplotlib.pyplot as plt
 
 from lidar_diff_icp.pipeline import difference_dem
 from lidar_diff_icp.detect import detect_change_standard
+from lidar_diff_icp import figures
 from lidar_diff_icp.viz import hillshade
 
 
@@ -36,6 +37,13 @@ def header_bounds(before, res):
 
 
 # name -> (before, after (FULL classified 3DEP cloud), bounds | None=from header, stream)
+#: Where the two standard per-site figures go. It was "figures/rerun_class2" -- the name of
+#: the 2026-08-19 experiment that first ran every site with ASPRS class-2 gen2 ground
+#: (cd14c35). class2 has been the default ever since, so the name recorded a question
+#: settled two weeks ago while the directory held the CURRENT products for all six sites.
+#: Named for its content now.
+FIGDIR = figures.DEFAULT_FIGDIR
+
 SITES = {
     "elba": ("data/before/4342-29-64.laz", "data/after/3dep2021_fulltile.laz",
              (577492.8, 4882737.6, 580032.8, 4886237.6), False),
@@ -62,42 +70,7 @@ def _tif(arr, res, x0, y0, ny, out):
         d.write(np.flipud(arr).astype("float32"), 1)
 
 
-def fig_dod_lod(name, Z21, dod, lod, res, X0, Y0, nx, ny, figdir):
-    hs = hillshade(Z21, res, X0, Y0, fill_gaps=False)  # nodata -> white, consistent with the LoD panel
-    ext = (X0, X0 + nx * res, Y0, Y0 + ny * res); v = 0.3
-    fig, ax = plt.subplots(1, 2, figsize=(15, 9))
-    ax[0].imshow(hs, extent=ext, origin="lower", cmap="gray", alpha=0.6)
-    im0 = ax[0].imshow(dod, extent=ext, origin="lower", cmap="RdBu", vmin=-v, vmax=v)
-    ax[0].set_title(f"{name}: DEM of Difference (gridded ground): gen2 - gen1 (m)\n"
-                    "red = erosion, blue = deposition")
-    fig.colorbar(im0, ax=ax[0], shrink=0.6, extend="both")
-    im1 = ax[1].imshow(lod, extent=ext, origin="lower", cmap="viridis", vmin=0, vmax=0.2)
-    ax[1].set_title("level of detection (m)")
-    fig.colorbar(im1, ax=ax[1], shrink=0.6, extend="max")
-    for a in ax: a.set_xlabel("Easting (m)"); a.set_ylabel("Northing (m)")
-    out = f"{figdir}/{name}_dod_lod.png"
-    fig.savefig(out, dpi=130, bbox_inches="tight"); plt.close(fig)
-    return out
-
-
-def fig_dem_change(name, Z21, dod, change, regions, res, X0, Y0, nx, ny, figdir):
-    """DEM hillshade with the robustly-detected DoD cells at 70% opacity."""
-    hs = hillshade(Z21, res, X0, Y0, fill_gaps=True)  # gap-filled backdrop, no white holes
-    ext = (X0, X0 + nx * res, Y0, Y0 + ny * res); v = 0.3
-    over = np.where(change, dod, np.nan)
-    net = sum(r["volume_m3"] for r in regions)
-    fig, ax = plt.subplots(figsize=(10, 11))
-    ax.imshow(hs, extent=ext, origin="lower", cmap="gray")
-    im = ax.imshow(over, extent=ext, origin="lower", cmap="RdBu", vmin=-v, vmax=v, alpha=0.7)
-    ax.set_title(f"{name}: topographic change above detection limits")
-    ax.set_xlabel("Easting (m)"); ax.set_ylabel("Northing (m)")
-    fig.colorbar(im, ax=ax, shrink=0.6, extend="both", label="detected DoD (m)")
-    out = f"{figdir}/{name}_change.png"
-    fig.savefig(out, dpi=130, bbox_inches="tight"); plt.close(fig)
-    return out
-
-
-def run_site(name, figdir="figures/rerun_class2", *, skip_penetration=False,
+def run_site(name, figdir=FIGDIR, *, skip_penetration=False,
              leafon_lod_factor=None):
     before, after, bounds, stream = SITES[name]
     res = 5.0
@@ -184,8 +157,10 @@ def run_site(name, figdir="figures/rerun_class2", *, skip_penetration=False,
                                           "tau_sys_m", "method")},
                    "gen2_null_cells": int((~np.isfinite(Z21)).sum())}, fh, indent=2)
 
-    fa = fig_dod_lod(name, Z21, dod, lod, res, X0, Y0, nx, ny, figdir)
-    fb = fig_dem_change(name, Z21, dod, change, regions, res, X0, Y0, nx, ny, figdir)
+    # The figures read the products just saved above, via the library, so either can
+    # be rebuilt later without re-running any point-cloud work.
+    fa = figures.dod_lod_figure(str(outdir), figdir, name)
+    fb = figures.change_figure(str(outdir), figdir, name)
     print(f"[{name}] wrote {fa}  and  {fb}", flush=True)
     return dict(name=name, sigma=r["stable_sigma"], med_lod=float(np.nanmedian(lod)),
                 n_regions=len(regions))
@@ -194,7 +169,7 @@ def run_site(name, figdir="figures/rerun_class2", *, skip_penetration=False,
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--only", nargs="*", help="run only these site names")
-    ap.add_argument("--figdir", default="figures/rerun_class2")
+    ap.add_argument("--figdir", default=FIGDIR)
     ap.add_argument("--no-penetration", action="store_true",
                     help="skip the gen2 ground-penetration layer entirely. It is flagged by "
                          "analysis/ridgelines/AUDIT_findings.md as a gen2-derived variable "
