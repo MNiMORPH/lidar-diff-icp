@@ -38,6 +38,16 @@ class Coreg:
     nmad_after: float  # after (the achieved co-registration floor, m)
     n_iter: int
     converged: bool
+    #: Cells in the population that actually DETERMINED ``dz`` -- the only number that
+    #: says whether the reported vertical tie is an observation at all. It is not ``n``:
+    #: ``n`` counts the cosine fit's cells, and the rigid vertical fallback legitimately
+    #: reports n=0 while its ``dz`` rests on a real overlap. Zero here means no estimator
+    #: ever saw data, and the value is whatever the code happened to leave in place.
+    #:
+    #: REQUIRED, with no default. A default of 0 would fail closed (every edge dropped) and
+    #: a default of ``n`` would fail open (a population asserted where none was counted).
+    #: Both hide the question; constructing a Coreg means answering it.
+    n_dz: int
 
 
 def slope_aspect(z: np.ndarray, res: float):
@@ -131,9 +141,13 @@ def nuth_kaab(z_ref: np.ndarray, z_src: np.ndarray, res: float,
     # airborne shifts are sub-metre) or fails to beat it.
     dz0 = float(np.nanmedian(dh0))
     nmad_rigid = _nmad((dh0 - dz0)[np.isfinite(dh0)])
+    n_dz = n_used                               # the cosine fit's own population
     if (not np.isfinite(nmad_after)) or nmad_after > nmad_rigid or np.hypot(dx, dy) > 10.0:
         dx = dy = 0.0; dz = dz0; nmad_after = nmad_rigid; converged = True
         coef_cov = np.full((3, 3), np.nan)      # horizontal not estimated
+        # dz is now the median of dh0, so its population is dh0's finite cells -- which is
+        # how the fallback can legitimately report n=0 and still carry a real vertical tie.
+        n_dz = int(np.isfinite(dh0).sum())
 
     # Shift-component uncertainty from the cosine-fit covariance. The eastward
     # increment is a*sin(b) = p2 and the northward is a*cos(b) = p1, so their
@@ -144,7 +158,7 @@ def nuth_kaab(z_ref: np.ndarray, z_src: np.ndarray, res: float,
     dz_sigma = float(nmad_after / np.sqrt(max(n_used, 1)))
 
     return Coreg(dx, dy, dz, dx_sigma, dy_sigma, dz_sigma, n_used,
-                 nmad_before, nmad_after, it, converged)
+                 nmad_before, nmad_after, it, converged, n_dz)
 
 
 def tie_translation_tilt(z_ref, z_src, res, x_origin, y_origin,
@@ -477,6 +491,25 @@ def align_swaths(pc, res: float = 2.0, exclude=(5, 6, 9), ref=None,
         # dz and must be kept.
         if not np.isfinite((c.dx, c.dy, c.dz)).all():
             continue
+        # NOT FILTERED HERE -- see analysis/SWATH_TIE_DEGENERACY.md. `c.n_dz` now travels
+        # with every observation so the question can be asked, but four candidate rules were
+        # tested against the real sites and every one of them misclassifies a real case:
+        #
+        #   n == 0                  the rigid fallback legitimately has n=0 with a valid dz
+        #   converged is False      kills Carlton 89-90: 22,293 cells, finite dx_sigma, and
+        #                           it IMPROVED the scatter -- slow, not failed
+        #   n_dz <= 0               too permissive: Battle Creek 1014-1102 reports n_dz=36
+        #                           and keeps its -3.4640 m extrapolation
+        #   dtan must bracket 0     kills 1012-1014: 37,436 cells, dtan entirely negative,
+        #                           dz -0.0072 m and perfectly sound
+        #
+        # The quantity that actually separates them is the LEVER ARM of the intercept
+        # extrapolation -- dtan span 0.0000 and 0.0184 for the two bad pairs against
+        # 0.126 to 1.56 for the good ones -- but turning that into a cut means inventing a
+        # ratio threshold, which is the trap this project exists to avoid. The
+        # threshold-free answer is to weight the network by each observation's own variance
+        # so an extrapolated tie self-downweights; that is a change to the weighting scheme
+        # and is Andy's call.
         edges.append((a, b, c.dx, c.dy, c.dz, float(c.n)))
     if not edges:
         raise ValueError("no overlapping swath pairs")
@@ -635,4 +668,7 @@ def coregister_swaths(pc, swath_ref: int, swath_src: int, res: float = 2.0,
     # ``n`` is left as the horizontal fit's count ON PURPOSE: align_swaths uses it as the
     # network least-squares weight, and holding it fixed makes the two tie modes differ in
     # ONE thing, the vertical estimator, rather than in the weighting as well.
-    return replace(c, dz=k)
+    # ``_n`` is the intercept fit's own population and used to be discarded. dz now comes
+    # from THAT estimator, so its population must travel with it -- otherwise a tie fitted
+    # on nothing is indistinguishable from one fitted on the whole sidelap.
+    return replace(c, dz=k, n_dz=int(_n))

@@ -179,8 +179,11 @@ def test_align_swaths_ignores_nan_edge(monkeypatch):
     observation must NOT poison the least-squares network -- the connected chain
     1-2-3 still determines every swath. Regression for the Carlton all-NaN DoD."""
     from lidar_diff_icp import io
-    def mk(dz, n):                                  # a pairwise Coreg observation
-        return coreg.Coreg(0.0, 0.0, dz, 0.0, 0.0, 0.0, n, 0.1, 0.05, 3, True)
+    def mk(dz, n, n_dz=None):                       # a pairwise Coreg observation
+        # n_dz defaults to n here: these fakes stand for ordinary cosine-fit observations,
+        # where the cells that determined dz ARE the cells of the fit.
+        return coreg.Coreg(0.0, 0.0, dz, 0.0, 0.0, 0.0, n, 0.1, 0.05, 3, True,
+                           n if n_dz is None else n_dz)
     fake = {(1, 2): mk(-0.02, 1000), (2, 3): mk(-0.03, 1000),
             (1, 3): mk(np.nan, 0)}                  # the poisoning empty-overlap edge
     monkeypatch.setattr(coreg, "coregister_swaths",
@@ -337,3 +340,73 @@ def test_swath_tie_intercept_is_extent_invariant():
     assert int_w == pytest.approx(int_d, abs=0.002)
     assert int_w == pytest.approx(-k_true, abs=0.003)
     assert int_d == pytest.approx(-k_true, abs=0.003)
+
+
+def test_n_dz_travels_with_every_observation(monkeypatch):
+    """The population behind dz is now recorded, though nothing filters on it yet.
+
+    Four candidate rules were tested against the real sites and each misclassifies a real
+    case -- see analysis/SWATH_TIE_DEGENERACY.md and the comment in align_swaths. This
+    pins the plumbing: n_dz is required on Coreg, so no observation can be constructed
+    without answering "how many cells determined this?", and it reaches the caller.
+    """
+    from lidar_diff_icp import io
+
+    def mk(dz, n, n_dz, converged):
+        return coreg.Coreg(0.0, 0.0, dz, 0.0, 0.0, 0.0, n, 0.1, 0.09, 20, converged, n_dz)
+
+    fake = {(1, 2): mk(-0.02, 1000, 1000, True),
+            (2, 3): mk(-0.0143, 22293, 22293, False),   # SLOW: real, must survive
+            (1, 3): mk(-3.4640, 0, 36, False)}          # the extrapolated sliver tie
+    monkeypatch.setattr(coreg, "coregister_swaths",
+                        lambda pc, a, b, res, exclude, tie="overlap_median": fake[(a, b)])
+    ps = np.array([1, 1, 2, 2, 3, 3])
+    pc = io.PointCloud(np.zeros(6), np.zeros(6), np.zeros(6), ps,
+                       np.zeros(6), np.zeros(6), np.zeros(6, int), io.MN_GEN1_CRS)
+    corr, edges, mis = coreg.align_swaths(pc, ref=1)
+
+    kept = {(e[0], e[1]) for e in edges}
+    assert (2, 3) in kept, "a slow but well-populated fit must survive"
+    # NOT filtered today: the sliver tie is still admitted, at weight sqrt(n)=0
+    assert (1, 3) in kept
+    assert next(e for e in edges if (e[0], e[1]) == (1, 3))[5] == 0.0
+    # the chain still determines swath 3 from the real edge
+    assert abs((corr[3][2] - corr[2][2]) - (-0.0143)) < 1e-9
+
+
+def test_a_coreg_cannot_be_built_without_stating_its_population():
+    import pytest as _pt
+    with _pt.raises(TypeError):
+        coreg.Coreg(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 10, 0.1, 0.1, 3, True)   # no n_dz
+
+
+def test_the_rigid_fallback_is_kept_but_its_protection_is_nominal(monkeypatch):
+    """The case the older comment protects is kept -- and never constrained anything.
+
+    A rigid-fallback edge can have n=0 (the cosine loop broke before any fit, the guard
+    then fired on a non-finite nmad). n_dz > 0, so it is rightly NOT dropped. But
+    align_swaths weights the network by sqrt(n), deliberately -- coregister_swaths holds n
+    at the horizontal fit's count so the two tie modes differ in the vertical estimator
+    ALONE, not in the weighting. So such an edge enters at zero weight and constrains
+    nothing, exactly as before this change.
+
+    Recorded rather than fixed: making the weight n_dz would change the network solution at
+    every site and break that stated design property. Whether a fallback tie should carry
+    weight is a separate question.
+    """
+    from lidar_diff_icp import io
+
+    def mk(dz, n, n_dz):
+        return coreg.Coreg(0.0, 0.0, dz, np.nan, np.nan, 0.01, n, 0.1, 0.1, 1, True, n_dz)
+
+    fake = {(1, 2): mk(-0.02, 0, 4200)}     # rigid fallback: n=0, but 4200 cells behind dz
+    monkeypatch.setattr(coreg, "coregister_swaths",
+                        lambda pc, a, b, res, exclude, tie="overlap_median": fake[(a, b)])
+    ps = np.array([1, 1, 2, 2])
+    pc = io.PointCloud(np.zeros(4), np.zeros(4), np.zeros(4), ps,
+                       np.zeros(4), np.zeros(4), np.zeros(4, int), io.MN_GEN1_CRS)
+    corr, edges, mis = coreg.align_swaths(pc, ref=1)
+    assert (1, 2) in {(e[0], e[1]) for e in edges}, "n_dz > 0, so it must not be dropped"
+    e = next(x for x in edges if (x[0], x[1]) == (1, 2))
+    assert e[5] == 0.0, "its weight is sqrt(n) = 0 -- it enters, but constrains nothing"
+    assert corr[2][2] == 0.0, "so swath 2 is left where the minimum-norm solution puts it"
