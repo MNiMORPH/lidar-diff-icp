@@ -46,7 +46,7 @@ import laspy
 import pandas as pd
 from scipy.ndimage import gaussian_filter, uniform_filter, distance_transform_edt as edt
 
-from . import io, coreg
+from . import groundq, io, coreg
 from .ground import classify_ground_csf
 
 
@@ -298,6 +298,7 @@ def heteroscedastic_lod(dod, slope_deg, abs_curv, stable, *, stderr=None,
 
 
 def _stream_ground(path, bounds, res, nx, ny, q, *, plane=None, chunk=8_000_000,
+                   q_curve=None, q_min_count=20, q_fallback=0.50,
                    coarse_bins=120, bw=0.02, down=3.0, up=2.0, after_ground="class2"):
     """Per-cell low-q ground, spread, and count by STREAMING the cloud in chunks,
     so peak RAM is O(cells), not O(points) -- for statewide runs where the dense
@@ -356,10 +357,22 @@ def _stream_ground(path, bounds, res, nx, ny, q, *, plane=None, chunk=8_000_000,
 
     with np.errstate(invalid="ignore"):
         def coarse_pct(p):
-            b = np.argmax(ccdf >= (p * ntot)[:, None], axis=1)
+            # p may be a SCALAR or a PER-CELL array; (p * ntot) broadcasts either way, which
+            # is what lets the calibrated route cost no extra pass over the cloud.
+            b = np.argmax(ccdf >= (np.asarray(p) * ntot)[:, None], axis=1)
             return np.where(np.isfinite(lo), lo + (b + 0.5) * span / CB, np.nan)
-        anchor = coarse_pct(q)
+        # SPREAD FIRST. The calibrated percentile is a function of the cell's own spread, so
+        # it has to exist before q does. It is read off the coarse pass that was already
+        # being computed, so nothing is added but an ordering.
         spread = 1.4826 * (coarse_pct(0.75) - coarse_pct(0.25)) / 1.349
+        if q_curve is not None:
+            q = groundq.q_from_spread(spread * 1000.0, q_curve,
+                                      min_count=q_min_count, count=ntot)
+            # A cell the curve declines to estimate keeps the fallback q rather than
+            # vanishing: the ground is still gridded there, just not corrected, and the
+            # count of such cells is reported by the caller.
+            q = np.where(np.isfinite(q), q, q_fallback)
+        anchor = coarse_pct(q)
     flo = anchor - down; SPAN = down + up; FB = int(round(SPAN / bw))  # pass 3: fine window
     below = np.zeros(N, np.int64); fhist = np.zeros(N * FB, np.int64)
     for f, v in chunks():
@@ -380,7 +393,8 @@ def _stream_ground(path, bounds, res, nx, ny, q, *, plane=None, chunk=8_000_000,
     return g.reshape(ny, nx), spread.reshape(ny, nx), cnt.reshape(ny, nx)
 
 
-def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
+def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q="calibrated",
+                   gen2_epoch="gen2_2021_control",
                    correction_surface=False, along_track_drift=True, tie="reference",
                    ground="slope_normal", sn_smooth_cells=1.2, stream=False,
                    ground_source="csf", after_ground="class2", csf_pdal=None,
@@ -510,12 +524,36 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
     X0, Y0, X1, Y1 = bounds
     nx = int(round((X1 - X0) / res)); ny = int(round((Y1 - Y0) / res))
 
-    def cellstat(x, y, z, how, q=ground_q):
+    # ---- the ground percentile: calibrated per cell, or a stated constant --------------
+    # "calibrated" (the default since 2026-09-04) reads the curve fitted against surveyed
+    # control by analysis/calibrate_ground_q.py and gives EACH CELL the percentile its own
+    # class-2 spread earns. A float pins the old behaviour and is still accepted -- but it
+    # must be stated, because ground_q = 0.50 was measured to carry a +8.1 mm bias against
+    # 519 surveyed marks and is only right where the ground class is clean.
+    _GQ_CURVE = None
+    if isinstance(ground_q, str):
+        if ground_q != "calibrated":
+            raise ValueError(f"ground_q must be a float or 'calibrated', not {ground_q!r}")
+        if not stream:
+            raise ValueError(
+                "ground_q='calibrated' needs stream=True. The in-memory path grids the "
+                "ground with pandas groupby.quantile, which takes ONE quantile for all "
+                "cells, so a per-cell percentile cannot be applied there. Refusing rather "
+                "than silently falling back to 0.50: a cell that was never corrected must "
+                "not end up looking corrected. Pass stream=True, or ground_q=0.50 to state "
+                "that the uncorrected median is what you want.")
+        _GQ_CURVE = groundq.load_curve(gen2_epoch, expect_epoch=gen2_epoch)
+        _GQ_SCALAR = 0.50
+        print(groundq.describe(_GQ_CURVE), flush=True)
+    else:
+        _GQ_SCALAR = float(ground_q)
+
+    def cellstat(x, y, z, how, q=None):
         ix = ((x - X0) / res).astype(int); iy = ((y - Y0) / res).astype(int)
         ok = (ix >= 0) & (ix < nx) & (iy >= 0) & (iy < ny)
         gb = pd.Series(z[ok]).groupby(iy[ok] * nx + ix[ok])
         if how == "ground":
-            s = gb.quantile(q)
+            s = gb.quantile(_GQ_SCALAR if q is None else q)
         elif how == "spread":
             s = 1.4826 * (gb.quantile(0.75) - gb.quantile(0.25)) / 1.349
         else:  # count
@@ -528,7 +566,8 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
     # statewide runs; else load it in memory. A stays None in streaming mode.
     A = None
     if stream:
-        Z21, s21, n21 = _stream_ground(after_laz, bounds, res, nx, ny, ground_q,
+        Z21, s21, n21 = _stream_ground(after_laz, bounds, res, nx, ny, _GQ_SCALAR,
+                                       q_curve=_GQ_CURVE,
                                        after_ground=after_ground)
         r21 = _stream_roughness(after_laz, bounds, res, nx, ny, after_ground=after_ground)
     else:
@@ -885,7 +924,12 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
 
     corrections = {
         "epochs": "after - before (positive = deposition)",
-        "crs": "EPSG:26915", "res_m": res, "ground_percentile": ground_q,
+        "crs": "EPSG:26915", "res_m": res,
+        "ground_percentile": ("calibrated per cell from the class-2 spread"
+                              if _GQ_CURVE is not None else _GQ_SCALAR),
+        "ground_q_curve": (dict(path=_GQ_CURVE["path"], epoch=_GQ_CURVE["epoch"],
+                                n_marks=_GQ_CURVE["n_marks"], **_GQ_CURVE["provenance"])
+                           if _GQ_CURVE is not None else None),
         "ground_estimator": ground, "ground_source": ground_source,
         "bounds": [float(b) for b in bounds], "stable_1sigma_m": round(sigma, 4),
         "robust_stable": robust_stable,

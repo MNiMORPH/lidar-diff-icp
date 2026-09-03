@@ -31,6 +31,13 @@ _ap.add_argument("--set", dest="set_", default="gen2_2021_control",
                       "transferable between epochs: 2008 was flown leaf-off in November and "
                       "2021 at green-up in May, and the classifiers differ too.")
 _ap.add_argument("--out", default=None)
+_ap.add_argument("--diagnostics", action="store_true",
+                 help="also print every number quoted in "
+                      "analysis/GROUND_Q_FROM_CLASS2_SPREAD.md: the rank summary, the "
+                      "covariate comparison against lowveg, the spread-bin table with "
+                      "bootstrap CIs, and the two-regime test. Without this the doc is only "
+                      "half reproducible, which is the gap that keeps recurring on this "
+                      "project.")
 _A = _ap.parse_args()
 SET = _A.set_
 OUTNPZ = _A.out or f"data/derived/ground_q_vs_class2sd_{SET}.npz"
@@ -52,6 +59,11 @@ for t in marks(SET).itertuples():
     mu = (float(t.elevation) - float(coef[0])) / nn
     rows.append(dict(point_id=t.point_id, easting=t.easting, northing=t.northing,
                      sd=float(np.std(hg)), rank=float(np.mean(hg < mu)),
+                     nmad=float(1.4826 * np.median(np.abs(hg - np.median(hg)))),
+                     iqr=float(np.percentile(hg, 75) - np.percentile(hg, 25)),
+                     skew=float(np.mean(((hg - hg.mean()) /
+                                         max(np.std(hg), 1e-9)) ** 3)),
+                     med_minus_truth=(float(np.median(hg)) - mu) * 1000,
                      mu=mu, hg=hg))
 F = pd.DataFrame(rows)
 ls = np.log(F.sd.to_numpy() * 1000)
@@ -83,6 +95,48 @@ for nm, e in (("q = 0.50 (pipeline default)", e50),
               ("q = isotonic(log class-2 SD), held out", eiso)):
     print(f"  {nm:>34s} {np.median(e):11.1f} {abs(np.median(e)):9.1f} "
           f"{np.sqrt(np.mean(e**2)):8.1f} {np.percentile(np.abs(e),90):9.1f}")
+if _A.diagnostics:
+    from scipy.stats import spearmanr, mannwhitneyu
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from control_lowveg_offset import lowveg
+    F["lowveg"] = [lowveg(p, 0.15, 2.00, setname=SET) for p in F.point_id]
+    print(f"\n  RANK OF SURVEYED GROUND WITHIN THE CLASS-2 RETURNS")
+    print(f"    median {F['rank'].median():.4f}   mean {F['rank'].mean():.4f}   "
+          f"p16 {F['rank'].quantile(.16):.4f}   p84 {F['rank'].quantile(.84):.4f}")
+    print(f"    at exactly 0 (truth below every ground return): {(F['rank']<=0).sum()}   "
+          f"at 1 (above all): {(F['rank']>=1).sum()}")
+    print(f"    class-2 MEDIAN minus truth: median {F.med_minus_truth.median():+.1f} mm   "
+          f"mean {F.med_minus_truth.mean():+.1f}   sd {F.med_minus_truth.std():.1f}")
+    print(f"\n  COVARIATE COMPARISON (vs the rank). lowveg is built from TWO chosen bands;")
+    print(f"  the spread measures from none.")
+    print(f"    {'covariate':>12s} {'windows?':>10s} {'rho':>8s} {'p':>11s}")
+    for c, wnd in (("sd","none"), ("nmad","none"), ("iqr","none"), ("skew","none"),
+                   ("lowveg","TWO")):
+        m = np.isfinite(F[c]) & np.isfinite(F["rank"])
+        r = spearmanr(F[c][m], F["rank"][m])
+        print(f"    {c:>12s} {wnd:>10s} {r.statistic:+8.3f} {r.pvalue:11.2e}")
+    x = F.sd.to_numpy() * 1000; y = F["rank"].to_numpy()
+    rng2 = np.random.default_rng(0)
+    print(f"\n  SHAPE: median rank per class-2 SD bin, bootstrap SE (2000 draws)")
+    print(f"    {'SD bin mm':>14s} {'n':>5s} {'median rank':>12s} {'SE':>7s} {'95% CI':>16s}")
+    for a, b in zip([0,30,45,60,80,110,160,250], [30,45,60,80,110,160,250,1e9]):
+        sel = (x >= a) & (x < b)
+        if sel.sum() < 8:
+            continue
+        v = y[sel]
+        bs = np.array([np.median(rng2.choice(v, v.size)) for _ in range(2000)])
+        lab = f"{a:.0f}-{b:.0f}" if b < 1e8 else f">{a:.0f}"
+        print(f"    {lab:>14s} {int(sel.sum()):5d} {np.median(v):12.3f} {bs.std():7.3f} "
+              f"[{np.percentile(bs,2.5):5.3f},{np.percentile(bs,97.5):5.3f}]")
+    lo, hi = x < 60, x >= 60
+    print(f"\n  TWO REGIMES, split at the 59.3 mm bare-ground class-2 NMAD:")
+    print(f"    within <60 mm:  rho {spearmanr(x[lo],y[lo]).statistic:+.3f}  "
+          f"p {spearmanr(x[lo],y[lo]).pvalue:.3f}   n={int(lo.sum())}")
+    print(f"    within >=60 mm: rho {spearmanr(x[hi],y[hi]).statistic:+.3f}  "
+          f"p {spearmanr(x[hi],y[hi]).pvalue:.3e}   n={int(hi.sum())}")
+    print(f"    medians {np.median(y[lo]):.3f} vs {np.median(y[hi]):.3f}   "
+          f"Mann-Whitney p {mannwhitneyu(y[lo],y[hi]).pvalue:.3e}")
+
 iso_full = IsotonicRegression(increasing=False, out_of_bounds="clip").fit(ls, rk)
 print(f"\n  calibration curve q(class-2 SD), fitted on all {len(F)} marks:")
 for v in (20, 40, 60, 80, 120, 200, 400):

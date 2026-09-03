@@ -70,7 +70,10 @@ ap.add_argument("--dz", type=float, default=0.005,
                 help="histogram bin, m. Far below the ~50 mm ground-component width measured "
                      "at these marks, so it is not the limiting scale.")
 ap.add_argument("--out", default=None)
-A = ap.parse_args()
+# Parse argv ONLY when run as a script. This module is imported for marks()/column(), and
+# parsing at import made the importer inherit this CLI: calibrate_ground_q --diagnostics
+# died on 'unrecognized arguments' from a parser it does not own.
+A = ap.parse_args() if __name__ == "__main__" else ap.parse_args([])
 SCALES = [float(s) for s in A.smooth.split(",")]
 OUT = A.out or f"data/derived/control_mode_shift_{A.set_}.csv"
 

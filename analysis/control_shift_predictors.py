@@ -46,7 +46,7 @@ ap.add_argument("--set", dest="set_", choices=sorted(CONTROL), default="gen2_202
 ap.add_argument("--smooth", default="0.005,0.02,0.05")
 ap.add_argument("--dz", type=float, default=0.005)
 ap.add_argument("--out", default=None)
-A = ap.parse_args()
+A = ap.parse_args() if __name__ == "__main__" else ap.parse_args([])
 SCALES = [float(s) for s in A.smooth.split(",")]
 OUT = A.out or f"data/derived/control_shift_predictors_{A.set_}.csv"
 
