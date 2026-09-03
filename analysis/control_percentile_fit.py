@@ -28,6 +28,7 @@ inherits whatever bias our least-squares surface carries under canopy.
 
     ./lidar-icp/bin/python analysis/control_percentile_fit.py
 """
+import argparse
 import os
 import sys
 
@@ -41,6 +42,35 @@ BAND_LO, BAND_HI = 0.15, 2.00       # CONTROL_LOWVEG_OFFSET.md's exact definitio
 BIN_W = 0.06                        # the mm fit's uniform bin width
 SET = "gen2_2021_control"
 
+_ap = argparse.ArgumentParser()
+# The stored boxes carry TWO windows. The near-ground one stops at +2.00 m, which is a
+# convention, not a physical edge: it was chosen to exclude tree crowns. Whether that choice
+# moves the answer is testable here rather than arguable, because the tall window covers
+# -2..+45 m and so has no upper truncation at all. Its bins are 0.25 m against 0.02 m, so it
+# trades vertical resolution for completeness -- both numbers are reported, neither is
+# DEFAULT = full, and NO clipping of any kind (Andy, 2026-09-03). The near window's +2.00 m
+# top excludes tree crowns, which is a decision about what counts as "the return column"
+# taken before knowing whether it matters. Measured, it barely does: on the same marks the
+# slope moves -0.849 -> -0.922 and the intercept +0.4385 -> +0.4561, one to two SE. Since it
+# is arbitrary and nearly free, the untruncated column is the honest default. It also drops
+# bottom-clipped marks from 13 to 3, because it reaches a metre lower.
+#
+# FUTURE (noted, not done): clip around the PERCEIVED GROUND SURFACE rather than at fixed
+# heights. Both windows are fixed distances from our fitted surface, so in tall canopy the
+# denominator is dominated by returns that have nothing to do with where the ground is. A
+# window defined relative to the ground return population itself -- rather than -1/+2 or
+# -2/+45 m -- would make the rank mean the same thing in a field and under a closed canopy.
+# That is a change to what q_ctrl MEASURES, not a filter, so it needs its own comparison
+# against these numbers before it could replace them.
+_ap.add_argument("--window", choices=["near", "full"], default="full",
+                 help="near = ng_all, -1..+2 m at 0.02 m; full = can_all, -2..+45 m at 0.25 m")
+_ap.add_argument("--drop-bottom-clipped", action="store_true",
+                 help="drop marks whose surveyed ground lies BELOW the window, whose rank "
+                      "therefore clips at 0 and can only flatten the slope")
+ARGS = _ap.parse_args()
+EDGE_KEY = "ng_edges" if ARGS.window == "near" else "can_edges"
+HIST_KEY = "ng_all" if ARGS.window == "near" else "can_all"
+
 
 def q_at_surveyed(point_id, surveyed_z):
     """Rank of the surveyed ground within this mark's near-ground return column."""
@@ -51,8 +81,8 @@ def q_at_surveyed(point_id, surveyed_z):
     coef = z["surface_coef"]
     nn = np.sqrt(1.0 + coef[1] ** 2 + coef[2] ** 2)
     h_s = (float(surveyed_z) - float(coef[0])) / nn
-    e = z["ng_edges"]
-    h = z["ng_all"].astype(float)
+    e = z[EDGE_KEY]
+    h = z[HIST_KEY].astype(float)
     t = h.sum()
     if t <= 0 or not np.isfinite(h_s):
         return np.nan, np.nan
@@ -68,10 +98,15 @@ m["q_ctrl"] = [a for a, _ in res]
 m["h_survey_mm"] = [b for _, b in res]
 m = m.dropna(subset=["q_ctrl"]).copy()
 
+_e0 = np.load(os.path.join(STRUCT, f"{SET}__{m.point_id.iloc[0]}.npz"))[EDGE_KEY]
+print(f"window: {ARGS.window}  ({_e0[0]:+.2f} to {_e0[-1]:+.2f} m, "
+      f"{_e0[1]-_e0[0]:.3f} m bins, {len(_e0)-1} bins)")
 print(f"marks: {len(m):,} with lowveg, a published residual and a locatable surveyed height")
 n_lo = int((m.q_ctrl <= 0).sum()); n_hi = int((m.q_ctrl >= 1).sum())
-print(f"  surveyed ground BELOW the whole stored column: {n_lo}   ABOVE it: {n_hi}  "
-      f"(kept, not dropped; the window is -1.00..+2.00 m)")
+print(f"  surveyed ground BELOW the whole column: {n_lo}   ABOVE it: {n_hi}")
+if ARGS.drop_bottom_clipped and n_lo:
+    m = m[m.q_ctrl > 0].copy()
+    print(f"  DROPPED the {n_lo} bottom-clipped marks as asked; {len(m):,} remain")
 print(f"  q_ctrl  median {m.q_ctrl.median():.4f}   IQR {m.q_ctrl.quantile(.25):.4f}"
       f"-{m.q_ctrl.quantile(.75):.4f}")
 print(f"  h_survey median {m.h_survey_mm.median():+.1f} mm   "
