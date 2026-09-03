@@ -180,10 +180,73 @@ def fit_mark_scalesep(point_id, surveyed_z, bw=0.15, iters=200, tol=1e-9):
                 h_survey=h_s, resid_mm=(mu - h_s) * 1000.0, iters=it + 1)
 
 
+def fit_mark_raw(point_id, surveyed_z, bw=0.15, dz=0.001, iters=300, tol=1e-10):
+    """Scale separation on the RAW returns, not on the archived 0.02 m histograms.
+
+    The archived histograms cannot support this model: the ground component's width is the
+    instrumental sigma ~11 mm, BELOW one 20 mm bin, so the Gaussian has nothing to be sharp
+    against and widens to 50-68 mm, swallowing the vegetation (measured; see
+    NEAR_GROUND_MIXTURE.md). The acquisition kept every mark's cropped cloud in
+    data/derived/control_boxes, so the returns themselves are on disk and no re-acquisition
+    is needed -- 1 mm binning here is far below the feature being estimated.
+    """
+    import laspy
+    from lidar_diff_icp.groundtruth.tie import _design
+    bp = os.path.join("data/derived/control_boxes", f"{SET}__{point_id}.laz")
+    sp = os.path.join(STRUCT, f"{SET}__{point_id}.npz")
+    if not (os.path.exists(bp) and os.path.exists(sp)):
+        return None
+    z = np.load(sp); coef = z["surface_coef"]
+    E, N, R = float(z["easting"]), float(z["northing"]), float(z["struct_radius"])
+    f = laspy.read(bp)
+    x, y, zz = np.asarray(f.x), np.asarray(f.y), np.asarray(f.z)
+    sel = np.hypot(x - E, y - N) <= R
+    if sel.sum() < 50:
+        return None
+    nn = np.sqrt(1.0 + coef[1] ** 2 + coef[2] ** 2)
+    h = (zz[sel] - (_design(x[sel] - E, y[sel] - N, 2) @ coef)) / nn
+    h_s = (float(surveyed_z) - float(coef[0])) / nn
+    lo, hi = -1.0, 2.0
+    h = h[(h > lo) & (h <= hi)]
+    if h.size < 50:
+        return None
+    e = np.arange(lo, hi + 0.5 * dz, dz)
+    c = np.histogram(h, bins=e)[0].astype(float)
+    d = 0.5 * (e[:-1] + e[1:])
+    mu = float(np.median(h))
+    sig = 0.02
+    w = 0.5
+    r = np.full(d.size, 0.5)
+    prev = None
+    for it in range(iters):
+        veg = gaussian_filter1d(np.maximum(c * (1 - r), 0.0), bw / dz, mode="nearest")
+        veg = veg / max(veg.sum() * dz, 1e-12)
+        g = norm.pdf(d, mu, sig)
+        den = w * g + (1 - w) * veg
+        ok = den > 0
+        r = np.zeros_like(d); r[ok] = w * g[ok] / den[ok]
+        cr = c * r; sw = cr.sum()
+        w = float(sw / max(c.sum(), 1.0))
+        if sw > 0:
+            mu = float(np.sum(cr * d) / sw)
+            sig = float(max(np.sqrt(np.sum(cr * (d - mu) ** 2) / sw), 0.002))
+        ll = float(np.sum(c[ok] * np.log(den[ok])))
+        if prev is not None and abs(ll - prev) < tol * max(abs(prev), 1.0):
+            break
+        prev = ll
+    return dict(point_id=point_id, mu_g=mu, sigma_g=sig, tau=np.nan, w_g=w, n=float(h.size),
+                h_survey=h_s, resid_mm=(mu - h_s) * 1000.0, iters=it + 1)
+
+
 m = load(0.15, 2.00)
 MODEL = os.environ.get("MODEL", "emg")
 BW = float(os.environ.get("BW", "0.15"))
-if MODEL == "scalesep":
+if MODEL == "raw":
+    print(f"model: narrow Gaussian + UNKNOWN smooth, RAW returns at 1 mm "
+          f"(bandwidth {BW*1000:.0f} mm)")
+    rows = [r for r in (fit_mark_raw(t.point_id, t.elevation, bw=BW)
+                        for t in m.itertuples()) if r]
+elif MODEL == "scalesep":
     print(f"model: narrow Gaussian + UNKNOWN smooth (bandwidth {BW*1000:.0f} mm)")
     rows = [r for r in (fit_mark_scalesep(t.point_id, t.elevation, bw=BW)
                         for t in m.itertuples()) if r]

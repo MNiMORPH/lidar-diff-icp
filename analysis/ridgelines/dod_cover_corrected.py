@@ -31,6 +31,14 @@ ap.add_argument("--slope", type=float, default=None,
                      "It used to default to -0.1922, which was Elba's number AND stale -- "
                      "the shipped dod_cover_q2.json records -0.1835 -- so on any other "
                      "region it silently applied Elba's correction. Refuses if absent.")
+ap.add_argument("--q-from-class2-spread", default=None, metavar="NPZ",
+                help="take the ground percentile per cell from the class-2 SPREAD, using the "
+                     "curve calibrated against surveyed control by "
+                     "analysis/calibrate_ground_q.py. This is not a cover correction: no "
+                     "cover layer, no relation, no windows. The cell's own class-2 returns "
+                     "supply both the spread and the percentile. Held out at the marks it "
+                     "cut RMS 124.5 -> 104.6 mm against q = 0.50 and removed a +8.1 mm "
+                     "median bias.")
 ap.add_argument("--intercept", type=float, default=None,
                 help="q2 at zero cover. Required with --slope, because a typed slope has no "
                      "fit to read it from. There is no default: 0.5 was one for years, and "
@@ -98,6 +106,16 @@ def _q2_intercept(tile_dir):
 
 
 # ---- the relation, and the population it obliges us to build -------------------------
+QSD = None
+if A.q_from_class2_spread:
+    if A.relation or A.slope is not None:
+        raise SystemExit("--q-from-class2-spread is an alternative to --relation/--slope, "
+                         "not an addition: they set the same quantity by different means.")
+    QSD = np.load(A.q_from_class2_spread, allow_pickle=True)
+    print(f"ground percentile from the CLASS-2 SPREAD, curve {A.q_from_class2_spread}")
+    print(f"  fitted on {int(QSD['n_marks'])} marks: {str(QSD['fitted_on'])}")
+    print(f"  shape: {str(QSD['shape'])};  validated {str(QSD['cv'])}")
+    print(f"  LIMITS: {str(QSD['known_limits'])}")
 REL = json.load(open(A.relation)) if A.relation else None
 if REL is not None:
     if A.slope is not None:
@@ -124,6 +142,11 @@ if REL is not None:
         print(f"  the relation was MEASURED over {COVER_NAME} 0.."
               f"{REL['fitted_on']['lowveg_max_observed']:.3f}; cells beyond that are "
               f"EXTRAPOLATION and are counted below")
+elif QSD is not None:
+    SLOPE = INTERCEPT = None
+    COL_LO, COL_HI, COL_DZ = A.zlo, A.zhi, A.dz
+    COL_CLASSES = "class2"
+    COVER_NAME = "class2_spread"
 else:
     if A.slope is not None and A.intercept is None:
         raise SystemExit("--slope needs --intercept: the pair defines the relation, and "
@@ -200,7 +223,28 @@ for uu, a, bb in zip(u, st, sp):
 print(f"gen1: ground on {int(np.isfinite(h1).sum()):,} cells", flush=True)
 
 # ---- gen2 at the cover-dependent percentile -----------------------------------------
-if REL is not None:
+if QSD is not None:
+    # The cell's own class-2 spread, from the histogram already built, then the calibrated
+    # percentile for that spread. Cells with too few returns to have a spread get NaN and
+    # are left out rather than given the default -- the curve says nothing about them.
+    C0 = np.cumsum(H, 1).astype(float)
+    ntot0 = C0[:, -1]
+    ctr = COL_LO + (np.arange(NZ) + 0.5) * COL_DZ
+    with np.errstate(invalid="ignore", divide="ignore"):
+        mean_h = (H * ctr).sum(1) / np.maximum(ntot0, 1)
+        var_h = (H * (ctr - mean_h[:, None]) ** 2).sum(1) / np.maximum(ntot0, 1)
+    sd_mm = np.where(ntot0 >= 20, np.sqrt(np.maximum(var_h, 0)) * 1000.0, np.nan)
+    q2 = np.full(NC, np.nan)
+    ok_sd = np.isfinite(sd_mm) & (sd_mm > 0)
+    q2[ok_sd] = np.interp(np.log(sd_mm[ok_sd]), QSD["log_sd_mm"], QSD["q"])
+    np.save(f"{D}/class2_sd_mm.npy", sd_mm.reshape(NY, NX))
+    print(f"class-2 spread: {int(ok_sd.sum()):,} cells with >=20 returns; "
+          f"median {np.nanmedian(sd_mm):.1f} mm  p90 {np.nanpercentile(sd_mm,90):.1f}")
+    print(f"  q from the curve: median {np.nanmedian(q2):.3f}  "
+          f"p10 {np.nanpercentile(q2,10):.3f}  min {np.nanmin(q2):.3f}  "
+          f"({int(np.sum(q2 < 0.45)):,} cells below 0.45, i.e. corrected)")
+    cover = sd_mm
+elif REL is not None:
     mid = 0.5 * (LV_EDGES[:-1] + LV_EDGES[1:])
     band = (mid > CV["band_lo_m"]) & (mid <= CV["band_hi_m"])   # bin CENTRE, as at the marks
     tot = LVH.sum(1).astype(float)
@@ -215,7 +259,8 @@ if REL is not None:
               f"{_lvmax:.3f} the relation was measured to -- EXTRAPOLATED, not dropped")
 else:
     cover = np.load(f"{D}/canopy_cover_pfs.npy").ravel()
-q2 = INTERCEPT + SLOPE * np.where(np.isfinite(cover), cover, 0.0)
+if QSD is None:
+    q2 = INTERCEPT + SLOPE * np.where(np.isfinite(cover), cover, 0.0)
 _oob = int(np.sum((q2 < 0) | (q2 > 1)))
 if _oob:
     print(f"q2 outside [0,1] on {_oob:,} cells; clipped to the column's ends, which is a "
@@ -238,7 +283,9 @@ dod_med = (h2_med - h1) / 1000.0 * nnorm         # same but gen2 at its plain me
 np.save(f"{D}/dod_cover_q2.npy", dod_corr.reshape(NY, NX))
 np.save(f"{D}/dod_gen2_median.npy", dod_med.reshape(NY, NX))
 np.save(f"{D}/gen2_q2_used.npy", np.where(have, q2, np.nan).reshape(NY, NX))
-json.dump({"relation": f"q2 = {INTERCEPT:.6f} + slope * {COVER_NAME}",
+json.dump({"relation": ("q2 = isotonic(log class-2 SD), calibrated on surveyed control"
+                        if QSD is not None
+                        else f"q2 = {INTERCEPT:.6f} + slope * {COVER_NAME}"),
            "intercept": INTERCEPT, "slope": SLOPE,
            "relation_source": A.relation or f"{D}/q2_cover_fit.json",
            "percentile_population": {"classes": COL_CLASSES, "window_lo_m": COL_LO,
