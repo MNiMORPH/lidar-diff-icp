@@ -105,10 +105,32 @@ def q_at_surveyed(point_id, surveyed_z):
     # straddling bin contributes its share), which a Beta admits, rather than rounded to
     # force an integer.
     #
-    # THE ASSUMPTION, stated because it is the weak point and is not removed by any of
-    # this: the n returns are treated as independent. They are not -- one pulse yields
-    # several returns and returns within the disc are spatially correlated -- so n
-    # overstates the information and the posterior is narrower than the truth.
+    # THE ASSUMPTION: the n returns are treated as independent. They are not. Two things
+    # follow, and they are not the same thing, so keep them apart:
+    #
+    # IDENTICALLY DISTRIBUTED -- assume the vegetation structure is statistically uniform
+    #   within the cell / the 7.5 m disc (Andy, 2026-09-03). Then every return, whichever
+    #   pulse it came from, is a draw from the SAME height distribution. That is what the
+    #   posterior MEAN needs, so the rank estimate is approximately unbiased under it. It
+    #   is an assumption about the site, and it fails where a cell straddles a stand edge.
+    #
+    # INDEPENDENT -- uniformity does not give this, and only the VARIANCE depends on it.
+    #   Returns from one pulse are ordered along a single ray. But the effect is bounded
+    #   and small, measured on the gen2 cloud these marks come from:
+    #
+    #     returns 182,923,322   pulses 102,885,312   mean returns per pulse r = 1.7779
+    #     number_of_returns:  1: 30.0%   2: 30.9%   3: 26.5%   4: 10.3%   5: 2.0%
+    #
+    #   If returns within a pulse carried NO independent information -- the worst case --
+    #   the effective sample size is n/r and the posterior SD is understated by
+    #   sqrt(r) = 1.3334x. That is a bound, and a loose one: a pulse's returns sit at
+    #   DIFFERENT heights (canopy, then ground), so they are informative about different
+    #   parts of the distribution rather than duplicates. The truth lies between 1.00x and
+    #   1.33x on the SD, and nothing on the mean.
+    #
+    #   Not bounded by that number: spatial correlation BETWEEN pulses within the disc.
+    #   Uniformity is the assumption doing the work there, and it is the one to revisit
+    #   before trusting these SEs at face value.
     c = np.concatenate([[0.0], np.cumsum(h) / t])
     k = float(np.interp(h_s, e, c)) * t
     a = k + 0.5
@@ -206,8 +228,12 @@ _rel = {
         "is binomial, and the Jeffreys prior gives p|k,n ~ Beta(k+1/2, n-k+1/2). A mark "
         "with nothing below is k=0 and needs no rule of its own. Bin SEs carry the marks' "
         "posterior variances as well as the scatter between them. ASSUMES the n returns "
-        "are independent, which lidar returns are not, so the posterior is narrower than "
-        "the truth."),
+        "are independent, which lidar returns are not. Under the assumption that structure "
+        "is statistically uniform within the cell, the returns are at least identically "
+        "distributed, so the MEAN is approximately unbiased; only the variance suffers. "
+        "Measured on this cloud, r = 1.7779 returns per pulse, so the SD is understated by "
+        "at most sqrt(r) = 1.3334x, and by less than that because a pulse's returns sit at "
+        "different heights rather than repeating one."),
     "fitted_on": {"set": SET, "marks": int(len(m)), "bins": int(len(X)),
                   "bin_width_lowveg": BIN_W,
                   "lowveg_max_observed": float(m.lowveg.max()),
