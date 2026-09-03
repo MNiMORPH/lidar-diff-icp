@@ -77,12 +77,16 @@ _ap.add_argument("--window", choices=["near", "full"], default="full",
 # ground returns can fall below the true surface, so the informative sample size is the
 # mark's own class-2 count, not its total, and the resulting fraction is rescaled back onto
 # the full column by the class-2 share.
-_ap.add_argument("--below-rule", default="ground",
-                 choices=["zero", "jeffreys", "laplace", "rule3", "ground"],
+_ap.add_argument("--below-rule", default="jeffreys-class2",
+                 choices=["empirical-zero", "jeffreys", "laplace-succession",
+                          "rule-of-three", "jeffreys-class2"],
                  help="rank for marks whose surveyed ground lies below every return. "
-                      "zero = the empirical 0; "
-                      "jeffreys = 0.5/(n+1); laplace = 1/(n+2); rule3 = 3/n (a 95%% upper "
-                      "bound, deliberately generous); ground = Jeffreys on the class-2 "
+                      "empirical-zero = the observed 0, i.e. no estimate; "
+                      "jeffreys = 0.5/(n+1), the Jeffreys Beta(0.5,0.5) posterior mean; "
+                      "laplace-succession = 1/(n+2), Laplace's rule of succession; "
+                      "rule-of-three = 3/n, the Hanley & Lippman-Hand (1983) one-sided 95%% "
+                      "upper limit for a binomial proportion with zero successes, "
+                      "approximating 1-0.05^(1/n); jeffreys-class2 = Jeffreys on the class-2 "
                       "count, rescaled by the class-2 share (DEFAULT). Measured: on "
                       "these marks every rule agrees to 4 decimals, because a column of "
                       "1,725-9,079 returns makes 'none below' a tight constraint -- the "
@@ -101,15 +105,19 @@ HIST_KEY = "ng_all" if ARGS.window == "near" else "can_all"
 
 def _below_zero_rank(n_total, n_class2):
     """Plausible rank when NO return was seen below the surveyed ground."""
-    if ARGS.below_rule == "zero":
+    if ARGS.below_rule == "empirical-zero":
         return 0.0
     if ARGS.below_rule == "jeffreys":
         return 0.5 / (n_total + 1.0)
-    if ARGS.below_rule == "laplace":
+    if ARGS.below_rule == "laplace-succession":
         return 1.0 / (n_total + 2.0)
-    if ARGS.below_rule == "rule3":
+    if ARGS.below_rule == "rule-of-three":
         return 3.0 / max(n_total, 1.0)
-    # ground: only a ground return can land below the true surface, so condition on those.
+    # jeffreys-class2: NOT a named method in the literature -- a composite I built from
+    # Jeffreys plus P(below) = P(below | ground) * P(ground). Only a ground return can land
+    # below the true surface, so condition on those. Its weaknesses are real and stated in
+    # the module docstring: it assumes independent returns, which lidar returns are not, and
+    # it uses class-2 membership as a stand-in for being ground.
     if not n_class2 or not np.isfinite(n_class2) or n_class2 <= 0:
         return 0.5 / (n_total + 1.0)
     frac_below_given_ground = 0.5 / (n_class2 + 1.0)
@@ -224,8 +232,10 @@ _rel = {
         "rank assigned where NO return lies below the surveyed ground. 'ground' takes "
         "Jeffreys on the mark's class-2 count -- only a ground return can fall below the "
         "true surface -- rescaled onto the full column by the class-2 share. On these 3 of "
-        "389 marks every rule (zero/jeffreys/laplace/rule3/ground) gives the same fit to 4 "
-        "decimals; the estimator matters for sparser columns, not for these."),
+        "389 marks every rule (all five) gives the same fit to 4 "
+        "decimals; the estimator matters for sparser columns, not for these. "
+        "jeffreys/laplace-succession/rule-of-three are standard; jeffreys-class2 is a "
+        "composite built for this project and is not a named method."),
     "fitted_on": {"set": SET, "marks": int(len(m)), "bins": int(len(X)),
                   "bin_width_lowveg": BIN_W,
                   "lowveg_max_observed": float(m.lowveg.max()),
