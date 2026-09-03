@@ -26,13 +26,81 @@ component location does not move.
 
 ## The two components
 
-**Ground: Gaussian.** Range measurement error plus the true surface's roughness within the
-cell, both approximately normal, give a Gaussian about the true surface.
+**Ground: a narrow Gaussian.** Range measurement error plus the true surface's roughness
+within the cell. Its width is the INSTRUMENTAL floor, sigma ~ 0.011 m, plus roughness.
 
-**Material above ground: exponential.** Beer-Lambert extinction through a locally homogeneous
-medium makes the density of first-interception heights exponential. Convolving the exponential
-arrival density with Gaussian measurement error is an exponentially-modified Gaussian, so the
-EMG is a mechanism rather than a curve chosen because it fit.
+**Above it: SHAPE UNKNOWN, and deliberately so.** Superseded 2026-09-03 -- see below.
+
+### Why the exponential was wrong (superseded, kept visible)
+
+The first version of this document specified an exponentially-modified Gaussian: Beer-Lambert
+extinction convolved with measurement error. `tau` in that model is a MEAN FREE PATH, and
+
+    1 / tau  =  G * a / cos(theta)
+
+so its reciprocal measures leaf area density `a` -- the MacArthur-Horn gap-fraction
+inversion, the same physics PyForestScan uses for plant area density above 2 m. That part
+stands and is worth keeping.
+
+Two things were wrong with it.
+
+**Orientation.** Beer-Lambert decays from the TOP of the canopy DOWNWARD, not upward from
+the ground. An exponential falling away from the ground is not what the physics predicts.
+
+**Constant `a`.** The exponential holds only if leaf area density is uniform over the fitted
+range. It is not: herb layer, shrubs, trunk space, crown. Stacking the control marks'
+profiles on their SURVEYED ground shows it directly (mean normalised density, x1000):
+
+       h mm   lowveg<=0.02   0.10-0.25   lowveg>0.25
+       -100          17.67       23.22          8.39
+          0         130.75       45.40         18.25
+        +50         101.26       43.85         30.11
+       +200           8.09       28.32         23.02
+       +400           0.01       12.98         25.46
+       +600           0.00        2.53         15.45
+
+Bare ground falls 130.75 -> 0.01 over 400 mm. Under cover the profile is FLAT from +50 to
++500 mm and rises again near +400 -- a layered slab, not a decay. The EMG fits were already
+saying so: `tau` stretched to a p90 of 883 mm trying to make an exponential look flat.
+
+Also visible there: below lowveg 0.25 the mode sits at +10 mm above surveyed ground -- one
+bin, i.e. AT the ground -- with ~40% of returns below it, as a distribution centred on the
+ground should have. Above 0.25 the mode jumps to +70 mm and the mass below falls to 14%. The
+dominant peak stops being the ground and becomes the cover, while a minority ground
+component survives underneath: shots still get through.
+
+### The model that replaces it: separate by SCALE, not by family
+
+Leave `a(h)` unknown. The MacArthur-Horn inversion never needed a form for it, and the two
+components are distinguishable by scale instead:
+
+    ground      the ONLY sharp feature -- instrumental sigma ~11 mm, plus roughness
+    vegetation  smooth in height, structured over hundreds of mm
+
+Fit as EM where the vegetation M-step is a SMOOTH of its own responsibility-weighted counts
+rather than a parameter update, with the smoother wide enough that the vegetation component
+cannot represent a ground-width peak. Robust to `a(h)` doing anything, which is what a
+statewide run over 55,296 tiles requires.
+
+**A short window is not an arbitrary choice -- it linearises the inversion** (Andy). Over a
+few tens of centimetres the gap probability is nearly constant, so `n(h) = a(h) P_gap(h)`
+reduces to `n(h) ~ a(h)`: the near-ground return density IS the near-ground vegetation
+structure, with no extinction correction to make. That is the reason to work near the ground,
+and it is independent of any convenience.
+
+### Measured: it cannot be fitted on 0.02 m histograms
+
+Run on the control boxes, sweeping the smoother bandwidth:
+
+    bw=0.10   sigma_g median 50.5 mm   w_g median 0.940   mu_g-surveyed +24.1 mm
+    bw=0.15   sigma_g median 58.8 mm   w_g median 0.976   mu_g-surveyed +24.0 mm
+    bw=0.25   sigma_g median 67.7 mm   w_g median 0.988   mu_g-surveyed +25.6 mm
+
+`w_g` runs to 0.94-0.99 and `sigma_g` floats to 50-68 mm: the Gaussian SWALLOWS the
+vegetation instead of separating from it. Scale separation requires the ground component to
+be held at the sharp scale, and 11 mm is BELOW ONE 20 mm BIN. The stored histograms cannot
+resolve the feature the method depends on, whatever the parameterisation. Re-acquiring the
+marks at 1 cm, or as raw slope-normal distances, is a prerequisite rather than a refinement.
 
 ## Why ONE form, when a pooled measurement said otherwise
 
