@@ -29,6 +29,7 @@ inherits whatever bias our least-squares surface carries under canopy.
     ./lidar-icp/bin/python analysis/control_percentile_fit.py
 """
 import argparse
+import json
 import os
 import sys
 
@@ -64,6 +65,9 @@ _ap = argparse.ArgumentParser()
 # against these numbers before it could replace them.
 _ap.add_argument("--window", choices=["near", "full"], default="full",
                  help="near = ng_all, -1..+2 m at 0.02 m; full = can_all, -2..+45 m at 0.25 m")
+_ap.add_argument("--out", default="data/derived/control_q_ctrl_fit.json",
+                 help="where to write the relation, so a consumer READS it instead of "
+                      "carrying a typed coefficient")
 _ap.add_argument("--drop-bottom-clipped", action="store_true",
                  help="drop marks whose surveyed ground lies BELOW the window, whose rank "
                       "therefore clips at 0 and can only flatten the slope")
@@ -151,3 +155,46 @@ print(f"  per-mark, unweighted     intercept {pm[1]:+.4f}                slope {
       f"   (n = {len(m):,})")
 print("\nFor comparison, the ridgeline route on the same quantity (Elba, lowveg, free "
       "intercept): intercept +0.4853  slope -0.0200")
+
+
+# ---------------------------------------------------------------------------------------
+# The relation as DATA, with the population that produced it attached. A consumer that
+# applies these two numbers to a differently-built return column would be using a rank
+# measured in one population to index another -- the same class of error as reading a
+# percentile off class-2 near-ground returns when it was fitted on the full column. So the
+# spec travels with the coefficients and dod_cover_corrected.py refuses on a mismatch.
+p_des, e_des, chi2_des = wls(X, Y, 1.0 / S ** 2)
+_rel = {
+    "relation": "q_ctrl = a + b * lowveg",
+    "intercept": float(p_des[0]), "intercept_se": float(e_des[0]),
+    "slope": float(p_des[1]), "slope_se": float(e_des[1]),
+    "chi2_per_dof": float(chi2_des),
+    "weighting": "DESIGN 1/SE^2 on uniform lowveg bins",
+    "fitted_on": {"set": SET, "marks": int(len(m)), "bins": int(len(X)),
+                  "bin_width_lowveg": BIN_W,
+                  "lowveg_max_observed": float(m.lowveg.max()),
+                  "bottom_clipped_dropped": bool(ARGS.drop_bottom_clipped)},
+    # What q_ctrl is a rank WITHIN. A consumer must reproduce this population.
+    "percentile_population": {
+        "window_lo_m": float(_e0[0]), "window_hi_m": float(_e0[-1]),
+        "bin_m": float(_e0[1] - _e0[0]), "n_bins": int(len(_e0) - 1),
+        "classes": "ALL returns (no classification filter)",
+        "height": "slope-normal to the local ground surface, (z - S)/|n|",
+    },
+    # What lowveg is, so the covariate is built the same way too.
+    "covariate": {
+        "name": "lowveg", "band_lo_m": BAND_LO, "band_hi_m": BAND_HI,
+        "denominator_lo_m": -1.0, "denominator_hi_m": 2.0, "bin_m": 0.02,
+        "classes": "ALL returns (no classification filter)",
+        "test": "bin CENTRE, so with 0.02 m bins this is 'fraction above 0.14 m'",
+        "source": "analysis/CONTROL_LOWVEG_OFFSET.md",
+    },
+    # The one difference a tile CANNOT reproduce, stated rather than left to be discovered.
+    "known_scale_difference": (
+        "at the marks the reference surface is an order-2 least-squares fit to class-2 "
+        "returns within 7.5 m of the point; on a tile it is the gridded z_after plane of a "
+        "5 m cell. Mark-scale and grid-scale ground estimates are not the same surface, and "
+        "this relation was fitted against the former."),
+}
+json.dump(_rel, open(ARGS.out, "w"), indent=2)
+print(f"\nwrote {ARGS.out}  (intercept {_rel['intercept']:+.4f}, slope {_rel['slope']:+.4f})")
