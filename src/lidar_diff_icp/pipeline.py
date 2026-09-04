@@ -46,7 +46,7 @@ import laspy
 import pandas as pd
 from scipy.ndimage import gaussian_filter, uniform_filter, distance_transform_edt as edt
 
-from . import groundq, io, coreg
+from . import groundq, io, coreg, terrain
 from .ground import classify_ground_csf
 
 
@@ -612,64 +612,13 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
         n21 = cellstat(A["x"], A["y"], A["z"], "count")
         r21 = cell_plane_roughness(A["x"], A["y"], A["z"], X0, Y0, res, nx, ny)
 
-    # terrain masks from the reference ground
-    Zf = Z21.copy(); nanm = np.isnan(Zf)
-    if nanm.any():
-        Zf = Zf[tuple(edt(nanm, return_distances=False, return_indices=True))]
-    # THE VALLEY FLOOR IS CUT BY ELEVATION, NOT TPI (Andy, 2026-09-04). TPI's only job
-    # here was the floodplain -- `stable` is otherwise slope and Laplacian convexity -- and
-    # measured at whitewater the TPI mask MISSES 150,873 cells of valley floor while
-    # removing 16,218 upland hollows at a median 305.5 m. Wrong in both directions, and it
-    # set stable_sigma, the LoD and the registration at every site.
-    # The caller always says which (Andy, 2026-09-04): an elevation in metres, or
-    # "histogram" to compute it from the landscape. There is no silent default -- a stated
-    # value and a computed one are different claims about the same tile.
-    from .refcells import valley_top_for_landscape
-    if valley_top_m is None:
-        raise ValueError(
-            "difference_dem needs valley_top_m: an elevation in metres, or 'histogram' to "
-            "compute it from the landscape's pooled elevations. It will not choose for you "
-            "-- a computed valley top silently replacing a stated one is how elba rebuilt "
-            "on 226.9 m instead of its established 230.0 m.")
-    if valley_top_m == "histogram":
-        _vt, _mem = valley_top_for_landscape(tile_dir_for_landscape or ".")
-        _src = f"histogram over {len(_mem)} tile(s)"
-    else:
-        _vt, _src = float(valley_top_m), "stated"
-    sdeg = np.degrees(coreg.slope_aspect(gaussian_filter(Zf, 2.0), res)[0])
-    Zsm = gaussian_filter(Zf, 50 / res / 2)
-    lap = (np.gradient(np.gradient(Zsm, res, axis=0), res, axis=0)
-           + np.gradient(np.gradient(Zsm, res, axis=1), res, axis=1))
-    if _vt is None:
-        # No cut rather than a wrong one, said out loud: on a tile whose commonest
-        # elevation is NOT the valley floor (cook: a lake plateau, mode 588.4 m of a
-        # 447-606 m range) there is no dip above the mode to find.
-        floodplain = np.zeros(Z21.shape, bool)
-        print("  NO valley cut: this tile's elevation histogram has no minimum above its "
-              "dominant mode, so floodplain cells are NOT excluded from the stable set. "
-              "stable_sigma and the LoD include any valley change.", flush=True)
-    else:
-        floodplain = np.isfinite(Z21) & (Z21 < float(_vt))
-        print(f"  valley cut at {float(_vt):.1f} m "
-              f"({_src}): "
-              f"{int(floodplain.sum()):,} cells excluded from the stable set "
-              f"({100 * floodplain.mean():.1f}% of the grid)", flush=True)
-    upland = ~floodplain
-    # STABLE = LOW CURVATURE, ABOVE THE VALLEY TOP. Andy, 2026-09-04. Not ridgetops, and no
-    # slope restriction: the lateral (Nuth-Kaeae) shift is estimated from how dh varies with
-    # slope and aspect, so removing slope removes the signal it needs. The old mask --
-    # (slope<3 & upland) | (5<slope<35 & upland & lap<0) -- kept whitewater at a MEDIAN
-    # SLOPE OF 3.0 deg, nearly flat, which is close to useless for that fit; low curvature
-    # keeps p50 ~10 deg and p90 ~28 deg at both tiles.
-    #
-    # `lap` here is the Laplacian of a 25 m-smoothed surface, NOT curv_laplacian.npy, so
-    # refcells' curv_max=0.015 does not transfer: measured, |lap| runs p50 0.0020, p90
-    # 0.0069, p99 0.0127 at elba, so 0.015 sits past p99 and cuts nothing.
-    stable = upland & (np.abs(lap) <= curv_max) & np.isfinite(Z21)
-    print(f"  stable: |laplacian| <= {curv_max:g} and above the valley top -> "
-          f"{int(stable.sum()):,} cells ({100 * stable.mean():.1f}% of the grid); "
-          f"slope p50 {np.median(sdeg[stable]):.1f} deg p90 "
-          f"{np.percentile(sdeg[stable], 90):.1f}", flush=True)
+    # terrain masks from the reference ground. DEFINED IN terrain.py, NOT here: this block
+    # being inline is exactly why five other scripts re-derived it by hand, and why only the
+    # pipeline's copy was fixed when the valley cut moved from TPI to elevation.
+    _tm = terrain.terrain_masks(Z21, res, valley_top_m=valley_top_m,
+                                tile_dir=tile_dir_for_landscape, curv_max=curv_max)
+    Zf = _tm["filled"]; sdeg = _tm["slope_deg"]; lap = _tm["laplacian"]
+    floodplain = _tm["floodplain"]; stable = _tm["stable"]
 
     # ground estimator: "low_q" (horizontal ground_q quantile) or "slope_normal"
     # (ground_q quantile -- median by default -- of the residual to a common smoothed
