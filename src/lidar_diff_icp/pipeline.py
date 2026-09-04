@@ -298,7 +298,7 @@ def heteroscedastic_lod(dod, slope_deg, abs_curv, stable, *, stderr=None,
 
 
 def _stream_ground(path, bounds, res, nx, ny, q, *, plane=None, chunk=8_000_000,
-                   q_curve=None, q_min_count=20, q_fallback=0.50,
+                   q_curve=None, q_min_count=20, q_fallback=0.50, q_out=None,
                    coarse_bins=120, bw=0.02, down=3.0, up=2.0, after_ground="class2"):
     """Per-cell low-q ground, spread, and count by STREAMING the cloud in chunks,
     so peak RAM is O(cells), not O(points) -- for statewide runs where the dense
@@ -320,6 +320,14 @@ def _stream_ground(path, bounds, res, nx, ny, q, *, plane=None, chunk=8_000_000,
 
     Returns (ground, spread, count) as ny x nx arrays.
     """
+    # q must be numeric by here. difference_dem resolves "calibrated" into a scalar plus a
+    # curve BEFORE calling; a string arriving here means a call site was missed, which is
+    # exactly what happened on 2026-09-04 -- one of two call sites was patched, and the other
+    # failed 300 lines away with "ufunc 'multiply' did not contain a loop".
+    if isinstance(q, str):
+        raise TypeError(
+            f"_stream_ground got ground_q={q!r} as a string. difference_dem must resolve it "
+            f"to a scalar (and pass q_curve=) before calling; this call site was missed.")
     X0, Y0, X1, Y1 = bounds
     N = nx * ny
 
@@ -365,14 +373,12 @@ def _stream_ground(path, bounds, res, nx, ny, q, *, plane=None, chunk=8_000_000,
         # it has to exist before q does. It is read off the coarse pass that was already
         # being computed, so nothing is added but an ordering.
         spread = 1.4826 * (coarse_pct(0.75) - coarse_pct(0.25)) / 1.349
-        if q_curve is not None:
-            q = groundq.q_from_spread(spread * 1000.0, q_curve,
-                                      min_count=q_min_count, count=ntot)
-            # A cell the curve declines to estimate keeps the fallback q rather than
-            # vanishing: the ground is still gridded there, just not corrected, and the
-            # count of such cells is reported by the caller.
-            q = np.where(np.isfinite(q), q, q_fallback)
-        anchor = coarse_pct(q)
+        # The ANCHOR only positions the fine window, so it is taken at the fallback quantile
+        # and never at the calibrated one. That breaks the circularity: the calibrated q needs
+        # a spread, the spread needs the fine histogram, and the fine histogram needs an
+        # anchor. Anchoring at 0.50 costs nothing and lets q be derived from the very
+        # histogram it will then be read from.
+        anchor = coarse_pct(q_fallback if q_curve is not None else q)
     flo = anchor - down; SPAN = down + up; FB = int(round(SPAN / bw))  # pass 3: fine window
     below = np.zeros(N, np.int64); fhist = np.zeros(N * FB, np.int64)
     for f, v in chunks():
@@ -381,6 +387,37 @@ def _stream_ground(path, bounds, res, nx, ny, q, *, plane=None, chunk=8_000_000,
         ff = f[inw]; b = np.clip((d[inw] / bw).astype(np.int64), 0, FB - 1)
         fhist += np.bincount(ff * FB + b, minlength=N * FB)
     fhist = fhist.reshape(N, FB); fcdf = below[:, None] + np.cumsum(fhist, axis=1)
+
+    if q_curve is not None:
+        # THE SPREAD THE CURVE WAS CALIBRATED ON: the plain standard deviation of the
+        # ground-class returns about the LOCAL surface -- np.std(hg) at the marks, where hg is
+        # the class-2 column relative to an order-2 fit. The fine histogram here is that same
+        # object: class-2 returns (after_ground='class2'), residual to the per-cell plane.
+        #
+        # It replaces 1.4826*(p75-p25)/1.349 read off the COARSE histogram, which was a
+        # different statistic (robust, not plain) of a different residual (to the REGIONAL
+        # plane) over a different window. Indexing the curve with that pushed Whitewater's
+        # ground down by ~1 m in the worst tenth of cells and widened stable_sigma from
+        # 86.3 to 99.2 mm. A curve must be indexed by the quantity it was fitted on.
+        ctr_f = flo[:, None] + (np.arange(FB) + 0.5) * bw
+        nf = fhist.sum(1).astype(float)
+        with np.errstate(invalid="ignore", divide="ignore"):
+            mean_f = (fhist * ctr_f).sum(1) / np.maximum(nf, 1)
+            var_f = (fhist * (ctr_f - mean_f[:, None]) ** 2).sum(1) / np.maximum(nf, 1)
+        sd_mm = np.where(nf > 0, np.sqrt(np.maximum(var_f, 0.0)) * 1000.0, np.nan)
+        qc = groundq.q_from_spread(sd_mm, q_curve, min_count=q_min_count, count=nf)
+        # A cell the curve declines to estimate keeps the fallback: its ground is still
+        # gridded, simply not corrected. NaN here would silently drop the cell.
+        q = np.where(np.isfinite(qc), qc, q_fallback)
+        if q_out is not None:
+            q_out["class2_sd_mm"] = sd_mm.reshape(ny, nx)
+            q_out["q"] = q.reshape(ny, nx)
+            q_out["n_declined"] = int(np.sum(~np.isfinite(qc)))
+        print(f"  ground_q per cell: class-2 SD median {np.nanmedian(sd_mm):.1f} mm "
+              f"p90 {np.nanpercentile(sd_mm, 90):.1f}; q median {np.nanmedian(q):.3f} "
+              f"min {np.nanmin(q):.3f}; {int(np.sum(q < 0.45)):,} cells corrected, "
+              f"{int(np.sum(~np.isfinite(qc))):,} declined", flush=True)
+
     tgt = q * ntot
     bf = np.argmax(fcdf >= tgt[:, None], axis=1)
     cprev = np.where(bf > 0, fcdf[np.arange(N), np.clip(bf - 1, 0, FB - 1)], below).astype(float)
@@ -566,8 +603,9 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q="calibrat
     # statewide runs; else load it in memory. A stays None in streaming mode.
     A = None
     if stream:
+        _GQ_OUT = {} if _GQ_CURVE is not None else None
         Z21, s21, n21 = _stream_ground(after_laz, bounds, res, nx, ny, _GQ_SCALAR,
-                                       q_curve=_GQ_CURVE,
+                                       q_curve=_GQ_CURVE, q_out=_GQ_OUT,
                                        after_ground=after_ground)
         r21 = _stream_roughness(after_laz, bounds, res, nx, ny, after_ground=after_ground)
     else:
@@ -677,14 +715,21 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q="calibrat
         dxe = x[ok] - (X0 + (ix[ok] + 0.5) * res)
         dyn = y[ok] - (Y0 + (iy[ok] + 0.5) * res)
         resid = z[ok] - (Zreg_f[f] + dxe * dzde[f] + dyn * dzdn[f])
-        s = pd.Series(resid).groupby(f).quantile(ground_q)
+        # _GQ_SCALAR, never the calibrated per-cell q. groundg grids BOTH epochs -- gen1
+        # via tie_polynomial below, gen2 on the non-stream path -- and the calibration is
+        # GEN2-ONLY: it was fitted on gen2 control, and the gen1 curve came back flat at
+        # 0.219 with q = 0.50 biased +89.8 mm, which is a statement about the 2008 control's
+        # uncertain vertical reference rather than about the lidar
+        # (analysis/GROUND_Q_FROM_CLASS2_SPREAD.md). gen1 keeps the plain median.
+        s = pd.Series(resid).groupby(f).quantile(_GQ_SCALAR)
         out = np.full(nx * ny, np.nan)
         out[s.index.values] = Zreg_f[s.index.values] + s.values
         return out.reshape(ny, nx)
 
     # after-epoch reference ground in the chosen estimator (== Z21 for low_q)
     if ground == "slope_normal":
-        Zref = (_stream_ground(after_laz, bounds, res, nx, ny, ground_q,
+        Zref = (_stream_ground(after_laz, bounds, res, nx, ny, _GQ_SCALAR,
+                               q_curve=_GQ_CURVE,
                                plane=(Zreg_f, dzde, dzdn), after_ground=after_ground)[0]
                 if stream else groundg(A["x"], A["y"], A["z"]))
     elif ground in ("plane", "poly2"):

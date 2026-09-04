@@ -103,3 +103,12 @@ def test_difference_dem_rejects_an_unknown_ground_q_string():
     with pytest.raises(ValueError, match="must be a float or 'calibrated'"):
         difference_dem("nonexistent_before.laz", "nonexistent_after.laz",
                        (0.0, 0.0, 100.0, 100.0), ground_q="median", stream=True)
+
+
+def test_stream_ground_refuses_an_unresolved_ground_q_string():
+    """difference_dem resolves 'calibrated' into a scalar + curve before calling. A string
+    reaching _stream_ground means a call site was missed -- which happened: one of two was
+    patched and the other died 300 lines away with a numpy ufunc error naming no cause."""
+    from lidar_diff_icp.pipeline import _stream_ground
+    with pytest.raises(TypeError, match="this call site was missed"):
+        _stream_ground("nonexistent.laz", (0.0, 0.0, 10.0, 10.0), 5.0, 2, 2, "calibrated")
