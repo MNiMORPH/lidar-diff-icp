@@ -19,8 +19,7 @@ for EVERY grid cell (the existing class-split cube covers only the divide refere
 """
 import argparse, json, os
 import numpy as np, laspy, pyarrow.parquet as pq
-from lidar_diff_icp import registration as reg
-from scipy.ndimage import distance_transform_edt
+from lidar_diff_icp import groundq
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--tile", default="data/derived/elba_fulldensity")
@@ -111,11 +110,9 @@ if A.q_from_class2_spread:
     if A.relation or A.slope is not None:
         raise SystemExit("--q-from-class2-spread is an alternative to --relation/--slope, "
                          "not an addition: they set the same quantity by different means.")
-    QSD = np.load(A.q_from_class2_spread, allow_pickle=True)
-    print(f"ground percentile from the CLASS-2 SPREAD, curve {A.q_from_class2_spread}")
-    print(f"  fitted on {int(QSD['n_marks'])} marks: {str(QSD['fitted_on'])}")
-    print(f"  shape: {str(QSD['shape'])};  validated {str(QSD['cv'])}")
-    print(f"  LIMITS: {str(QSD['known_limits'])}")
+    QSD = groundq.load_curve(A.q_from_class2_spread)
+    print("ground percentile from the CLASS-2 SPREAD")
+    print(groundq.describe(QSD))
 REL = json.load(open(A.relation)) if A.relation else None
 if REL is not None:
     if A.slope is not None:
@@ -158,17 +155,14 @@ else:
     COVER_NAME = "canopy_cover_pfs"
     print(f"relation: q2 = {INTERCEPT:.4f} + {SLOPE:+.4f} * cover   "
           f"(tile fit; class-2 near-ground column)")
-j = reg.read_corrections(D)   # geoid sidecar wins where a tile carries both;
-                              # reading "corrections.json" by name picks elbaext's
-                              # obsolete reference_plane product
-b = j["bounds"]; RES = float(j["res_m"]); X0, Y0 = b[0], b[1]
-zf = np.load(f"{D}/z_after.npy"); NY, NX = zf.shape; NC = zf.size
-_zf = zf.copy(); _m = ~np.isfinite(_zf)
-if _m.any():
-    _zf = _zf[tuple(distance_transform_edt(_m, return_distances=False, return_indices=True))]
-gy, gx = np.gradient(_zf, RES)
-gxf = gx.ravel(); gyf = gy.ravel(); zflat = _zf.ravel()
-nnorm = np.sqrt(gxf**2 + gyf**2 + 1.0)
+# The reference surface and its per-cell local plane. groundq.reference_surface reads
+# the tile's own corrections (the geoid sidecar wins where a tile carries both; reading
+# "corrections.json" by name picks elbaext's obsolete reference_plane product) and the
+# q = 0.50 gen2 grid, which is what the correction is measured against.
+SURF = groundq.reference_surface(D)
+RES, X0, Y0 = SURF["res"], SURF["x0"], SURF["y0"]
+NY, NX = SURF["ny"], SURF["nx"]; NC = NY * NX
+gxf, gyf, zflat, nnorm = SURF["dzde"], SURF["dzdn"], SURF["z"], SURF["nnorm"]
 NZ = int(round((COL_HI - COL_LO) / COL_DZ))
 
 # ---- gen2, ONE streaming pass -------------------------------------------------------
@@ -178,38 +172,50 @@ NZ = int(round((COL_HI - COL_LO) / COL_DZ))
 # bin-centre rule scripts/make_lowveg.py uses. Building both here is what lets a lowveg
 # relation be applied over the WHOLE grid -- lowveg.npy itself exists only on the divide
 # cells of the near-ground cube, which is enough to fit a relation and not to apply one.
-H = np.zeros((NC, NZ), np.int32)
-LV_EDGES = None
-if REL is not None:
-    LV_EDGES = np.arange(CV["denominator_lo_m"], CV["denominator_hi_m"] + 0.5 * CV["bin_m"],
-                         CV["bin_m"])
-    LVH = np.zeros((NC, LV_EDGES.size - 1), np.int32)
-n_in = 0
-n_lv = 0
-with laspy.open(A.gen2) as f:
-    for pts in f.chunk_iterator(A.chunk):
-        cl = np.asarray(pts.classification)
-        keep = np.ones(cl.shape, bool) if COL_CLASSES == "all" else (cl == 2)
-        x = np.asarray(pts.x)[keep]; y = np.asarray(pts.y)[keep]; z = np.asarray(pts.z)[keep]
-        ix = ((x - X0) / RES).astype(np.int64); iy = ((y - Y0) / RES).astype(np.int64)
-        ing = (ix >= 0) & (ix < NX) & (iy >= 0) & (iy < NY)
-        cc = iy[ing] * NX + ix[ing]
-        xc = X0 + ((cc % NX) + 0.5) * RES; yc = Y0 + ((cc // NX) + 0.5) * RES
-        h = (z[ing] - (zflat[cc] + gxf[cc] * (x[ing] - xc) + gyf[cc] * (y[ing] - yc))) / nnorm[cc]
-        zi = np.floor((h - COL_LO) / COL_DZ).astype(np.int64)
-        m = (zi >= 0) & (zi < NZ)
-        np.add.at(H, (cc[m], zi[m]), 1)
-        n_in += int(m.sum())
-        if LV_EDGES is not None:
-            li = np.floor((h - LV_EDGES[0]) / CV["bin_m"]).astype(np.int64)
-            ml = (li >= 0) & (li < LV_EDGES.size - 1)
-            np.add.at(LVH, (cc[ml], li[ml]), 1)
-            n_lv += int(ml.sum())
-print(f"gen2: {n_in:,} {COL_CLASSES} returns in {COL_LO:+.2f}..{COL_HI:+.2f} m over "
-      f"{int((H.sum(1) > 0).sum()):,} cells", flush=True)
-if LV_EDGES is not None:
-    print(f"      {n_lv:,} returns in the covariate window over "
-          f"{int((LVH.sum(1) > 0).sum()):,} cells", flush=True)
+GQ = None
+if QSD is not None:
+    # THE METHOD, in one call. groundq.correct_gen2 builds the class-2 column against the
+    # reference plane, measures the cell's own spread, reads q off the calibrated curve and
+    # takes the ground at that q. It is the SAME function the pipeline calls, so the tile
+    # route and the pipeline route cannot drift apart -- which is exactly what happened when
+    # this was reimplemented in pipeline._stream_ground against a different plane.
+    GQ = groundq.correct_gen2(D, A.gen2, QSD, zlo=COL_LO, zhi=COL_HI, dz=COL_DZ,
+                              chunk=A.chunk, surf=SURF)
+    H = GQ["H"]
+    LV_EDGES = None
+else:
+    H = np.zeros((NC, NZ), np.int32)
+    LV_EDGES = None
+    if REL is not None:
+        LV_EDGES = np.arange(CV["denominator_lo_m"], CV["denominator_hi_m"] + 0.5 * CV["bin_m"],
+                             CV["bin_m"])
+        LVH = np.zeros((NC, LV_EDGES.size - 1), np.int32)
+    n_in = 0
+    n_lv = 0
+    with laspy.open(A.gen2) as f:
+        for pts in f.chunk_iterator(A.chunk):
+            cl = np.asarray(pts.classification)
+            keep = np.ones(cl.shape, bool) if COL_CLASSES == "all" else (cl == 2)
+            x = np.asarray(pts.x)[keep]; y = np.asarray(pts.y)[keep]; z = np.asarray(pts.z)[keep]
+            ix = ((x - X0) / RES).astype(np.int64); iy = ((y - Y0) / RES).astype(np.int64)
+            ing = (ix >= 0) & (ix < NX) & (iy >= 0) & (iy < NY)
+            cc = iy[ing] * NX + ix[ing]
+            xc = X0 + ((cc % NX) + 0.5) * RES; yc = Y0 + ((cc // NX) + 0.5) * RES
+            h = (z[ing] - (zflat[cc] + gxf[cc] * (x[ing] - xc) + gyf[cc] * (y[ing] - yc))) / nnorm[cc]
+            zi = np.floor((h - COL_LO) / COL_DZ).astype(np.int64)
+            m = (zi >= 0) & (zi < NZ)
+            np.add.at(H, (cc[m], zi[m]), 1)
+            n_in += int(m.sum())
+            if LV_EDGES is not None:
+                li = np.floor((h - LV_EDGES[0]) / CV["bin_m"]).astype(np.int64)
+                ml = (li >= 0) & (li < LV_EDGES.size - 1)
+                np.add.at(LVH, (cc[ml], li[ml]), 1)
+                n_lv += int(ml.sum())
+    print(f"gen2: {n_in:,} {COL_CLASSES} returns in {COL_LO:+.2f}..{COL_HI:+.2f} m over "
+          f"{int((H.sum(1) > 0).sum()):,} cells", flush=True)
+    if LV_EDGES is not None:
+        print(f"      {n_lv:,} returns in the covariate window over "
+              f"{int((LVH.sum(1) > 0).sum()):,} cells", flush=True)
 
 # ---- gen1: per-cell median of the registered per-return offsets ----------------------
 t = pq.read_table(f"{D}/beam_offset_table.parquet", columns=["cell", "d_mm_corr", "in_grid"])
@@ -224,19 +230,11 @@ print(f"gen1: ground on {int(np.isfinite(h1).sum()):,} cells", flush=True)
 
 # ---- gen2 at the cover-dependent percentile -----------------------------------------
 if QSD is not None:
-    # The cell's own class-2 spread, from the histogram already built, then the calibrated
-    # percentile for that spread. Cells with too few returns to have a spread get NaN and
+    # The cell's own class-2 spread and the calibrated percentile for it, both measured by
+    # groundq.correct_gen2 above. Cells with too few returns to have a spread get NaN and
     # are left out rather than given the default -- the curve says nothing about them.
-    C0 = np.cumsum(H, 1).astype(float)
-    ntot0 = C0[:, -1]
-    ctr = COL_LO + (np.arange(NZ) + 0.5) * COL_DZ
-    with np.errstate(invalid="ignore", divide="ignore"):
-        mean_h = (H * ctr).sum(1) / np.maximum(ntot0, 1)
-        var_h = (H * (ctr - mean_h[:, None]) ** 2).sum(1) / np.maximum(ntot0, 1)
-    sd_mm = np.where(ntot0 >= 20, np.sqrt(np.maximum(var_h, 0)) * 1000.0, np.nan)
-    q2 = np.full(NC, np.nan)
+    sd_mm, q2 = GQ["sd_mm"], GQ["q"]
     ok_sd = np.isfinite(sd_mm) & (sd_mm > 0)
-    q2[ok_sd] = np.interp(np.log(sd_mm[ok_sd]), QSD["log_sd_mm"], QSD["q"])
     np.save(f"{D}/class2_sd_mm.npy", sd_mm.reshape(NY, NX))
     print(f"class-2 spread: {int(ok_sd.sum()):,} cells with >=20 returns; "
           f"median {np.nanmedian(sd_mm):.1f} mm  p90 {np.nanpercentile(sd_mm,90):.1f}")
@@ -266,17 +264,12 @@ if _oob:
     print(f"q2 outside [0,1] on {_oob:,} cells; clipped to the column's ends, which is a "
           f"FLOOR/CEILING not a fit -- those cells take the extreme return, not a percentile")
 q2 = np.clip(q2, 0.0, 1.0)
-C = np.cumsum(H, 1).astype(float); ntot = C[:, -1]
-have = ntot > 0
-idx = np.arange(NC)
-r = q2 * ntot
-k = (C >= r[:, None]).argmax(1)
-below = np.where(k > 0, C[idx, np.maximum(k - 1, 0)], 0.0)
-inbin = C[idx, k] - below
-frac = np.where(inbin > 0, (r - below) / np.maximum(inbin, 1e-9), 0.0)
-h2 = np.where(have, (COL_LO + (k + np.clip(frac, 0, 1)) * COL_DZ) * 1000.0, np.nan)
-h2_med = np.where(have, (COL_LO + ((C >= 0.5 * ntot[:, None]).argmax(1) + 0.5) * COL_DZ) * 1000.0,
-                  np.nan)
+# The ground at the chosen percentile, and the plain median it is judged against. Both are
+# groundq's, so a cover-relation q and a calibrated q are read off the column identically.
+h2 = GQ["h2_mm"] if GQ is not None else groundq.ground_at_q(H, COL_LO, COL_DZ, q2)
+h2_med = (GQ["h2_median_mm"] if GQ is not None
+          else groundq.ground_at_median(H, COL_LO, COL_DZ))
+have = H.sum(1) > 0                              # cells with any return in the column
 
 dod_corr = (h2 - h1) / 1000.0 * nnorm            # m, positive = elevation rose
 dod_med = (h2_med - h1) / 1000.0 * nnorm         # same but gen2 at its plain median
