@@ -96,8 +96,21 @@ for t in _M.itertuples():
     # The covariate and the response are groundq's, so the statistic fitted here is
     # literally the one groundq.spread_from_histogram measures on a tile.
     rows.append(dict(point_id=t.point_id, easting=t.easting, northing=t.northing,
-                     mu=mu, hg=hg, **groundq.mark_statistics(hg, mu)))
+                     point_type=t.point_type, n_g=int(g.sum()), mu=mu, hg=hg,
+                     **groundq.mark_statistics(hg, mu)))
 F = pd.DataFrame(rows)
+
+# THE PER-MARK TABLE. Written because it was NOT: the relationship this whole route rests on
+# -- the percentile of true ground, and the class-2 spread it is indexed by, one row per mark
+# -- existed only as data/derived/control_q_vs_sigma.csv, which NOTHING in the tree produced.
+# It had been made by ad-hoc code and the producer never committed, so the curve was
+# reproducible and the measurement under it was not. groundq.mark_statistics reproduces that
+# orphan file exactly (519/519 marks, every column, max |diff| 1.4e-14), so this supersedes it.
+MARKS_OUT = OUTNPZ.replace(".npz", "_marks.csv").replace("ground_q_vs_class2sd_",
+                                                         "control_marks_")
+F.drop(columns=["hg"]).to_csv(MARKS_OUT, index=False)
+print(f"wrote {MARKS_OUT}  ({len(F)} marks, one row each)")
+
 SD_MM = F.sd.to_numpy() * 1000
 ls = np.log(SD_MM)
 rk = F["rank"].to_numpy()
