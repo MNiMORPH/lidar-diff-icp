@@ -32,7 +32,7 @@ Lessons baked in
   (``correction_surface=True``) for legacy data lacking ``gps_time``, but it is a
   data-driven IDW that absorbs localized flat change up to its dz threshold, adds
   only ~4 mm here, and is OFF by default.
-* **TPI, not flow accumulation, buffers the floodplain** out of the stable set
+* **ELEVATION, not TPI, cuts the floodplain** out of the stable set
   (flow routing is unreliable on flats).
 * Convention: DoD is always ``after - before`` (positive = deposition); plot red =
   erosion, blue = deposition; standard NW (315/45) hillshade.
@@ -395,7 +395,7 @@ def _stream_ground(path, bounds, res, nx, ny, q, *, plane=None, chunk=8_000_000,
 
 
 def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
-                   gen2_curve=None, gen2_epoch="gen2_2021_control",
+                   gen2_curve=None, gen2_epoch="gen2_2021_control", valley_top_m=None,
                    correction_surface=False, along_track_drift=True, tie="reference",
                    ground="slope_normal", sn_smooth_cells=1.2, stream=False,
                    ground_source="csf", after_ground="class2", csf_pdal=None,
@@ -608,14 +608,34 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
     Zf = Z21.copy(); nanm = np.isnan(Zf)
     if nanm.any():
         Zf = Zf[tuple(edt(nanm, return_distances=False, return_indices=True))]
-    tpi = Z21 - uniform_filter(Zf, size=int(2 * 300 / res), mode="nearest")
+    # THE VALLEY FLOOR IS CUT BY ELEVATION, NOT TPI (Andy, 2026-09-04). TPI's only job
+    # here was the floodplain -- `stable` is otherwise slope and Laplacian convexity -- and
+    # measured at whitewater the TPI mask MISSES 150,873 cells of valley floor while
+    # removing 16,218 upland hollows at a median 305.5 m. Wrong in both directions, and it
+    # set stable_sigma, the LoD and the registration at every site.
+    from .refcells import valley_top_from_histogram
+    _vt = valley_top_m if valley_top_m is not None else valley_top_from_histogram(Z21)
     sdeg = np.degrees(coreg.slope_aspect(gaussian_filter(Zf, 2.0), res)[0])
     Zsm = gaussian_filter(Zf, 50 / res / 2)
     lap = (np.gradient(np.gradient(Zsm, res, axis=0), res, axis=0)
            + np.gradient(np.gradient(Zsm, res, axis=1), res, axis=1))
-    convex = (sdeg > 5) & (sdeg < 35) & (tpi > -2) & (lap < 0)
-    stable = ((sdeg < 3) & (tpi > -2)) | convex
-    floodplain = np.isfinite(Z21) & (tpi < -2)
+    if _vt is None:
+        # No cut rather than a wrong one, said out loud: on a tile whose commonest
+        # elevation is NOT the valley floor (cook: a lake plateau, mode 588.4 m of a
+        # 447-606 m range) there is no dip above the mode to find.
+        floodplain = np.zeros(Z21.shape, bool)
+        print("  NO valley cut: this tile's elevation histogram has no minimum above its "
+              "dominant mode, so floodplain cells are NOT excluded from the stable set. "
+              "stable_sigma and the LoD include any valley change.", flush=True)
+    else:
+        floodplain = np.isfinite(Z21) & (Z21 < float(_vt))
+        print(f"  valley cut at {float(_vt):.1f} m "
+              f"({'stated' if valley_top_m is not None else 'histogram'}): "
+              f"{int(floodplain.sum()):,} cells excluded from the stable set "
+              f"({100 * floodplain.mean():.1f}% of the grid)", flush=True)
+    upland = ~floodplain
+    convex = (sdeg > 5) & (sdeg < 35) & upland & (lap < 0)
+    stable = ((sdeg < 3) & upland) | convex
 
     # ground estimator: "low_q" (horizontal ground_q quantile) or "slope_normal"
     # (ground_q quantile -- median by default -- of the residual to a common smoothed

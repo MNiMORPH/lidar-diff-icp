@@ -89,6 +89,9 @@ ny, nx = z.shape
 zf = z.copy(); nm = ~np.isfinite(zf)
 if nm.any():
     zf = zf[tuple(distance_transform_edt(nm, return_distances=False, return_indices=True))]
+# TPI is kept ONLY as a recorded per-cell covariate below (rec["tpi"]), never as a cut.
+# It defines no population here any more: the floodplain is by elevation and the crest gate
+# is convexity + a valley top. Andy, 2026-09-04: TPI is not used for floodplain anywhere.
 tpi_large = zf - uniform_filter(zf, size=61)
 
 # --- cross-ridge direction from the Hessian of a lightly smoothed DEM --------------------
@@ -135,18 +138,33 @@ L0 = 20; kappa, bslope = kap[L0]
 kappa_g = np.full((ny, nx), np.nan); b_g = np.full((ny, nx), np.nan)
 kappa_g[rr, cc] = kappa; b_g[rr, cc] = bslope
 
-# crude floodplain elevation mask (part of the suite; applied consistently). Crests sit on
-# topographic highs so this removes few, but we exclude valley-bottom cells for safety.
-floodplain = tpi_large < -2.0
+# THE FLOODPLAIN MASK, BY ELEVATION (Andy, 2026-09-04). It was `tpi_large < -2.0`, and
+# this file is the PRODUCER of floodplain_mask.npy, so that one line set the cut for every
+# consumer in the project. Measured at whitewater, the TPI version missed 150,873 cells of
+# valley floor and removed 16,218 upland hollows at a median 305.5 m -- wrong in both
+# directions. The cut is now the first local minimum above the tile's dominant elevation
+# mode; see refcells.valley_top_from_histogram for what that assumes and where it fails.
+from lidar_diff_icp.refcells import VALLEY_TOP_M, valley_top_from_histogram
+_vt = VALLEY_TOP_M.get(TILE) or valley_top_from_histogram(zf)
+if _vt is None:
+    floodplain = np.zeros_like(tpi_large, bool)
+    print(f"NO valley cut for {TILE}: its elevation histogram has no minimum above the "
+          f"dominant mode, so floodplain_mask.npy is EMPTY and every consumer of it "
+          f"applies no floodplain cut on this tile.")
+else:
+    floodplain = np.isfinite(zf) & (zf < float(_vt))
+    print(f"floodplain by ELEVATION < {float(_vt):.1f} m "
+          f"({'registry' if VALLEY_TOP_M.get(TILE) else 'histogram'}): "
+          f"{int(floodplain.sum()):,} cells ({100*floodplain.mean():.1f}% of the grid)")
 np.save(f"{D}/floodplain_mask.npy", floodplain)
 
 # crest = convex, near-crest, on a topographic high, NOT floodplain
 KMIN = 0.004                                          # ~ >=0.8 m of convex relief over +/-20 m
-crest_sel = (kappa > KMIN) & (np.abs(bslope) < 0.15) & (tpi_large[rr, cc] > 0) & (~floodplain[rr, cc])
+crest_sel = (kappa > KMIN) & (np.abs(bslope) < 0.15) & (~floodplain[rr, cc])
 crest = np.zeros((ny, nx), bool); crest[rr[crest_sel], cc[crest_sel]] = True
 np.save(f"{D}/crest_mask.npy", crest)
-print(f"\ncrest cells (convex, near-crest, on high, non-floodplain): {int(crest.sum())} "
-      f"of {len(rr)} divide cells ({int((tpi_large[rr,cc]<=-2.0).sum())} divide cells were floodplain)")
+print(f"\ncrest cells (convex, near-crest, above the valley top): {int(crest.sum())} "
+      f"of {len(rr)} divide cells ({int(floodplain[rr, cc].sum())} divide cells were below it)")
 
 # per-pixel record at every ridgecrest cell: slope AND curvature (+ DoD, land cover, coords)
 cr, cco = np.where(crest)
