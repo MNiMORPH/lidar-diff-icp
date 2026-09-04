@@ -43,7 +43,59 @@ import os
 
 import numpy as np
 
-__all__ = ["reference_cells", "floodplain_by_elevation", "VALLEY_TOP_M"]
+__all__ = ["reference_cells", "floodplain_by_elevation", "valley_top_from_histogram",
+           "VALLEY_TOP_M"]
+
+
+def valley_top_from_histogram(z, *, bins=60):
+    """Valley top from the elevation histogram: the FIRST LOCAL MINIMUM ABOVE THE DOMINANT
+    MODE. Returns the elevation, or None if the tile has no minimum above its mode.
+
+    The dominant mode is the valley floor wherever the valley is the flattest, most
+    repeated elevation in the tile -- which is what a floodplain is. Walking up from it to
+    the first dip finds where that population stops.
+
+    It replaces "the trough between the tallest bin in each half of the elevation RANGE",
+    which required a SECOND mode and had no test that one existed. Measured 2026-09-04:
+
+        elba        dominant 222.2 m -> 226.9 m (17.2% of tile);
+                    old rule 231.5 m (19.4%);  established VALLEY_TOP 230.0 m (18.8%)
+        whitewater  dominant 202.3 m -> 207.7 m (35.8%);
+                    old rule 297.9 m (76.5%) -- it found no second mode and cut the tile in
+                    three quarters, taking the whole valley SIDE with the floor
+
+    KNOWN LIMITS, to revisit (Andy, 2026-09-04):
+      * THE PREMISE IS THAT THE COMMONEST ELEVATION IS THE VALLEY FLOOR, and it fails where
+        it is not. Measured across the six sites 2026-09-04:
+
+            elba        mode 222.2 m of 214-353 -> cut 226.9 m, removes 17.2%   ok
+            whitewater  mode 202.3 m of 201-360 -> cut 207.7 m, removes 35.8%   ok
+            carlton     mode 226.4 m of 209-317 -> cut 233.5 m, removes 22.2%   ok
+            mnrv        mode 229.4 m of 226-304 -> cut 232.0 m, removes 28.5%   ok
+            cook        mode 588.4 m of 447-606 -> NO minimum above it          refuses
+            battlecreek mode 281.6 m of 244-304 -> cut 283.6 m, removes 75.2%   WRONG
+
+        Cook is a lake-studded plateau: its commonest elevation is the upland, so there is
+        no dip above the mode and this returns None, which makes reference_cells refuse.
+        BATTLE CREEK IS THE BUILT ENVIRONMENT (Andy, 2026-09-04): graded lots and fill set
+        the modal elevation, the cut lands 2 m above it, and 75.2% of the tile goes. Revisit
+        for urban sites and for landscapes that are not valley-dominated.
+      * A tile with NO valley still returns a cut, just above whatever its commonest
+        elevation is. Check the fraction it removes before trusting it on flat ground.
+      * It is a per-tile threshold, so it is NOT comparable between tiles. Use VALLEY_TOP_M
+        where a landscape has an established value.
+    """
+    zc = np.asarray(z, float).ravel()
+    zc = zc[np.isfinite(zc)]
+    if zc.size <= 100:
+        return None
+    h, e = np.histogram(zc, bins=bins)
+    c = 0.5 * (e[:-1] + e[1:])
+    pk = int(np.argmax(h))
+    i = pk + 1
+    while i + 1 < len(h) and not (h[i] <= h[i - 1] and h[i] <= h[i + 1]):
+        i += 1
+    return float(c[i]) if i + 1 < len(h) else None
 
 #: The valley-top ELEVATION per site, in metres. STATED, never inferred.
 #:
@@ -159,8 +211,13 @@ def reference_cells(tile_dir, *, cells=None, curv_max=0.015, slope_max=12.0,
         if zf is None:
             raise FileNotFoundError(
                 f"{tile_dir}/z_after.npy is missing, so the valley cut cannot be applied.")
+        src = "stated"
         if valley_top_m is None:
             valley_top_m = VALLEY_TOP_M.get(os.path.basename(str(tile_dir).rstrip("/")))
+            src = "registry"
+        if valley_top_m is None:
+            valley_top_m = valley_top_from_histogram(zf)
+            src = "histogram"
         if valley_top_m is None:
             # STATED, never inferred (Andy, 2026-09-04). The antimode of the tile's own
             # elevation histogram is withdrawn: it worked at elba only because that tile is
@@ -179,7 +236,7 @@ def reference_cells(tile_dir, *, cells=None, curv_max=0.015, slope_max=12.0,
                 f"cut deliberately. Known: "
                 + ", ".join(f"{k}={v:g} m" for k, v in sorted(VALLEY_TOP_M.items())))
         z = zf.ravel()[idx]
-        cut(f"below valley top {float(valley_top_m):.1f} m (stated)",
+        cut(f"below valley top {float(valley_top_m):.1f} m ({src})",
             ~(np.isfinite(z) & (z < float(valley_top_m))))
 
     dod = _opt(tile_dir, "dod.npy")
