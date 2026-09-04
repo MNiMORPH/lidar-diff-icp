@@ -272,3 +272,71 @@ def correct_gen2(tile_dir, gen2_cloud, curve, *, zlo=-1.0, zhi=2.0, dz=0.02,
                                        "window_hi_m": zhi, "bin_m": dz,
                                        "min_count": min_count}}
 
+# ---------------------------------------------------------------------------------------
+# CALIBRATING THE CURVE -- the other half of the same object
+#
+# The application above and the calibration below MUST measure the same statistic, or the
+# curve is indexed by a quantity it was not fitted on. That is not a hypothetical: indexing
+# it with a robust spread (1.4826*(p75-p25)/1.349) of a residual to a different plane pushed
+# Whitewater's ground down by ~1 m in the worst tenth of cells. So the definition lives here,
+# once, and tests/test_groundq.py pins that spread_from_histogram converges to it.
+#
+# The mark-reading itself stays in analysis/calibrate_ground_q.py: it depends on the control
+# CSVs and the per-mark boxes, which are survey bookkeeping rather than method.
+
+
+def mark_statistics(hg, mu_true):
+    """The covariate and the response for ONE control mark.
+
+    ``hg``: that mark's ground-class returns as slope-normal heights above its own fitted
+    order-2 surface, in METRES. ``mu_true``: the surveyed ground in that same frame, metres.
+
+    ``sd``, ``nmad`` and ``iqr`` come back in METRES and ``med_minus_truth`` in MM, which is
+    how the calibration has always carried them. ``sd`` is the PLAIN standard deviation --
+    the quantity :func:`spread_from_histogram` reproduces on a tile.
+    """
+    hg = np.asarray(hg, float)
+    return {"sd": float(np.std(hg)),
+            "rank": float(np.mean(hg < mu_true)),
+            "nmad": float(1.4826 * np.median(np.abs(hg - np.median(hg)))),
+            "iqr": float(np.percentile(hg, 75) - np.percentile(hg, 25)),
+            "skew": float(np.mean(((hg - hg.mean()) / max(np.std(hg), 1e-9)) ** 3)),
+            "med_minus_truth": (float(np.median(hg)) - mu_true) * 1000}
+
+
+def spatial_folds(easting, northing, *, n_folds=5, block_m=10_000, seed=0):
+    """Cross-validation folds of whole ``block_m`` blocks, so a fold never sees its own area.
+
+    Marks near each other share a flight line, a phenology and a crew. Splitting them at
+    random would let the curve be scored on a mark it effectively already saw, which is how
+    a spatial calibration flatters itself. Returns ``(fold_index_per_mark, blocks)``.
+    """
+    e = (np.asarray(easting, float) // block_m).astype(int).astype(str)
+    n = (np.asarray(northing, float) // block_m).astype(int).astype(str)
+    blk = np.char.add(np.char.add(e, "_"), n)
+    _, first = np.unique(blk, return_index=True)
+    ub = blk[np.sort(first)]                 # order of first appearance, as pandas .unique()
+    np.random.default_rng(seed).shuffle(ub)
+    fold = {b: i % n_folds for i, b in enumerate(ub)}
+    return np.array([fold[b] for b in blk], int), ub
+
+
+def fit_curve(sd_mm, rank):
+    """Isotonic, monotone NON-INCREASING, rank on log(spread).
+
+    Monotone because more contamination cannot mean a HIGHER ground rank -- the only
+    constraint imposed, and it is physical. Isotonic rather than a functional family so the
+    flat-then-falling shape comes from the data instead of from a chosen form or a threshold.
+    """
+    from sklearn.isotonic import IsotonicRegression
+    return IsotonicRegression(increasing=False, out_of_bounds="clip").fit(
+        np.log(np.asarray(sd_mm, float)), np.asarray(rank, float))
+
+
+def save_curve(path, iso, *, n_marks, epoch, fitted_on, response, covariate, shape, cv,
+               known_limits):
+    """Write a curve WITH its provenance, so a consumer can see what it may be applied to."""
+    np.savez(path, log_sd_mm=iso.f_.x, q=iso.f_.y, n_marks=n_marks, set=epoch,
+             fitted_on=fitted_on, response=response, covariate=covariate, shape=shape,
+             cv=cv, known_limits=known_limits)
+    return path
