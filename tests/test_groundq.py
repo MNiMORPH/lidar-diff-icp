@@ -112,3 +112,26 @@ def test_stream_ground_refuses_an_unresolved_ground_q_string():
     from lidar_diff_icp.pipeline import _stream_ground
     with pytest.raises(TypeError, match="this call site was missed"):
         _stream_ground("nonexistent.laz", (0.0, 0.0, 10.0, 10.0), 5.0, 2, 2, "calibrated")
+
+
+
+
+def _one_cell_histogram(hg, zlo=-1.0, zhi=2.0, dz=0.02):
+    nz = int(round((zhi - zlo) / dz))
+    idx = np.floor((np.asarray(hg) - zlo) / dz).astype(int)
+    keep = (idx >= 0) & (idx < nz)
+    H = np.zeros((1, nz), np.int32)
+    np.add.at(H, (np.zeros(int(keep.sum()), int), idx[keep]), 1)
+    return H, zlo, dz
+
+
+def _ground_and_mat(seed=0):
+    """A cell that looks like a real one: a tight ground return plus a vegetation mat."""
+    rng = np.random.default_rng(seed)
+    return np.r_[rng.normal(0.0, 0.05, 400), rng.normal(0.35, 0.20, 200)]
+
+
+def test_ground_at_q_propagates_a_declined_cell_as_nan():
+    """A cell the curve declined to estimate must not come back looking corrected."""
+    H, zlo, dz = _one_cell_histogram(_ground_and_mat())
+    assert np.isnan(groundq.ground_at_q(H, zlo, dz, np.array([np.nan]))[0])

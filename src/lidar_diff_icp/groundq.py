@@ -222,12 +222,18 @@ def ground_at_q(H, zlo, dz, q):
     C = np.cumsum(H, 1).astype(float)
     ntot = C[:, -1]
     idx = np.arange(nc)
-    r = np.asarray(q, float) * ntot
+    qq = np.asarray(q, float)
+    r = qq * ntot
     k = (C >= r[:, None]).argmax(1)
     below = np.where(k > 0, C[idx, np.maximum(k - 1, 0)], 0.0)
     inbin = C[idx, k] - below
     frac = np.where(inbin > 0, (r - below) / np.maximum(inbin, 1e-9), 0.0)
-    return np.where(ntot > 0, (zlo + (k + np.clip(frac, 0, 1)) * dz) * 1000.0, np.nan)
+    g = np.where(ntot > 0, (zlo + (k + np.clip(frac, 0, 1)) * dz) * 1000.0, np.nan)
+    # A NaN q must NOT fall through to bin 0. `C >= nan` is False everywhere, so argmax
+    # returns 0 and the cell silently takes the FLOOR of the column: measured on Elba,
+    # 1,131 declined cells carried a median DoD of -1.091 m, a metre of fake erosion,
+    # where their plain gen2 median said +0.003 m. Decline explicitly instead.
+    return np.where(np.isfinite(qq), g, np.nan)
 
 
 def ground_at_median(H, zlo, dz):
