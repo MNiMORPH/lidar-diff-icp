@@ -396,7 +396,7 @@ def _stream_ground(path, bounds, res, nx, ny, q, *, plane=None, chunk=8_000_000,
 
 def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
                    gen2_curve=None, gen2_epoch="gen2_2021_control", valley_top_m=None,
-                   curv_max=0.005,
+                   tile_dir_for_landscape=None, curv_max=0.005,
                    correction_surface=False, along_track_drift=True, tie="reference",
                    ground="slope_normal", sn_smooth_cells=1.2, stream=False,
                    ground_source="csf", after_ground="class2", csf_pdal=None,
@@ -621,8 +621,21 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
     # measured at whitewater the TPI mask MISSES 150,873 cells of valley floor while
     # removing 16,218 upland hollows at a median 305.5 m. Wrong in both directions, and it
     # set stable_sigma, the LoD and the registration at every site.
-    from .refcells import valley_top_from_histogram
-    _vt = valley_top_m if valley_top_m is not None else valley_top_from_histogram(Z21)
+    # The caller always says which (Andy, 2026-09-04): an elevation in metres, or
+    # "histogram" to compute it from the landscape. There is no silent default -- a stated
+    # value and a computed one are different claims about the same tile.
+    from .refcells import valley_top_for_landscape
+    if valley_top_m is None:
+        raise ValueError(
+            "difference_dem needs valley_top_m: an elevation in metres, or 'histogram' to "
+            "compute it from the landscape's pooled elevations. It will not choose for you "
+            "-- a computed valley top silently replacing a stated one is how elba rebuilt "
+            "on 226.9 m instead of its established 230.0 m.")
+    if valley_top_m == "histogram":
+        _vt, _mem = valley_top_for_landscape(tile_dir_for_landscape or ".")
+        _src = f"histogram over {len(_mem)} tile(s)"
+    else:
+        _vt, _src = float(valley_top_m), "stated"
     sdeg = np.degrees(coreg.slope_aspect(gaussian_filter(Zf, 2.0), res)[0])
     Zsm = gaussian_filter(Zf, 50 / res / 2)
     lap = (np.gradient(np.gradient(Zsm, res, axis=0), res, axis=0)
@@ -638,7 +651,7 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
     else:
         floodplain = np.isfinite(Z21) & (Z21 < float(_vt))
         print(f"  valley cut at {float(_vt):.1f} m "
-              f"({'stated' if valley_top_m is not None else 'histogram'}): "
+              f"({_src}): "
               f"{int(floodplain.sum()):,} cells excluded from the stable set "
               f"({100 * floodplain.mean():.1f}% of the grid)", flush=True)
     upland = ~floodplain

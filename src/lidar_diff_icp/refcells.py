@@ -268,30 +268,40 @@ def reference_cells(tile_dir, *, cells=None, curv_max=0.015, slope_max=12.0,
         if zf is None:
             raise FileNotFoundError(
                 f"{tile_dir}/z_after.npy is missing, so the valley cut cannot be applied.")
-        src = "stated"
+        # THE CALLER ALWAYS SAYS WHICH (Andy, 2026-09-04). No silent fallback: a stated
+        # value and a computed one are different claims, and a chain that quietly
+        # substitutes one for the other hides which was used. Elba rebuilt on a computed
+        # 226.9 m instead of its cited 230.0 m exactly that way, and nothing said so.
+        #
+        #   valley_top_m = <float>       an elevation in metres, stated
+        #                = "registry"    VALLEY_TOP_M for this tile; raises if absent
+        #                = "histogram"   computed from the LANDSCAPE's pooled elevations
         if valley_top_m is None:
-            valley_top_m = VALLEY_TOP_M.get(os.path.basename(str(tile_dir).rstrip("/")))
-            src = "registry"
-        if valley_top_m is None:
-            valley_top_m = valley_top_from_histogram(zf)
-            src = "histogram"
-        if valley_top_m is None:
-            # STATED, never inferred (Andy, 2026-09-04). The antimode of the tile's own
-            # elevation histogram is withdrawn: it worked at elba only because that tile is
-            # genuinely bimodal (a 25,601-cell peak at 222.2 m, a 20,570-cell peak at
-            # 338.3 m, a 2,919-cell trough at 231.5 m), and at whitewater the histogram
-            # merely decays from a 98,783-cell spike at 202.3 m, so it returned an arbitrary
-            # point and cut 76% of the tile. TPI is not an alternative either: it misses
-            # 150,873 cells of whitewater's valley floor.
             raise ValueError(
-                f"exclude_valley needs valley_top_m, an ELEVATION IN METRES for this "
-                f"landscape. It is not inferred from the tile: a histogram-derived "
-                f"threshold is not comparable between tiles and is meaningless where the "
-                f"tile is not bimodal. Elba's established value is 230.0 m "
-                f"(analysis/steady_state/run_steady_state_strata.py VALLEY_TOP, "
-                f"ALLFOREST_BLUFFLAND.md). Pass exclude_valley=False to work without the "
-                f"cut deliberately. Known: "
-                + ", ".join(f"{k}={v:g} m" for k, v in sorted(VALLEY_TOP_M.items())))
+                "exclude_valley needs valley_top_m and will not choose for you. Pass an "
+                "elevation in metres, or 'registry' to use the established value for this "
+                "tile, or 'histogram' to compute it from the landscape's pooled "
+                "elevations. Known registry values: "
+                + ", ".join(f"{k}={v:g} m" for k, v in sorted(VALLEY_TOP_M.items()))
+                + ". Or exclude_valley=False to work without the cut deliberately.")
+        if valley_top_m == "registry":
+            name = os.path.basename(str(tile_dir).rstrip("/"))
+            valley_top_m = VALLEY_TOP_M.get(name)
+            if valley_top_m is None:
+                raise ValueError(
+                    f"no established valley top for {name!r}. Add one to "
+                    f"refcells.VALLEY_TOP_M with its source, or ask for 'histogram'.")
+            src = "registry"
+        elif valley_top_m == "histogram":
+            valley_top_m, members = valley_top_for_landscape(tile_dir)
+            if valley_top_m is None:
+                raise ValueError(
+                    f"the pooled elevation histogram for this landscape "
+                    f"({', '.join(members)}) has no minimum above its dominant mode, so no "
+                    f"valley top can be computed. State one, or exclude_valley=False.")
+            src = f"histogram over {len(members)} tile(s)"
+        else:
+            src = "stated"
         z = zf.ravel()[idx]
         cut(f"below valley top {float(valley_top_m):.1f} m ({src})",
             ~(np.isfinite(z) & (z < float(valley_top_m))))

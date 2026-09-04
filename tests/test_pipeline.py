@@ -83,8 +83,11 @@ def test_boresight_correction_recovers_injected_roll(tmp_path):
     za = _ground(xa, ya) + _bump(xa, ya) + rng.normal(0, 0.02, na)
     _write_laz14(tmp_path / "after.laz", xa, ya, za, np.ones(na), ya, np.zeros(na))
     before = str(tmp_path / "before.laz"); after = str(tmp_path / "after.laz")
+    # A synthetic flat-ish tile has no valley; state the cut rather than let anything
+    # compute one. The caller ALWAYS says which (Andy, 2026-09-04).
     kw = dict(res=5.0, ground_q=0.10, ground="low_q", ground_source="last_return",
-              after_ground="last_return", geoid_datum=(0.0, 0.0, 0.0))
+              after_ground="last_return", geoid_datum=(0.0, 0.0, 0.0),
+              valley_top_m=-1e9)
     r_off = difference_dem(before, after, BOUNDS, correct_boresight=False, **kw)
     r_on = difference_dem(before, after, BOUNDS, correct_boresight=True, **kw)
     assert r_off["corrections"]["boresight_roll_mm_per_deg"] is None
@@ -125,7 +128,8 @@ def test_difference_dem_recovers_bump_and_zero_on_stable(tmp_path):
     # explicit zero geoid datum rather than let the datum step compute (nan) from PROJ.
     r = difference_dem(before, after, BOUNDS, res=5.0, ground_q=0.10,
                        ground="low_q", ground_source="last_return",
-                       after_ground="last_return", geoid_datum=(0.0, 0.0, 0.0))
+                       after_ground="last_return", geoid_datum=(0.0, 0.0, 0.0),
+                       valley_top_m=-1e9)
     dod = r["dod"]; res = r["res"]
     ci = int((BUMP_XY[0] - X0) / res); ri = int((BUMP_XY[1] - Y0) / res)
     # the 1 m bump is recovered (above dz_thresh, so kept as real change)

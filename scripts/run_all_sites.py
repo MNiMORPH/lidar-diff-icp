@@ -23,7 +23,7 @@ import matplotlib.pyplot as plt
 
 from lidar_diff_icp.pipeline import difference_dem
 from lidar_diff_icp.detect import detect_change_standard
-from lidar_diff_icp import figures
+from lidar_diff_icp import figures, refcells
 from lidar_diff_icp.viz import hillshade
 
 
@@ -55,7 +55,10 @@ SITES = {
     # fit in memory whole; it is the same path the other four large sites use.
     "elba": ("data/before/4342-29-64.laz", "data/after/3dep2021_fulldensity.laz",
              (577492.8, 4882737.6, 580032.8, 4886237.6), True),
-    "whitewater": ("data/before/4358-26-03.laz", "data/after/3dep_4358_fulltile.laz",
+    # 3dep_4358_fulltile.laz was a TRUNCATED fetch: 5.52 returns/m2 east of easting 586362
+    # against 15.45 west, same five flight lines both sides. Replaced 2026-09-04 by an
+    # uncapped re-fetch, 148,050,625 points, west/east density ratio 1.06.
+    "whitewater": ("data/before/4358-26-03.laz", "data/after/3dep_4358_fulldensity.laz",
                    None, True),
     "mnrv": ("data/before_mnrv/4342-23-01.laz", "data/after_mnrv/mnrv_3dep2021.laz",
              None, True),
@@ -78,6 +81,20 @@ def _tif(arr, res, x0, y0, ny, out):
         d.write(np.flipud(arr).astype("float32"), 1)
 
 
+#: Where each site's valley top comes from. STATED per site, never defaulted: "registry"
+#: uses refcells.VALLEY_TOP_M (an established, cited elevation); "histogram" computes it
+#: from the landscape's pooled elevations. Elba's landscape has a cited 230.0 m, so it uses
+#: it; the others have none, and say so by asking for the computation.
+VALLEY_TOP_SOURCE = {
+    "elba": "registry",
+    "whitewater": "histogram",
+    "mnrv": "histogram",
+    "cook": "histogram",
+    "carlton": "histogram",
+    "battlecreek": "histogram",
+}
+
+
 def run_site(name, figdir=FIGDIR, *, skip_penetration=False):
     before, after, bounds, stream = SITES[name]
     res = 5.0
@@ -89,9 +106,16 @@ def run_site(name, figdir=FIGDIR, *, skip_penetration=False):
 
     t = time.time()
     print(f"[{name}] difference_dem  bounds={tuple(round(b,1) for b in bounds)} stream={stream}", flush=True)
+    # The valley cut is STATED here, per site, and never chosen by the pipeline:
+    # "registry" for a landscape with an established, cited elevation; "histogram" to
+    # compute it from the landscape's pooled elevations. Andy, 2026-09-04: we must always
+    # tell it which.
+    vt = VALLEY_TOP_SOURCE[name]
     r = difference_dem(before, after, bounds, res=res, ground="slope_normal",
                        ground_source="csf", after_ground="class2", stream=stream,
-                       robust_stable=True, csf_cache=f"data/csf_cache/{name}.las")
+                       robust_stable=True, csf_cache=f"data/csf_cache/{name}.las",
+                       valley_top_m=(refcells.VALLEY_TOP_M[name] if vt == "registry" else vt),
+                       tile_dir_for_landscape=str(outdir))
     dod, lod, Z21, stable = r["dod"], r["lod"], r["z_after"], r["stable"]
     nx, ny = r["nx"], r["ny"]; X0, Y0 = r["bounds"][0], r["bounds"][1]
     ex = np.isfinite(dod)
