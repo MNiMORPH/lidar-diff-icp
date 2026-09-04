@@ -67,6 +67,18 @@ for nm, fn in (("dod.npy (uncorrected)", "dod.npy"),
     print(f"{nm:22s} {ok.sum():8,d} {st.sum():7,d} {1000*sig:7.1f} {1000*np.median(lod[ok]):8.1f} "
           f"{1000*np.percentile(lod[ok],90):8.1f} {det:8.1f}%")
     out[fn] = lod
-np.save(f"{D}/lod_cover_q2.npy", out["dod_cover_q2.npy"])
-np.save(f"{D}/lod_refit_uncorrected.npy", out["dod.npy"])
-print(f"\nwrote {D}/lod_cover_q2.npy and {D}/lod_refit_uncorrected.npy  (sigma, LoD in mm)")
+# Write what fitted. A failed fit is a RESULT, not a crash: xdem's heteroscedasticity model
+# is a Delaunay interpolation over the covariate space, and it goes degenerate when the
+# stable set is small or its (slope, curvature) support collapses -- at whitewater the
+# correction takes the stable set from 60,568 to 48,498 cells and qhull reports
+# "initial simplex is flat". Previously this raised KeyError three lines later, which hid
+# which product failed and lost the one that succeeded.
+for fn, name in (("dod_cover_q2.npy", "lod_cover_q2.npy"),
+                 ("dod.npy", "lod_refit_uncorrected.npy")):
+    if fn in out:
+        np.save(f"{D}/{name}", out[fn])
+        print(f"wrote {D}/{name}")
+    else:
+        print(f"NOT written: {D}/{name} -- the error model would not fit {fn} on this "
+              f"tile's stable set. The DoD itself is unaffected; it has no LoD by this "
+              f"method.")
