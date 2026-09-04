@@ -56,6 +56,11 @@ _ap.add_argument("--point-types", nargs="+", required=True,
                       "n=130) -23.1 mm. The pooled curve's whole falling limb is the VVA "
                       "population, and the +8.1 mm bias that motivated this correction is a "
                       "pooling artifact.")
+_ap.add_argument("--shape", default="piecewise", choices=["piecewise", "isotonic"],
+                 help="piecewise (default, Andy 2026-09-04): two straight segments in log "
+                      "spread with the break scanned, fitted to equal-count bin medians "
+                      "weighted by their bootstrap SEs. isotonic: the earlier staircase. "
+                      "Both are stored as knots and applied by identical code.")
 _ap.add_argument("--out", default=None)
 _ap.add_argument("--diagnostics", action="store_true",
                  help="also print every number quoted in "
@@ -67,6 +72,7 @@ _ap.add_argument("--diagnostics", action="store_true",
 _A = _ap.parse_args()
 SET = _A.set_
 TYPES = [t.upper() for t in _A.point_types]
+SHAPE = _A.shape
 OUTNPZ = _A.out or (f"data/derived/ground_q_vs_class2sd_{SET}_"
                     f"{'-'.join(sorted(TYPES))}.npz")
 
@@ -129,14 +135,14 @@ pred = np.empty(len(F))
 for k in range(5):
     tr, te = f5 != k, f5 == k
     if te.sum() == 0 or tr.sum() < 30: pred[te] = np.median(rk[tr]); continue
-    iso = groundq.fit_curve(SD_MM[tr], rk[tr])
-    pred[te] = iso.predict(ls[te])
+    _lk, _qk = groundq.fit_curve(SD_MM[tr], rk[tr], shape=SHAPE)
+    pred[te] = np.interp(ls[te], _lk, _qk)
 eiso = err_at(pred)
 print(f"  gen2, {len(F)} marks, 5-fold spatially blocked (10 km) CV")
 print(f"  {'ground estimator':>34s} {'median err':>11s} {'|median|':>9s} {'RMS':>8s} {'p90|err|':>9s}")
 for nm, e in (("q = 0.50 (pipeline default)", e50),
               (f"q = {np.median(rk):.3f} constant (calibrated)", e57),
-              ("q = isotonic(log class-2 SD), held out", eiso)):
+              (f"q = {SHAPE}(log class-2 SD), held out", eiso)):
     print(f"  {nm:>34s} {np.median(e):11.1f} {abs(np.median(e)):9.1f} "
           f"{np.sqrt(np.mean(e**2)):8.1f} {np.percentile(np.abs(e),90):9.1f}")
 if _A.diagnostics:
@@ -181,20 +187,22 @@ if _A.diagnostics:
     print(f"    medians {np.median(y[lo]):.3f} vs {np.median(y[hi]):.3f}   "
           f"Mann-Whitney p {mannwhitneyu(y[lo],y[hi]).pvalue:.3e}")
 
-iso_full = groundq.fit_curve(SD_MM, rk)
+KNOTS = groundq.fit_curve(SD_MM, rk, shape=SHAPE)
 print(f"\n  calibration curve q(class-2 SD), fitted on all {len(F)} marks:")
 for v in (20, 40, 60, 80, 120, 200, 400):
-    print(f"    SD {v:4d} mm -> q = {float(iso_full.predict([np.log(v)])[0]):.3f}")
+    print(f"    SD {v:4d} mm -> q = {float(np.interp(np.log(v), *KNOTS)):.3f}")
 # The curve travels with its provenance: a consumer must be able to see what population it
 # was fitted on and what it is entitled to be applied to.
 groundq.save_curve(
-    OUTNPZ, iso_full, n_marks=len(F), epoch=SET,
+    OUTNPZ, KNOTS, n_marks=len(F), epoch=SET,
     fitted_on=(f"{SET}: point types {'+'.join(sorted(TYPES))}, class-2 returns "
                f"within 7.5 m"),
     point_types="+".join(sorted(TYPES)),
     response="rank of surveyed ground within the mark's class-2 returns",
     covariate="natural log of the class-2 standard deviation, mm",
-    shape="isotonic, monotone non-increasing -- flat then falling, no break imposed",
+    shape=("two straight segments in log spread, joined continuously, break SCANNED over "
+           "the observed bin centres" if SHAPE == "piecewise"
+           else "isotonic, monotone non-increasing -- flat then falling, no break imposed"),
     cv="5-fold spatially blocked on 10 km blocks",
     known_limits=("calibrated on 7.5 m discs and applied to 5 m cells; per-epoch -- "
                   "this curve is valid only for the epoch named in `set`; corrects a "

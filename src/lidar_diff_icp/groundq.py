@@ -369,19 +369,70 @@ def spatial_folds(easting, northing, *, n_folds=5, block_m=10_000, seed=0):
     return np.array([fold[b] for b in blk], int), ub
 
 
-def fit_curve(sd_mm, rank):
-    """Isotonic, monotone NON-INCREASING, rank on log(spread).
+def fit_curve(sd_mm, rank, *, shape="piecewise", n_bins=10, n_boot=2000, seed=0):
+    """The percentile of true ground as a function of log(ground-return spread).
 
-    Monotone because more contamination cannot mean a HIGHER ground rank -- the only
-    constraint imposed, and it is physical. Isotonic rather than a functional family so the
-    flat-then-falling shape comes from the data instead of from a chosen form or a threshold.
+    Returns ``(log_sd_knots, q_knots)`` -- the same pair the curve file stores and that
+    :func:`q_from_spread` interpolates between, so BOTH SHAPES ARE APPLIED BY IDENTICAL CODE.
+
+    ``shape="piecewise"`` (Andy, 2026-09-04) fits two straight segments in log spread, joined
+    continuously, with the break SCANNED over the observed bin centres rather than chosen.
+    It is fitted to equal-count bin medians weighted by their bootstrap SEs, because the raw
+    per-mark rank is heteroscedastic and censored -- 20% of marks are pinned at 0 or 1, since
+    a percentile cannot represent an offset larger than the local spread.
+
+    ``shape="isotonic"`` is the earlier monotone-non-increasing staircase, kept because it is
+    what every curve before 2026-09-04 was fitted with.
+
+    Measured on the 519 gen2 marks, on deciles: flat 26.95 AIC, a single line 12.10, this
+    piecewise 13.15. The line and the piecewise are within ~1 AIC of each other -- not a real
+    difference -- and both fit within the error bars (chi2_red 1.01 and 0.86) where the
+    isotonic staircase is a rougher description of the same relation.
     """
-    from sklearn.isotonic import IsotonicRegression
-    return IsotonicRegression(increasing=False, out_of_bounds="clip").fit(
-        np.log(np.asarray(sd_mm, float)), np.asarray(rank, float))
+    sd = np.asarray(sd_mm, float); rk = np.asarray(rank, float)
+    if shape == "isotonic":
+        from sklearn.isotonic import IsotonicRegression
+        iso = IsotonicRegression(increasing=False, out_of_bounds="clip").fit(np.log(sd), rk)
+        return np.asarray(iso.f_.x, float), np.asarray(iso.f_.y, float)
+    if shape != "piecewise":
+        raise ValueError(f"shape must be 'piecewise' or 'isotonic', not {shape!r}")
+
+    rng = np.random.default_rng(seed)
+    edges = np.quantile(sd, np.linspace(0, 1, n_bins + 1))
+    edges[0] -= 1e-9; edges[-1] += 1e-9
+    cx, cy, ce = [], [], []
+    for i in range(n_bins):
+        m = (sd > edges[i]) & (sd <= edges[i + 1])
+        if m.sum() < 5:
+            continue
+        v = rk[m]
+        bs = np.array([np.median(rng.choice(v, v.size)) for _ in range(n_boot)])
+        cx.append(np.median(sd[m])); cy.append(np.median(v)); ce.append(bs.std())
+    cx = np.array(cx); cy = np.array(cy); ce = np.array(ce)
+    if cx.size < 4:
+        raise ValueError(f"only {cx.size} usable bins; cannot fit two segments")
+    L = np.log(cx); w = 1.0 / np.maximum(ce, 1e-6) ** 2
+
+    def _wls(X):
+        rw = np.sqrt(w)[:, None]
+        b, *_ = np.linalg.lstsq(X * rw, cy * np.sqrt(w), rcond=None)
+        return b, float(np.sum(w * (cy - X @ b) ** 2))
+
+    best = None
+    for xb in cx[1:-1]:
+        X = np.c_[np.ones_like(L), L, np.maximum(L - np.log(xb), 0.0)]
+        b, chi2 = _wls(X)
+        if best is None or chi2 < best[0]:
+            best = (chi2, xb, b)
+    _, xb, b = best
+    lk = np.array([L.min(), np.log(xb), L.max()])
+    qk = b[0] + b[1] * lk + b[2] * np.maximum(lk - np.log(xb), 0.0)
+    # The knots are CLIPPED to [0, 1]: a percentile outside it is not a percentile. The fit
+    # is not clipped -- only its stored endpoints, and only if the segments run out of range.
+    return lk, np.clip(qk, 0.0, 1.0)
 
 
-def save_curve(path, iso, *, n_marks, epoch, fitted_on, response, covariate, shape, cv,
+def save_curve(path, knots, *, n_marks, epoch, fitted_on, response, covariate, shape, cv,
                known_limits, **extra):
     """Write a curve WITH its provenance, so a consumer can see what it may be applied to.
 
@@ -389,7 +440,9 @@ def save_curve(path, iso, *, n_marks, epoch, fitted_on, response, covariate, sha
     ``point_types``, since the control types are different populations and which ones were
     fitted on decides what the curve means.
     """
-    np.savez(path, log_sd_mm=iso.f_.x, q=iso.f_.y, n_marks=n_marks, set=epoch,
+    lk, qk = knots
+    np.savez(path, log_sd_mm=np.asarray(lk, float), q=np.asarray(qk, float),
+             n_marks=n_marks, set=epoch,
              fitted_on=fitted_on, response=response, covariate=covariate, shape=shape,
              cv=cv, known_limits=known_limits, **extra)
     return path
