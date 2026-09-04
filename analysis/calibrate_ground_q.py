@@ -1,22 +1,36 @@
 #!/usr/bin/env python3
 """Calibrate ground_q from the class-2 spread, against surveyed control.
 
-WHAT THIS REPLACES. The pipeline takes the per-cell MEDIAN of class-2 returns as the ground
-(`ground_q = 0.50`). Measured against 519 surveyed marks, that is right where the ground
-class is clean and wrong where it is not -- and the class-2 spread says which is which,
-with no cover product, no windows and no external layer.
+READ THE RESULT BEFORE USING THE CURVE. On open ground this correction does not help. Held
+out on 5 folds of 10 km spatially blocked marks, over the 227 NVA (non-vegetated) marks:
 
-The finding: the rank of true ground within a cell's class-2 returns is FLAT (~0.57) while
-the class-2 spread is no wider than bare-ground noise, and FALLS once it is wider -- i.e.
-once something other than ground is in the class. Measured: rho +0.006 (p 0.94) below 60 mm,
-rho -0.183 (p 0.001) above, medians 0.571 vs 0.390, Mann-Whitney p 3.5e-06.
+           q = 0.50 (pipeline default)        -3.5      3.5     49.1     73.1
+       q = 0.527 constant (calibrated)         0.1      0.1     48.7     73.9
+    q = isotonic(log class-2 SD), held out    -5.8      5.8     52.5     76.5
 
-No break is imposed. An ISOTONIC (monotone non-increasing) regression of rank on log spread
-reproduces the flat-then-falling shape without a threshold, without a functional form, and
-without any cutoff to defend.
+The plain median is already within 3.5 mm of truth and the curve costs more RMS than the bias
+it removes. `difference_dem` therefore defaults to ground_q = 0.50 and requires a curve to be
+named before it will use one.
 
-The test that decides it: held-out marks, spatially blocked. Does taking the q(SD) percentile
-of a mark's class-2 returns land closer to surveyed ground than taking the median?
+WHAT THE CURVE IS. An ISOTONIC (monotone non-increasing) regression of the rank of true ground
+within a mark's class-2 returns on log(class-2 spread). No break is imposed, no functional
+form, no cutoff. The only constraint is physical: more contamination cannot mean a higher
+ground rank.
+
+WHY --point-types IS REQUIRED. The control set is three populations, and which of them you fit
+decides what the curve means:
+
+    NVA  n=227   class-2 median  -3.5 mm from truth   non-vegetated, open ground
+    VVA  n=162                 +103.3 mm              sited UNDER VEGETATION, by design
+    LCP  n=130                  -23.1 mm              the acquisition's calibration points
+
+Pooling all three produced a curve whose falling limb is entirely the VVA marks, and a
+headline gain (RMS 124.5 -> 104.6 mm) that vanishes on open ground. This mirrors
+ground_control/run_bridge_gen2.py, where --point-types has been required all along:
+"--point-types NVA is the consequence, not a preference".
+
+    ./lidar-icp/bin/python analysis/calibrate_ground_q.py --set gen2_2021_control \
+        --point-types NVA --diagnostics
 """
 import argparse
 import numpy as np, pandas as pd, os, sys, laspy

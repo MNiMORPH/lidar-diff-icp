@@ -35,9 +35,12 @@ ap.add_argument("--q-from-class2-spread", default=None, metavar="NPZ",
                      "curve calibrated against surveyed control by "
                      "analysis/calibrate_ground_q.py. This is not a cover correction: no "
                      "cover layer, no relation, no windows. The cell's own class-2 returns "
-                     "supply both the spread and the percentile. Held out at the marks it "
-                     "cut RMS 124.5 -> 104.6 mm against q = 0.50 and removed a +8.1 mm "
-                     "median bias.")
+                     "supply both the spread and the percentile. NOTE the curve is NOT a "
+                     "default anywhere: on open ground it measured WORSE than q = 0.50 "
+                     "(held-out RMS 52.5 vs 49.1 mm on the 227 NVA marks). The 124.5 -> "
+                     "104.6 mm gain once quoted here was measured on all 519 marks POOLED, "
+                     "which mixes in VVA checkpoints sited under vegetation by design. See "
+                     "analysis/GROUND_Q_FROM_CLASS2_SPREAD.md.")
 ap.add_argument("--intercept", type=float, default=None,
                 help="q2 at zero cover. Required with --slope, because a typed slope has no "
                      "fit to read it from. There is no default: 0.5 was one for years, and "

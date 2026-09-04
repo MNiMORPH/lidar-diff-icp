@@ -1,28 +1,37 @@
 """The ground percentile as a function of the cell's own class-2 spread.
 
-WHY THIS EXISTS. The pipeline took the per-cell MEDIAN of the ground-class returns,
-``ground_q = 0.50``. Measured against 519 surveyed gen2 control marks, that is right where
-the ground class is clean and wrong where it is not -- and the spread of the class-2 returns
-says which is which, with no cover product, no windows and no external layer. Held out on
-10 km spatially blocked folds it removed a +8.1 mm median bias and cut RMS 124.5 -> 104.6 mm.
+WHAT THIS IS FOR, AND WHAT IT IS NOT. The pipeline takes the per-cell MEDIAN of the
+ground-class returns, ``ground_q = 0.50``, and on OPEN GROUND that is the right answer:
+against the 227 NVA control marks it lands -3.5 mm from surveyed truth, and the curve fitted
+here is measurably WORSE -- held out, RMS 52.5 mm against 49.1 for the plain median. So this
+module does NOT supply a default. ``difference_dem`` uses 0.50 unless a curve is named, and
+:func:`load_curve` refuses every shortcut that would let one be applied unexamined.
 
-The full derivation, the shape, and the limits are in
-``analysis/GROUND_Q_FROM_CLASS2_SPREAD.md``; the curve is produced by
-``analysis/calibrate_ground_q.py``.
+The relation itself is real. It is a statement about VEGETATED ground, because that is where
+the marks carrying it were sited: pooled over all 519 control marks the curve looked like a
+16% RMS improvement, but the control set is three populations -- NVA (open, n=227, class-2
+median -3.5 mm from truth), VVA (sited UNDER vegetation by design, n=162, +103.3 mm) and LCP
+(the acquisition's own calibration points, n=130, -23.1 mm). The pooled curve's entire falling
+limb is the VVA marks. Applying it to ordinary ground widened the DoD's scatter at both sites
+tested (Elba NMAD 74.8 -> 79.1 mm, Whitewater 85.0 -> 92.4 on common cells).
 
-WHAT THE CURVE IS. An isotonic (monotone non-increasing) regression of
+The full account, with the measurements that overturned the earlier one, is in
+``analysis/GROUND_Q_FROM_CLASS2_SPREAD.md``.
+
+WHAT A CURVE IS. An isotonic (monotone non-increasing) regression of
 
     rank of the surveyed ground within a mark's class-2 returns
 
-on ``log(class-2 standard deviation in mm)``. Monotone because more contamination cannot
-mean a HIGHER ground rank; isotonic rather than a fitted form because the shape -- flat while
-the class is no wider than bare-ground noise, falling once it is wider -- should come from
+on ``log(class-2 standard deviation in mm)``. Monotone because more contamination cannot mean
+a HIGHER ground rank; isotonic rather than a fitted form because the shape should come from
 the data rather than from a functional family or a threshold.
 
-PER EPOCH, ALWAYS. A curve is valid only for the epoch it was calibrated on. 2008 was flown
-leaf-off in November and 2021 at green-up in May, and the deliveries used different
-classifiers. The loader REFUSES to hand back a curve whose recorded epoch does not match the
-one asked for, because a silent mismatch here would bias every elevation on the tile.
+TWO REFUSALS, NOT CONVENTIONS. A curve is valid only for the epoch AND the control point
+types it was fitted on, and :func:`load_curve` raises rather than assume either. 2008 was
+flown leaf-off in November and 2021 at green-up in May, with different classifiers; and NVA,
+VVA and LCP are different populations that the project's datum work has required be stated
+since ``ground_control/run_bridge_gen2.py`` -- "--point-types NVA is the consequence, not a
+preference". Pooling them is the specific mistake this module was built around and then made.
 """
 from __future__ import annotations
 
