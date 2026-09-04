@@ -21,8 +21,8 @@ of a mark's class-2 returns land closer to surveyed ground than taking the media
 import argparse
 import numpy as np, pandas as pd, os, sys, laspy
 sys.path.insert(0, "analysis")
-from sklearn.isotonic import IsotonicRegression
 from control_mode_shift import CONTROL, STRUCT, BOX, marks
+from lidar_diff_icp import groundq
 from lidar_diff_icp.groundtruth.tie import _design
 _ap = argparse.ArgumentParser()
 _ap.add_argument("--set", dest="set_", default="gen2_2021_control",
@@ -57,20 +57,15 @@ for t in marks(SET).itertuples():
     nn = np.sqrt(1 + coef[1]**2 + coef[2]**2)
     hg = np.sort((zz[g] - (_design(x[g]-E, y[g]-N, 2) @ coef)) / nn)
     mu = (float(t.elevation) - float(coef[0])) / nn
+    # The covariate and the response are groundq's, so the statistic fitted here is
+    # literally the one groundq.spread_from_histogram measures on a tile.
     rows.append(dict(point_id=t.point_id, easting=t.easting, northing=t.northing,
-                     sd=float(np.std(hg)), rank=float(np.mean(hg < mu)),
-                     nmad=float(1.4826 * np.median(np.abs(hg - np.median(hg)))),
-                     iqr=float(np.percentile(hg, 75) - np.percentile(hg, 25)),
-                     skew=float(np.mean(((hg - hg.mean()) /
-                                         max(np.std(hg), 1e-9)) ** 3)),
-                     med_minus_truth=(float(np.median(hg)) - mu) * 1000,
-                     mu=mu, hg=hg))
+                     mu=mu, hg=hg, **groundq.mark_statistics(hg, mu)))
 F = pd.DataFrame(rows)
-ls = np.log(F.sd.to_numpy() * 1000)
+SD_MM = F.sd.to_numpy() * 1000
+ls = np.log(SD_MM)
 rk = F["rank"].to_numpy()
-blk = (F.easting//10000).astype(int).astype(str) + "_" + (F.northing//10000).astype(int).astype(str)
-ub = blk.unique(); rng = np.random.default_rng(0); rng.shuffle(ub)
-fold = {b: i % 5 for i, b in enumerate(ub)}; f5 = blk.map(fold).to_numpy()
+f5, _blocks = groundq.spatial_folds(F.easting.to_numpy(), F.northing.to_numpy())
 
 def err_at(q_vec):
     """|estimated ground - truth| in mm, taking the q-th percentile of each mark's class 2."""
@@ -85,7 +80,7 @@ pred = np.empty(len(F))
 for k in range(5):
     tr, te = f5 != k, f5 == k
     if te.sum() == 0 or tr.sum() < 30: pred[te] = np.median(rk[tr]); continue
-    iso = IsotonicRegression(increasing=False, out_of_bounds="clip").fit(ls[tr], rk[tr])
+    iso = groundq.fit_curve(SD_MM[tr], rk[tr])
     pred[te] = iso.predict(ls[te])
 eiso = err_at(pred)
 print(f"  gen2, {len(F)} marks, 5-fold spatially blocked (10 km) CV")
@@ -137,21 +132,20 @@ if _A.diagnostics:
     print(f"    medians {np.median(y[lo]):.3f} vs {np.median(y[hi]):.3f}   "
           f"Mann-Whitney p {mannwhitneyu(y[lo],y[hi]).pvalue:.3e}")
 
-iso_full = IsotonicRegression(increasing=False, out_of_bounds="clip").fit(ls, rk)
+iso_full = groundq.fit_curve(SD_MM, rk)
 print(f"\n  calibration curve q(class-2 SD), fitted on all {len(F)} marks:")
 for v in (20, 40, 60, 80, 120, 200, 400):
     print(f"    SD {v:4d} mm -> q = {float(iso_full.predict([np.log(v)])[0]):.3f}")
 # The curve travels with its provenance: a consumer must be able to see what population it
 # was fitted on and what it is entitled to be applied to.
-np.savez(OUTNPZ,
-         log_sd_mm=iso_full.f_.x, q=iso_full.f_.y, n_marks=len(F),
-         set=SET,
-         fitted_on=f"{SET}: control marks, class-2 returns within 7.5 m",
-         response="rank of surveyed ground within the mark's class-2 returns",
-         covariate="natural log of the class-2 standard deviation, mm",
-         shape="isotonic, monotone non-increasing -- flat then falling, no break imposed",
-         cv="5-fold spatially blocked on 10 km blocks",
-         known_limits=("calibrated on 7.5 m discs and applied to 5 m cells; per-epoch -- "
-                       "this curve is valid only for the epoch named in `set`; corrects a "
-                       "population, not a cell"))
+groundq.save_curve(
+    OUTNPZ, iso_full, n_marks=len(F), epoch=SET,
+    fitted_on=f"{SET}: control marks, class-2 returns within 7.5 m",
+    response="rank of surveyed ground within the mark's class-2 returns",
+    covariate="natural log of the class-2 standard deviation, mm",
+    shape="isotonic, monotone non-increasing -- flat then falling, no break imposed",
+    cv="5-fold spatially blocked on 10 km blocks",
+    known_limits=("calibrated on 7.5 m discs and applied to 5 m cells; per-epoch -- "
+                  "this curve is valid only for the epoch named in `set`; corrects a "
+                  "population, not a cell"))
 print(f"\n  wrote {OUTNPZ}")
