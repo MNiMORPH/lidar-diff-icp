@@ -27,18 +27,21 @@ from lidar_diff_icp.viz import hillshade
 Z95 = 1.96
 
 
-def stable_mask(Z21, res):
-    """Verbatim from pipeline.py: terrain masks from the reference ground."""
-    Zf = Z21.copy(); nanm = np.isnan(Zf)
-    if nanm.any():
-        Zf = Zf[tuple(edt(nanm, return_distances=False, return_indices=True))]
-    tpi = Z21 - uniform_filter(Zf, size=int(2 * 300 / res), mode="nearest")
-    sdeg = np.degrees(coreg.slope_aspect(gaussian_filter(Zf, 2.0), res)[0])
-    Zsm = gaussian_filter(Zf, 50 / res / 2)
-    lap = (np.gradient(np.gradient(Zsm, res, axis=0), res, axis=0)
-           + np.gradient(np.gradient(Zsm, res, axis=1), res, axis=1))
-    convex = (sdeg > 5) & (sdeg < 35) & (tpi > -2) & (lap < 0)
-    return ((sdeg < 3) & (tpi > -2)) | convex
+def stable_mask(Z21, res, *, valley_top_m, tile_dir=None, curv_max=0.005):
+    """The pipeline's stable mask. NO LONGER A COPY.
+
+    This was a verbatim duplicate of a block inside difference_dem, and it is why the
+    project had two stable masks that could silently disagree: when the valley cut moved
+    from TPI to elevation on 2026-09-04, the pipeline's copy was fixed and this one was not.
+    It now delegates to lidar_diff_icp.terrain.terrain_masks, which is the single
+    definition, so the two cannot drift again.
+
+    ``valley_top_m`` is required and is never chosen for you: an elevation in metres,
+    ``"registry"``, or ``"histogram"``. See terrain.resolve_valley_top.
+    """
+    from lidar_diff_icp import terrain
+    return terrain.terrain_masks(Z21, res, valley_top_m=valley_top_m, tile_dir=tile_dir,
+                                 curv_max=curv_max, verbose=False)["stable"]
 
 
 def clip_stable(stable, dod):

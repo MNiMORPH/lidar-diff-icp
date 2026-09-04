@@ -28,6 +28,9 @@ from lidar_diff_icp.detect import detect_change_standard
 ap = argparse.ArgumentParser(description=__doc__,
                              formatter_class=argparse.RawDescriptionHelpFormatter)
 ap.add_argument("--tile", default="data/derived/elba_fulldensity")
+ap.add_argument("--valley-top", dest="valley_top", default="registry",
+                help="valley top for the stable mask: an elevation in metres, "
+                     "'registry', or 'histogram'. Never chosen for you.")
 A = ap.parse_args()
 T = A.tile
 cfg = json.load(open(f"{T}/corrections.json")); res = float(cfg["res_m"])
@@ -44,7 +47,8 @@ abs_curv = np.abs(np.gradient(np.gradient(Zs, res, axis=0), res, axis=0)
                   + np.gradient(np.gradient(Zs, res, axis=1), res, axis=1))
 sdeg = slope
 
-st_pipe, _ = clip_stable(stable_mask(Z21, res), dod)
+st_pipe, _ = clip_stable(stable_mask(Z21, res, valley_top_m=A.valley_top,
+                                     tile_dir=T), dod)
 fin = np.isfinite(dod) & np.isfinite(lod_pipe)
 
 print(f"calibration masks:  pipeline {int(st_pipe.sum()):,} cells   "
