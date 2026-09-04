@@ -133,31 +133,40 @@ def describe(curve, q=None):
 # the pass that builds that grid: grid first, then re-read the cloud and correct against it.
 
 
-def reference_surface(tile_dir, *, grid_file="z_after.npy"):
-    """The gen2 grid and its per-cell local plane -- the frame the correction lives in.
+def surface_from_grid(z, x0, y0, res):
+    """A gridded ground surface and its per-cell local plane -- the frame the correction
+    lives in.
 
     NaN cells are filled from their nearest finite neighbour before the gradient is taken,
     so a hole does not propagate a NaN plane into every cell around it. The fill affects the
-    PLANE only; a cell with no returns still ends with a NaN ground.
+    PLANE only; ``valid`` records which cells the grid actually had, and a cell with no
+    returns still ends with a NaN ground.
     """
     from scipy.ndimage import distance_transform_edt
 
+    ny, nx = z.shape
+    valid = np.isfinite(z)
+    zf = z.copy()
+    if not valid.all():
+        zf = zf[tuple(distance_transform_edt(~valid, return_distances=False,
+                                             return_indices=True))]
+    gy, gx = np.gradient(zf, res)
+    return {"x0": x0, "y0": y0, "res": float(res), "ny": ny, "nx": nx,
+            "z": zf.ravel(), "valid": valid.ravel(),
+            "dzde": gx.ravel(), "dzdn": gy.ravel(),
+            "nnorm": np.sqrt(gx.ravel() ** 2 + gy.ravel() ** 2 + 1.0)}
+
+
+def reference_surface(tile_dir, *, grid_file="z_after.npy"):
+    """:func:`surface_from_grid` for a tile on disk, reading its own grid geometry."""
     from . import registration as reg
 
     j = reg.read_corrections(tile_dir)
     b = j["bounds"]
-    res = float(j["res_m"])
-    z = np.load(os.path.join(tile_dir, grid_file))
-    ny, nx = z.shape
-    zf = z.copy()
-    m = ~np.isfinite(zf)
-    if m.any():
-        zf = zf[tuple(distance_transform_edt(m, return_distances=False, return_indices=True))]
-    gy, gx = np.gradient(zf, res)
-    return {"x0": b[0], "y0": b[1], "res": res, "ny": ny, "nx": nx,
-            "z": zf.ravel(), "dzde": gx.ravel(), "dzdn": gy.ravel(),
-            "nnorm": np.sqrt(gx.ravel() ** 2 + gy.ravel() ** 2 + 1.0),
-            "tile": tile_dir, "grid_file": grid_file}
+    surf = surface_from_grid(np.load(os.path.join(tile_dir, grid_file)),
+                             b[0], b[1], float(j["res_m"]))
+    surf.update(tile=tile_dir, grid_file=grid_file)
+    return surf
 
 
 def column_histogram(cloud, surf, *, zlo=-1.0, zhi=2.0, dz=0.02, classes=(2,),
@@ -248,17 +257,22 @@ def ground_at_median(H, zlo, dz):
     return np.where(ntot > 0, (zlo + (k + 0.5) * dz) * 1000.0, np.nan)
 
 
-def correct_gen2(tile_dir, gen2_cloud, curve, *, zlo=-1.0, zhi=2.0, dz=0.02,
-                 min_count=20, chunk=3_000_000, surf=None, verbose=True):
-    """The whole correction for one tile: cloud in, corrected gen2 ground out.
+def correct_gen2(gen2_cloud, curve, *, surf=None, tile_dir=None, zlo=-1.0, zhi=2.0,
+                 dz=0.02, min_count=20, chunk=3_000_000, verbose=True):
+    """The whole correction: cloud in, corrected gen2 ground out.
 
-    ``curve`` is a loaded curve (:func:`load_curve`) or a path/epoch. Returns a dict with
-    ``h2_mm`` (corrected, slope-normal), ``h2_median_mm`` (uncorrected control), ``q``,
+    Give either ``surf`` (:func:`surface_from_grid`, for a caller that already holds the
+    grid) or ``tile_dir`` (to read the tile's ``z_after.npy``). ``curve`` is a loaded curve
+    (:func:`load_curve`) or a path/epoch. Returns a dict with ``h2_mm`` (corrected,
+    slope-normal, MM above the plane), ``h2_median_mm`` (the uncorrected control), ``q``,
     ``sd_mm``, ``count``, the histogram ``H`` and the reference surface ``surf``.
     """
     if not isinstance(curve, dict):
         curve = load_curve(curve)
     if surf is None:
+        if tile_dir is None:
+            raise ValueError("correct_gen2 needs either surf= (an in-memory grid) or "
+                             "tile_dir= (to read that tile's z_after.npy)")
         surf = reference_surface(tile_dir)
     H, n_in = column_histogram(gen2_cloud, surf, zlo=zlo, zhi=zhi, dz=dz, chunk=chunk)
     if verbose:

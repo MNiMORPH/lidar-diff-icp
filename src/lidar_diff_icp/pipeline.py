@@ -298,7 +298,6 @@ def heteroscedastic_lod(dod, slope_deg, abs_curv, stable, *, stderr=None,
 
 
 def _stream_ground(path, bounds, res, nx, ny, q, *, plane=None, chunk=8_000_000,
-                   q_curve=None, q_min_count=20, q_fallback=0.50, q_out=None,
                    coarse_bins=120, bw=0.02, down=3.0, up=2.0, after_ground="class2"):
     """Per-cell low-q ground, spread, and count by STREAMING the cloud in chunks,
     so peak RAM is O(cells), not O(points) -- for statewide runs where the dense
@@ -320,14 +319,15 @@ def _stream_ground(path, bounds, res, nx, ny, q, *, plane=None, chunk=8_000_000,
 
     Returns (ground, spread, count) as ny x nx arrays.
     """
-    # q must be numeric by here. difference_dem resolves "calibrated" into a scalar plus a
-    # curve BEFORE calling; a string arriving here means a call site was missed, which is
-    # exactly what happened on 2026-09-04 -- one of two call sites was patched, and the other
-    # failed 300 lines away with "ufunc 'multiply' did not contain a loop".
+    # q is a plain quantile. The CALIBRATED per-cell percentile is NOT applied here: it is
+    # a second pass against the finished q = 0.50 grid (groundq.correct_gen2), because the
+    # curve is indexed by a spread measured against that grid's own local plane. Folding it
+    # into this estimator is what broke it -- this function's residual is taken against the
+    # REGIONAL plane on one call and against nothing at all on the other.
     if isinstance(q, str):
         raise TypeError(
             f"_stream_ground got ground_q={q!r} as a string. difference_dem must resolve it "
-            f"to a scalar (and pass q_curve=) before calling; this call site was missed.")
+            f"to a scalar before calling; this call site was missed.")
     X0, Y0, X1, Y1 = bounds
     N = nx * ny
 
@@ -365,20 +365,14 @@ def _stream_ground(path, bounds, res, nx, ny, q, *, plane=None, chunk=8_000_000,
 
     with np.errstate(invalid="ignore"):
         def coarse_pct(p):
-            # p may be a SCALAR or a PER-CELL array; (p * ntot) broadcasts either way, which
-            # is what lets the calibrated route cost no extra pass over the cloud.
             b = np.argmax(ccdf >= (np.asarray(p) * ntot)[:, None], axis=1)
             return np.where(np.isfinite(lo), lo + (b + 0.5) * span / CB, np.nan)
-        # SPREAD FIRST. The calibrated percentile is a function of the cell's own spread, so
-        # it has to exist before q does. It is read off the coarse pass that was already
-        # being computed, so nothing is added but an ordering.
+        # A ROBUST within-cell spread, reported for the LoD -- deliberately not the statistic
+        # the ground-q curve is indexed by, which is the plain SD of the class-2 column about
+        # the tile's own surface (groundq.spread_from_histogram). The two are different
+        # numbers and confusing them is what pushed Whitewater's ground down by ~1 m.
         spread = 1.4826 * (coarse_pct(0.75) - coarse_pct(0.25)) / 1.349
-        # The ANCHOR only positions the fine window, so it is taken at the fallback quantile
-        # and never at the calibrated one. That breaks the circularity: the calibrated q needs
-        # a spread, the spread needs the fine histogram, and the fine histogram needs an
-        # anchor. Anchoring at 0.50 costs nothing and lets q be derived from the very
-        # histogram it will then be read from.
-        anchor = coarse_pct(q_fallback if q_curve is not None else q)
+        anchor = coarse_pct(q)
     flo = anchor - down; SPAN = down + up; FB = int(round(SPAN / bw))  # pass 3: fine window
     below = np.zeros(N, np.int64); fhist = np.zeros(N * FB, np.int64)
     for f, v in chunks():
@@ -387,36 +381,6 @@ def _stream_ground(path, bounds, res, nx, ny, q, *, plane=None, chunk=8_000_000,
         ff = f[inw]; b = np.clip((d[inw] / bw).astype(np.int64), 0, FB - 1)
         fhist += np.bincount(ff * FB + b, minlength=N * FB)
     fhist = fhist.reshape(N, FB); fcdf = below[:, None] + np.cumsum(fhist, axis=1)
-
-    if q_curve is not None:
-        # THE SPREAD THE CURVE WAS CALIBRATED ON: the plain standard deviation of the
-        # ground-class returns about the LOCAL surface -- np.std(hg) at the marks, where hg is
-        # the class-2 column relative to an order-2 fit. The fine histogram here is that same
-        # object: class-2 returns (after_ground='class2'), residual to the per-cell plane.
-        #
-        # It replaces 1.4826*(p75-p25)/1.349 read off the COARSE histogram, which was a
-        # different statistic (robust, not plain) of a different residual (to the REGIONAL
-        # plane) over a different window. Indexing the curve with that pushed Whitewater's
-        # ground down by ~1 m in the worst tenth of cells and widened stable_sigma from
-        # 86.3 to 99.2 mm. A curve must be indexed by the quantity it was fitted on.
-        ctr_f = flo[:, None] + (np.arange(FB) + 0.5) * bw
-        nf = fhist.sum(1).astype(float)
-        with np.errstate(invalid="ignore", divide="ignore"):
-            mean_f = (fhist * ctr_f).sum(1) / np.maximum(nf, 1)
-            var_f = (fhist * (ctr_f - mean_f[:, None]) ** 2).sum(1) / np.maximum(nf, 1)
-        sd_mm = np.where(nf > 0, np.sqrt(np.maximum(var_f, 0.0)) * 1000.0, np.nan)
-        qc = groundq.q_from_spread(sd_mm, q_curve, min_count=q_min_count, count=nf)
-        # A cell the curve declines to estimate keeps the fallback: its ground is still
-        # gridded, simply not corrected. NaN here would silently drop the cell.
-        q = np.where(np.isfinite(qc), qc, q_fallback)
-        if q_out is not None:
-            q_out["class2_sd_mm"] = sd_mm.reshape(ny, nx)
-            q_out["q"] = q.reshape(ny, nx)
-            q_out["n_declined"] = int(np.sum(~np.isfinite(qc)))
-        print(f"  ground_q per cell: class-2 SD median {np.nanmedian(sd_mm):.1f} mm "
-              f"p90 {np.nanpercentile(sd_mm, 90):.1f}; q median {np.nanmedian(q):.3f} "
-              f"min {np.nanmin(q):.3f}; {int(np.sum(q < 0.45)):,} cells corrected, "
-              f"{int(np.sum(~np.isfinite(qc))):,} declined", flush=True)
 
     tgt = q * ntot
     bf = np.argmax(fcdf >= tgt[:, None], axis=1)
@@ -603,9 +567,7 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q="calibrat
     # statewide runs; else load it in memory. A stays None in streaming mode.
     A = None
     if stream:
-        _GQ_OUT = {} if _GQ_CURVE is not None else None
         Z21, s21, n21 = _stream_ground(after_laz, bounds, res, nx, ny, _GQ_SCALAR,
-                                       q_curve=_GQ_CURVE, q_out=_GQ_OUT,
                                        after_ground=after_ground)
         r21 = _stream_roughness(after_laz, bounds, res, nx, ny, after_ground=after_ground)
     else:
@@ -729,7 +691,6 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q="calibrat
     # after-epoch reference ground in the chosen estimator (== Z21 for low_q)
     if ground == "slope_normal":
         Zref = (_stream_ground(after_laz, bounds, res, nx, ny, _GQ_SCALAR,
-                               q_curve=_GQ_CURVE,
                                plane=(Zreg_f, dzde, dzdn), after_ground=after_ground)[0]
                 if stream else groundg(A["x"], A["y"], A["z"]))
     elif ground in ("plane", "poly2"):
@@ -878,6 +839,43 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q="calibrat
     s08 = cellstat(xc[be], yc[be], zc[be], "spread")
     n08 = cellstat(xc[be], yc[be], zc[be], "count")
     r08 = cell_plane_roughness(xc[be], yc[be], zc[be], X0, Y0, res, nx, ny)
+    # THE CALIBRATED VEGETATION CORRECTION, applied HERE and not earlier, for two reasons.
+    #
+    # AFTER THE REGISTRATION, because the gen1 tie and drift are fitted against Zref: hand
+    # them a corrected gen2 surface and they absorb the correction's spatial pattern, which
+    # is vegetation. At Elba the registration terms (d_mm_corr) were likewise fitted against
+    # the UNCORRECTED z_after grid and the correction applied afterwards.
+    #
+    # AS A DELTA, because the correction and the registration live in different frames --
+    # the curve is indexed by the class-2 spread about the gen2 grid's OWN local plane (the
+    # tile analogue of the order-2 surface fitted through each control mark's box), while
+    # Zref is a quantile of the residual to the smoothed REGIONAL plane. Differencing the
+    # corrected ground against the median ground IN THE SAME FRAME cancels the frame
+    # exactly, leaving the correction and nothing else. Replacing Zref outright would have
+    # smuggled the low_q-vs-slope_normal difference in alongside it.
+    #
+    # It is a SECOND PASS over the cloud by necessity: the reference surface IS the q = 0.50
+    # grid, so it has to exist before the correction can be measured. Same
+    # groundq.correct_gen2 that analysis/ridgelines/dod_cover_corrected.py calls; there is
+    # no second implementation.
+    if _GQ_CURVE is not None:
+        _surf = groundq.surface_from_grid(Z21, X0, Y0, res)
+        _gq = groundq.correct_gen2(after_laz, _GQ_CURVE, surf=_surf, chunk=8_000_000)
+        _nn = _surf["nnorm"].reshape(ny, nx)
+        _dv = (_gq["h2_mm"] - _gq["h2_median_mm"]).reshape(ny, nx) / 1000.0 * _nn
+        _declined = np.isfinite(Zref) & ~np.isfinite(_dv)
+        Zref = Zref + _dv
+        print(f"  calibrated gen2 ground: median correction "
+              f"{np.nanmedian(_dv) * 1000:+.1f} mm, p10 {np.nanpercentile(_dv, 10) * 1000:+.1f}; "
+              f"{int(np.sum(_dv < -0.001)):,} cells lowered; {int(_declined.sum()):,} cells "
+              f"DECLINED (fewer than 20 class-2 returns) and drop out of the DoD rather than "
+              f"pass through uncorrected", flush=True)
+        gq_grids = {"ground_q": _gq["q"].reshape(ny, nx),
+                    "class2_sd_mm": _gq["sd_mm"].reshape(ny, nx),
+                    "gen2_correction_m": _dv}
+    else:
+        gq_grids = None
+
     dod = Zref - Z08c
     # Reporting stable mask. The geometric `stable` admits real change where its
     # heuristics fail (a floodplain wider than the TPI window reads as flat-stable),
@@ -1005,6 +1003,9 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q="calibrat
             {str(p): {"gps_time": [round(t, 3) for t in c[0]],
                       "drift_m": [round(d, 4) for d in c[1]]} for p, c in curves.items()},
     }
+    # the per-cell percentile actually applied, and the spread it was read from, so a
+    # consumer can see WHICH cells were corrected instead of inferring it
     return dict(dod=dod, lod=lod, z_after=Z21, stable=stable_rep,
+                ground_q_grids=gq_grids,
                 corrections=corrections, stable_sigma=sigma,
                 bounds=tuple(bounds), res=res, nx=nx, ny=ny)

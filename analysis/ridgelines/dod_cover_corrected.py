@@ -179,8 +179,8 @@ if QSD is not None:
     # takes the ground at that q. It is the SAME function the pipeline calls, so the tile
     # route and the pipeline route cannot drift apart -- which is exactly what happened when
     # this was reimplemented in pipeline._stream_ground against a different plane.
-    GQ = groundq.correct_gen2(D, A.gen2, QSD, zlo=COL_LO, zhi=COL_HI, dz=COL_DZ,
-                              chunk=A.chunk, surf=SURF)
+    GQ = groundq.correct_gen2(A.gen2, QSD, surf=SURF, zlo=COL_LO, zhi=COL_HI,
+                              dz=COL_DZ, chunk=A.chunk)
     H = GQ["H"]
     LV_EDGES = None
 else:
