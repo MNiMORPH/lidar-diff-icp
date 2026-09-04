@@ -6,11 +6,14 @@ erosion are both organised by topography, so a cover term fitted across a whole 
 absorbs real geomorphic change. This picks a reference population where the change term is
 as close to zero as the landscape allows and only the measurement effect should remain:
 
-    LOW-GRADIENT UPLAND      slope < --slope-max AND large-scale TPI > 0
-                             gentle enough that overland-flow erosion is negligible, and
-                             ABOVE the local mean so it is not receiving deposition either.
-    (optionally) DIVIDES     --ridge adds the Scherler & Schwanghart divide network, which
-                             has zero contributing area by construction.
+    LOW-CURVATURE DIVIDE CELLS, from lidar_diff_icp.refcells.reference_cells: the
+    Scherler & Schwanghart divide network with |curv_laplacian| <= curv_max and gentle
+    slope, valley floor cut BY ELEVATION at this tile's own histogram antimode.
+
+    The slope + TPI "low-gradient upland" proxy this script used to default to was REMOVED
+    2026-09-04 (Andy). TPI > 0 keeps ground that both receives and sheds, so it is not the
+    no-change population; a divide has zero contributing area by construction. The
+    population is now defined once, in refcells, rather than re-derived here.
 
 On that population the offset is regressed on PyForestScan canopy cover. Reported as binned
 medians with a robust standard error (1.2533*NMAD/sqrt(n)) so the reader can see which bins
@@ -34,11 +37,6 @@ ap = argparse.ArgumentParser()
 ap.add_argument("--tile", default="data/derived/elbaext")
 ap.add_argument("--offset", default="corr", choices=("raw", "corr"))
 ap.add_argument("--slope-max", type=float, default=12.0)
-ap.add_argument("--tpi-window", type=float, default=500.0, help="upland test window (m)")
-ap.add_argument("--ridge", action="store_true", help="ALSO include divide cells of any slope")
-ap.add_argument("--ref", default="upland", choices=("upland", "divides"),
-                help="upland = low-gradient, TPI>0 (default); divides = the S&S divide "
-                     "network ONLY, which has zero contributing area by construction")
 ap.add_argument("--inc-max", type=float, default=None,
                 help="keep only returns below this beam incidence (deg). Fixing incidence "
                      "removes the beam-geometry term, leaving cover as the only variable -- "
@@ -54,8 +52,6 @@ ap.add_argument("--min-n", type=int, default=1,
 A = ap.parse_args()
 TILE = os.path.basename(A.tile.rstrip("/"))
 TAG = ("" if TILE == "elba_fulldensity" else f"_{TILE}") + ("" if A.offset == "corr" else "_raw")
-TAG += "_ridge" if A.ridge else ""
-TAG += "" if A.ref == "upland" else "_divides"
 TAG += "" if A.inc_max is None else f"_inc{A.inc_max:g}"
 DCOL = "d_mm_corr" if A.offset == "corr" else "d_mm"
 
@@ -74,9 +70,6 @@ z = np.load(f"{A.tile}/z_after.npy")
 zf = z.copy(); miss = ~np.isfinite(zf)
 if miss.any():
     zf = zf[tuple(distance_transform_edt(miss, return_distances=False, return_indices=True))]
-k = max(3, int(round(A.tpi_window / RES)) | 1)
-tpi = (zf - uniform_filter(zf, size=k, mode="nearest")).ravel()
-
 df = pd.read_parquet(f"{A.tile}/beam_offset_table.parquet",
                      columns=["cell", DCOL, "slope", "canopy_cover", "curv_laplacian",
                               "incidence", "in_grid"])
@@ -84,19 +77,17 @@ df = df[df.in_grid.values].copy()
 if A.curv_max is not None:
     df = df[(df.curv_laplacian.abs() <= A.curv_max).to_numpy()].copy()
 cell = df.cell.to_numpy()
-if A.ref == "divides":
-    ref = np.load(f"{A.tile}/ridge_mask.npy").astype(bool).ravel()[cell]
-    label = "divides (zero contributing area)"
-else:
-    ref = (df.slope.to_numpy() < A.slope_max) & (tpi[cell] > 0)
-    label = f"low-gradient upland (slope<{A.slope_max:g} deg, TPI{A.tpi_window:g}>0)"
+from lidar_diff_icp.refcells import reference_cells
+_mask, _rep = reference_cells(A.tile, curv_max=(A.curv_max if A.curv_max is not None
+                                                else 0.015),
+                              slope_max=A.slope_max)
+ref = _mask.ravel()[cell]
+label = (f"low-curvature divide cells (refcells: |curv|<={A.curv_max if A.curv_max is not None else 0.015:g}, "
+         f"slope<{A.slope_max:g} deg, valley cut by elevation)")
+print("  reference population: " + ", ".join(f"{k}={v}" for k, v in _rep.items()))
 if A.inc_max is not None:
     ref &= df.incidence.to_numpy() < A.inc_max
     label += f", incidence<{A.inc_max:g} deg"
-if A.ridge:
-    rm = np.load(f"{A.tile}/ridge_mask.npy").astype(bool).ravel()
-    ref = ref | rm[cell]
-    label += " + divides"
 ref &= np.isfinite(df[DCOL].to_numpy()) & np.isfinite(df.canopy_cover.to_numpy())
 d = df[DCOL].to_numpy(float)[ref]; cov = df.canopy_cover.to_numpy(float)[ref]
 sl = df.slope.to_numpy(float)[ref]
@@ -155,8 +146,9 @@ if cc.size >= 3:
     # the linear slope says so rather than silently assuming the selection was linear.
     _cal = {
         "tile": TILE, "offset_column": DCOL,
-        "population": {"ref": A.ref, "slope_max_deg": A.slope_max,
-                       "tpi_window_m": A.tpi_window, "include_divides": bool(A.ridge),
+        "population": {"ref": "refcells divide cells", "slope_max_deg": A.slope_max,
+                       "population": "refcells.reference_cells (divides, low curvature,"
+                       " valley cut by elevation)",
                        "inc_max_deg": A.inc_max, "curv_max": A.curv_max,
                        "min_n_per_bin": A.min_n, "n_cover_bins": int(cc.size),
                        "n_returns": int(sum(nn))},

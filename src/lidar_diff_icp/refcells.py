@@ -16,7 +16,12 @@ sensitivity (``gross_change_mm`` set low), never as the default.
 Every default criterion is therefore either geometric or vegetation-structural:
 
 * **divide cells, low concavity** (``ridge_mask``, ``|curv_laplacian| <= curv_max``) --
-  hilltops shed rather than collect, so they are the geomorphic no-change population.
+  hilltops shed rather than collect, so they are the geomorphic no-change population. This
+  is THE population. A slope + TPI "low-gradient upland" proxy is not a substitute: it keeps
+  ground that both receives and sheds, and it was removed from the tree on 2026-09-04.
+* **valley floor cut by ELEVATION**, at the antimode of this tile's own elevation histogram
+  -- not by the TPI floodplain mask, whose extent depends on the window width and which
+  keeps flat terrace ground at valley level.
 * **gentle slope** (``slope_max``) -- excludes cells where mass wasting is plausible and
   where intra-cell relief dominates the return column. On these tiles it does not move
   any answer; it trims the noise.
@@ -49,7 +54,7 @@ def _opt(d, name):
 def reference_cells(tile_dir, *, cells=None, curv_max=0.015, slope_max=12.0,
                     gross_change_mm=500.0, clearcut_drop=0.30, require_ridge=True,
                     exclude_valley=True, valley_top_m=None,
-                    use_floodplain_mask=True):
+                    use_floodplain_mask=False):
     """Boolean mask of stable reference cells, plus a report of what each cut removed.
 
     ``cells`` is an optional array of flat cell indices (e.g. the near-ground cube's
@@ -96,9 +101,13 @@ def reference_cells(tile_dir, *, cells=None, curv_max=0.015, slope_max=12.0,
     # a 19% valley limb produced an easting gradient of -84.8 mm/km against +3.5 on the
     # upland (analysis/STABLE_POINT_TILT_AUDIT.md), and a 27%-floodplain flat-slope bin
     # produced a spurious +7.9 mm rise. Excluded by default for anything divide-based.
-    # Two cuts, neither with an invented number: the crude floodplain mask, and the
-    # ANTIMODE of this tile's own elevation histogram, computed here, which separates the
-    # upland plateau from the valley terraces.
+    # Cut by ELEVATION (Andy, 2026-09-04), not by the TPI floodplain mask. The mask is a
+    # topographic-position heuristic -- TPI over an 800 m window < -2 m -- so what it removes
+    # depends on the window and on how wide the valley is, and it keeps flat terrace ground
+    # sitting at valley level. The ANTIMODE of this tile's own elevation histogram separates
+    # the upland plateau from the valley floor on the quantity that actually defines a
+    # floodplain. use_floodplain_mask now defaults to FALSE; pass True for an older
+    # population.
     if exclude_valley:
         if use_floodplain_mask:
             fld = _opt(tile_dir, "floodplain_mask.npy")

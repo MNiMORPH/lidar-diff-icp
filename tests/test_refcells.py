@@ -81,7 +81,21 @@ def test_a_missing_floodplain_mask_refuses_rather_than_skipping_the_cut(tile):
     and every comparison between them was invalid without saying so."""
     (tile / "floodplain_mask.npy").unlink()
     with pytest.raises(FileNotFoundError, match="not comparable"):
-        reference_cells(tile)
+        reference_cells(tile, use_floodplain_mask=True)
+
+
+def test_the_valley_cut_is_by_ELEVATION_not_the_tpi_mask(tile):
+    """Andy, 2026-09-04: cut the floodplain on ELEVATION. The TPI mask is a
+    topographic-position heuristic whose extent depends on the window width, and it keeps
+    flat terrace ground sitting at valley level. The default must not silently apply it."""
+    m, rep = reference_cells(tile)
+    assert not any("floodplain mask" in k for k in rep), rep
+    # The elevation cut fires only where the histogram is bimodal -- a tile with no valley
+    # has nothing to remove, and this fixture is unimodal. On the real tiles it does fire:
+    # elba cuts below 286.1 m and whitewater below 282.0 m.
+    m2, rep2 = reference_cells(tile, use_floodplain_mask=True)
+    assert any("floodplain mask" in k for k in rep2), rep2
+    assert m2.sum() <= m.sum()
 
 
 def test_working_without_the_mask_is_allowed_but_must_be_stated(tile):
