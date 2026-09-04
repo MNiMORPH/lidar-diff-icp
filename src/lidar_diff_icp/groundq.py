@@ -98,7 +98,7 @@ def describe(curve, q=None):
     """One block of text naming the curve and what it did -- for a run's own output."""
     out = [f"ground_q from the class-2 spread: {curve['path']}",
            f"  epoch {curve['epoch']}, calibrated on {curve['n_marks']} surveyed marks"]
-    for k in ("shape", "cv", "known_limits"):
+    for k in ("fitted_on", "shape", "cv", "known_limits"):
         if k in curve["provenance"]:
             out.append(f"  {k}: {curve['provenance'][k]}")
     if q is not None:
@@ -110,3 +110,165 @@ def describe(curve, q=None):
                        f"{int(np.sum(qq < 0.45)):,} cells below 0.45, "
                        f"{int((~fin).sum()):,} cells declined")
     return "\n".join(out)
+
+
+# ---------------------------------------------------------------------------------------
+# APPLYING THE CURVE TO A TILE
+#
+# Lifted from analysis/ridgelines/dod_cover_corrected.py, which is the code that actually
+# produced Elba's corrected DoD. It is moved here rather than rewritten, because the one
+# time it was rewritten -- inside pipeline._stream_ground -- the residual frame silently
+# changed (no plane on one call, the REGIONAL plane on the other, an anchor-relative window
+# instead of a fixed one) and the correction made stable ground worse: Whitewater's
+# stable_sigma went 86.3 -> 93.0 mm against 86.3 uncorrected.
+#
+# THE FRAME IS THE METHOD. At the control marks the spread and the rank are measured on the
+# slope-normal residual to an order-2 surface fitted through the mark's own box
+# (analysis/control_mode_shift.py:90). On a tile the analogue is the residual to the gen2
+# grid plus its local gradient. A curve indexed by a spread measured in any other frame is
+# indexed by a different quantity.
+#
+# THIS IS INTRINSICALLY TWO-PASS. The reference surface IS the q = 0.50 gen2 grid
+# (`z_after.npy`, saved from pipeline's own Z21), so the correction cannot be folded into
+# the pass that builds that grid: grid first, then re-read the cloud and correct against it.
+
+
+def reference_surface(tile_dir, *, grid_file="z_after.npy"):
+    """The gen2 grid and its per-cell local plane -- the frame the correction lives in.
+
+    NaN cells are filled from their nearest finite neighbour before the gradient is taken,
+    so a hole does not propagate a NaN plane into every cell around it. The fill affects the
+    PLANE only; a cell with no returns still ends with a NaN ground.
+    """
+    from scipy.ndimage import distance_transform_edt
+
+    from . import registration as reg
+
+    j = reg.read_corrections(tile_dir)
+    b = j["bounds"]
+    res = float(j["res_m"])
+    z = np.load(os.path.join(tile_dir, grid_file))
+    ny, nx = z.shape
+    zf = z.copy()
+    m = ~np.isfinite(zf)
+    if m.any():
+        zf = zf[tuple(distance_transform_edt(m, return_distances=False, return_indices=True))]
+    gy, gx = np.gradient(zf, res)
+    return {"x0": b[0], "y0": b[1], "res": res, "ny": ny, "nx": nx,
+            "z": zf.ravel(), "dzde": gx.ravel(), "dzdn": gy.ravel(),
+            "nnorm": np.sqrt(gx.ravel() ** 2 + gy.ravel() ** 2 + 1.0),
+            "tile": tile_dir, "grid_file": grid_file}
+
+
+def column_histogram(cloud, surf, *, zlo=-1.0, zhi=2.0, dz=0.02, classes=(2,),
+                     chunk=3_000_000):
+    """Per-cell histogram of the slope-normal residual of ``cloud`` to ``surf``.
+
+    ``classes=None`` takes every return; ``(2,)`` takes the ASPRS ground class. One
+    streaming pass, peak RAM O(cells x bins). Returns ``(H, n_in)``.
+    """
+    import laspy
+
+    x0, y0, res, ny, nx = surf["x0"], surf["y0"], surf["res"], surf["ny"], surf["nx"]
+    zflat, gxf, gyf, nn = surf["z"], surf["dzde"], surf["dzdn"], surf["nnorm"]
+    nz = int(round((zhi - zlo) / dz))
+    H = np.zeros((ny * nx, nz), np.int32)
+    n_in = 0
+    with laspy.open(str(cloud)) as f:
+        for pts in f.chunk_iterator(chunk):
+            cl = np.asarray(pts.classification)
+            keep = np.ones(cl.shape, bool) if classes is None else np.isin(cl, classes)
+            x = np.asarray(pts.x)[keep]; y = np.asarray(pts.y)[keep]; z = np.asarray(pts.z)[keep]
+            ix = ((x - x0) / res).astype(np.int64); iy = ((y - y0) / res).astype(np.int64)
+            ing = (ix >= 0) & (ix < nx) & (iy >= 0) & (iy < ny)
+            cc = iy[ing] * nx + ix[ing]
+            xc = x0 + ((cc % nx) + 0.5) * res
+            yc = y0 + ((cc // nx) + 0.5) * res
+            h = (z[ing] - (zflat[cc] + gxf[cc] * (x[ing] - xc)
+                           + gyf[cc] * (y[ing] - yc))) / nn[cc]
+            zi = np.floor((h - zlo) / dz).astype(np.int64)
+            m = (zi >= 0) & (zi < nz)
+            np.add.at(H, (cc[m], zi[m]), 1)
+            n_in += int(m.sum())
+    return H, n_in
+
+
+def spread_from_histogram(H, zlo, dz, *, min_count=20):
+    """The per-cell class-2 spread in MM -- the statistic the curve is indexed by.
+
+    The plain standard deviation about the column's own mean, which is what ``np.std(hg)``
+    measures at the marks. NOT a robust spread: a robust one is a different statistic, and
+    indexing the curve with it is what pushed Whitewater's ground down by ~1 m in the worst
+    tenth of cells. Cells with fewer than ``min_count`` returns get NaN -- the same minimum
+    the calibration required of a mark. Returns ``(sd_mm, count)``.
+    """
+    nz = H.shape[1]
+    ntot = np.cumsum(H, 1).astype(float)[:, -1]
+    ctr = zlo + (np.arange(nz) + 0.5) * dz
+    with np.errstate(invalid="ignore", divide="ignore"):
+        mean_h = (H * ctr).sum(1) / np.maximum(ntot, 1)
+        var_h = (H * (ctr - mean_h[:, None]) ** 2).sum(1) / np.maximum(ntot, 1)
+    return np.where(ntot >= min_count, np.sqrt(np.maximum(var_h, 0)) * 1000.0, np.nan), ntot
+
+
+def ground_at_q(H, zlo, dz, q):
+    """Slope-normal ground height in MM at the per-cell quantile ``q``.
+
+    Read off the per-cell CDF with in-bin linear interpolation. A NaN ``q`` propagates to a
+    NaN height: a cell the curve declined to estimate is left out, never quietly given the
+    default.
+    """
+    nc, nz = H.shape
+    C = np.cumsum(H, 1).astype(float)
+    ntot = C[:, -1]
+    idx = np.arange(nc)
+    r = np.asarray(q, float) * ntot
+    k = (C >= r[:, None]).argmax(1)
+    below = np.where(k > 0, C[idx, np.maximum(k - 1, 0)], 0.0)
+    inbin = C[idx, k] - below
+    frac = np.where(inbin > 0, (r - below) / np.maximum(inbin, 1e-9), 0.0)
+    return np.where(ntot > 0, (zlo + (k + np.clip(frac, 0, 1)) * dz) * 1000.0, np.nan)
+
+
+def ground_at_median(H, zlo, dz):
+    """The plain per-cell median height in MM -- the uncorrected estimate, for comparison.
+
+    Bin CENTRE, not interpolated: this is the control the correction is judged against, and
+    it is reproduced exactly as the Elba producer computed it.
+    """
+    C = np.cumsum(H, 1).astype(float)
+    ntot = C[:, -1]
+    k = (C >= 0.5 * ntot[:, None]).argmax(1)
+    return np.where(ntot > 0, (zlo + (k + 0.5) * dz) * 1000.0, np.nan)
+
+
+def correct_gen2(tile_dir, gen2_cloud, curve, *, zlo=-1.0, zhi=2.0, dz=0.02,
+                 min_count=20, chunk=3_000_000, surf=None, verbose=True):
+    """The whole correction for one tile: cloud in, corrected gen2 ground out.
+
+    ``curve`` is a loaded curve (:func:`load_curve`) or a path/epoch. Returns a dict with
+    ``h2_mm`` (corrected, slope-normal), ``h2_median_mm`` (uncorrected control), ``q``,
+    ``sd_mm``, ``count``, the histogram ``H`` and the reference surface ``surf``.
+    """
+    if not isinstance(curve, dict):
+        curve = load_curve(curve)
+    if surf is None:
+        surf = reference_surface(tile_dir)
+    H, n_in = column_histogram(gen2_cloud, surf, zlo=zlo, zhi=zhi, dz=dz, chunk=chunk)
+    if verbose:
+        print(f"gen2: {n_in:,} class2 returns in {zlo:+.2f}..{zhi:+.2f} m over "
+              f"{int((H.sum(1) > 0).sum()):,} cells", flush=True)
+    sd_mm, count = spread_from_histogram(H, zlo, dz, min_count=min_count)
+    q = q_from_spread(sd_mm, curve, min_count=min_count, count=count)
+    n_oob = int(np.sum((q < 0) | (q > 1)))
+    if n_oob and verbose:
+        print(f"q outside [0,1] on {n_oob:,} cells; clipped to the column's ends, which is a "
+              f"FLOOR/CEILING not a fit -- those cells take the extreme return, not a "
+              f"percentile")
+    q = np.clip(q, 0.0, 1.0)
+    return {"h2_mm": ground_at_q(H, zlo, dz, q), "h2_median_mm": ground_at_median(H, zlo, dz),
+            "q": q, "sd_mm": sd_mm, "count": count, "H": H, "surf": surf, "n_in": n_in,
+            "curve": curve, "column": {"classes": "class2", "window_lo_m": zlo,
+                                       "window_hi_m": zhi, "bin_m": dz,
+                                       "min_count": min_count}}
+
