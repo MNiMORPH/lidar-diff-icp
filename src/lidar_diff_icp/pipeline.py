@@ -927,8 +927,7 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
     sigma = float(1.4826 * np.median(np.abs(r - np.median(r))))
     # LoD: calibrated heteroscedastic model (xdem/Hugonnet 2022) if available,
     # else a within-cell spread proxy (relief-inflated on slopes -- fallback only).
-    abs_curv = np.abs(np.gradient(np.gradient(gaussian_filter(Zf, 1.0), res, axis=0), res, axis=0)
-                      + np.gradient(np.gradient(gaussian_filter(Zf, 1.0), res, axis=1), res, axis=1))
+    abs_curv = _tm["abs_curv"]        # from terrain.terrain_masks; sigma 1 cell, not 5
     # Standard-error LoD covariate: the cell ground-estimate's DoD standard error,
     # combining the two DISTINCT pieces of within-cell information in the form the
     # statistics dictate -- detrended ROUGHNESS (surface variability, the numerator)

@@ -20,7 +20,7 @@ import numpy as np
 import laspy
 
 from lidar_diff_icp.pipeline import rasterize, heteroscedastic_lod
-from lidar_diff_icp import coreg
+from lidar_diff_icp import coreg, terrain
 
 
 def main():
@@ -32,6 +32,11 @@ def main():
     ap.add_argument("--agg", choices=("median", "mean"), default="median")
     ap.add_argument("--calibrated-error", action="store_true",
                     help="use the xdem heteroscedastic model instead of the per-point LoD")
+    ap.add_argument("--valley-top", dest="valley_top", default="histogram",
+                    help="valley top for the stable mask: an elevation in metres, "
+                         "'registry', or 'histogram'. Never chosen for you.")
+    ap.add_argument("--tile-dir", dest="tile_dir", default=None,
+                    help="tile directory, for --valley-top registry/histogram")
     ap.add_argument("--outdir", default="data/derived/raster")
     ap.add_argument("--figdir", default="figures")
     a = ap.parse_args()
@@ -51,15 +56,13 @@ def main():
     Zg = rasterize(x, y, z, bounds, res, a.agg)          # surface for hillshade / terrain
 
     if a.calibrated_error:
-        from scipy.ndimage import gaussian_filter, uniform_filter, distance_transform_edt as edt
-        Zf = Zg.copy(); nanm = np.isnan(Zf)
-        if nanm.any():
-            Zf = Zf[tuple(edt(nanm, return_distances=False, return_indices=True))]
-        tpi = Zg - uniform_filter(Zf, size=int(2 * 300 / res), mode="nearest")
-        sdeg = np.degrees(coreg.slope_aspect(gaussian_filter(Zf, 1.0), res)[0])
-        curv = np.abs(np.gradient(np.gradient(gaussian_filter(Zf, 1.0), res, axis=0), res, axis=0)
-                      + np.gradient(np.gradient(gaussian_filter(Zf, 1.0), res, axis=1), res, axis=1))
-        stable = (((sdeg < 3) & (tpi > -2)) | ((sdeg > 5) & (sdeg < 35) & (tpi > -2))) & np.isfinite(dod)
+        # ONE definition, from terrain.py -- slope, the LoD's curvature covariate and the
+        # stable mask together. This hand-rolled all three, and its slope used sigma=1
+        # where the pipeline uses 2, so the LoD it reported was never quite the pipeline's.
+        _tm = terrain.terrain_masks(Zg, res, valley_top_m=a.valley_top,
+                                    tile_dir=a.tile_dir)
+        sdeg = _tm["slope_deg"]; curv = _tm["abs_curv"]
+        stable = _tm["stable"] & np.isfinite(dod)
         err = heteroscedastic_lod(dod, sdeg, curv, stable)
         emethod = "xdem heteroscedastic (slope,curv), calibrated on stable ground"
         if err is None:

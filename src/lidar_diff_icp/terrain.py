@@ -62,7 +62,8 @@ def terrain_masks(z_grid, res, *, valley_top_m, tile_dir=None, curv_max=0.005,
                   verbose=True):
     """Slope, curvature, valley floor and the STABLE mask, from a gridded ground surface.
 
-    Returns a dict with ``slope_deg``, ``laplacian``, ``floodplain``, ``upland``,
+    Returns a dict with ``slope_deg``, ``laplacian`` (sigma 5 cells, for the stable mask),
+    ``abs_curv`` (sigma 1 cell, the LoD's covariate), ``floodplain``, ``upland``,
     ``stable``, ``valley_top_m``, ``valley_top_source`` and ``report`` (cells removed by
     each cut, in order), so a caller can record what it used rather than restate it.
 
@@ -85,6 +86,14 @@ def terrain_masks(z_grid, res, *, valley_top_m, tile_dir=None, curv_max=0.005,
     zsm = gaussian_filter(zf, 50 / res / 2)
     lap = (np.gradient(np.gradient(zsm, res, axis=0), res, axis=0)
            + np.gradient(np.gradient(zsm, res, axis=1), res, axis=1))
+    # A SECOND, SHARPER curvature: the LoD's covariate, smoothed at sigma=1 cell rather
+    # than 5. The pipeline computes both -- `lap` for the stable mask, `abs_curv` for the
+    # error model -- and they are genuinely different quantities at different scales. Both
+    # live here so a consumer cannot pick up one and hand-roll the other, which is exactly
+    # what scripts/rasterize_change.py was doing.
+    z1 = gaussian_filter(zf, 1.0)
+    abs_curv = np.abs(np.gradient(np.gradient(z1, res, axis=0), res, axis=0)
+                      + np.gradient(np.gradient(z1, res, axis=1), res, axis=1))
 
     report = {"start": int(z.size)}
     if vt is None:
@@ -111,6 +120,6 @@ def terrain_masks(z_grid, res, *, valley_top_m, tile_dir=None, curv_max=0.005,
               f"{int(stable.sum()):,} cells ({100 * stable.mean():.1f}% of the grid); "
               f"slope p50 {np.median(sdeg[stable]):.1f} deg p90 "
               f"{np.percentile(sdeg[stable], 90):.1f}", flush=True)
-    return {"slope_deg": sdeg, "laplacian": lap, "filled": zf,
+    return {"slope_deg": sdeg, "laplacian": lap, "abs_curv": abs_curv, "filled": zf,
             "floodplain": floodplain, "upland": upland, "stable": stable,
             "valley_top_m": vt, "valley_top_source": src, "report": report}
