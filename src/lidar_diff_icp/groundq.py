@@ -34,9 +34,16 @@ import numpy as np
 CURVE_DIR = os.path.join("data", "derived")
 
 
-def curve_path(epoch):
-    """Canonical path for an epoch's curve, e.g. 'gen2_2021_control'."""
-    return os.path.join(CURVE_DIR, f"ground_q_vs_class2sd_{epoch}.npz")
+def curve_path(epoch, point_types):
+    """Canonical path for a curve, e.g. ('gen2_2021_control', ['NVA']).
+
+    The point types are IN THE FILENAME because they decide what the curve means. NVA, VVA
+    and LCP marks are three different populations -- measured on this control, the class-2
+    median sits -3.5 mm from truth at NVA, +103.3 mm at VVA and -23.1 mm at LCP -- so a
+    curve is only interpretable if you can see which went into it.
+    """
+    tag = "-".join(sorted(t.upper() for t in point_types))
+    return os.path.join(CURVE_DIR, f"ground_q_vs_class2sd_{epoch}_{tag}.npz")
 
 
 def load_curve(path_or_epoch, *, expect_epoch=None):
@@ -55,6 +62,15 @@ def load_curve(path_or_epoch, *, expect_epoch=None):
             f"applying an uncalibrated percentile would put an unmeasured bias into every "
             f"elevation on the tile.")
     z = np.load(p, allow_pickle=True)
+    if "point_types" not in z.files:
+        raise ValueError(
+            f"{p} records no point_types. Curves written before 2026-09-04 pooled NVA, VVA "
+            f"and LCP marks, which are three different populations: the class-2 median sits "
+            f"-3.5 mm from truth at NVA, +103.3 mm at VVA (sited UNDER vegetation by design) "
+            f"and -23.1 mm at LCP. A pooled curve's falling limb is the VVA marks, so it "
+            f"cannot be read as a vegetation correction for ordinary ground. Refit stating "
+            f"the types:\n"
+            f"    analysis/calibrate_ground_q.py --set <epoch> --point-types NVA")
     got = str(z["set"]) if "set" in z else None
     if expect_epoch is not None and got != expect_epoch:
         raise ValueError(
@@ -64,6 +80,7 @@ def load_curve(path_or_epoch, *, expect_epoch=None):
     return {"log_sd_mm": np.asarray(z["log_sd_mm"], float),
             "q": np.asarray(z["q"], float),
             "epoch": got,
+            "point_types": str(z["point_types"]),
             "n_marks": int(z["n_marks"]) if "n_marks" in z else None,
             "path": p,
             "provenance": {k: str(z[k]) for k in
@@ -98,6 +115,8 @@ def describe(curve, q=None):
     """One block of text naming the curve and what it did -- for a run's own output."""
     out = [f"ground_q from the class-2 spread: {curve['path']}",
            f"  epoch {curve['epoch']}, calibrated on {curve['n_marks']} surveyed marks"]
+    out.insert(2, f"  point types {curve['point_types']} -- NVA/VVA/LCP are different "
+                 f"populations and are never pooled")
     for k in ("fitted_on", "shape", "cv", "known_limits"):
         if k in curve["provenance"]:
             out.append(f"  {k}: {curve['provenance'][k]}")

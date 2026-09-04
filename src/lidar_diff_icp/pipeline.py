@@ -394,8 +394,8 @@ def _stream_ground(path, bounds, res, nx, ny, q, *, plane=None, chunk=8_000_000,
     return g.reshape(ny, nx), spread.reshape(ny, nx), cnt.reshape(ny, nx)
 
 
-def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q="calibrated",
-                   gen2_epoch="gen2_2021_control",
+def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
+                   gen2_curve=None, gen2_epoch="gen2_2021_control",
                    correction_surface=False, along_track_drift=True, tie="reference",
                    ground="slope_normal", sn_smooth_cells=1.2, stream=False,
                    ground_source="csf", after_ground="class2", csf_pdal=None,
@@ -411,7 +411,13 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q="calibrat
                       pre-filtered last-return file -- see ``after_ground``).
     ``bounds``      : (minx, miny, maxx, maxy) in the working CRS (EPSG:26915).
     ``ground_q``    : per-cell ground quantile for GRIDDING. **0.50 (median) by
-                      default** -- the CSF/class-2 ground returns are already
+                      default**, and on open ground that is the best estimate we
+                      have: against the 227 NVA control marks it lands -3.5 mm from
+                      surveyed truth. ``"calibrated"`` instead takes each cell's
+                      percentile from its own class-2 spread, and then ``gen2_curve``
+                      MUST name the curve -- see the note at the resolution block for
+                      why it is not the default and why there is no default curve.
+                      The CSF/class-2 ground returns are already
                       vegetation-free, so they scatter symmetrically about the
                       surface and the median is the unbiased estimate. A low
                       percentile (e.g. the legacy 0.10) sits ~1.28*sigma below the
@@ -525,16 +531,36 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q="calibrat
     X0, Y0, X1, Y1 = bounds
     nx = int(round((X1 - X0) / res)); ny = int(round((Y1 - Y0) / res))
 
-    # ---- the ground percentile: calibrated per cell, or a stated constant --------------
-    # "calibrated" (the default since 2026-09-04) reads the curve fitted against surveyed
-    # control by analysis/calibrate_ground_q.py and gives EACH CELL the percentile its own
-    # class-2 spread earns. A float pins the old behaviour and is still accepted -- but it
-    # must be stated, because ground_q = 0.50 was measured to carry a +8.1 mm bias against
-    # 519 surveyed marks and is only right where the ground class is clean.
+    # ---- the ground percentile: a stated constant, or calibrated per cell --------------
+    # 0.50 IS THE DEFAULT AND IT IS NOT A FALLBACK. Held out on 10 km spatially blocked
+    # folds over the 227 NVA (open-ground) control marks:
+    #
+    #     q = 0.50                                median err -3.5 mm   RMS 49.1 mm
+    #     q = 0.527 constant (calibrated)         median err  0.1      RMS 48.7
+    #     q = isotonic(log class-2 SD), held out  median err -5.8      RMS 52.5
+    #
+    # The spread-dependent curve is WORSE than doing nothing on open ground. It was briefly
+    # the default on the strength of a 124.5 -> 104.6 mm gain, but that was measured on all
+    # 519 marks POOLED, and pooling mixes in 162 VVA checkpoints sited UNDER VEGETATION by
+    # design (class-2 median +103.3 mm above truth) with 130 LCP calibration points
+    # (-23.1 mm). The pooled curve's falling limb is the VVA population, so applying it to
+    # ordinary ground imports a canopy response that does not belong there -- measured, it
+    # widened the DoD's scatter at both Elba (NMAD 74.8 -> 79.1 mm) and Whitewater
+    # (85.0 -> 92.4 mm on common cells). See analysis/GROUND_Q_FROM_CLASS2_SPREAD.md.
+    #
+    # "calibrated" remains available and now REQUIRES gen2_curve. There is deliberately no
+    # default curve: which point types were fitted decides what the curve means.
     _GQ_CURVE = None
     if isinstance(ground_q, str):
         if ground_q != "calibrated":
             raise ValueError(f"ground_q must be a float or 'calibrated', not {ground_q!r}")
+        if gen2_curve is None:
+            raise ValueError(
+                "ground_q='calibrated' requires gen2_curve=<path to a curve .npz>. There is "
+                "no default: which control point types the curve was fitted on decides what "
+                "it means, and on open ground (NVA) the calibrated curve measured WORSE "
+                "than ground_q=0.50 -- RMS 52.5 vs 49.1 mm, held out. Name the curve you "
+                "mean, or pass ground_q=0.50.")
         if not stream:
             raise ValueError(
                 "ground_q='calibrated' needs stream=True. The in-memory path grids the "
@@ -543,7 +569,7 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q="calibrat
                 "than silently falling back to 0.50: a cell that was never corrected must "
                 "not end up looking corrected. Pass stream=True, or ground_q=0.50 to state "
                 "that the uncorrected median is what you want.")
-        _GQ_CURVE = groundq.load_curve(gen2_epoch, expect_epoch=gen2_epoch)
+        _GQ_CURVE = groundq.load_curve(gen2_curve, expect_epoch=gen2_epoch)
         _GQ_SCALAR = 0.50
         print(groundq.describe(_GQ_CURVE), flush=True)
     else:
@@ -971,6 +997,7 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q="calibrat
         "ground_percentile": ("calibrated per cell from the class-2 spread"
                               if _GQ_CURVE is not None else _GQ_SCALAR),
         "ground_q_curve": (dict(path=_GQ_CURVE["path"], epoch=_GQ_CURVE["epoch"],
+                                point_types=_GQ_CURVE["point_types"],
                                 n_marks=_GQ_CURVE["n_marks"], **_GQ_CURVE["provenance"])
                            if _GQ_CURVE is not None else None),
         "ground_estimator": ground, "ground_source": ground_source,

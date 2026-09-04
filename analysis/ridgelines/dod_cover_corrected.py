@@ -284,7 +284,8 @@ json.dump({"relation": ("q2 = isotonic(log class-2 SD), calibrated on surveyed c
                                else A.relation or f"{D}/q2_cover_fit.json"),
            "percentile_population": {"classes": COL_CLASSES, "window_lo_m": COL_LO,
                                      "window_hi_m": COL_HI, "bin_m": COL_DZ},
-           "source": "analysis/ridgelines/Q2_COVER_RELATION.md",
+           "source": ("analysis/GROUND_Q_FROM_CLASS2_SPREAD.md" if QSD is not None
+                      else "analysis/ridgelines/Q2_COVER_RELATION.md"),
            "gen1": "beam_offset_table.parquet median of d_mm_corr (4 registration terms)",
            "gen2": f"{A.gen2}, {COL_CLASSES}, column {COL_LO}..{COL_HI} m, {COL_DZ} m bins",
            "sign": "gen2 - gen1, positive = elevation rose",

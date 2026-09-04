@@ -12,14 +12,36 @@ import pytest
 from lidar_diff_icp import groundq
 
 
-def _write_curve(tmp_path, epoch="gen2_2021_control", log_sd=None, q=None):
-    p = tmp_path / f"ground_q_vs_class2sd_{epoch}.npz"
+def _write_curve(tmp_path, epoch="gen2_2021_control", log_sd=None, q=None,
+                 point_types="NVA"):
+    p = tmp_path / f"ground_q_vs_class2sd_{epoch}_{point_types}.npz"
     log_sd = np.log([20.0, 60.0, 120.0, 400.0]) if log_sd is None else log_sd
     q = np.array([0.506, 0.445, 0.395, 0.101]) if q is None else q
+    kw = {} if point_types is None else {"point_types": point_types}
     np.savez(p, log_sd_mm=log_sd, q=q, n_marks=519, set=epoch,
              fitted_on="test", response="test", covariate="test",
-             shape="isotonic", cv="test", known_limits="test")
+             shape="isotonic", cv="test", known_limits="test", **kw)
     return str(p)
+
+
+def test_curve_without_point_types_is_refused(tmp_path):
+    """NVA, VVA and LCP are three different populations -- the class-2 median sits -3.5 mm
+    from truth at NVA, +103.3 mm at VVA (sited under vegetation BY DESIGN) and -23.1 mm at
+    LCP. A pooled curve's falling limb is the VVA marks, so a curve that cannot say what
+    went into it cannot be read as a vegetation correction for ordinary ground."""
+    p = _write_curve(tmp_path, point_types=None)
+    with pytest.raises(ValueError, match="records no point_types"):
+        groundq.load_curve(p)
+
+
+def test_difference_dem_refuses_calibrated_without_a_named_curve():
+    """There is no default curve, on purpose: on open ground the calibrated curve measured
+    WORSE than ground_q = 0.50 (RMS 52.5 vs 49.1 mm, held out), so it must be asked for by
+    name rather than arrived at by default."""
+    from lidar_diff_icp.pipeline import difference_dem
+    with pytest.raises(ValueError, match="requires gen2_curve"):
+        difference_dem("nonexistent_before.laz", "nonexistent_after.laz",
+                       (0.0, 0.0, 100.0, 100.0), ground_q="calibrated", stream=True)
 
 
 def test_curve_refuses_an_epoch_it_was_not_calibrated_on(tmp_path):
@@ -36,7 +58,7 @@ def test_curve_refuses_an_epoch_it_was_not_calibrated_on(tmp_path):
 def test_curve_checks_the_epoch_INSIDE_the_file_not_the_filename(tmp_path):
     """Renaming a file must not smuggle the wrong calibration through."""
     p = _write_curve(tmp_path, epoch="gen1_2008_control")
-    renamed = str(tmp_path / "ground_q_vs_class2sd_gen2_2021_control.npz")
+    renamed = str(tmp_path / "ground_q_vs_class2sd_gen2_2021_control_NVA.npz")
     os.rename(p, renamed)
     with pytest.raises(ValueError, match="calibrated on 'gen1_2008_control'"):
         groundq.load_curve(renamed, expect_epoch="gen2_2021_control")
@@ -89,13 +111,14 @@ def test_curve_is_monotone_non_increasing_as_calibrated(tmp_path):
     assert np.all(np.diff(groundq.q_from_spread(sd, c)) <= 1e-12)
 
 
-def test_difference_dem_refuses_calibrated_on_the_in_memory_path():
+def test_difference_dem_refuses_calibrated_on_the_in_memory_path(tmp_path):
     """The in-memory path grids with pandas groupby.quantile, which takes ONE quantile for
     all cells. Refusing beats falling back to 0.50 silently."""
     from lidar_diff_icp.pipeline import difference_dem
     with pytest.raises(ValueError, match="needs stream=True"):
         difference_dem("nonexistent_before.laz", "nonexistent_after.laz",
-                       (0.0, 0.0, 100.0, 100.0), stream=False)
+                       (0.0, 0.0, 100.0, 100.0), ground_q="calibrated",
+                       gen2_curve=_write_curve(tmp_path), stream=False)
 
 
 def test_difference_dem_rejects_an_unknown_ground_q_string():

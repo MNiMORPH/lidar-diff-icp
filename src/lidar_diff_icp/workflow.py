@@ -63,12 +63,15 @@ BASE_INPUTS = ("corrections.json", "z_after.npy", "dod.npy", "lod.npy")
 BASE_CODE = ("src/lidar_diff_icp/pipeline.py", "scripts/run_all_sites.py",
              "src/lidar_diff_icp/groundq.py")
 
-#: The ground-q calibration is an INPUT to the base products, not a tile product: since
-#: 2026-09-04 difference_dem takes each cell's percentile from it, so re-calibrating changes
-#: every tile's z_after and DoD. It lives outside the tile directory, which is exactly why it
-#: needs listing here -- nothing inside a tile reveals that its ground came from an older
-#: curve. Produced by analysis/calibrate_ground_q.py.
-BASE_GLOBAL_INPUTS = ("data/derived/ground_q_vs_class2sd_gen2_2021_control.npz",)
+#: Files OUTSIDE a tile directory that the base products nevertheless depend on, listed
+#: here because nothing inside a tile would reveal that its ground came from a stale one.
+#:
+#: EMPTY, and that is the point. The ground-q curve was listed here while difference_dem
+#: took every cell's percentile from it by default. It no longer does: the default is
+#: ground_q = 0.50, and "calibrated" must name its curve, because on open ground the
+#: calibrated curve measured WORSE than the median (RMS 52.5 vs 49.1 mm, held out on the
+#: 227 NVA marks). A tile's ground therefore depends on nothing outside the tile again.
+BASE_GLOBAL_INPUTS = ()
 
 
 @dataclass(frozen=True)
