@@ -71,10 +71,17 @@ def find_projects(lon: float, lat: float, *, cache: str | Path | None = None
 
 
 def bbox_covered(geom, bbox_lonlat: tuple[float, float, float, float]) -> bool:
-    """Does a project boundary fully contain a lon/lat bbox (minlon,minlat,maxlon,
-    maxlat)? Conservative: the whole rectangle must be inside."""
+    """Does a project boundary cover a lon/lat bbox (minlon,minlat,maxlon,maxlat)?
+
+    Uses ``covers``, NOT ``contains``. ``contains`` is false when the bbox merely touches
+    the boundary, and the consequence is not a near-miss: resolve_reference falls through to
+    the NEXT candidate, which is an OLDER project. Measured 2026-09-04 on the mnrv tile,
+    MN_SEDriftless_5_2021 covers 100.0% of the bbox area and still returned contains=False,
+    so --auto resolved to USGS_LPC_MN_Phase1_LeSueurCO_2010_LAS_2016 -- a 2010 acquisition
+    offered as the gen2 reference for a 2008-to-2021 difference, with no warning.
+    """
     from shapely.geometry import box
-    return geom.contains(box(*bbox_lonlat))
+    return geom.covers(box(*bbox_lonlat))
 
 
 def resolve_reference(lon: float, lat: float,
@@ -90,8 +97,29 @@ def resolve_reference(lon: float, lat: float,
         raise LookupError(f"no 3DEP EPT project covers ({lon}, {lat})")
     if bbox_lonlat is None:
         return cands[0]
+    from shapely.geometry import box
+    bb = box(*bbox_lonlat)
+    newest = max(c["latest"] for c in cands)
     for c in cands:                                   # first (most-recent) full cover
         if bbox_covered(c["geom"], bbox_lonlat):
+            if c["latest"] < newest:
+                # NEVER downgrade the epoch silently. Measured on the mnrv tile
+                # 2026-09-04: MN_SEDriftless_5_2021 misses 0.0064% of the bbox -- a
+                # ~50 x 20 m sliver at one corner -- and this loop happily returned
+                # USGS_LPC_MN_Phase1_LeSueurCO_2010_LAS_2016 instead. A 2010 acquisition
+                # offered as the gen2 half of a 2008-to-2021 difference is not a near
+                # miss; it is a different experiment, and nothing in the output would
+                # have said so.
+                best = [d for d in cands if d["latest"] == newest]
+                gaps = ", ".join(
+                    f"{d['name']}({d['latest']}) misses "
+                    f"{100 * bb.difference(d['geom']).area / bb.area:.4f}% of the bbox"
+                    for d in best)
+                raise LookupError(
+                    f"the newest project(s) here do not fully cover the bbox, and the "
+                    f"first that does is OLDER: {c['name']}({c['latest']}). Refusing to "
+                    f"downgrade the epoch silently. {gaps}. Shrink the bbox, or pass the "
+                    f"project explicitly with --base if the shortfall is acceptable.")
             return {**c, "covers": True}
     raise LookupError(
         f"a 3DEP project covers ({lon}, {lat}) but none fully covers the bbox "
