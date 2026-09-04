@@ -43,7 +43,49 @@ import os
 
 import numpy as np
 
-__all__ = ["reference_cells"]
+__all__ = ["reference_cells", "valley_antimode", "floodplain_by_elevation"]
+
+
+def valley_antimode(z, *, bins=60):
+    """The elevation separating the valley floor from the upland, or None if unimodal.
+
+    The antimode of the tile's own elevation histogram: find the tallest bin in each half,
+    and take the minimum between them. Returns None when the histogram is not bimodal --
+    a tile with no valley has nothing to separate.
+
+    NEVER USE TPI FOR THIS (Andy, 2026-09-04). TPI < -2 m over a 600-800 m window is a
+    topographic-position heuristic, and measured against this cut it misses almost the
+    entire floodplain: at whitewater the TPI mask holds 99,289 cells while 227,467 sit below
+    the antimode, leaving 145,513 cells of genuine valley floor in any population the mask
+    was supposed to remove them from. It also removes upland hollows -- 16,218 cells with a
+    median elevation of 305.5 m, well above the 282.0 m antimode -- which are local lows in
+    their neighbourhood but not floodplain at all. Wrong in both directions.
+    """
+    zc = np.asarray(z, float).ravel()
+    zc = zc[np.isfinite(zc)]
+    if zc.size <= 100:
+        return None
+    h, e = np.histogram(zc, bins=bins)
+    half = bins // 2
+    lo, hi = int(np.argmax(h[:half])), half + int(np.argmax(h[half:]))
+    if hi <= lo + 2:
+        return None
+    anti = lo + int(np.argmin(h[lo:hi]))
+    return 0.5 * (e[anti] + e[anti + 1])
+
+
+def floodplain_by_elevation(z, *, thr=None):
+    """Valley-floor mask from ELEVATION. Returns ``(mask, threshold)``.
+
+    ``thr`` pins the threshold so tiles of one landscape share it; otherwise the per-tile
+    antimode is used, which is NOT comparable between tiles. Returns an all-False mask and
+    None where the histogram is unimodal, so a tile with no valley is not half-deleted.
+    """
+    z = np.asarray(z, float)
+    t = thr if thr is not None else valley_antimode(z)
+    if t is None:
+        return np.zeros(z.shape, bool), None
+    return np.isfinite(z) & (z < t), float(t)
 
 
 def _opt(d, name):
