@@ -44,7 +44,64 @@ import os
 import numpy as np
 
 __all__ = ["reference_cells", "floodplain_by_elevation", "valley_top_from_histogram",
-           "VALLEY_TOP_M"]
+           "landscape_of", "valley_top_for_landscape", "VALLEY_TOP_M"]
+
+
+def landscape_of(tile_dir, root="data/derived"):
+    """Every tile that shares ground with this one, transitively. The LANDSCAPE.
+
+    A valley top is a property of the landscape, not of the rectangle we happened to cut
+    from it, so it must be computed on ground the tiles share. Computed per tile it is not
+    even self-consistent: refcells' own record has elba at 228.9 m and elbaext at 237.1 m
+    ON OVERLAPPING GROUND, a 31,242-cell disagreement about which cells are floodplain in
+    the same valley.
+
+    Membership is MEASURED from the tiles' own bounds -- overlap, then transitive closure --
+    never declared. Returns a sorted list of tile directory names including this one.
+    """
+    import json
+    B = {}
+    for d in sorted(os.listdir(root)):
+        p = os.path.join(root, d, "corrections.json")
+        if os.path.exists(p):
+            try:
+                B[d] = json.load(open(p))["bounds"]
+            except Exception:
+                pass
+    name = os.path.basename(str(tile_dir).rstrip("/"))
+    if name not in B:
+        return [name]
+
+    def hit(a, b):
+        return (min(B[a][2], B[b][2]) > max(B[a][0], B[b][0])
+                and min(B[a][3], B[b][3]) > max(B[a][1], B[b][1]))
+
+    group, frontier = {name}, [name]
+    while frontier:
+        a = frontier.pop()
+        for b in B:
+            if b not in group and hit(a, b):
+                group.add(b); frontier.append(b)
+    return sorted(group)
+
+
+def valley_top_for_landscape(tile_dir, root="data/derived", bins=60):
+    """The valley top from the POOLED elevations of the whole landscape.
+
+    Every tile sharing ground gets the same cut by construction, which per-tile computation
+    cannot promise. Returns ``(valley_top_m, members)``; the elevation is None where the
+    pooled histogram has no minimum above its dominant mode.
+    """
+    members = landscape_of(tile_dir, root=root)
+    zs = []
+    for d in members:
+        p = os.path.join(root, d, "z_after.npy")
+        if os.path.exists(p):
+            z = np.load(p).ravel()
+            zs.append(z[np.isfinite(z)])
+    if not zs:
+        return None, members
+    return valley_top_from_histogram(np.concatenate(zs), bins=bins), members
 
 
 def valley_top_from_histogram(z, *, bins=60):
