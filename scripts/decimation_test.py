@@ -22,7 +22,7 @@ import pandas as pd
 import py4dgeo
 from scipy.ndimage import uniform_filter, distance_transform_edt as edt
 
-from lidar_diff_icp import io, coreg
+from lidar_diff_icp import io, coreg, terrain
 
 
 def main():
@@ -31,6 +31,11 @@ def main():
     ap.add_argument("--bounds", nargs=4, type=float, required=True)
     ap.add_argument("--core-res", type=float, default=2.0)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--valley-top", dest="valley_top", default="histogram",
+                    help="valley top for the floodplain mask: an elevation in metres, "
+                         "'registry', or 'histogram'. Never chosen for you.")
+    ap.add_argument("--tile-dir", dest="tile_dir", default=None,
+                    help="tile directory, for --valley-top registry/histogram")
     a = ap.parse_args()
     X0, Y0, X1, Y1 = a.bounds
     res = 5.0; nx = int(round((X1 - X0) / res)); ny = int(round((Y1 - Y0) / res))
@@ -66,8 +71,8 @@ def main():
     Zfill = Z21.copy(); nanm = np.isnan(Zfill)
     if nanm.any():
         Zfill = Zfill[tuple(edt(nanm, return_distances=False, return_indices=True))]
-    tpi = Z21 - uniform_filter(Zfill, size=int(2 * 300 / res), mode="nearest")
-    floodplain = np.isfinite(Z21) & (tpi < -2.0)
+    floodplain = terrain.terrain_masks(Z21, res, valley_top_m=a.valley_top,
+                                       tile_dir=a.tile_dir)["floodplain"]
     cs = coreg.correction_surface(Z21, Z08c, res, X0, Y0, radius=400.0, exclude=floodplain)
     C = cs["C"]
     ixp = np.clip(((xc - X0) / res).astype(int), 0, nx - 1)

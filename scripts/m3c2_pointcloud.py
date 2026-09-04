@@ -12,7 +12,7 @@ import numpy as np
 import laspy
 import py4dgeo
 
-from lidar_diff_icp import io, coreg
+from lidar_diff_icp import io, coreg, terrain
 from lidar_diff_icp.swathdiff import _median_grid
 
 
@@ -31,6 +31,11 @@ def main():
     ap.add_argument("--robust", action="store_true",
                     help="M3C2 median (robust_aggr) instead of mean -- robust to "
                          "above-ground last returns on steep/rough slopes")
+    ap.add_argument("--valley-top", dest="valley_top", default="histogram",
+                    help="valley top for the floodplain and stable masks: an elevation in "
+                         "metres, 'registry', or 'histogram'. Never chosen for you.")
+    ap.add_argument("--tile-dir", dest="tile_dir", default=None,
+                    help="tile directory, for --valley-top registry/histogram")
     ap.add_argument("--normal-radius", type=float, default=3.0)
     ap.add_argument("--cyl-radius", type=float, default=1.5)
     ap.add_argument("--along-track-drift", action="store_true",
@@ -85,11 +90,11 @@ def main():
         mi8b = be8 & (xc >= X0) & (xc < X1) & (yc >= Y0) & (yc < Y1)
         Z21g = pg(x2[m2], y2[m2], z2[m2], 0.10)
         Z08g = pg(xc[mi8b], yc[mi8b], zc[mi8b], 0.10)
-        Zfill = Z21g.copy(); nanm = np.isnan(Zfill)
-        if nanm.any():
-            Zfill = Zfill[tuple(edt(nanm, return_distances=False, return_indices=True))]
-        tpi = Z21g - uniform_filter(Zfill, size=int(2 * 300 / res), mode="nearest")
-        floodplain = np.isfinite(Z21g) & (tpi < -2.0)
+        # ONE definition, from terrain.py. The floodplain excluded from the correction
+        # surface must be the same one the DoD's stable mask uses, or the surface is fitted
+        # on ground the pipeline calls valley and vice versa.
+        floodplain = terrain.terrain_masks(Z21g, res, valley_top_m=a.valley_top,
+                                           tile_dir=a.tile_dir)["floodplain"]
         cs = coreg.correction_surface(Z21g, Z08g, res, X0, Y0, radius=400.0,
                                       exclude=floodplain)
         C = cs["C"]
@@ -111,15 +116,8 @@ def main():
         Z21g = pg(x2[m2], y2[m2], z2[m2], 0.10)
         mi8c = be8 & (xc >= X0) & (xc < X1) & (yc >= Y0) & (yc < Y1)
         resid = Z21g - pg(xc[mi8c], yc[mi8c], zc[mi8c], 0.10)   # ground change (~0 stable)
-        Zfill = Z21g.copy(); nanm = np.isnan(Zfill)
-        if nanm.any():
-            Zfill = Zfill[tuple(edt(nanm, return_distances=False, return_indices=True))]
-        tpi = Z21g - uniform_filter(Zfill, size=int(2 * 300 / res), mode="nearest")
-        sdeg = np.degrees(coreg.slope_aspect(gaussian_filter(Zfill, 2.0), res)[0])
-        Zsm = gaussian_filter(Zfill, 10.0)
-        lap = (np.gradient(np.gradient(Zsm, res, axis=0), res, axis=0)
-               + np.gradient(np.gradient(Zsm, res, axis=1), res, axis=1))
-        stable = ((sdeg < 3) & (tpi > -2)) | ((sdeg > 5) & (sdeg < 35) & (tpi > -2) & (lap < 0))
+        stable = terrain.terrain_masks(Z21g, res, valley_top_m=a.valley_top,
+                                       tile_dir=a.tile_dir)["stable"]
         ixp = np.clip(((xc - X0) / res).astype(int), 0, nx - 1)
         iyp = np.clip(((yc - Y0) / res).astype(int), 0, ny - 1)
         chg_pt = resid[iyp, ixp]

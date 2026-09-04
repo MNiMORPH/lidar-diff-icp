@@ -39,6 +39,11 @@ _ap.add_argument("--dod", required=True,
 _ap.add_argument("--without", default="",
                  help="comma-separated optional layers to run without, stated explicitly; "
                       "only 'penetration' is optional here (it drives step 4 alone)")
+_ap.add_argument("--valley-top", dest="valley_top", default="histogram",
+                 help="valley top for floodplain_mask.npy: an elevation in metres, "
+                      "'registry', or 'histogram'. Never chosen for you -- this file is the "
+                      "PRODUCER of the mask, so this one flag sets the cut for every "
+                      "consumer in the project.")
 ARGS = _ap.parse_args()
 
 TILE = ARGS.tile
@@ -144,17 +149,17 @@ kappa_g[rr, cc] = kappa; b_g[rr, cc] = bslope
 # valley floor and removed 16,218 upland hollows at a median 305.5 m -- wrong in both
 # directions. The cut is now the first local minimum above the tile's dominant elevation
 # mode; see refcells.valley_top_from_histogram for what that assumes and where it fails.
-from lidar_diff_icp.refcells import VALLEY_TOP_M, valley_top_from_histogram
-_vt = VALLEY_TOP_M.get(TILE) or valley_top_from_histogram(zf)
+from lidar_diff_icp import terrain
+from lidar_diff_icp.refcells import floodplain_by_elevation
+_vt, _vsrc = terrain.resolve_valley_top(ARGS.valley_top, D)
 if _vt is None:
     floodplain = np.zeros_like(tpi_large, bool)
     print(f"NO valley cut for {TILE}: its elevation histogram has no minimum above the "
           f"dominant mode, so floodplain_mask.npy is EMPTY and every consumer of it "
           f"applies no floodplain cut on this tile.")
 else:
-    floodplain = np.isfinite(zf) & (zf < float(_vt))
-    print(f"floodplain by ELEVATION < {float(_vt):.1f} m "
-          f"({'registry' if VALLEY_TOP_M.get(TILE) else 'histogram'}): "
+    floodplain, _ = floodplain_by_elevation(zf, _vt)
+    print(f"floodplain by ELEVATION < {float(_vt):.1f} m ({_vsrc}): "
           f"{int(floodplain.sum()):,} cells ({100*floodplain.mean():.1f}% of the grid)")
 np.save(f"{D}/floodplain_mask.npy", floodplain)
 
