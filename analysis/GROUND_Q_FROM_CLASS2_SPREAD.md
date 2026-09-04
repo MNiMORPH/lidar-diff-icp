@@ -53,6 +53,25 @@ every cell of every tile. The pooled curve's entire falling limb is the VVA popu
 On open ground the curve is nearly flat. The +8.1 mm bias that motivated the whole correction
 is a pooling artifact: on NVA marks alone the bias is -3.5 mm.
 
+## Why the curve is REGIONAL, and why that is a requirement
+
+Not a compromise forced by thin data -- a condition for the measurement to mean anything.
+The offset being measured is a ground-cover effect of a few tens of mm sitting on a per-mark
+scatter of 49.1 mm (NVA, n=227). Resolving it needs many marks spanning the whole cover
+range, and no single flight line or site supplies that:
+
+    519 marks span 397 distinct flight lines over a 228 x 127 km survey
+    marks per line: median 2, mean 2.1, min 1, max 8
+    40% of lines carry exactly ONE mark; 89% carry three or fewer
+
+A per-line fit would be two points. The REGIONAL COLLECTION IS REQUIRED for a robust
+measurement of cover-based offsets (Andy, 2026-09-04), and the curve is therefore correctly
+one curve per epoch, applied to every tile.
+
+The cost is stated rather than hidden: a per-line level error cannot be separated from the
+cover signal, because no line carries enough marks to estimate its own level. That is a
+limit on attributing a residual to a line, not on the cover relation itself.
+
 ## The rule that already existed, and that this broke
 
 `ground_control/run_bridge_gen2.py` makes `--point-types` a **required** argument —
