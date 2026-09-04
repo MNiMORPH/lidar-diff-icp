@@ -21,7 +21,7 @@ DATA PROVENANCE (all under data/, git-ignored; reacquire as below)
         4342-03-32_b_a, 4342-03-32_a_b, 4342-02-32_c_d, 4342-02-32_d_c
         (download via lidar_diff_icp.tiles.download_tile(name, ..., county="ramsey"))
   gen2: data/after_battlecreek/gen2_4tile.laz
-        scripts/fetch_3dep_curl.py --auto --bounds <frame> --max-depth 12
+        scripts/fetch_3dep_curl.py --auto --bounds <frame>
   NAIP: data/naip/naip2010_bc4tile.npz
         scripts/fetch_naip.py --bounds <frame> --year 2010 --res 2
 

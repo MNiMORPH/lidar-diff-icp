@@ -374,7 +374,7 @@ pip install -e .
 #    unless its boundary fully covers the tile (--base <EPT_URL> pins it instead).
 env PROJ_DATA=/usr/share/proj GDAL_DATA=/usr/share/gdal \
   python scripts/fetch_3dep_curl.py --auto --bounds <minx miny maxx maxy> \
-  --max-depth 12 --out data/after/3dep_fulldensity.laz
+  --out data/after/3dep_fulldensity.laz
 
 # 2. last-return filter (rn==nr, singles kept)
 python scripts/filter_last_return.py data/after/3dep_fulldensity.laz data/after/3dep_last.laz

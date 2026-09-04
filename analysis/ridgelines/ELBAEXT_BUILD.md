@@ -46,7 +46,7 @@ return_number, number_of_returns, and classification are all preserved.
 
 The existing `3dep2021_fulldensity.laz` covers only the current elba extent, so a fresh
 full-density pull was made over the elbaext+buffer with `scripts/fetch_3dep_curl.py`
-(`--auto --max-depth 12`, matching the fulldensity recipe):
+(`--auto`, every octree depth -- the fulldensity recipe):
 
 - Auto-resolved gen2 reference: **MN_SEDriftless_2_2021** (2021); boundary fully covers
   the elbaext bbox (mandatory coverage check passed).

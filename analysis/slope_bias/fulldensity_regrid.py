@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """FULL-DENSITY RE-GRID (Task 4 decisive test) — does differencing gen2 ground from the
-FULL 3DEP return set (--max-depth 12, 5.78 ground pts/m2) instead of the decimated
+FULL 3DEP return set (every octree depth, 5.78 ground pts/m2) instead of the decimated
 default-depth fetch (0.30 pts/m2) resolve the false hillslope aggradation (+tan(slope)
 gen2-high bias)?
 

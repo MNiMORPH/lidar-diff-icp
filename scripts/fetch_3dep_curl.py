@@ -1,9 +1,17 @@
 #!/usr/bin/env python3
-"""Robust 3DEP EPT patch fetch by direct curl of octree node tiles.
+"""Robust 3DEP EPT patch fetch by direct curl of octree node tiles. NO DEPTH CAP.
+
+--max-depth was REMOVED 2026-09-04 (Andy). It was never asked for, it defaulted to 9, and a
+truncated fetch is invisible in every tile-average statistic: whitewater shipped for weeks
+holding 5.52 returns/m2 east of easting 586362 against 15.45 west, while averaging a
+respectable 11.39 over the tile. The same five flight lines cover both halves in the same
+proportions, so nothing about the acquisition differed -- it was this download. Every site
+must start from one basis, so this script now takes EVERY overlapping node at EVERY depth
+the octree has.
 
 PDAL's readers.ept over S3 is unreliable in some environments (intermittent node
 read failures), while plain HTTPS GETs are solid. This walks the EPT hierarchy,
-downloads the node .laz tiles overlapping a bbox (depths up to --max-depth),
+downloads every node .laz tile overlapping a bbox, at every depth,
 decodes with laspy, reprojects EPSG:3857 -> EPSG:26915, and writes one LAS,
 **streaming per tile** so peak RAM is ~one node tile rather than the whole cloud
 (the dense 3DEP can be hundreds of millions of points). Preserves PointSourceId,
@@ -13,7 +21,7 @@ Give --base explicitly, or --auto to resolve the covering gen2 project from the
 bbox (with a mandatory coverage check). Run with the PROJ fix if a conda base
 leaks it:
     env PROJ_DATA=/usr/share/proj GDAL_DATA=/usr/share/gdal python scripts/fetch_3dep_curl.py \
-      --auto --bounds 578014 4883738 579514 4885238 --max-depth 9 \
+      --auto --bounds 578014 4883738 579514 4885238 \
       --out data/after/3dep2021_subpatch.laz
     # or pin the project:
     #   --base https://s3-us-west-2.amazonaws.com/usgs-lidar-public/MN_SEDriftless_2_2021
@@ -42,7 +50,6 @@ def main():
                     help="cache file for the EPT project-boundary index (--auto)")
     ap.add_argument("--bounds", nargs=4, type=float, required=True,
                     metavar=("MINX", "MINY", "MAXX", "MAXY"), help="EPSG:26915")
-    ap.add_argument("--max-depth", type=int, default=9)
     ap.add_argument("--max-tiles", type=int, default=None,
                     help="cap on node tiles fetched (default: NO cap -- fetch every "
                          "overlapping tile for complete coverage). A cap that "
@@ -92,11 +99,11 @@ def main():
         H = frontier.pop()
         for key, cnt in H.items():
             d, x, y, z = map(int, key.split("-"))
-            if d > a.max_depth or not overlap(d, x, y):
+            if not overlap(d, x, y):
                 continue
             keep.append(key)
             # descend into a stored sub-hierarchy at the file boundary
-            if cnt == -1 and key not in seen_hier and d <= a.max_depth:
+            if cnt == -1 and key not in seen_hier:
                 seen_hier.add(key)
                 try:
                     frontier.append(_get_json(f"{a.base}/ept-hierarchy/{key}.json"))
@@ -112,7 +119,7 @@ def main():
               f"--max-tiles (default) or raise it to cover the whole area.",
               file=sys.stderr, flush=True)
         keep = keep[: a.max_tiles]
-    print(f"{len(keep)} overlapping node tiles (depth<= {a.max_depth})", flush=True)
+    print(f"{len(keep)} overlapping node tiles (ALL depths)", flush=True)
 
     tmp = Path(a.out).parent / "_ept_tiles"; tmp.mkdir(parents=True, exist_ok=True)
 
