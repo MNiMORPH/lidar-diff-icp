@@ -280,7 +280,8 @@ json.dump({"relation": ("q2 = isotonic(log class-2 SD), calibrated on surveyed c
                         if QSD is not None
                         else f"q2 = {INTERCEPT:.6f} + slope * {COVER_NAME}"),
            "intercept": INTERCEPT, "slope": SLOPE,
-           "relation_source": A.relation or f"{D}/q2_cover_fit.json",
+           "relation_source": (A.q_from_class2_spread if QSD is not None
+                               else A.relation or f"{D}/q2_cover_fit.json"),
            "percentile_population": {"classes": COL_CLASSES, "window_lo_m": COL_LO,
                                      "window_hi_m": COL_HI, "bin_m": COL_DZ},
            "source": "analysis/ridgelines/Q2_COVER_RELATION.md",
