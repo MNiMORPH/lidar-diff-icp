@@ -23,7 +23,8 @@ import matplotlib.pyplot as plt
 
 from lidar_diff_icp.pipeline import difference_dem
 from lidar_diff_icp.detect import detect_change_standard
-from lidar_diff_icp import figures, refcells
+from lidar_diff_icp import figures
+from lidar_diff_icp.sites import SITES as _SITES, site as _site
 from lidar_diff_icp.viz import hillshade
 
 
@@ -44,33 +45,7 @@ def header_bounds(before, res):
 #: Named for its content now.
 FIGDIR = figures.DEFAULT_FIGDIR
 
-SITES = {
-    # gen2 was 3dep2021_fulltile.laz until 2026-09-02: 16,785,971 points, 1.89 pts/m2,
-    # against 182,923,322 (20.55 pts/m2) sitting beside it in the same extent -- a 10.90x
-    # thinning, and 19.27x on the ground class (0.30 vs 5.78 pts/m2). Every other site
-    # already read its full cloud, so Elba alone was differenced from something 6.03-27.53x
-    # thinner than its peers: a cross-site method artifact before it is an uncertainty
-    # problem. It also put 109,894 of 339,950 DoD cells (32.33%) below cell_plane_roughness
-    # min_n=6, so they lost their LoD entirely. stream=True because 182.9M points will not
-    # fit in memory whole; it is the same path the other four large sites use.
-    "elba": ("data/before/4342-29-64.laz", "data/after/3dep2021_fulldensity.laz",
-             (577492.8, 4882737.6, 580032.8, 4886237.6), True),
-    # 3dep_4358_fulltile.laz was a TRUNCATED fetch: 5.52 returns/m2 east of easting 586362
-    # against 15.45 west, same five flight lines both sides. Replaced 2026-09-04 by an
-    # uncapped re-fetch, 148,050,625 points, west/east density ratio 1.06.
-    "whitewater": ("data/before/4358-26-03.laz", "data/after/3dep_4358_fulldensity.laz",
-                   None, True),
-    "mnrv": ("data/before_mnrv/4342-23-01.laz", "data/after_mnrv/mnrv_3dep2021.laz",
-             None, True),
-    "cook": ("data/before_ne/1158-31-59.laz", "data/after_ne/ne_3dep.laz",
-             (709531.0, 5323589.0, 711986.0, 5327144.0), True),
-    "carlton": ("data/before_carlton/2742-12-53.laz", "data/after_carlton/carlton_3dep.laz",
-                (547805.0, 5163676.0, 550225.0, 5167166.0), True),
-    "battlecreek": ("data/before_battlecreek/4342-03-32_b_a.laz",
-                    "data/after_battlecreek/battlecreek_3dep.laz",
-                    (498750.0, 4975136.0, 499365.0, 4976006.0), False),
-}
-
+SITES = {n: (s.gen1, s.gen2, s.bounds, s.stream) for n, s in _SITES.items()}
 
 def _tif(arr, res, x0, y0, ny, out):
     import rasterio
@@ -81,22 +56,9 @@ def _tif(arr, res, x0, y0, ny, out):
         d.write(np.flipud(arr).astype("float32"), 1)
 
 
-#: Where each site's valley top comes from. STATED per site, never defaulted: "registry"
-#: uses refcells.VALLEY_TOP_M (an established, cited elevation); "histogram" computes it
-#: from the landscape's pooled elevations. Elba's landscape has a cited 230.0 m, so it uses
-#: it; the others have none, and say so by asking for the computation.
-VALLEY_TOP_SOURCE = {
-    "elba": "registry",
-    "whitewater": "histogram",
-    "mnrv": "histogram",
-    "cook": "histogram",
-    "carlton": "histogram",
-    "battlecreek": "histogram",
-}
-
-
 def run_site(name, figdir=FIGDIR, *, skip_penetration=False):
-    before, after, bounds, stream = SITES[name]
+    S = _site(name)
+    before, after, bounds, stream = S.gen1, S.gen2, S.bounds, S.stream
     res = 5.0
     if bounds is None:
         bounds = header_bounds(before, res)
@@ -106,16 +68,13 @@ def run_site(name, figdir=FIGDIR, *, skip_penetration=False):
 
     t = time.time()
     print(f"[{name}] difference_dem  bounds={tuple(round(b,1) for b in bounds)} stream={stream}", flush=True)
-    # The valley cut is STATED here, per site, and never chosen by the pipeline:
-    # "registry" for a landscape with an established, cited elevation; "histogram" to
-    # compute it from the landscape's pooled elevations. Andy, 2026-09-04: we must always
-    # tell it which.
-    vt = VALLEY_TOP_SOURCE[name]
+    # The valley cut is STATED per site on the Site record, and never chosen by the
+    # pipeline: "registry" for a landscape with an established, cited elevation,
+    # "histogram" to compute it from the landscape's pooled elevations, or an elevation.
     r = difference_dem(before, after, bounds, res=res, ground="slope_normal",
                        ground_source="csf", after_ground="class2", stream=stream,
-                       robust_stable=True, csf_cache=f"data/csf_cache/{name}.las",
-                       valley_top_m=(refcells.VALLEY_TOP_M[name] if vt == "registry" else vt),
-                       tile_dir_for_landscape=str(outdir))
+                       robust_stable=True, csf_cache=S.csf_cache,
+                       valley_top_m=S.valley_top, tile_dir=S.tile_dir)
     dod, lod, Z21, stable = r["dod"], r["lod"], r["z_after"], r["stable"]
     nx, ny = r["nx"], r["ny"]; X0, Y0 = r["bounds"][0], r["bounds"][1]
     ex = np.isfinite(dod)
