@@ -30,6 +30,18 @@ _ap.add_argument("--set", dest="set_", default="gen2_2021_control",
                  help="which epoch's control marks to calibrate on. The curve is NOT "
                       "transferable between epochs: 2008 was flown leaf-off in November and "
                       "2021 at green-up in May, and the classifiers differ too.")
+_ap.add_argument("--point-types", nargs="+", required=True,
+                 help="which control point types to fit on, e.g. NVA. REQUIRED and with no "
+                      "default, exactly as ground_control/run_bridge_gen2.py requires it: "
+                      "'--point-types NVA is the consequence, not a preference'. The three "
+                      "types are different populations and pooling them bakes the canopy "
+                      "response into the percentile. MEASURED on these marks: NVA (open "
+                      "ground, n=227) puts the class-2 median -3.5 mm from truth and needs "
+                      "almost no spread dependence; VVA (sited UNDER vegetation by design, "
+                      "n=162) puts it +103.3 mm high; LCP (the 143 calibration points, "
+                      "n=130) -23.1 mm. The pooled curve's whole falling limb is the VVA "
+                      "population, and the +8.1 mm bias that motivated this correction is a "
+                      "pooling artifact.")
 _ap.add_argument("--out", default=None)
 _ap.add_argument("--diagnostics", action="store_true",
                  help="also print every number quoted in "
@@ -40,10 +52,20 @@ _ap.add_argument("--diagnostics", action="store_true",
                       "project.")
 _A = _ap.parse_args()
 SET = _A.set_
-OUTNPZ = _A.out or f"data/derived/ground_q_vs_class2sd_{SET}.npz"
+TYPES = [t.upper() for t in _A.point_types]
+OUTNPZ = _A.out or (f"data/derived/ground_q_vs_class2sd_{SET}_"
+                    f"{'-'.join(sorted(TYPES))}.npz")
+
+_M = marks(SET)
+_types = pd.read_csv(CONTROL[SET])[["point_id", "point_type"]].drop_duplicates("point_id")
+_M = _M.merge(_types, on="point_id", how="left")
+_keep = _M.point_type.str.upper().isin(TYPES)
+print(f"point types: fitting on {TYPES}; {int(_keep.sum())} of {len(_M)} marks kept "
+      f"({_M.point_type.value_counts().to_dict()})")
+_M = _M[_keep]
 
 rows = []
-for t in marks(SET).itertuples():
+for t in _M.itertuples():
     sp, bp = f"{STRUCT}/{SET}__{t.point_id}.npz", f"{BOX}/{SET}__{t.point_id}.laz"
     if not (os.path.exists(sp) and os.path.exists(bp)):
         continue
@@ -140,7 +162,9 @@ for v in (20, 40, 60, 80, 120, 200, 400):
 # was fitted on and what it is entitled to be applied to.
 groundq.save_curve(
     OUTNPZ, iso_full, n_marks=len(F), epoch=SET,
-    fitted_on=f"{SET}: control marks, class-2 returns within 7.5 m",
+    fitted_on=(f"{SET}: point types {'+'.join(sorted(TYPES))}, class-2 returns "
+               f"within 7.5 m"),
+    point_types="+".join(sorted(TYPES)),
     response="rank of surveyed ground within the mark's class-2 returns",
     covariate="natural log of the class-2 standard deviation, mm",
     shape="isotonic, monotone non-increasing -- flat then falling, no break imposed",

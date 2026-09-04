@@ -354,9 +354,14 @@ def fit_curve(sd_mm, rank):
 
 
 def save_curve(path, iso, *, n_marks, epoch, fitted_on, response, covariate, shape, cv,
-               known_limits):
-    """Write a curve WITH its provenance, so a consumer can see what it may be applied to."""
+               known_limits, **extra):
+    """Write a curve WITH its provenance, so a consumer can see what it may be applied to.
+
+    ``extra`` carries any further provenance the caller must record -- notably
+    ``point_types``, since the control types are different populations and which ones were
+    fitted on decides what the curve means.
+    """
     np.savez(path, log_sd_mm=iso.f_.x, q=iso.f_.y, n_marks=n_marks, set=epoch,
              fitted_on=fitted_on, response=response, covariate=covariate, shape=shape,
-             cv=cv, known_limits=known_limits)
+             cv=cv, known_limits=known_limits, **extra)
     return path
