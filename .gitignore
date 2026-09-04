@@ -20,6 +20,10 @@ __pycache__/
 !/data/derived/control_cover.csv
 !/data/derived/control_structure/
 !/data/derived/control_structure/*.npz
+# The ground-q calibration curves: ~5 kB each, and the pipeline REFUSES to run without
+# one (src/lidar_diff_icp/groundq.py). A constant fitted from surveyed control belongs
+# with the code that depends on it, not with the point clouds.
+!/data/derived/ground_q_vs_class2sd_*.npz
 # ------------------------------------------------------------------------------------------
 *.laz
 *.las

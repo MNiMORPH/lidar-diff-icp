@@ -194,14 +194,19 @@ def test_a_missing_product_is_not_reported_as_code_stale(tmp_path, monkeypatch):
 
 
 def test_base_inputs_are_code_checked_too(tmp_path, monkeypatch):
-    """A pipeline.py change invalidates dod/lod at every tile, and no Step produces them."""
+    """A pipeline.py change invalidates dod/lod at every tile, and no Step produces them.
+
+    Since 2026-09-04 the ground-q calibration curve is checked the same way: difference_dem
+    takes each cell's percentile from it, so a NEW curve invalidates every tile's ground --
+    and nothing inside a tile directory reveals that its ground came from an older one.
+    """
     d = str(tmp_path)
     for f in W.BASE_INPUTS:
         _touch(d, f, when=1000)
     monkeypatch.setattr(W, "code_time", lambda p: 500.0)
     assert W.base_code_state(d) == []
     monkeypatch.setattr(W, "code_time", lambda p: 2000.0)
-    assert W.base_code_state(d) == sorted(W.BASE_CODE)
+    assert W.base_code_state(d) == sorted(tuple(W.BASE_CODE) + tuple(W.BASE_GLOBAL_INPUTS))
 
 
 def test_an_identical_rewrite_does_not_cascade_staleness(tmp_path):

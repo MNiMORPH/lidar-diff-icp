@@ -60,7 +60,15 @@ BASE_INPUTS = ("corrections.json", "z_after.npy", "dod.npy", "lod.npy")
 #: them; run_all_sites.py is the driver. A change to either invalidates every tile's DoD and
 #: LoD at once -- the failure this check exists for, since nothing inside a tile directory
 #: shows it.
-BASE_CODE = ("src/lidar_diff_icp/pipeline.py", "scripts/run_all_sites.py")
+BASE_CODE = ("src/lidar_diff_icp/pipeline.py", "scripts/run_all_sites.py",
+             "src/lidar_diff_icp/groundq.py")
+
+#: The ground-q calibration is an INPUT to the base products, not a tile product: since
+#: 2026-09-04 difference_dem takes each cell's percentile from it, so re-calibrating changes
+#: every tile's z_after and DoD. It lives outside the tile directory, which is exactly why it
+#: needs listing here -- nothing inside a tile reveals that its ground came from an older
+#: curve. Produced by analysis/calibrate_ground_q.py.
+BASE_GLOBAL_INPUTS = ("data/derived/ground_q_vs_class2sd_gen2_2021_control.npz",)
 
 
 @dataclass(frozen=True)
@@ -386,8 +394,12 @@ def base_code_state(tile_dir):
     if not present:
         return []
     oldest = min(present)
-    return sorted(c for c in BASE_CODE
-                  if (code_time(c) or 0) > oldest)
+    stale = [c for c in BASE_CODE if (code_time(c) or 0) > oldest]
+    # The calibration curve goes through the SAME content-time path as source, deliberately:
+    # re-running the calibration and getting the same curve back must NOT invalidate every
+    # tile in the project. Only a curve whose CONTENT changed does.
+    stale += [c for c in BASE_GLOBAL_INPUTS if (code_time(c) or 0) > oldest]
+    return sorted(stale)
 
 
 def state(tile_dir, steps=STEPS):
