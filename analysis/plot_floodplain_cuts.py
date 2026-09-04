@@ -52,7 +52,14 @@ for row, tile in zip(ax, A.tiles):
     ov = np.full(Z.shape, np.nan)
     ov[only_z] = 0; ov[both] = 1; ov[only_tpi] = 2
     row[1].imshow(hs, extent=ext, origin="lower", cmap="gray")
-    row[1].imshow(ov, extent=ext, origin="lower", cmap="brg", vmin=0, vmax=2, alpha=0.75)
+    # EXPLICIT colours. "brg" runs blue -> RED -> green, so the middle class rendered red
+    # and the last green -- the reverse of the legend, and it inverted the reading of this
+    # figure (Andy caught it 2026-09-04). Never index a categorical overlay into a named
+    # continuous colormap.
+    from matplotlib.colors import ListedColormap, BoundaryNorm
+    cmap3 = ListedColormap(["tab:blue", "tab:green", "tab:red"])
+    row[1].imshow(ov, extent=ext, origin="lower", cmap=cmap3,
+                  norm=BoundaryNorm([-0.5, 0.5, 1.5, 2.5], cmap3.N), alpha=0.75)
     row[1].set_title(f"{nm}: what each cut removes\nblue = elevation only "
                      f"({int(only_z.sum()):,}), green = both ({int(both.sum()):,}), "
                      f"red = TPI only ({int(only_tpi.sum()):,})")
