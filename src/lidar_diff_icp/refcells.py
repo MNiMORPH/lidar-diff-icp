@@ -43,49 +43,40 @@ import os
 
 import numpy as np
 
-__all__ = ["reference_cells", "valley_antimode", "floodplain_by_elevation"]
+__all__ = ["reference_cells", "floodplain_by_elevation", "VALLEY_TOP_M"]
+
+#: The valley-top ELEVATION per site, in metres. STATED, never inferred.
+#:
+#: Only values with a source are here. A site absent from this table makes the valley cut
+#: RAISE rather than guess: a wrong valley top silently changes which ground counts as
+#: "no-change", and every calibration downstream rests on that population.
+VALLEY_TOP_M = {
+    # Elba: established before this session -- analysis/steady_state/
+    # run_steady_state_strata.py VALLEY_TOP, and ALLFOREST_BLUFFLAND.md.
+    "elba": 230.0,
+    "elba_fulldensity": 230.0,
+    "elbaext": 230.0,
+}
 
 
-def valley_antimode(z, *, bins=60):
-    """The elevation separating the valley floor from the upland, or None if unimodal.
+def floodplain_by_elevation(z, valley_top_m):
+    """Valley-floor mask: cells below a STATED elevation. Returns ``(mask, valley_top_m)``.
 
-    The antimode of the tile's own elevation histogram: find the tallest bin in each half,
-    and take the minimum between them. Returns None when the histogram is not bimodal --
-    a tile with no valley has nothing to separate.
+    The elevation is given, never inferred. An earlier version read it off the antimode of
+    the tile's own elevation histogram; that is withdrawn (Andy, 2026-09-04). It worked at
+    elba only because that tile is genuinely bimodal -- a 25,601-cell valley peak at 222.2 m
+    and a 20,570-cell upland peak at 338.3 m with a sharp 2,919-cell trough at 231.5 m. At
+    whitewater the valley peak is 98,783 cells at 202.3 m and the "upland peak" is 6,545 at
+    353.7 m, the tail end rather than a mode, so the histogram simply decays and the
+    procedure returned an arbitrary point in it, cutting 76% of the tile.
 
-    NEVER USE TPI FOR THIS (Andy, 2026-09-04). TPI < -2 m over a 600-800 m window is a
-    topographic-position heuristic, and measured against this cut it misses almost the
-    entire floodplain: at whitewater the TPI mask holds 99,289 cells while 227,467 sit below
-    the antimode, leaving 145,513 cells of genuine valley floor in any population the mask
-    was supposed to remove them from. It also removes upland hollows -- 16,218 cells with a
-    median elevation of 305.5 m, well above the 282.0 m antimode -- which are local lows in
-    their neighbourhood but not floodplain at all. Wrong in both directions.
-    """
-    zc = np.asarray(z, float).ravel()
-    zc = zc[np.isfinite(zc)]
-    if zc.size <= 100:
-        return None
-    h, e = np.histogram(zc, bins=bins)
-    half = bins // 2
-    lo, hi = int(np.argmax(h[:half])), half + int(np.argmax(h[half:]))
-    if hi <= lo + 2:
-        return None
-    anti = lo + int(np.argmin(h[lo:hi]))
-    return 0.5 * (e[anti] + e[anti + 1])
-
-
-def floodplain_by_elevation(z, *, thr=None):
-    """Valley-floor mask from ELEVATION. Returns ``(mask, threshold)``.
-
-    ``thr`` pins the threshold so tiles of one landscape share it; otherwise the per-tile
-    antimode is used, which is NOT comparable between tiles. Returns an all-False mask and
-    None where the histogram is unimodal, so a tile with no valley is not half-deleted.
+    And TPI is not an alternative: measured at whitewater, the TPI mask misses 150,873 cells
+    of valley floor while removing 16,218 upland hollows at a median 305.5 m. Never use TPI
+    for floodplain (Andy, 2026-09-04).
     """
     z = np.asarray(z, float)
-    t = thr if thr is not None else valley_antimode(z)
-    if t is None:
-        return np.zeros(z.shape, bool), None
-    return np.isfinite(z) & (z < t), float(t)
+    t = float(valley_top_m)
+    return np.isfinite(z) & (z < t), t
 
 
 def _opt(d, name):
@@ -165,44 +156,31 @@ def reference_cells(tile_dir, *, cells=None, curv_max=0.015, slope_max=12.0,
                     f"without it.")
             cut("floodplain mask", ~fld.astype(bool).ravel()[idx])
         zf = _opt(tile_dir, "z_after.npy")
-        if zf is not None and valley_top_m == "antimode":   # explicit alias
-            # LEGACY, and it is not comparable between tiles: the threshold is read off
-            # each tile's OWN elevation histogram, giving 228.9 m at elba and 237.1 m at
-            # elbaext on overlapping ground. Kept only to reproduce older results.
-            z = zf.ravel()[idx]
-            zc = z[m & np.isfinite(z)]
-            if zc.size > 100:
-                h, e = np.histogram(zc, bins=60)
-                lo, hi = int(np.argmax(h[:30])), 30 + int(np.argmax(h[30:]))
-                if hi > lo + 2:
-                    anti = lo + int(np.argmin(h[lo:hi]))
-                    zthr = 0.5 * (e[anti] + e[anti + 1])
-                    cut(f"below elevation antimode {zthr:.1f} m (LEGACY, per-tile)",
-                        ~(np.isfinite(z) & (z < zthr)))
-        elif zf is not None and valley_top_m is None:
-            # DEFAULT = the behaviour every existing caller was written against. The
-            # threshold is read off this tile's own elevation histogram, so it is NOT
-            # comparable between tiles (228.9 m at elba, 237.1 m at elbaext on overlapping
-            # ground). Pass valley_top_m=230.0 when tiles must share one threshold.
-            z = zf.ravel()[idx]
-            zc = z[m & np.isfinite(z)]
-            if zc.size > 100:
-                h, e = np.histogram(zc, bins=60)
-                lo, hi = int(np.argmax(h[:30])), 30 + int(np.argmax(h[30:]))
-                if hi > lo + 2:                      # bimodal: cut at the antimode
-                    anti = lo + int(np.argmin(h[lo:hi]))
-                    zthr = 0.5 * (e[anti] + e[anti + 1])
-                    cut(f"below elevation antimode {zthr:.1f} m",
-                        ~(np.isfinite(z) & (z < zthr)))
-        elif zf is not None:
-            # An EXPLICIT valley top, so tiles of the same landscape share one threshold.
-            # The per-tile antimode below does not: elba computes 228.9 m and elbaext
-            # 237.1 m on overlapping ground, a difference of 31,242 cells at elbaext.
-            # 230 m is the established Elba value (analysis/steady_state/
-            # run_steady_state_strata.py VALLEY_TOP, and ALLFOREST_BLUFFLAND.md).
-            z = zf.ravel()[idx]
-            cut(f"below valley top {float(valley_top_m):.1f} m (explicit)",
-                ~(np.isfinite(z) & (z < float(valley_top_m))))
+        if zf is None:
+            raise FileNotFoundError(
+                f"{tile_dir}/z_after.npy is missing, so the valley cut cannot be applied.")
+        if valley_top_m is None:
+            valley_top_m = VALLEY_TOP_M.get(os.path.basename(str(tile_dir).rstrip("/")))
+        if valley_top_m is None:
+            # STATED, never inferred (Andy, 2026-09-04). The antimode of the tile's own
+            # elevation histogram is withdrawn: it worked at elba only because that tile is
+            # genuinely bimodal (a 25,601-cell peak at 222.2 m, a 20,570-cell peak at
+            # 338.3 m, a 2,919-cell trough at 231.5 m), and at whitewater the histogram
+            # merely decays from a 98,783-cell spike at 202.3 m, so it returned an arbitrary
+            # point and cut 76% of the tile. TPI is not an alternative either: it misses
+            # 150,873 cells of whitewater's valley floor.
+            raise ValueError(
+                f"exclude_valley needs valley_top_m, an ELEVATION IN METRES for this "
+                f"landscape. It is not inferred from the tile: a histogram-derived "
+                f"threshold is not comparable between tiles and is meaningless where the "
+                f"tile is not bimodal. Elba's established value is 230.0 m "
+                f"(analysis/steady_state/run_steady_state_strata.py VALLEY_TOP, "
+                f"ALLFOREST_BLUFFLAND.md). Pass exclude_valley=False to work without the "
+                f"cut deliberately. Known: "
+                + ", ".join(f"{k}={v:g} m" for k, v in sorted(VALLEY_TOP_M.items())))
+        z = zf.ravel()[idx]
+        cut(f"below valley top {float(valley_top_m):.1f} m (stated)",
+            ~(np.isfinite(z) & (z < float(valley_top_m))))
 
     dod = _opt(tile_dir, "dod.npy")
     if dod is not None and gross_change_mm is not None:
