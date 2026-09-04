@@ -73,6 +73,21 @@ BASE_CODE = ("src/lidar_diff_icp/pipeline.py", "scripts/run_all_sites.py",
 #: 227 NVA marks). A tile's ground therefore depends on nothing outside the tile again.
 BASE_GLOBAL_INPUTS = ()
 
+#: The ground percentile as a function of the cell's own ground-return SD, calibrated
+#: against surveyed control. GLOBAL, not per-tile: one curve for the epoch, applied to every
+#: tile, because the control cannot support anything finer -- 519 marks spread over 397
+#: flight lines, 40% of which carry exactly one mark.
+#:
+#: Its producer chain, all on the control marks, none of it per-tile:
+#:     analysis/control_mode_shift.py      mode - surveyed elevation, no windows
+#:     analysis/control_q_in_ground.py     where truth sits among the GROUND-class returns
+#:     analysis/calibrate_ground_q.py      the per-mark table + the isotonic q(SD) fit
+#:
+#: Listed in the `code` of every step that applies it, so RECALIBRATING INVALIDATES EVERY
+#: CORRECTED DoD. That is the point: a tile carries no record of which curve produced it,
+#: so without this the graph would call a stale correction current.
+GROUND_Q_CURVE = "data/derived/ground_q_vs_class2sd_gen2_2021_control_LCP-NVA-VVA.npz"
+
 
 @dataclass(frozen=True)
 class Step:
@@ -178,22 +193,38 @@ STEPS: tuple[Step, ...] = (
                  f"--gen2 {{gen2}}",
          needs=("gen2",),
          note="gen2 class-2 near-ground histogram; the column q2 indexes into."),
+    Step("class2_spread",
+         produces=("class2_sd_mm.npy", "class2_n.npy"),
+         requires=("z_after.npy",),
+         command=f"{PY} analysis/class2_spread_grid.py --tile {{tile}} --gen2 {{gen2}}",
+         needs=("gen2",),
+         code=("src/lidar_diff_icp/groundq.py",),
+         note="The per-cell ground-return SD: the covariate the correction is indexed by. "
+              "Slope-normal residual to z_after, class 2 only, no cover layer and no "
+              "windows. Owns class2_sd_mm.npy so no other step writes it."),
     Step("q2_fit",
+         optional=True,
          produces=("q2_cover_fit.json",),
          requires=("nearground_cells_sn.npz", "z_after.npy", "canopy_cover_pfs.npy",
                    "beam_offset_table.parquet", "nearground_gen2_class_split.npz",
                    "floodplain_mask.npy", "curv_laplacian.npy"),
          command=f"{PY} analysis/ridgelines/q2_cover_fit.py --tile {{tile}}",
-         note="PER SITE -- the relation depends on each pair's phenology and undergrowth, "
-              "so there is no slope to carry between tiles."),
+         note="SUPERSEDED cover route, kept because it is still the only per-site relation "
+              "and because dod_cover_corrected.py still accepts it via --relation/--slope. "
+              "The shipped DoD no longer uses it: the correction is now indexed by the "
+              "cell's own ground-return SD, not by a cover product."),
     Step("dod_cover",
          produces=("dod_cover_q2.npy", "dod_cover_q2.json", "dod_gen2_median.npy",
                    "gen2_q2_used.npy"),
-         requires=("q2_cover_fit.json", "canopy_cover_pfs.npy", "z_after.npy"),
+         requires=("z_after.npy", "beam_offset_table.parquet"),
          command=f"{PY} analysis/ridgelines/dod_cover_corrected.py --tile {{tile}} "
-                 f"--gen2 {{gen2}}",
+                 f"--gen2 {{gen2}} --q-from-class2-spread {GROUND_Q_CURVE}",
          needs=("gen2",),
-         note="The cover-corrected DoD. Reads its slope from q2_cover_fit.json."),
+         code=("src/lidar_diff_icp/groundq.py", GROUND_Q_CURVE),
+         note="The vegetation-corrected DoD: gen2's ground taken at the percentile its own "
+              "ground-return SD earns, minus gen1's registered median. Needs NO cover "
+              "layer and no per-site fit -- the curve is global, the covariate is the "
+              "cell's own return column."),
     Step("lod_cover",
          produces=("lod_cover_q2.npy",),
          requires=("dod_cover_q2.npy", "slope.npy", "curv_laplacian.npy"),

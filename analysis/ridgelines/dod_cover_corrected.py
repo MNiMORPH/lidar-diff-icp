@@ -238,7 +238,9 @@ if QSD is not None:
     # are left out rather than given the default -- the curve says nothing about them.
     sd_mm, q2 = GQ["sd_mm"], GQ["q"]
     ok_sd = np.isfinite(sd_mm) & (sd_mm > 0)
-    np.save(f"{D}/class2_sd_mm.npy", sd_mm.reshape(NY, NX))
+    # class2_sd_mm.npy is NOT written here: analysis/class2_spread_grid.py owns it. Two
+    # producers for one file is how a grid ends up disagreeing with the correction read
+    # off it.
     print(f"class-2 spread: {int(ok_sd.sum()):,} cells with >=20 returns; "
           f"median {np.nanmedian(sd_mm):.1f} mm  p90 {np.nanpercentile(sd_mm,90):.1f}")
     print(f"  q from the curve: median {np.nanmedian(q2):.3f}  "
