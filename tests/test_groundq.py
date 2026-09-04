@@ -114,8 +114,6 @@ def test_stream_ground_refuses_an_unresolved_ground_q_string():
         _stream_ground("nonexistent.laz", (0.0, 0.0, 10.0, 10.0), 5.0, 2, 2, "calibrated")
 
 
-
-
 def _one_cell_histogram(hg, zlo=-1.0, zhi=2.0, dz=0.02):
     nz = int(round((zhi - zlo) / dz))
     idx = np.floor((np.asarray(hg) - zlo) / dz).astype(int)
@@ -131,7 +129,51 @@ def _ground_and_mat(seed=0):
     return np.r_[rng.normal(0.0, 0.05, 400), rng.normal(0.35, 0.20, 200)]
 
 
+def test_tile_spread_is_the_same_statistic_the_curve_was_calibrated_on():
+    """THE GUARD THIS MODULE EXISTS FOR. The curve is indexed by the plain standard
+    deviation of the ground-class column, measured at the marks by mark_statistics. On a
+    tile the same number has to come out of the histogram, or the curve is being read at
+    the wrong place on its own x-axis."""
+    hg = _ground_and_mat()
+    H, zlo, dz = _one_cell_histogram(hg)
+    sd_hist, count = groundq.spread_from_histogram(H, zlo, dz, min_count=20)
+    sd_marks = groundq.mark_statistics(hg, 0.0)["sd"] * 1000.0
+    assert count[0] == hg.size
+    assert abs(float(sd_hist[0]) - sd_marks) < 3.0, (float(sd_hist[0]), sd_marks)
+
+
+def test_a_robust_spread_is_a_different_number_and_would_misread_the_curve():
+    """Why the test above is not trivially satisfied by any spread. The pipeline briefly
+    indexed the curve with 1.4826*(p75-p25)/1.349 -- a robust spread of a residual to a
+    different plane -- and on Whitewater that pushed the ground down by ~1 m in the worst
+    tenth of cells. On a ground-plus-mat column the two disagree by more than the whole
+    calibrated range is wide."""
+    hg = _ground_and_mat()
+    plain = groundq.mark_statistics(hg, 0.0)["sd"] * 1000.0
+    robust = 1.4826 * (np.percentile(hg, 75) - np.percentile(hg, 25)) / 1.349 * 1000.0
+    assert abs(robust - plain) > 20.0, (robust, plain)
+
+
+def test_ground_at_q_reads_the_column_like_a_quantile():
+    hg = _ground_and_mat()
+    H, zlo, dz = _one_cell_histogram(hg)
+    for q in (0.10, 0.25, 0.50, 0.75):
+        got = float(groundq.ground_at_q(H, zlo, dz, np.array([q]))[0]) / 1000.0
+        assert abs(got - float(np.quantile(hg, q))) < dz, (q, got)
+
+
 def test_ground_at_q_propagates_a_declined_cell_as_nan():
     """A cell the curve declined to estimate must not come back looking corrected."""
     H, zlo, dz = _one_cell_histogram(_ground_and_mat())
     assert np.isnan(groundq.ground_at_q(H, zlo, dz, np.array([np.nan]))[0])
+
+
+def test_spatial_folds_split_whole_blocks_not_marks():
+    """Neighbouring marks share a flight line and a phenology; splitting them at random
+    would let the curve be scored on a mark it effectively already saw."""
+    e = np.array([100., 200., 10_100., 10_200., 20_100., 20_200.])
+    n = np.zeros(6)
+    f, blocks = groundq.spatial_folds(e, n, n_folds=3)
+    assert len(blocks) == 3
+    assert f[0] == f[1] and f[2] == f[3] and f[4] == f[5]
+    assert len(set(f.tolist())) == 3
