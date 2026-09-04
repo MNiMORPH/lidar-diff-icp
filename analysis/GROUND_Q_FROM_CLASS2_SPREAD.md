@@ -5,6 +5,31 @@ This document was rewritten that day: the earlier version reported the pooled re
 success, and the code has overruled it. What follows leads with the finding that decides the
 question.
 
+## The shape: TWO SEGMENTS, one break, scanned
+
+Since 2026-09-04 the curve is **two straight segments in log spread**, joined continuously,
+with the break scanned over the observed bin centres rather than chosen. It lands at 55.7 mm
+-- essentially the 59.3 mm bare-ground class-2 NMAD this document already records as the
+surface's own noise. Fitted knots:
+
+    spread  19.7   55.7   184.9 mm
+    q       0.569  0.563  0.219        held at the end values beyond that range
+
+It replaced an ISOTONIC staircase, which this document had described as imposing "no break".
+That was backwards, and it was my error, not a shorthand: an isotonic fit IS a step function
+-- a break at every level change, as many as the data admit, placed by
+pool-adjacent-violators. The staircase was the LESS restrained choice, not the more, and the
+phrase was used to justify choosing it. The two-segment fit imposes exactly one break and
+reports where.
+
+Held out on 10 km spatially blocked folds the two segments also measure better:
+
+    isotonic     median err -2.4   RMS 104.6   p90 171.0
+    piecewise    median err +0.5   RMS 101.5   p90 152.9
+
+Both shapes are stored as (log_sd, q) knots and applied by identical code, so the change is
+in the fit and nowhere else.
+
 ## The finding
 
 **On open ground the class-2 median is already right, and the spread-dependent curve makes it

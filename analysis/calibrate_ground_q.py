@@ -202,7 +202,8 @@ groundq.save_curve(
     covariate="natural log of the class-2 standard deviation, mm",
     shape=("two straight segments in log spread, joined continuously, break SCANNED over "
            "the observed bin centres" if SHAPE == "piecewise"
-           else "isotonic, monotone non-increasing -- flat then falling, no break imposed"),
+           else "isotonic, monotone non-increasing -- a STEP FUNCTION: a break at every "
+                "level change, as many as the data admit, placed by pool-adjacent-violators"),
     cv="5-fold spatially blocked on 10 km blocks",
     known_limits=("calibrated on 7.5 m discs and applied to 5 m cells; per-epoch -- "
                   "this curve is valid only for the epoch named in `set`; corrects a "

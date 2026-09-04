@@ -382,7 +382,11 @@ def fit_curve(sd_mm, rank, *, shape="piecewise", n_bins=10, n_boot=2000, seed=0)
     a percentile cannot represent an offset larger than the local spread.
 
     ``shape="isotonic"`` is the earlier monotone-non-increasing staircase, kept because it is
-    what every curve before 2026-09-04 was fitted with.
+    what every curve before 2026-09-04 was fitted with. Note what it actually is: a STEP
+    FUNCTION, a break at every level change, as many as the data admit, placed by
+    pool-adjacent-violators. It was documented for a day as imposing "no break", which is
+    backwards -- the two-segment fit imposes exactly ONE break and reports where. The
+    staircase is the LESS restrained choice, not the more.
 
     Measured on the 519 gen2 marks, on deciles: flat 26.95 AIC, a single line 12.10, this
     piecewise 13.15. The line and the piecewise are within ~1 AIC of each other -- not a real
