@@ -396,6 +396,7 @@ def _stream_ground(path, bounds, res, nx, ny, q, *, plane=None, chunk=8_000_000,
 
 def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
                    gen2_curve=None, gen2_epoch="gen2_2021_control", valley_top_m=None,
+                   curv_max=0.005,
                    correction_surface=False, along_track_drift=True, tie="reference",
                    ground="slope_normal", sn_smooth_cells=1.2, stream=False,
                    ground_source="csf", after_ground="class2", csf_pdal=None,
@@ -410,6 +411,13 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
                       classification intact (pass the full delivery, not a
                       pre-filtered last-return file -- see ``after_ground``).
     ``bounds``      : (minx, miny, maxx, maxy) in the working CRS (EPSG:26915).
+    ``curv_max``    : |Laplacian| ceiling for the STABLE mask, on the 25 m-smoothed
+                      surface. MINE (0.005, ~p78 of |lap| at elba and p80 at
+                      whitewater) -- chosen to be a real cut at both tiles, where
+                      the 0.015 used elsewhere in the project sits past p99 and
+                      cuts nothing. Stable is low curvature above the valley top,
+                      with NO slope restriction, because the lateral shift is
+                      estimated from how dh varies with slope and aspect.
     ``ground_q``    : per-cell ground quantile for GRIDDING. **0.50 (median) by
                       default**, and on open ground that is the best estimate we
                       have: against the 227 NVA control marks it lands -3.5 mm from
@@ -634,8 +642,21 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
               f"{int(floodplain.sum()):,} cells excluded from the stable set "
               f"({100 * floodplain.mean():.1f}% of the grid)", flush=True)
     upland = ~floodplain
-    convex = (sdeg > 5) & (sdeg < 35) & upland & (lap < 0)
-    stable = ((sdeg < 3) & upland) | convex
+    # STABLE = LOW CURVATURE, ABOVE THE VALLEY TOP. Andy, 2026-09-04. Not ridgetops, and no
+    # slope restriction: the lateral (Nuth-Kaeae) shift is estimated from how dh varies with
+    # slope and aspect, so removing slope removes the signal it needs. The old mask --
+    # (slope<3 & upland) | (5<slope<35 & upland & lap<0) -- kept whitewater at a MEDIAN
+    # SLOPE OF 3.0 deg, nearly flat, which is close to useless for that fit; low curvature
+    # keeps p50 ~10 deg and p90 ~28 deg at both tiles.
+    #
+    # `lap` here is the Laplacian of a 25 m-smoothed surface, NOT curv_laplacian.npy, so
+    # refcells' curv_max=0.015 does not transfer: measured, |lap| runs p50 0.0020, p90
+    # 0.0069, p99 0.0127 at elba, so 0.015 sits past p99 and cuts nothing.
+    stable = upland & (np.abs(lap) <= curv_max) & np.isfinite(Z21)
+    print(f"  stable: |laplacian| <= {curv_max:g} and above the valley top -> "
+          f"{int(stable.sum()):,} cells ({100 * stable.mean():.1f}% of the grid); "
+          f"slope p50 {np.median(sdeg[stable]):.1f} deg p90 "
+          f"{np.percentile(sdeg[stable], 90):.1f}", flush=True)
 
     # ground estimator: "low_q" (horizontal ground_q quantile) or "slope_normal"
     # (ground_q quantile -- median by default -- of the residual to a common smoothed
