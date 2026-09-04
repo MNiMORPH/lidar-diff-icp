@@ -27,7 +27,7 @@ import pandas as pd
 from scipy.ndimage import (gaussian_filter, uniform_filter,
                            distance_transform_edt as edt, gaussian_filter1d)
 
-from lidar_diff_icp import coreg
+from lidar_diff_icp import coreg, terrain
 
 
 def main():
@@ -36,6 +36,11 @@ def main():
                     help="difference product (reference - 2008) with an m3c2 dim")
     ap.add_argument("--bounds", nargs=4, type=float, required=True)
     ap.add_argument("--change-thresh", type=float, default=0.15)
+    ap.add_argument("--valley-top", dest="valley_top", required=True,
+                    help="valley top for the stable mask: an elevation in metres, "
+                         "'registry', or 'histogram'. Never chosen for you.")
+    ap.add_argument("--tile-dir", dest="tile_dir", default=None,
+                    help="tile directory, needed by --valley-top registry/histogram")
     ap.add_argument("--out-drift-laz", default="data/derived/2008_along_track_drift.laz",
                     help="2008 last-return points with a per-point 'drift' dim")
     a = ap.parse_args()
@@ -54,15 +59,10 @@ def main():
     h = laspy.read(a.change_laz)
     D = grid(np.asarray(h.x), np.asarray(h.y), np.asarray(h.m3c2))
     Zt = grid(np.asarray(h.x), np.asarray(h.y), np.asarray(h.z))
-    Zf = Zt.copy(); nanm = np.isnan(Zf)
-    if nanm.any():
-        Zf = Zf[tuple(edt(nanm, return_distances=False, return_indices=True))]
-    tpi = Zt - uniform_filter(Zf, size=int(2 * 300 / res), mode="nearest")
-    sdeg = np.degrees(coreg.slope_aspect(gaussian_filter(Zf, 2.0), res)[0])
-    Zs = gaussian_filter(Zf, 10.0)
-    lap = (np.gradient(np.gradient(Zs, res, axis=0), res, axis=0)
-           + np.gradient(np.gradient(Zs, res, axis=1), res, axis=1))
-    stable = ((sdeg < 3) & (tpi > -2)) | ((sdeg > 5) & (sdeg < 35) & (tpi > -2) & (lap < 0))
+    # ONE definition, from terrain.py. This was a hand copy of the pipeline's mask and
+    # still carried the TPI valley cut after the pipeline moved to elevation.
+    stable = terrain.terrain_masks(Zt, res, valley_top_m=a.valley_top,
+                                   tile_dir=a.tile_dir)["stable"]
 
     # 2008 last returns + acquisition
     f = laspy.read(a.before_laz)
