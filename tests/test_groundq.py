@@ -69,6 +69,42 @@ def test_missing_curve_refuses_rather_than_defaulting(tmp_path):
         groundq.load_curve(str(tmp_path / "absent.npz"))
 
 
+# --- resolving `ground_q` into (scalar, curve) -------------------------------------------
+# This was 42 lines inside difference_dem, reachable only by calling the whole pipeline.
+# The four refusals above test it through that door and still do; these test the RESOLUTION
+# itself, which nothing could reach before.
+
+def test_a_float_ground_q_passes_through_and_names_no_curve():
+    assert groundq.resolve_ground_q(0.42) == (0.42, None)
+    assert groundq.resolve_ground_q(0.50, stream=False) == (0.50, None)
+
+
+def test_a_float_ground_q_ignores_a_curve_it_was_not_asked_to_use(tmp_path):
+    """Passing gen2_curve is not, by itself, a request to apply it. The correction is opt-in
+    BY NAME, because on open ground it measured worse than doing nothing."""
+    q, curve = groundq.resolve_ground_q(0.50, gen2_curve=_write_curve(tmp_path))
+    assert (q, curve) == (0.50, None)
+
+
+def test_calibrated_returns_the_curve_and_holds_the_scalar_at_one_half(tmp_path, capsys):
+    """0.50 is not a fallback here -- it is the FRAME. The calibrated percentile is applied
+    as a post-registration delta h2(calibrated) - h2(median), so the q = 0.50 grid is the
+    surface the correction is measured against and must stay 0.50 even when a curve is in
+    force. If this drifted, the delta would be taken against the wrong surface and the gen1
+    tie could absorb the correction."""
+    q, curve = groundq.resolve_ground_q("calibrated", gen2_curve=_write_curve(tmp_path))
+    assert q == 0.50
+    assert curve["epoch"] == "gen2_2021_control"
+    assert curve["point_types"] == "NVA"
+    # and it says so on stdout: which curve, which epoch, which point types
+    assert "point types NVA" in capsys.readouterr().out
+
+
+def test_resolution_is_silent_when_asked_to_be(tmp_path, capsys):
+    groundq.resolve_ground_q("calibrated", gen2_curve=_write_curve(tmp_path), verbose=False)
+    assert capsys.readouterr().out == ""
+
+
 def test_q_interpolates_in_log_spread(tmp_path):
     c = groundq.load_curve(_write_curve(tmp_path))
     # a spread exactly at a knot returns that knot's q

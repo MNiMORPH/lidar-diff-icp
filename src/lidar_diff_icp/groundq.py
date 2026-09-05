@@ -140,6 +140,64 @@ def describe(curve, q=None):
     return "\n".join(out)
 
 
+def resolve_ground_q(ground_q, *, gen2_curve=None, gen2_epoch=None, stream=True,
+                     verbose=True):
+    """Turn a caller's `ground_q` into the pair the pipeline actually runs on:
+    ``(scalar, curve)``, where `curve` is None unless a calibrated per-cell percentile
+    was asked for BY NAME.
+
+    0.50 IS THE DEFAULT AND IT IS NOT A FALLBACK. Held out on 10 km spatially blocked
+    folds over the 227 NVA (open-ground) control marks:
+
+        q = 0.50                                median err -3.5 mm   RMS 49.1 mm
+        q = 0.527 constant (calibrated)         median err  0.1      RMS 48.7
+        q = isotonic(log class-2 SD), held out  median err -5.8      RMS 52.5
+
+    The spread-dependent curve is WORSE than doing nothing on open ground. It was briefly
+    the default on the strength of a 124.5 -> 104.6 mm gain, but that was measured on all
+    519 marks POOLED, and pooling mixes in 162 VVA checkpoints sited UNDER VEGETATION by
+    design (class-2 median +103.3 mm above truth) with 130 LCP calibration points
+    (-23.1 mm). The pooled curve's falling limb is the VVA population, so applying it to
+    ordinary ground imports a canopy response that does not belong there -- measured, it
+    widened the DoD's scatter at both Elba (NMAD 74.8 -> 79.1 mm) and Whitewater
+    (85.0 -> 92.4 mm on common cells). See analysis/GROUND_Q_FROM_CLASS2_SPREAD.md.
+
+    "calibrated" remains available and now REQUIRES gen2_curve. There is deliberately no
+    default curve: which point types were fitted decides what the curve means.
+
+    Every branch here RAISES rather than falls back, for one reason: a cell that was never
+    corrected must not end up looking corrected.
+    """
+    if not isinstance(ground_q, str):
+        return float(ground_q), None
+
+    if ground_q != "calibrated":
+        raise ValueError(f"ground_q must be a float or 'calibrated', not {ground_q!r}")
+    if gen2_curve is None:
+        raise ValueError(
+            "ground_q='calibrated' requires gen2_curve=<path to a curve .npz>. There is "
+            "no default: which control point types the curve was fitted on decides what "
+            "it means, and on open ground (NVA) the calibrated curve measured WORSE "
+            "than ground_q=0.50 -- RMS 52.5 vs 49.1 mm, held out. Name the curve you "
+            "mean, or pass ground_q=0.50.")
+    if not stream:
+        raise ValueError(
+            "ground_q='calibrated' needs stream=True. The in-memory path grids the "
+            "ground with pandas groupby.quantile, which takes ONE quantile for all "
+            "cells, so a per-cell percentile cannot be applied there. Refusing rather "
+            "than silently falling back to 0.50: a cell that was never corrected must "
+            "not end up looking corrected. Pass stream=True, or ground_q=0.50 to state "
+            "that the uncorrected median is what you want.")
+
+    curve = load_curve(gen2_curve, expect_epoch=gen2_epoch)
+    if verbose:
+        print(describe(curve), flush=True)
+    # The scalar stays 0.50: the calibrated percentile is applied as a post-registration
+    # DELTA against the q = 0.50 grid, so 0.50 is the frame the correction is measured in,
+    # not a fallback for it.
+    return 0.50, curve
+
+
 # ---------------------------------------------------------------------------------------
 # APPLYING THE CURVE TO A TILE
 #
