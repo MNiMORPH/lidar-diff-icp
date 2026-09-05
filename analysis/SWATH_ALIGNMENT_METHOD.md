@@ -50,9 +50,15 @@ across-track position; `c = +80.0 ± 5.7` mm per unit tangent pooled, per-pair +
 part of the overlap the tile covers, and two tiles of different extent get different ties for
 the same pair of flight lines.
 
-**Provenance of this estimator: no source is cited for it.** `coreg.py` cites Nuth & Kääb
-(2011) and DeLong et al. (2022); `across_track_tie` cites nothing. As this repository records
-it, the construction is ours. Whether prior art exists is an open literature question.
+**Provenance.** `coreg.py` cites Nuth & Kääb (2011) and DeLong et al. (2022);
+`across_track_tie` itself cites nothing. A literature search (2026-09-05,
+`analysis/ACROSS_TRACK_TIE_LITERATURE.md`) found the REGRESSION is standard — Sampath,
+Heidemann & Stensaas (2016, USGS/ASPRS) fit the same line — but they constrain the intercept
+to zero and report the SLOPE as a QA metric. Using the intercept as the tie was not found in
+any source. The field's own answer is a per-STRIP across-track term inside a block adjustment
+(Crombaghs et al. 2000; Glira et al. 2015), not a pairwise tie. **Open, and testable with data
+we have:** our single covariate `dtan = tan θ_ref − tan θ_src` estimates a COMMON-MODE term
+only, so if the two lines' across-track terms differ, `k` inherits that bias.
 
 ## 5. The free network, weighted by information
 
