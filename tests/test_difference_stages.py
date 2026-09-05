@@ -158,3 +158,22 @@ def test_an_unmeasurable_standard_error_gives_no_lod_rather_than_an_optimistic_o
     assert np.isfinite(base_lod[sel]).all()      # ... and these cells DO get an LoD normally
     lod, _ = _lod(s, d, rough_gen1=r)
     assert np.all(np.isnan(lod[sel]))
+
+
+def test_an_all_nan_model_counts_as_a_failed_fit_not_a_successful_one():
+    """heteroscedastic_lod signals failure with None, but xdem can also return an array
+    that is NaN EVERYWHERE -- when the DoD has no scatter to model. That is not None, so it
+    used to pass both guards: the product shipped an LoD of nothing while corrections.json
+    reported the xdem method. A DoD with zero scatter reproduces it.
+
+    Nothing-at-all is unambiguous and needs no threshold. A PARTLY NaN LoD is left alone,
+    because those NaNs are the deliberate 'this cell's error is not measurable'."""
+    s = _scene(n=200_000)
+    d = _difference(s)
+    flat = np.where(np.isfinite(d["dod"]), 0.030, np.nan)     # a DoD with NMAD exactly 0
+    lod, method = _lod(s, dict(d, dod=flat))
+    assert lod is not None
+    assert np.isfinite(lod).any(), "an LoD of nothing was reported as a successful fit"
+    # it may recover on route 2 or route 3 -- what matters is that the reported method is
+    # the one that actually produced numbers, so the failed route must not be claimed
+    assert "standard-error" not in method, method

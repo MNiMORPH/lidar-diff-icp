@@ -820,13 +820,24 @@ def estimate_lod(dod, slope_deg, abs_curv, stable, *, rough_gen1, count_gen1,
         print(f"  {_no_se:,} DoD cells have no measurable standard error (one or both epochs "
               f"below cell_plane_roughness min_n); they get NO LoD rather than an optimistic "
               f"one", flush=True)
+    # A DEGENERATE FIT IS NOT ONLY A None ONE. heteroscedastic_lod signals failure by
+    # returning None, but xdem can also return an array that is NaN EVERYWHERE -- reached
+    # when the DoD has no scatter for it to model (a synthetic with NMAD 0 does it, and so
+    # would a tile whose stable set is effectively one value). That array is not None, so it
+    # passed both guards below and the product shipped an LoD of nothing while
+    # corrections.json reported the xdem method. Nothing-at-all is unambiguous and needs no
+    # threshold, so it is treated as failure; a PARTLY NaN LoD is left alone, because those
+    # NaNs are the deliberate "this cell's error is not measurable" and must survive.
+    def _failed(a):
+        return a is None or not np.isfinite(a).any()
+
     lod = heteroscedastic_lod(dod, slope_deg, abs_curv, stable, stderr=stderr)
     lod_method = ("xdem heteroscedastic (slope,curv,standard-error[roughness/sqrt(density)]), "
                   "calibrated on stable ground")
-    if lod is None:                                   # stderr model degenerate -> slope,curv only
+    if _failed(lod):                                  # stderr model degenerate -> slope,curv only
         lod = heteroscedastic_lod(dod, slope_deg, abs_curv, stable)
         lod_method = "xdem heteroscedastic (slope,curv), calibrated on stable ground"
-    if lod is None:
+    if _failed(lod):
         lod = 1.96 * np.sqrt(np.nan_to_num(spread_gen1**2 / np.maximum(count_gen1, 1))
                              + np.nan_to_num(spread_gen2**2 / np.maximum(count_gen2, 1)))
 
