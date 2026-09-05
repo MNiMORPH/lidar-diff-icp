@@ -25,6 +25,7 @@ regenerate an adopted product is a judgement, not a scheduling detail.
 from __future__ import annotations
 
 import argparse
+import textwrap
 import datetime as _dt
 import hashlib
 import json
@@ -111,6 +112,10 @@ class Step:
     #: Extra source files whose change invalidates this step's outputs, beyond the script
     #: named in `command` (which is parsed out automatically). Library modules go here.
     code: tuple[str, ...] = field(default=())
+    #: Which MODULE this step belongs to, "" for the base pipeline. A group is a set of
+    #: steps that stand or fall together and that nothing outside them depends on, so it can
+    #: be switched off as a unit. See GROUPS.
+    group: str = ""
 
 
 STEPS: tuple[Step, ...] = (
@@ -209,6 +214,8 @@ STEPS: tuple[Step, ...] = (
          needs=("gen2",),
          note="gen2 class-2 near-ground histogram; the column q2 indexes into."),
     Step("class2_spread",
+         group="vegetation_correction",
+         optional=True,
          produces=("class2_sd_mm.npy", "class2_n.npy"),
          requires=("z_after.npy",),
          command=f"{PY} analysis/class2_spread_grid.py --tile {{tile}} --gen2 {{gen2}}",
@@ -218,6 +225,7 @@ STEPS: tuple[Step, ...] = (
               "Slope-normal residual to z_after, class 2 only, no cover layer and no "
               "windows. Owns class2_sd_mm.npy so no other step writes it."),
     Step("q2_fit",
+         group="vegetation_correction",
          optional=True,
          produces=("q2_cover_fit.json",),
          requires=("nearground_cells_sn.npz", "z_after.npy", "canopy_cover_pfs.npy",
@@ -229,6 +237,8 @@ STEPS: tuple[Step, ...] = (
               "The shipped DoD no longer uses it: the correction is now indexed by the "
               "cell's own ground-return SD, not by a cover product."),
     Step("dod_cover",
+         group="vegetation_correction",
+         optional=True,
          produces=("dod_cover_q2.npy", "dod_cover_q2.json", "dod_gen2_median.npy",
                    "gen2_q2_used.npy"),
          requires=("z_after.npy", "beam_offset_table.parquet"),
@@ -241,11 +251,14 @@ STEPS: tuple[Step, ...] = (
               "layer and no per-site fit -- the curve is global, the covariate is the "
               "cell's own return column."),
     Step("lod_cover",
+         group="vegetation_correction",
+         optional=True,
          produces=("lod_cover_q2.npy",),
          requires=("dod_cover_q2.npy", "slope.npy", "curv_laplacian.npy"),
          command=f"{PY} analysis/ridgelines/lod_cover_q2.py --tile {{tile}}",
          note="LoD refitted on the corrected DoD."),
     Step("cover_calibration",
+         group="vegetation_correction",
          produces=("cover_offset_calibration.json",),
          requires=("beam_offset_table.parquet", "canopy_cover_pfs.npy", "slope.npy",
                    "curv_laplacian.npy"),
@@ -274,6 +287,40 @@ STEPS: tuple[Step, ...] = (
 
 #: The base step, by name, for the callers that ask about it specifically.
 _BASE_STEP = next(s for s in STEPS if s.name == "base")
+
+
+#: Optional module groups: sets of steps that stand or fall together, and that NOTHING
+#: outside them requires. Declared so a module can be switched off as a unit and so the
+#: graph states which products are the base method's and which are an experiment's.
+GROUPS = {
+    "vegetation_correction":
+        "The gen2 leaf-on ground correction. NOT part of the shipped DoD: the pipeline "
+        "default is ground_q = 0.50, and 'calibrated' must name its curve, because on open "
+        "ground the calibrated curve measured WORSE than the median (RMS 52.5 vs 49.1 mm, "
+        "held out on the 227 NVA marks). Held out AT THE MARKS the correction is real "
+        "(RMS 124.5 -> 101.5 mm); on the tile it barely moves the forest-open contrast "
+        "(+2.06 mm of 58 at elba, -0.51 of 39 at whitewater), because forest and open both "
+        "sit on the curve's flat segment. Where we can assume no change the ground is clean "
+        "and there is little to do; where it acts we cannot assume no change. Its products "
+        "are dod_cover_q2.npy and lod_cover_q2.npy, NOT dod.npy and lod.npy.",
+}
+
+
+def group_of(name, steps=STEPS):
+    """Which module a step belongs to, "" for the base pipeline."""
+    return next(s.group for s in steps if s.name == name)
+
+
+def group_is_a_leaf(group, steps=STEPS):
+    """A group may be switched off only if nothing OUTSIDE it requires its products.
+
+    Checked rather than asserted: a group that something else depends on is not optional,
+    whatever its steps are flagged, and switching it off would leave the graph unbuildable.
+    """
+    inside = {s.name for s in steps if s.group == group}
+    owns = {f: s.name for s in steps for f in s.produces}
+    return not [(s.name, r) for s in steps if s.name not in inside
+                for r in s.requires if owns.get(r) in inside]
 
 
 def mutation_order_ok(steps=STEPS):
@@ -492,8 +539,21 @@ def state(tile_dir, steps=STEPS):
     return res
 
 
-def plan(tile_dir, *, gen1=None, gen2=None, dod=None, steps=STEPS, include_optional=True):
-    """The commands, in dependency order, with the tile substituted."""
+def plan(tile_dir, *, gen1=None, gen2=None, dod=None, steps=STEPS, include_optional=True,
+         skip_groups=()):
+    """The commands, in dependency order, with the tile substituted.
+
+    `skip_groups` drops whole modules -- see GROUPS. A group that something outside it
+    requires is REFUSED rather than dropped, because dropping it would leave the graph
+    unbuildable and the plan would be a lie.
+    """
+    for g in skip_groups:
+        if g not in GROUPS:
+            raise ValueError(f"unknown group {g!r}; known: {sorted(GROUPS)}")
+        if not group_is_a_leaf(g, steps):
+            raise ValueError(
+                f"group {g!r} cannot be skipped: steps outside it require its products. "
+                f"It is not an optional module, whatever its steps are flagged.")
     name = os.path.basename(str(tile_dir).rstrip("/"))
     # A tile directory is not necessarily a registered site: elbaext, elba_fulldensity and
     # the analysis scratch directories are products, not sites. Say so in the command rather
@@ -504,6 +564,8 @@ def plan(tile_dir, *, gen1=None, gen2=None, dod=None, steps=STEPS, include_optio
     cmds = []
     for s in order(steps):
         if s.optional and not include_optional:
+            continue
+        if s.group and s.group in skip_groups:
             continue
         missing = [n for n in s.needs if supplied.get(n) is None]
         c = (s.command.replace("{tile_name}", name).replace("{tile}", str(tile_dir))
@@ -524,7 +586,19 @@ def main(argv=None):
     ap.add_argument("--check", action="store_true", help="report each step's state")
     ap.add_argument("--plan", action="store_true", help="print the commands in order")
     ap.add_argument("--skip-optional", action="store_true")
+    ap.add_argument("--skip-group", action="append", default=[], metavar="NAME",
+                    help=f"drop a whole module from the plan; known: {sorted(GROUPS)}")
+    ap.add_argument("--groups", action="store_true",
+                    help="describe the optional module groups and exit")
     a = ap.parse_args(argv)
+    if a.groups:
+        for g, why in sorted(GROUPS.items()):
+            members = [s.name for s in STEPS if s.group == g]
+            print(f"{g}  ({'a leaf: may be skipped' if group_is_a_leaf(g) else 'NOT a leaf'})")
+            print(f"  steps: {', '.join(members)}")
+            for line in textwrap.wrap(why, 76):
+                print(f"  {line}")
+        return 0
     if not (a.check or a.plan):
         a.check = True
 
@@ -540,6 +614,8 @@ def main(argv=None):
                 d = (d + "; " if d else "") + "changed since: " + ", ".join(
                     os.path.basename(c) for c in cs[s.name])
             tag = s.name + (" *" if s.optional else "")
+            if s.group:
+                d = (d + "; " if d else "") + f"[{s.group}]"
             print(f"  {tag:<20} {k:<12} {d}")
         print("  * = optional. STALE = an output older than one of its own inputs.")
         print("  CODE-STALE = the SOURCE that produced it changed since. A code change "
@@ -549,8 +625,10 @@ def main(argv=None):
     if a.plan:
         print(f"\n# {a.tile} -- in dependency order")
         for s, c, missing in plan(a.tile, gen1=a.gen1, gen2=a.gen2, dod=a.dod,
-                                  include_optional=not a.skip_optional):
-            print(f"\n# {s.name}{' (optional)' if s.optional else ''}: {s.note}")
+                                  include_optional=not a.skip_optional,
+                                  skip_groups=tuple(a.skip_group)):
+            tags = ([" (optional)"] if s.optional else []) + ([f" [{s.group}]"] if s.group else [])
+            print(f"\n# {s.name}{''.join(tags)}: {s.note}")
             if missing:
                 print(f"#   NEEDS --{' --'.join(missing)}")
             print(c)

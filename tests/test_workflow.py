@@ -282,3 +282,55 @@ def test_rerunning_a_step_clears_its_staleness_even_if_the_bytes_match(tmp_path)
     _touch(d, "out.npy", when=4000, content=b"result")
     assert W.state(d, steps)["t"][0] == "OK", \
         "a step re-run against the new input is current, whatever bytes it produced"
+
+
+# --- optional module groups ---------------------------------------------------------------
+
+def test_the_vegetation_correction_is_a_leaf_so_it_can_be_switched_off():
+    """A group may only be called optional if NOTHING outside it requires its products.
+    The correction's outputs are dod_cover_q2.npy and lod_cover_q2.npy -- not dod.npy and
+    lod.npy -- and this is what pins that separation: if a base step ever came to require a
+    corrected product, the shipped DoD would silently depend on a correction that measured
+    WORSE than doing nothing on open ground."""
+    assert W.group_is_a_leaf("vegetation_correction")
+    members = {s.name for s in W.STEPS if s.group == "vegetation_correction"}
+    assert members == {"class2_spread", "q2_fit", "dod_cover", "lod_cover",
+                       "cover_calibration"}
+
+
+def test_every_step_in_an_optional_group_is_itself_optional():
+    """A mandatory step inside a switchable module is a contradiction: --skip-optional and
+    --skip-group would disagree about whether the product is required."""
+    for s in W.STEPS:
+        if s.group in W.GROUPS:
+            assert s.optional, f"{s.name} is in group {s.group} but is not optional"
+
+
+def test_every_declared_group_has_a_description_and_members():
+    for g in W.GROUPS:
+        assert W.GROUPS[g].strip(), g
+        assert [s for s in W.STEPS if s.group == g], f"group {g} has no steps"
+    for s in W.STEPS:
+        assert s.group == "" or s.group in W.GROUPS, f"{s.name}: undeclared group {s.group!r}"
+
+
+def test_skipping_a_group_drops_exactly_its_steps(tmp_path):
+    full = {s.name for s, _, _ in W.plan(tmp_path)}
+    cut = {s.name for s, _, _ in W.plan(tmp_path,
+                                        skip_groups=("vegetation_correction",))}
+    assert full - cut == {s.name for s in W.STEPS if s.group == "vegetation_correction"}
+    assert cut  # the base pipeline survives
+
+
+def test_an_unknown_group_is_refused_not_ignored(tmp_path):
+    with pytest.raises(ValueError, match="unknown group"):
+        W.plan(tmp_path, skip_groups=("no_such_module",))
+
+
+def test_a_group_something_depends_on_cannot_be_skipped(tmp_path):
+    """Refusing beats dropping: a plan missing a step another step needs is unbuildable,
+    and a plan that cannot be run is worse than no plan."""
+    steps = W.STEPS + (W.Step("downstream", produces=("z.npy",),
+                              requires=("dod_cover_q2.npy",), command="true"),)
+    with pytest.raises(ValueError, match="cannot be skipped"):
+        W.plan(tmp_path, steps=steps, skip_groups=("vegetation_correction",))
