@@ -8,9 +8,19 @@ build: it already has one**, and it is far too widely consumed to retire.
     tiles      battlecreek, carlton, cook, elba, elba_fulldensity, mnrv, whitewater
 
 The caveat that matters is not about the producer but about the QUANTITY: penetration is
-**geometry-confounded** and is a poor canopy proxy — scan angle and flight-line overlap
-density dominate it (corr -0.84 / -0.91) against canopy at -0.33. That is already stated in
-`canopy.py` and `analysis/ridgelines/AUDIT_findings.md`. Nothing here changes it.
+**geometry-confounded** and is a poor canopy proxy. `canopy.py` states the verdict
+directly — *"do not use `penetration` as a canopy measure; `canopy_cover_pfs` is the cover
+measure, computed identically on every tile"* — and `AUDIT_findings.md` puts the layer in
+Tier 1 as a gen2-derived variable, warning against binning any gen1 quantity against it.
+
+The measurement behind that, as recorded in the repo: ground-return fraction correlates
+**-0.84 with scan angle** (`analysis/ridgelines/gen1_intensity_fit.py:6`, which names it as
+the source of the 0.6 bimodal split, and `gen1_save_angles_slope.py:90`).
+
+CORRECTED 2026-09-05: an earlier version of this file added "-0.91" for overlap density and
+"-0.33" for canopy, and said both were stated in canopy.py and AUDIT_findings.md. Neither
+number appears anywhere in this repository, and neither file makes that statement. They came
+from a session memory note and were written here as if cited. Only the -0.84 is supported.
 
 ## The defect, measured 2026-09-05
 
@@ -48,12 +58,17 @@ where there is no information.
 
 The producer writes NaN by construction, so this yields exactly `elba`'s array.
 
-It is NOT run unprompted because it is a data product, not code, and its blast radius is
-real: regenerating it invalidates the inputs of `strata_core`, `geology_forest_split`,
-`curvature_diffusion`, `run_steady_state_strata` and the other consumers that hardcode
-`elba_fulldensity`, and any measured result that used the forest/open split on those 677
-cells changes. That is a decision about whether to re-derive a body of measured work, and
-it belongs to Andy, not to a cleanup pass.
+It is NOT run unprompted because it is a data product, not code. But the blast radius is
+SMALLER than first written here, and the workflow graph is what settles it: the only step
+that requires `penetration.npy` is `strata_core`, which is optional AND blocked
+(`canopy_struct.npz` has no producer). The base chain does not touch it, none of the five
+vegetation-correction steps touch it, and `convexity` runs `--without penetration`
+deliberately.
+
+So regenerating it would invalidate the HISTORICAL beam-angle and strata analyses that load
+the layer by path — `geology_forest_split`, `curvature_diffusion`, `run_steady_state_strata`
+and the rest — and nothing the current DoD or the current correction depends on. That makes
+it low priority rather than a decision blocking anything.
 
 The magnitude is small (0.19% of cells) and the direction is known (677 cells leave the
 forest class). Whether that is worth a re-run is exactly the judgement to be made out loud.
