@@ -58,7 +58,14 @@ PY_PFS = os.environ.get(
 #: bounds, its clouds and its valley top: the decision is now recorded, so the command that
 #: rebuilds the DoD can be printed like every other. The name is kept because several places
 #: legitimately ask "which files are the base products".
-BASE_INPUTS = ("corrections.json", "z_after.npy", "dod.npy", "lod.npy")
+BASE_INPUTS = ("corrections.json", "z_after.npy", "dod.npy", "lod.npy",
+               # run_all_sites writes these five too, and the graph used to claim only the
+               # four above -- so a rebuild could leave them stale with nothing to say so.
+               # change.npy is a real product (figures.py reads it); the three GeoTIFFs and
+               # regions.json have no consumer IN CODE and are outputs for the user: GIS
+               # exports and the record of the detected change regions. An output with no
+               # code consumer still has to be declared, or staleness cannot cover it.
+               "change.npy", "dod.tif", "lod.tif", "change.tif", "regions.json")
 
 
 #: What produces the base inputs, for the code-vs-product check. difference_dem writes

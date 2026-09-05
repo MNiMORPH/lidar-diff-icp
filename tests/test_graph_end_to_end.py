@@ -45,12 +45,28 @@ def built_tile(tmp_path):
                            ground="low_q", ground_source="last_return",
                            after_ground="last_return", geoid_datum=(0.0, 0.0, 0.0),
                            valley_top_m=-1e9)
-        # written the way scripts/run_all_sites.py writes them -- same files, same names
-        np.save(f"{TILE_DIR}/dod.npy", r["dod"])
-        np.save(f"{TILE_DIR}/lod.npy", r["lod"])
-        np.save(f"{TILE_DIR}/z_after.npy", r["z_after"])
+        # Written the way scripts/run_all_sites.py writes them -- same files, same names,
+        # and ALL NINE. Writing only the four grids let Step("base") claim five products
+        # nothing checked; the test below caught that the moment they were declared.
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
+        from run_all_sites import _tif
+        from lidar_diff_icp.detect import detect_change_standard
+
+        dod, lod, Z21 = r["dod"], r["lod"], r["z_after"]
+        det = detect_change_standard(dod, lod, r["stable"], r["res"])
+        X0, Y0 = BOUNDS[0], BOUNDS[1]; ny = dod.shape[0]
+        np.save(f"{TILE_DIR}/dod.npy", dod)
+        np.save(f"{TILE_DIR}/lod.npy", lod)
+        np.save(f"{TILE_DIR}/z_after.npy", Z21)
+        np.save(f"{TILE_DIR}/change.npy", det["change"])
+        _tif(dod, r["res"], X0, Y0, ny, f"{TILE_DIR}/dod.tif")
+        _tif(lod, r["res"], X0, Y0, ny, f"{TILE_DIR}/lod.tif")
+        _tif(det["change"].astype("float32"), r["res"], X0, Y0, ny, f"{TILE_DIR}/change.tif")
         with open(f"{TILE_DIR}/corrections.json", "w") as fh:
             json.dump(r["corrections"], fh, indent=2)
+        with open(f"{TILE_DIR}/regions.json", "w") as fh:
+            json.dump({k: det[k] for k in ("regions", "sigma", "corr_length_m",
+                                           "tau_sys_m", "method")}, fh, indent=2)
         yield TILE_DIR
     finally:
         shutil.rmtree(TILE_DIR, ignore_errors=True)
