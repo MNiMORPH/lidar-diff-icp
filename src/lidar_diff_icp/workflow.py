@@ -119,6 +119,21 @@ class Step:
 
 
 STEPS: tuple[Step, ...] = (
+    Step("completeness",
+         produces=("data_completeness.json",),
+         requires=(),
+         command="PROJ_DATA=/usr/share/proj GDAL_DATA=/usr/share/gdal "
+                 f"./lidar-icp/bin/python analysis/ept_coverage_check.py "
+                 f"--only {{site}} --write",
+         needs=("site",),
+         code=("src/lidar_diff_icp/completeness.py",),
+         note="Did we download ALL the 3DEP points over this tile? Asks the SOURCE -- the "
+              "EPT hierarchy carries a point count per node -- so it needs no point "
+              "download. FIRST, because a truncated fetch does not look like an error from "
+              "inside the tile: whitewater's gen2 averaged 11.39 returns/m2 over a tile "
+              "that was 15.45 west and 5.52 east of a seam, and elba's was 10.90x thinner "
+              "than every other site's. The ratio is RECORDED, never judged -- no "
+              "threshold is applied anywhere."),
     Step("base",
          produces=BASE_INPUTS,
          requires=(),

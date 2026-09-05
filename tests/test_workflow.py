@@ -334,3 +334,23 @@ def test_a_group_something_depends_on_cannot_be_skipped(tmp_path):
                               requires=("dod_cover_q2.npy",), command="true"),)
     with pytest.raises(ValueError, match="cannot be skipped"):
         W.plan(tmp_path, steps=steps, skip_groups=("vegetation_correction",))
+
+
+def test_completeness_is_the_first_step():
+    """It gates everything: a truncated fetch does not look like an error from inside the
+    tile, and two sites shipped products built from one before it was noticed. Ordering it
+    first is what makes --plan put the question before the answer."""
+    assert [s.name for s in W.order()][0] == "completeness"
+
+
+def test_completeness_applies_no_threshold():
+    """The step RECORDS the ratio; it does not decide what ratio is acceptable. A cut-off
+    nobody stated is exactly the kind of invented parameter that turns a judgement into a
+    silent one."""
+    step = next(s for s in W.STEPS if s.name == "completeness")
+    assert "RECORDED, never judged" in step.note
+    from lidar_diff_icp import completeness
+    import inspect
+    src = inspect.getsource(completeness)
+    for op in ("ratio >", "ratio <", "ratio >=", "ratio <="):
+        assert op not in src, f"completeness.py applies a threshold: {op}"
