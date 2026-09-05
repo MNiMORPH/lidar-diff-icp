@@ -362,7 +362,7 @@ def _across_track_diagnostics(pc, line_ref, line_src, res_m, exclude, dx, dy):
     z_src = swathdiff._median_grid(x[mb], y[mb], pc.z[mb], res_m, x0, y0, nx, ny)
     dtan = t_ref - coreg._shift_grid(t_src, dx, dy, res_m)
     dh = z_ref - coreg._shift_grid(z_src, dx, dy, res_m)
-    k, c, _n = coreg.across_track_tie(dh, dtan)
+    k, c, _n, _se = coreg.across_track_tie(dh, dtan)
     m = np.isfinite(dtan) & np.isfinite(dh)
     if not m.any():
         return float("nan"), float("nan"), float("nan"), float("nan"), float("nan"), False

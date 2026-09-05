@@ -107,7 +107,7 @@ def pair_mechanism(pc, a, b, res=2.0, exclude=(5, 6, 9)):
     tb = _median_grid(x[mb], y[mb], np.tan(np.radians(sa[mb])), res, x0, y0, nx, ny)
     dh = za - coreg._shift_grid(zb, c0.dx, c0.dy, res)
     dt = ta - coreg._shift_grid(tb, c0.dx, c0.dy, res)
-    k, cc, n = coreg.across_track_tie(dh, dt)
+    k, cc, n, _se = coreg.across_track_tie(dh, dt)
     m = np.isfinite(dh) & np.isfinite(dt)
     return float(np.mean(dt[m])), cc, k, float(np.nanmedian(dh)), n
 

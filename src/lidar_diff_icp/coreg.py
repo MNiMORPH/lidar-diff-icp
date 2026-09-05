@@ -21,6 +21,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 
+from typing import NamedTuple
+
 import numpy as np
 from scipy.ndimage import map_coordinates
 
@@ -48,6 +50,16 @@ class Coreg:
     #: a default of ``n`` would fail open (a population asserted where none was counted).
     #: Both hide the question; constructing a Coreg means answering it.
     n_dz: int
+    #: VARIANCE of the reported ``dz``, in m^2 -- the weight :func:`align_swaths` solves
+    #: the network with. Required, and for the same reason as ``n_dz``: a default would
+    #: assert a precision nobody measured.
+    #:
+    #: This is what lets the two tie modes be compared on equal terms. ``overlap_median``
+    #: reports ``(nmad_after / sqrt(n))^2``, the sampling variance of a level estimated from
+    #: n cells. ``intercept`` reports the square of :class:`ATTie`'s ``se``, which carries
+    #: the EXTRAPOLATION term as well, so a tie fitted far from ``dtan = 0`` over a short
+    #: span downweights itself by orders of magnitude instead of being trusted equally.
+    dz_var: float
 
 
 def slope_aspect(z: np.ndarray, res: float):
@@ -156,9 +168,16 @@ def nuth_kaab(z_ref: np.ndarray, z_src: np.ndarray, res: float,
     dy_sigma = float(np.sqrt(coef_cov[0, 0])) if np.isfinite(coef_cov[0, 0]) else np.nan
     # dz uncertainty ~ standard error of the median residual
     dz_sigma = float(nmad_after / np.sqrt(max(n_used, 1)))
+    # The median tie's variance IS this squared. The median-vs-mean efficiency factor
+    # (pi/2) is deliberately NOT applied: it is a constant across every overlap_median
+    # edge, so it cancels in the relative weighting, and applying it would move every
+    # shipped number for no change in any solution.
+    dz_var = float(dz_sigma ** 2)
 
+    # keyword form for the last two: dz_var is declared AFTER n_dz, and passing it
+    # positionally after dz_sigma silently bound it to `n`.
     return Coreg(dx, dy, dz, dx_sigma, dy_sigma, dz_sigma, n_used,
-                 nmad_before, nmad_after, it, converged, n_dz)
+                 nmad_before, nmad_after, it, converged, n_dz=n_dz, dz_var=dz_var)
 
 
 def tie_translation_tilt(z_ref, z_src, res, x_origin, y_origin,
@@ -467,6 +486,23 @@ def align_swaths(pc, res: float = 2.0, exclude=(5, 6, 9), ref=None,
     ``tie`` is passed through to :func:`coregister_swaths`: ``"overlap_median"`` (default,
     shipped behaviour) or ``"intercept"``, the extent-invariant across-track intercept.
 
+    THE NETWORK IS WEIGHTED BY 1/dz_var, NOT BY n (changed 2026-09-05). Weighting by cell
+    count says a tie is trustworthy in proportion to how many cells it saw, which is true
+    only when every observation has the same variance. It is precisely false for the
+    intercept tie, whose error is dominated by how far it extrapolates to ``dtan = 0``, not
+    by ``n``: Battle Creek's 1014-1102 saw 36 cells over a dtan span of 0.0184 while
+    extrapolating ~0.8, returned ``dz = -3.4640 m`` against ``+0.0600`` from the median tie
+    on the same cells, and was shipped as a solved constant -- the tile's whole 3.484 m
+    misclosure.
+
+    1/variance is the ordinary weighted-least-squares weight and needs NO THRESHOLD. Four
+    candidate filters were tested against the real sites and each misclassified a real case
+    (``analysis/SWATH_TIE_DEGENERACY.md``); this replaces all of them, because a tie with a
+    43:1 lever ratio downweights itself by ~1e6 without anyone choosing a cut-off. It also
+    repairs a defect that document recorded and did not fix: a rigid-fallback edge reports
+    ``n = 0`` with a valid ``dz``, so under ``w = n`` it entered at weight zero and the case
+    coreg's own comment protects had never once constrained anything.
+
     Returns ``(corrections, edges, misclosure)`` where ``corrections`` maps
     swath id -> (Dx, Dy, Dz) m, ``edges`` lists the pairwise observations, and
     ``misclosure`` is the per-edge residual (~0 for a tree/chain; nonzero only
@@ -510,7 +546,16 @@ def align_swaths(pc, res: float = 2.0, exclude=(5, 6, 9), ref=None,
         # threshold-free answer is to weight the network by each observation's own variance
         # so an extrapolated tie self-downweights; that is a change to the weighting scheme
         # and is Andy's call.
-        edges.append((a, b, c.dx, c.dy, c.dz, float(c.n)))
+        # WEIGHT BY INFORMATION, NOT BY COUNT. The network used to be solved with w = n,
+        # which says a tie is trustworthy in proportion to how many cells it saw. That is
+        # true only when every observation has the same variance -- and it is precisely
+        # false for the intercept tie, whose error is dominated by the extrapolation lever
+        # arm, not by n. 1/variance is the ordinary least-squares weight and needs no
+        # threshold: a tie fitted far from dtan = 0 over a short span downweights itself.
+        # See analysis/SWATH_TIE_DEGENERACY.md, which proposed exactly this and stopped
+        # short of it.
+        w = (1.0 / c.dz_var) if (np.isfinite(c.dz_var) and c.dz_var > 0) else 0.0
+        edges.append((a, b, c.dx, c.dy, c.dz, float(c.n), float(w)))
     if not edges:
         raise ValueError("no overlapping swath pairs")
     # A swath with no finite edge to the network is unconstrained; warn and let it
@@ -522,7 +567,7 @@ def align_swaths(pc, res: float = 2.0, exclude=(5, 6, 9), ref=None,
         warnings.warn(f"align_swaths: swaths with no overlap edges, left unaligned: {missing}")
     n, E = len(swaths), len(edges)
     A = np.zeros((E, n)); w = np.zeros(E); O = np.zeros((E, 3))
-    for e, (a, b, dx, dy, dz, ww) in enumerate(edges):
+    for e, (a, b, dx, dy, dz, nn, ww) in enumerate(edges):
         A[e, idx[a]] = -1.0; A[e, idx[b]] = 1.0
         w[e] = ww; O[e] = (dx, dy, dz)
     sw = np.sqrt(w)
@@ -636,7 +681,15 @@ def _lad(X: np.ndarray, y: np.ndarray, iters: int = 200, tol: float = 1e-9) -> n
     return beta
 
 
-def across_track_tie(dh: np.ndarray, dtan: np.ndarray):
+class ATTie(NamedTuple):
+    """The across-track vertical tie, with the error that says whether to believe it."""
+    k: float          # intercept at dtan = 0, in the units of dh
+    c: float          # across-track slope, per unit tangent
+    n: int            # finite cells used
+    se: float         # standard error of k, INCLUDING the extrapolation lever arm
+
+
+def across_track_tie(dh: np.ndarray, dtan: np.ndarray) -> "ATTie":
     """Vertical tie between two overlapping flight lines, at across-track position zero.
 
     ``dh`` is the per-cell height difference ``z_ref - z_src`` over the pair's overlap and
@@ -656,15 +709,41 @@ def across_track_tie(dh: np.ndarray, dtan: np.ndarray):
     The fit is LAD (median regression) so that it reduces exactly to the current tie when
     ``c`` is zero.
 
-    Returns ``(k, c, n)``: tie in the units of ``dh``, across-track slope per unit
-    tangent, and the number of finite cells used.
+    Returns an :class:`ATTie`: ``k`` the tie in the units of ``dh``, ``c`` the across-track
+    slope per unit tangent, ``n`` the finite cells used, and ``se`` the standard error OF
+    THE INTERCEPT.
+
+    ``se`` IS THE POINT OF THIS ESTIMATOR'S SAFETY. The intercept is evaluated at
+    ``dtan = 0``, which the sidelap may not contain: its error carries the extrapolation
+    term
+
+        se = scale * sqrt(1/n + mean(dtan)^2 / sum((dtan - mean(dtan))^2))
+
+    so a pair sampled far from zero over a short span reports a large error rather than a
+    confident wrong number. Measured at Battle Creek, pair 1014-1102 samples dtan over a
+    span of 0.0184 while extrapolating ~0.8 -- a lever ratio near 43:1 -- and returns
+    ``dz = -3.4640 m`` where the median tie on the same 36 cells gives ``+0.0600``. That
+    value was shipped as a solved constant and is the tile's entire 3.484 m misclosure.
+    With ``se`` reported, :func:`align_swaths` can weight it out without anyone choosing a
+    threshold; see ``analysis/SWATH_TIE_DEGENERACY.md``.
+
+    ``scale`` is the NMAD of the fit residuals, so the error is robust in the same sense the
+    fit is. The design factor is the ordinary least-squares form: for LAD the exact
+    asymptotic variance involves the residual density at zero, and estimating that would add
+    a nuisance parameter to remove a constant. The factor that MATTERS here -- the lever arm
+    -- is identical in both forms.
     """
     m = np.isfinite(dh) & np.isfinite(dtan)
     n = int(m.sum())
     if n < 3 or np.ptp(dtan[m]) <= 0:
-        return float("nan"), float("nan"), n
-    beta = _lad(np.c_[np.ones(n), dtan[m]], dh[m])
-    return float(beta[0]), float(beta[1]), n
+        return ATTie(float("nan"), float("nan"), n, float("nan"))
+    X = np.c_[np.ones(n), dtan[m]]
+    beta = _lad(X, dh[m])
+    t = dtan[m]; tbar = float(np.mean(t)); Stt = float(np.sum((t - tbar) ** 2))
+    resid = dh[m] - X @ beta
+    scale = float(_nmad(resid))
+    se = (scale * np.sqrt(1.0 / n + tbar ** 2 / Stt)) if Stt > 0 else float("inf")
+    return ATTie(float(beta[0]), float(beta[1]), n, float(se))
 
 
 def coregister_swaths(pc, swath_ref: int, swath_src: int, res: float = 2.0,
@@ -706,7 +785,8 @@ def coregister_swaths(pc, swath_ref: int, swath_src: int, res: float = 2.0,
     t_src = _median_grid(x[mb], y[mb], np.tan(np.radians(sa[mb])), res, x0, y0, nx, ny)
     z_sh = _shift_grid(z_src, c.dx, c.dy, res)
     t_sh = _shift_grid(t_src, c.dx, c.dy, res)
-    k, _c, _n = across_track_tie(z_ref - z_sh, t_ref - t_sh)
+    at = across_track_tie(z_ref - z_sh, t_ref - t_sh)
+    k = at.k
     if not np.isfinite(k):
         return c
     # ``n`` is left as the horizontal fit's count ON PURPOSE: align_swaths uses it as the
@@ -715,4 +795,7 @@ def coregister_swaths(pc, swath_ref: int, swath_src: int, res: float = 2.0,
     # ``_n`` is the intercept fit's own population and used to be discarded. dz now comes
     # from THAT estimator, so its population must travel with it -- otherwise a tie fitted
     # on nothing is indistinguishable from one fitted on the whole sidelap.
-    return replace(c, dz=k, n_dz=int(_n))
+    # dz_var travels WITH the estimator that produced dz. Leaving the median tie's variance
+    # in place here would report an extrapolated intercept as if it were as well determined
+    # as a 90,000-cell median -- which is exactly how Battle Creek shipped -3.4640 m.
+    return replace(c, dz=k, n_dz=int(at.n), dz_var=float(at.se ** 2))

@@ -183,7 +183,8 @@ def test_align_swaths_ignores_nan_edge(monkeypatch):
         # n_dz defaults to n here: these fakes stand for ordinary cosine-fit observations,
         # where the cells that determined dz ARE the cells of the fit.
         return coreg.Coreg(0.0, 0.0, dz, 0.0, 0.0, 0.0, n, 0.1, 0.05, 3, True,
-                           n if n_dz is None else n_dz)
+                           n_dz=n if n_dz is None else n_dz,
+                           dz_var=(0.05 ** 2) / max(n, 1))
     fake = {(1, 2): mk(-0.02, 1000), (2, 3): mk(-0.03, 1000),
             (1, 3): mk(np.nan, 0)}                  # the poisoning empty-overlap edge
     monkeypatch.setattr(coreg, "coregister_swaths",
@@ -352,12 +353,16 @@ def test_n_dz_travels_with_every_observation(monkeypatch):
     """
     from lidar_diff_icp import io
 
-    def mk(dz, n, n_dz, converged):
-        return coreg.Coreg(0.0, 0.0, dz, 0.0, 0.0, 0.0, n, 0.1, 0.09, 20, converged, n_dz)
+    def mk(dz, n, n_dz, converged, dz_var):
+        return coreg.Coreg(0.0, 0.0, dz, 0.0, 0.0, 0.0, n, 0.1, 0.09, 20, converged,
+                           n_dz=n_dz, dz_var=dz_var)
 
-    fake = {(1, 2): mk(-0.02, 1000, 1000, True),
-            (2, 3): mk(-0.0143, 22293, 22293, False),   # SLOW: real, must survive
-            (1, 3): mk(-3.4640, 0, 36, False)}          # the extrapolated sliver tie
+    # dz_var is what separates these three, and it is measured rather than chosen: the
+    # sliver's intercept extrapolates ~0.8 in dtan from a span of 0.0184, so its standard
+    # error is ~1e3 x the others' and its network weight ~1e6 x smaller.
+    fake = {(1, 2): mk(-0.02, 1000, 1000, True, 1e-5),
+            (2, 3): mk(-0.0143, 22293, 22293, False, 1e-6),  # SLOW: real, must survive
+            (1, 3): mk(-3.4640, 0, 36, False, 1.0e1)}        # the extrapolated sliver tie
     monkeypatch.setattr(coreg, "coregister_swaths",
                         lambda pc, a, b, res, exclude, tie="overlap_median": fake[(a, b)])
     ps = np.array([1, 1, 2, 2, 3, 3])
@@ -367,37 +372,45 @@ def test_n_dz_travels_with_every_observation(monkeypatch):
 
     kept = {(e[0], e[1]) for e in edges}
     assert (2, 3) in kept, "a slow but well-populated fit must survive"
-    # NOT filtered today: the sliver tie is still admitted, at weight sqrt(n)=0
+    # The sliver tie is still ADMITTED -- nothing filters it, and nothing should: a filter
+    # needs a threshold and every candidate rule tested misclassified a real case. It is
+    # WEIGHTED OUT instead, by its own variance, which is measured.
     assert (1, 3) in kept
-    assert next(e for e in edges if (e[0], e[1]) == (1, 3))[5] == 0.0
-    # the chain still determines swath 3 from the real edge
-    assert abs((corr[3][2] - corr[2][2]) - (-0.0143)) < 1e-9
+    e13 = next(e for e in edges if (e[0], e[1]) == (1, 3))
+    e23 = next(e for e in edges if (e[0], e[1]) == (2, 3))
+    assert e13[6] / e23[6] < 1e-6, "the sliver must weigh ~1e-6 of a real edge"
+
+    # The chain still determines swath 3 from the real edge. NOT exactly, and that is the
+    # honest form of the assertion: the sliver is downweighted by ~1e7, not deleted, so it
+    # perturbs the solution by a fraction of a micron. Asserting exact equality would be
+    # asserting that it was excluded, which is a different mechanism from the one used.
+    err = abs((corr[3][2] - corr[2][2]) - (-0.0143))
+    assert err < 1e-6, err                      # sub-micron against a -3.4640 m outlier
 
 
 def test_a_coreg_cannot_be_built_without_stating_its_population():
     import pytest as _pt
     with _pt.raises(TypeError):
-        coreg.Coreg(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 10, 0.1, 0.1, 3, True)   # no n_dz
+        coreg.Coreg(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 10, 0.1, 0.1, 3, True)   # no n_dz/dz_var
 
 
-def test_the_rigid_fallback_is_kept_but_its_protection_is_nominal(monkeypatch):
-    """The case the older comment protects is kept -- and never constrained anything.
+def test_the_rigid_fallback_now_actually_constrains_the_network(monkeypatch):
+    """FIXED 2026-09-05, and this test used to assert the defect.
 
-    A rigid-fallback edge can have n=0 (the cosine loop broke before any fit, the guard
-    then fired on a non-finite nmad). n_dz > 0, so it is rightly NOT dropped. But
-    align_swaths weights the network by sqrt(n), deliberately -- coregister_swaths holds n
-    at the horizontal fit's count so the two tie modes differ in the vertical estimator
-    ALONE, not in the weighting. So such an edge enters at zero weight and constrains
-    nothing, exactly as before this change.
+    A rigid-fallback edge legitimately reports n = 0 with a valid dz resting on a real
+    overlap -- coreg's own comment says so, and n_dz > 0 keeps it from being dropped. But
+    the network was weighted by sqrt(n), so the edge entered at weight ZERO and constrained
+    nothing: the case that comment protects had never once had an effect.
+    analysis/SWATH_TIE_DEGENERACY.md recorded it under "Also found, not fixed".
 
-    Recorded rather than fixed: making the weight n_dz would change the network solution at
-    every site and break that stated design property. Whether a fallback tie should carry
-    weight is a separate question.
+    Weighting by 1/dz_var fixes it with no special case. The edge states a variance
+    (0.01^2 m^2), so it enters at weight 1e4 and its dz is honoured.
     """
     from lidar_diff_icp import io
 
     def mk(dz, n, n_dz):
-        return coreg.Coreg(0.0, 0.0, dz, np.nan, np.nan, 0.01, n, 0.1, 0.1, 1, True, n_dz)
+        return coreg.Coreg(0.0, 0.0, dz, np.nan, np.nan, 0.01, n, 0.1, 0.1, 1, True,
+                           n_dz=n_dz, dz_var=0.01 ** 2)
 
     fake = {(1, 2): mk(-0.02, 0, 4200)}     # rigid fallback: n=0, but 4200 cells behind dz
     monkeypatch.setattr(coreg, "coregister_swaths",
@@ -408,8 +421,9 @@ def test_the_rigid_fallback_is_kept_but_its_protection_is_nominal(monkeypatch):
     corr, edges, mis = coreg.align_swaths(pc, ref=1)
     assert (1, 2) in {(e[0], e[1]) for e in edges}, "n_dz > 0, so it must not be dropped"
     e = next(x for x in edges if (x[0], x[1]) == (1, 2))
-    assert e[5] == 0.0, "its weight is sqrt(n) = 0 -- it enters, but constrains nothing"
-    assert corr[2][2] == 0.0, "so swath 2 is left where the minimum-norm solution puts it"
+    assert e[5] == 0.0, "n is still reported as 0 -- the rigid fallback ran no cosine fit"
+    assert e[6] == pytest.approx(1.0 / 0.01 ** 2), "but its WEIGHT is now 1/dz_var"
+    assert corr[2][2] == pytest.approx(-0.02), "so its dz is honoured, not discarded"
 
 
 def test_swath_coverage_finds_the_line_that_adds_nothing():
@@ -446,3 +460,44 @@ def test_swath_coverage_is_reported_on_the_grid_it_is_given():
     coarse = coreg.swath_coverage(x, y, ps, (0.0, 0.0, 4.0, 2.0), 2.0)
     assert fine[2]["exclusive"] == 1, "at 1 m swath 2 owns a cell of its own"
     assert coarse[2]["exclusive"] == 0, "at 2 m it shares every cell it touches"
+
+
+# --- the network is weighted by information, not by count ---------------------------------
+
+def test_the_intercept_se_carries_the_extrapolation_lever_arm():
+    """THE MECHANISM THIS ALL RESTS ON. across_track_tie evaluates the intercept at
+    dtan = 0, which the sidelap may not contain. Its standard error therefore has to carry
+    the extrapolation term, or a tie fitted 43 lever-lengths away looks as good as one
+    fitted through the middle of the data.
+
+    Battle Creek's pair 1014-1102 is the real case: dtan span 0.0184 while extrapolating
+    ~0.8, giving dz = -3.4640 m where the median tie on the same 36 cells gives +0.0600.
+    """
+    rng = np.random.default_rng(0)
+    t_good = rng.uniform(-0.8, 0.8, 5000)                    # spans zero
+    good = coreg.across_track_tie(0.05 + 0.08 * t_good + rng.normal(0, 0.02, 5000), t_good)
+    t_bad = rng.uniform(-0.808, -0.790, 36)                  # the Battle Creek shape
+    bad = coreg.across_track_tie(0.05 + 0.08 * t_bad + rng.normal(0, 0.02, 36), t_bad)
+
+    assert abs(good.k - 0.05) < 0.005, "a well-conditioned fit recovers the tie"
+    assert bad.se > 100 * good.se, "and the extrapolated one must SAY it is uncertain"
+    # the resulting network weights differ by orders of magnitude, with no threshold anywhere
+    assert (1 / bad.se ** 2) / (1 / good.se ** 2) < 1e-4
+
+
+def test_a_degenerate_predictor_reports_no_tie_rather_than_a_confident_one():
+    """dtan span exactly zero -- every cell at one across-track position, Battle Creek's
+    1101-1102. The slope is unidentifiable and the intercept undefined."""
+    t = np.full(36, -0.7357)
+    r = coreg.across_track_tie(np.linspace(0, 0.1, 36), t)
+    assert np.isnan(r.k) and r.n == 36
+
+
+def test_dz_var_travels_with_the_estimator_that_produced_dz():
+    """The median tie and the intercept tie have different variances on the same cells, so
+    dz_var must come from whichever estimator actually produced dz. Reporting the median's
+    variance for an extrapolated intercept is how a 3.4640 m tie was shipped as solved."""
+    z = _synthetic_surface()
+    c = coreg.nuth_kaab(z, np.roll(z, 2, axis=1) + 0.05, 1.0)
+    assert c.dz_var == pytest.approx(c.dz_sigma ** 2)
+    assert c.dz_var > 0

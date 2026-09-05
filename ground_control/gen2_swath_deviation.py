@@ -236,7 +236,7 @@ def pair_stats(pc, line_ref, line_src, *, res_m, block_m, exclude) -> PairStats 
     nb = bmeans.size
     se_block = float(bmeans.std(ddof=1) / np.sqrt(nb)) if nb > 1 else float("nan")
 
-    k, c, _n = coreg.across_track_tie(dh, dtan)
+    k, c, _n, _se = coreg.across_track_tie(dh, dtan)
     med = float(np.median(vals))
     return PairStats(
         pair=(int(line_ref), int(line_src)),
