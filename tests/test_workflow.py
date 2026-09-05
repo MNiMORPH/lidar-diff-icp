@@ -51,7 +51,7 @@ def test_no_two_steps_claim_the_same_output():
 def test_a_missing_producer_is_rejected_not_silently_ordered():
     bad = W.STEPS + (W.Step("invented", produces=("x.npy",),
                             requires=("nothing_makes_this.npy",), command="true"),)
-    with pytest.raises(ValueError, match="neither base inputs nor produced"):
+    with pytest.raises(ValueError, match="produced by no step"):
         W.order(bad)
 
 

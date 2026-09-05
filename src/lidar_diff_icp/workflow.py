@@ -49,10 +49,14 @@ PY_PFS = os.environ.get(
     "LIDAR_DIFF_PFS_PYTHON",
     f"PROJ_DATA={_PFS_ENV}/share/proj GDAL_DATA={_PFS_ENV}/share/gdal {_PFS_ENV}/bin/python")
 
-#: Products of ``pipeline.difference_dem`` (via ``analysis/ridgelines/run_elba_dod.py`` or
-#: ``scripts/run_all_sites.py``). Everything below builds on these; the workflow treats them
-#: as given rather than pretending to schedule the DoD itself, whose vertical frame is a
-#: per-region decision (see ``analysis/slope_bias/elbaext_geoid_regrid.py``).
+#: Products of ``pipeline.difference_dem``. Everything below builds on these.
+#:
+#: THEY ARE NOW A STEP LIKE ANY OTHER -- see ``Step("base")`` at the head of STEPS. They were
+#: treated as given, on the reasoning that the DoD's vertical frame is a per-region decision
+#: the graph could not make. That reasoning expired when ``sites.py`` gave every site its
+#: bounds, its clouds and its valley top: the decision is now recorded, so the command that
+#: rebuilds the DoD can be printed like every other. The name is kept because several places
+#: legitimately ask "which files are the base products".
 BASE_INPUTS = ("corrections.json", "z_after.npy", "dod.npy", "lod.npy")
 
 
@@ -110,6 +114,17 @@ class Step:
 
 
 STEPS: tuple[Step, ...] = (
+    Step("base",
+         produces=BASE_INPUTS,
+         requires=(),
+         command=f"{PY} scripts/run_all_sites.py --only {{site}}",
+         needs=("site",),
+         code=BASE_CODE + BASE_GLOBAL_INPUTS,
+         note="The DoD, the LoD, the gen2 reference grid and the record of every correction "
+              "applied -- pipeline.difference_dem, driven by run_all_sites. `requires` is "
+              "empty because its inputs are the two point clouds, which live OUTSIDE the "
+              "tile directory; sites.py names them per site and is listed in `code`, so a "
+              "change to a site's definition invalidates its products."),
     Step("slope",
          produces=("slope.npy",),
          requires=("z_after.npy",),
@@ -257,6 +272,10 @@ STEPS: tuple[Step, ...] = (
 )
 
 
+#: The base step, by name, for the callers that ask about it specifically.
+_BASE_STEP = next(s for s in STEPS if s.name == "base")
+
+
 def mutation_order_ok(steps=STEPS):
     """Every mutated file must be produced by a step that runs EARLIER."""
     seq = [s.name for s in order(steps)]
@@ -277,14 +296,15 @@ def order(steps=STEPS):
     remaining requirements cannot be satisfied (a cycle, or a missing producer).
     """
     made = {f: s.name for s in steps for f in s.produces}
-    unknown = {r for s in steps for r in s.requires
-               if r not in made and r not in BASE_INPUTS}
+    unknown = {r for s in steps for r in s.requires if r not in made}
     if unknown:
         raise ValueError(
-            f"these requirements are neither base inputs nor produced by any step: "
-            f"{sorted(unknown)}. Either add the producing step or list the file in "
-            f"BASE_INPUTS if it comes from difference_dem.")
-    have, out, left = set(BASE_INPUTS), [], list(steps)
+            f"these requirements are produced by no step: {sorted(unknown)}. Either add "
+            f"the producing step or, if difference_dem writes it, add it to BASE_INPUTS "
+            f"(which Step('base') produces).")
+    # `have` starts EMPTY. It used to be seeded with BASE_INPUTS, which is what let the base
+    # products sit outside the graph; they are produced by a step now like everything else.
+    have, out, left = set(), [], list(steps)
     while left:
         ready = [s for s in left if all(r in have for r in s.requires)]
         if not ready:
@@ -422,18 +442,19 @@ def code_state(tile_dir, steps=STEPS):
 
 
 def base_code_state(tile_dir):
-    """The same check for the base inputs, which no Step produces."""
-    outs = [_mtime(os.path.join(tile_dir, f)) for f in BASE_INPUTS]
-    present = [m for m in outs if m is not None]
-    if not present:
-        return []
-    oldest = min(present)
-    stale = [c for c in BASE_CODE if (code_time(c) or 0) > oldest]
-    # The calibration curve goes through the SAME content-time path as source, deliberately:
-    # re-running the calibration and getting the same curve back must NOT invalidate every
-    # tile in the project. Only a curve whose CONTENT changed does.
-    stale += [c for c in BASE_GLOBAL_INPUTS if (code_time(c) or 0) > oldest]
-    return sorted(stale)
+    """Source files that changed after the base products were written.
+
+    A thin view onto code_state now that Step("base") produces them -- there is no second
+    implementation. Kept because callers legitimately ask this one question, and because
+    code_state reports nothing for a step whose outputs are absent, which for the base
+    products means "no DoD yet" rather than "up to date".
+
+    The calibration curve, when one is listed in BASE_GLOBAL_INPUTS, goes through the SAME
+    content-time path as source, deliberately: re-running the calibration and getting the
+    same curve back must NOT invalidate every tile in the project. Only a curve whose
+    CONTENT changed does.
+    """
+    return code_state(tile_dir, steps=(_BASE_STEP,)).get("base", [])
 
 
 def state(tile_dir, steps=STEPS):
@@ -474,7 +495,12 @@ def state(tile_dir, steps=STEPS):
 def plan(tile_dir, *, gen1=None, gen2=None, dod=None, steps=STEPS, include_optional=True):
     """The commands, in dependency order, with the tile substituted."""
     name = os.path.basename(str(tile_dir).rstrip("/"))
-    supplied = {"gen1": gen1, "gen2": gen2}
+    # A tile directory is not necessarily a registered site: elbaext, elba_fulldensity and
+    # the analysis scratch directories are products, not sites. Say so in the command rather
+    # than printing one that dies -- a plan that cannot be run is worse than no plan.
+    from . import sites as _sites
+    site = name if name in _sites.SITES else None
+    supplied = {"gen1": gen1, "gen2": gen2, "site": site}
     cmds = []
     for s in order(steps):
         if s.optional and not include_optional:
@@ -483,7 +509,8 @@ def plan(tile_dir, *, gen1=None, gen2=None, dod=None, steps=STEPS, include_optio
         c = (s.command.replace("{tile_name}", name).replace("{tile}", str(tile_dir))
              .replace("{gen1}", gen1 or "<--gen1 NOT GIVEN>")
              .replace("{gen2}", gen2 or "<--gen2 NOT GIVEN>")
-             .replace("{dod}", dod or f"{tile_dir}/dod.npy"))
+             .replace("{dod}", dod or f"{tile_dir}/dod.npy")
+             .replace("{site}", site or f"<no Site registered for {name!r}; see sites.py>"))
         cmds.append((s, c, missing))
     return cmds
 
@@ -504,10 +531,7 @@ def main(argv=None):
     if a.check:
         st = state(a.tile)
         cs = code_state(a.tile)
-        base = [f for f in BASE_INPUTS if not os.path.exists(os.path.join(a.tile, f))]
         print(f"{a.tile}")
-        if base:
-            print(f"  BASE INPUTS ABSENT: {', '.join(base)} -- run difference_dem first")
         print(f"  {'step':<20} {'state':<12} detail")
         for s in order():
             k, d = st[s.name]
@@ -517,10 +541,6 @@ def main(argv=None):
                     os.path.basename(c) for c in cs[s.name])
             tag = s.name + (" *" if s.optional else "")
             print(f"  {tag:<20} {k:<12} {d}")
-        bc = base_code_state(a.tile)
-        if bc:
-            print(f"  {'(base inputs)':<20} {'CODE-STALE':<12} "
-                  f"dod/lod/z_after predate: {', '.join(os.path.basename(c) for c in bc)}")
         print("  * = optional. STALE = an output older than one of its own inputs.")
         print("  CODE-STALE = the SOURCE that produced it changed since. A code change "
               "invalidates every")
