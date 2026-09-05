@@ -440,6 +440,122 @@ def grid_reference(after_laz, bounds, grid, q, *, stream=True, after_ground="cla
         cloud=A, route="memory")
 
 
+def register_gen1(before_laz, bounds, res, *, ground_source="csf", csf_pdal=None,
+                  csf_cache=None, before_crs=None, correct_boresight=False,
+                  boresight_roll_mm_per_deg=None, swath_tie="intercept", verbose=True):
+    """Get the BEFORE (gen1) cloud into its own internally-consistent frame: classify the
+    ground, remove any instrumental boresight roll, and solve the swath network so the
+    flight lines agree with each other.
+
+    This is gen1-internal only. Nothing here looks at gen2 and nothing here sets an
+    absolute level -- the cross-epoch datum is apply_datum's job, and keeping the two
+    apart is what stops the gen1 tie absorbing a cross-epoch correction.
+
+    Returns a dict:
+
+        x, y, z        the ALIGNED point coordinates (per-swath dx,dy,dz applied)
+        ground         boolean, which points are the ground selection
+        source_id      per-point flight line
+        gps_time       per-point time, for the along-track drift fit
+        swath_corr     {swath: (dx, dy, dz)} as solved
+        swath_cov      per-swath coverage on this grid
+        zero_line      the swath defined as zero when the network was solved
+        boresight      the roll constant removed, or None
+
+    THE ZERO LINE IS NOT ARBITRARY IN ITS EFFECT. align_swaths solves a FREE NETWORK and
+    only then subtracts the reference swath's value, so this choice does not touch any
+    swath-to-swath DIFFERENCE -- but it DOES set the absolute level the whole mosaic
+    inherits. Measured on elbaext, the six per-swath dz span 44.60 mm, so re-gauging on a
+    different line moves every elevation by up to that much. It is returned, and recorded
+    in corrections.json, so two products can be related.
+    """
+    # --- before: (CSF ground classification) -> align -> tie -> drift ---
+    # ground_source="csf" (default) runs PDAL CSF on the before cloud first for a
+    # cleaner, more general bare-earth (removes structures/understory); "last_return"
+    # skips it and uses the raw last-return heuristic. CSF is slow (min/tile).
+    # CSF ground is classified ONCE and kept: it is deterministic and slow (~min/tile),
+    # and every downstream step (move/tilt/drift/grid) leaves it unchanged. With
+    # csf_cache set, the raw classified cloud is archived there and reused on later runs
+    # (move + tilt are applied to it below); without it, a temp is used and deleted.
+    import os as _os, shutil as _sh
+    _csf_tmp = None
+    if ground_source == "csf":
+        if csf_cache and _os.path.exists(csf_cache):
+            before_laz = csf_cache                       # reuse the archived raw CSF
+        else:
+            _tmp = classify_ground_csf(before_laz, pdal=csf_pdal)
+            if csf_cache:                                # archive the raw CSF, keep it
+                _os.makedirs(_os.path.dirname(csf_cache) or ".", exist_ok=True)
+                _sh.move(_tmp, csf_cache)
+                _sh.rmtree(_os.path.dirname(_tmp), ignore_errors=True)
+                before_laz = csf_cache
+            else:
+                _csf_tmp = _tmp; before_laz = _tmp
+    f = laspy.read(str(before_laz))
+    x8 = np.asarray(f.x); y8 = np.asarray(f.y); z8 = np.asarray(f.z)
+    ps8 = np.asarray(f.point_source_id); gt8 = np.asarray(f.gps_time)
+    rn8 = np.asarray(f.return_number); nr8 = np.asarray(f.number_of_returns)
+    cl8 = np.asarray(f.classification)
+    try:                                             # LAS 1.4 scan angle is stored in 0.006 deg
+        sa8 = np.asarray(f.scan_angle).astype(float) * 0.006
+    except Exception:                                # older formats / missing -> no boresight term
+        sa8 = np.zeros_like(z8)
+    # before-epoch ground POINT selection. "csf"/"last_return" -> last returns of the
+    # (CSF-classified or raw) cloud; "class2" -> the before survey's OWN ASPRS ground
+    # class (a test path: gen1's 2008 vendor classification, which the CSF default was
+    # chosen to replace -- see read_after_ground note).
+    be = (cl8 == 2) if ground_source == "class2" else (rn8 == nr8)
+    if _csf_tmp is not None:
+        import shutil, os
+        shutil.rmtree(os.path.dirname(_csf_tmp), ignore_errors=True)
+    pc = io.PointCloud(x8, y8, z8, ps8, cl8,
+                       np.zeros_like(z8), sa8, before_crs)
+    # INSTRUMENTAL boresight roll (opt-in), removed per point BEFORE the empirical swath
+    # alignment. Calibrated from gen1 self-overlap (gen2-free), so it is decoupled from the
+    # gen1-vs-gen2 lateral tie and needs no iteration.
+    boresight_used = None
+    if correct_boresight:
+        boresight_used = (boresight_roll_mm_per_deg if boresight_roll_mm_per_deg is not None
+                          else coreg.estimate_boresight_roll(pc, res).b)
+        z8 = z8 - boresight_used * sa8 / 1000.0      # mm/deg * deg -> mm -> m
+        pc = io.PointCloud(x8, y8, z8, ps8, cl8, np.zeros_like(z8), sa8, before_crs)
+    # ZERO LINE. align_swaths solves a FREE NETWORK and only then subtracts the reference
+    # swath's value, so this choice does not touch any swath-to-swath DIFFERENCE -- but it
+    # DOES set the absolute level the whole mosaic inherits, because that level becomes the
+    # reference line's own error. Measured on elbaext: the six per-swath dz span 44.60 mm
+    # (-22.60 .. +22.00), so re-gauging on a different line moves every elevation by up to
+    # that much. The product's absolute level therefore DEPENDS ON THE ZERO LINE until a
+    # ground-control datum constant is applied; see `zero_line` and
+    # `absolute_datum_mm` in corrections.json, and ground_control/apply_datum.py.
+    # The ZERO LINE: the flight line defined as zero when this tile's swath network
+    # is solved. Arbitrary and per-tile; it sets only the level the tile inherits,
+    # and an absolute datum cancels it exactly. Recorded so two products can be
+    # related: see scripts/backfill_zero_line.py.
+    zero_line = int(ps8.min())
+    corr, _, _ = coreg.align_swaths(pc, ref=zero_line, tie=swath_tie)
+    # What each flight line uniquely contributes ON THIS GRID. A swath already covered by
+    # another adds overlap but no new information, so whether its constant is right cannot
+    # move that cell -- which is how Battle Creek shipped 1102 dz=+0.0137 m from a tie no
+    # estimator produced, and it mattered on ONE cell by 4.9 mm. Recorded, not acted on:
+    # exclusivity is grid-dependent and a swath can be a shared cell's MAJORITY, so the cut
+    # is a judgement about how far a product may move. See analysis/SWATH_TIE_DEGENERACY.md.
+    swath_cov = coreg.swath_coverage(x8, y8, ps8, bounds, res)
+    _no_new = sorted(k for k, v in swath_cov.items() if v["exclusive"] == 0)
+    if _no_new and verbose:
+        print(f"  swaths adding NO exclusive coverage at {res} m: "
+              + ", ".join(f"{k} (max share {swath_cov[k]['max_share']*100:.1f}%, "
+                          f"{swath_cov[k]['cells']} cells)" for k in _no_new)
+              + " -- their alignment constants are recorded but cannot be checked against "
+                "any cell they alone determine", flush=True)
+    xc, yc, zc = x8.copy(), y8.copy(), z8.copy()
+    for s, (dx, dy, dz) in corr.items():
+        m = ps8 == s; xc[m] += dx; yc[m] += dy; zc[m] += dz
+
+    return dict(x=xc, y=yc, z=zc, ground=be, source_id=ps8, gps_time=gt8,
+                swath_corr=corr, swath_cov=swath_cov, zero_line=zero_line,
+                boresight=boresight_used)
+
+
 def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
                    gen2_curve=None, gen2_epoch="gen2_2021_control", valley_top_m=None,
                    tile_dir=None, curv_max=0.005,
@@ -643,87 +759,18 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
     else:
         Zref = Z21
 
-    # --- before: (CSF ground classification) -> align -> tie -> drift ---
-    # ground_source="csf" (default) runs PDAL CSF on the before cloud first for a
-    # cleaner, more general bare-earth (removes structures/understory); "last_return"
-    # skips it and uses the raw last-return heuristic. CSF is slow (min/tile).
-    # CSF ground is classified ONCE and kept: it is deterministic and slow (~min/tile),
-    # and every downstream step (move/tilt/drift/grid) leaves it unchanged. With
-    # csf_cache set, the raw classified cloud is archived there and reused on later runs
-    # (move + tilt are applied to it below); without it, a temp is used and deleted.
-    import os as _os, shutil as _sh
-    _csf_tmp = None
-    if ground_source == "csf":
-        if csf_cache and _os.path.exists(csf_cache):
-            before_laz = csf_cache                       # reuse the archived raw CSF
-        else:
-            _tmp = classify_ground_csf(before_laz, pdal=csf_pdal)
-            if csf_cache:                                # archive the raw CSF, keep it
-                _os.makedirs(_os.path.dirname(csf_cache) or ".", exist_ok=True)
-                _sh.move(_tmp, csf_cache)
-                _sh.rmtree(_os.path.dirname(_tmp), ignore_errors=True)
-                before_laz = csf_cache
-            else:
-                _csf_tmp = _tmp; before_laz = _tmp
-    f = laspy.read(str(before_laz))
-    x8 = np.asarray(f.x); y8 = np.asarray(f.y); z8 = np.asarray(f.z)
-    ps8 = np.asarray(f.point_source_id); gt8 = np.asarray(f.gps_time)
-    rn8 = np.asarray(f.return_number); nr8 = np.asarray(f.number_of_returns)
-    cl8 = np.asarray(f.classification)
-    try:                                             # LAS 1.4 scan angle is stored in 0.006 deg
-        sa8 = np.asarray(f.scan_angle).astype(float) * 0.006
-    except Exception:                                # older formats / missing -> no boresight term
-        sa8 = np.zeros_like(z8)
-    # before-epoch ground POINT selection. "csf"/"last_return" -> last returns of the
-    # (CSF-classified or raw) cloud; "class2" -> the before survey's OWN ASPRS ground
-    # class (a test path: gen1's 2008 vendor classification, which the CSF default was
-    # chosen to replace -- see read_after_ground note).
-    be = (cl8 == 2) if ground_source == "class2" else (rn8 == nr8)
-    if _csf_tmp is not None:
-        import shutil, os
-        shutil.rmtree(os.path.dirname(_csf_tmp), ignore_errors=True)
-    pc = io.PointCloud(x8, y8, z8, ps8, cl8,
-                       np.zeros_like(z8), sa8, before_crs)
-    # INSTRUMENTAL boresight roll (opt-in), removed per point BEFORE the empirical swath
-    # alignment. Calibrated from gen1 self-overlap (gen2-free), so it is decoupled from the
-    # gen1-vs-gen2 lateral tie and needs no iteration.
-    boresight_used = None
-    if correct_boresight:
-        boresight_used = (boresight_roll_mm_per_deg if boresight_roll_mm_per_deg is not None
-                          else coreg.estimate_boresight_roll(pc, res).b)
-        z8 = z8 - boresight_used * sa8 / 1000.0      # mm/deg * deg -> mm -> m
-        pc = io.PointCloud(x8, y8, z8, ps8, cl8, np.zeros_like(z8), sa8, before_crs)
-    # ZERO LINE. align_swaths solves a FREE NETWORK and only then subtracts the reference
-    # swath's value, so this choice does not touch any swath-to-swath DIFFERENCE -- but it
-    # DOES set the absolute level the whole mosaic inherits, because that level becomes the
-    # reference line's own error. Measured on elbaext: the six per-swath dz span 44.60 mm
-    # (-22.60 .. +22.00), so re-gauging on a different line moves every elevation by up to
-    # that much. The product's absolute level therefore DEPENDS ON THE ZERO LINE until a
-    # ground-control datum constant is applied; see `zero_line` and
-    # `absolute_datum_mm` in corrections.json, and ground_control/apply_datum.py.
-    # The ZERO LINE: the flight line defined as zero when this tile's swath network
-    # is solved. Arbitrary and per-tile; it sets only the level the tile inherits,
-    # and an absolute datum cancels it exactly. Recorded so two products can be
-    # related: see scripts/backfill_zero_line.py.
-    zero_line = int(ps8.min())
-    corr, _, _ = coreg.align_swaths(pc, ref=zero_line, tie=swath_tie)
-    # What each flight line uniquely contributes ON THIS GRID. A swath already covered by
-    # another adds overlap but no new information, so whether its constant is right cannot
-    # move that cell -- which is how Battle Creek shipped 1102 dz=+0.0137 m from a tie no
-    # estimator produced, and it mattered on ONE cell by 4.9 mm. Recorded, not acted on:
-    # exclusivity is grid-dependent and a swath can be a shared cell's MAJORITY, so the cut
-    # is a judgement about how far a product may move. See analysis/SWATH_TIE_DEGENERACY.md.
-    swath_cov = coreg.swath_coverage(x8, y8, ps8, bounds, res)
-    _no_new = sorted(k for k, v in swath_cov.items() if v["exclusive"] == 0)
-    if _no_new:
-        print(f"  swaths adding NO exclusive coverage at {res} m: "
-              + ", ".join(f"{k} (max share {swath_cov[k]['max_share']*100:.1f}%, "
-                          f"{swath_cov[k]['cells']} cells)" for k in _no_new)
-              + " -- their alignment constants are recorded but cannot be checked against "
-                "any cell they alone determine", flush=True)
-    xc, yc, zc = x8.copy(), y8.copy(), z8.copy()
-    for s, (dx, dy, dz) in corr.items():
-        m = ps8 == s; xc[m] += dx; yc[m] += dy; zc[m] += dz
+    # --- before (gen1): CSF ground -> boresight -> swath network -------------------
+    # register_gen1 is gen1-INTERNAL: it looks at no gen2 data and sets no absolute
+    # level, which is what stops the gen1 tie absorbing a cross-epoch correction.
+    _reg = register_gen1(before_laz, bounds, res, ground_source=ground_source,
+                         csf_pdal=csf_pdal, csf_cache=csf_cache, before_crs=before_crs,
+                         correct_boresight=correct_boresight,
+                         boresight_roll_mm_per_deg=boresight_roll_mm_per_deg,
+                         swath_tie=swath_tie)
+    xc = _reg["x"]; yc = _reg["y"]; zc = _reg["z"]; be = _reg["ground"]
+    ps8 = _reg["source_id"]; gt8 = _reg["gps_time"]
+    corr = _reg["swath_corr"]; swath_cov = _reg["swath_cov"]
+    zero_line = _reg["zero_line"]; boresight_used = _reg["boresight"]
 
     # cross-epoch vertical datum, in the principled order: get x,y right, then z.
     # (1) HORIZONTAL: one constant Nuth & Kaeaeb lateral shift from the full topography
