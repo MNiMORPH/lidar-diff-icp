@@ -394,6 +394,52 @@ def _stream_ground(path, bounds, res, nx, ny, q, *, plane=None, chunk=8_000_000,
     return g.reshape(ny, nx), spread.reshape(ny, nx), cnt.reshape(ny, nx)
 
 
+def grid_reference(after_laz, bounds, grid, q, *, stream=True, after_ground="class2",
+                   csf_pdal=None, verbose=True):
+    """Grid the AFTER (gen2) cloud: the reference ground and the per-cell statistics that
+    every later stage is measured against.
+
+    Returns a dict, not four bare arrays, because the caller needs to know which route
+    produced them:
+
+        ground   the per-cell ground elevation at quantile `q`               (ny, nx)
+        spread   the within-cell standard deviation of the ground returns    (ny, nx)
+        count    how many ground returns the cell had                        (ny, nx)
+        rough    plane-fit roughness -- the residual to a fitted plane, so a
+                 SLOPE does not read as roughness the way `spread` does      (ny, nx)
+        cloud    the loaded points, or None in streaming mode
+        route    "stream" or "memory"
+
+    `spread` and `rough` are two different numbers and are not interchangeable. `spread`
+    is taken about the cell's own horizontal level, so on a slope it counts the slope
+    itself; `rough` is the residual to a fitted plane and does not. `spread` is what the
+    ground-q curve is indexed by (it is the statistic the curve was calibrated on at the
+    marks); `rough` is what feeds the LoD's standard-error term.
+
+    stream=True grids the (dense) after cloud in chunks, O(cells) RAM, which is what makes
+    a statewide run possible; the in-memory route holds the whole cloud and exists for the
+    estimators that need random access to it. The streaming route CANNOT return the cloud,
+    which is why `ground=plane`/`poly2` refuse under stream=True further down.
+    """
+    X0, Y0, res, nx, ny = grid
+    if stream:
+        Z21, s21, n21 = _stream_ground(after_laz, bounds, res, nx, ny, q,
+                                       after_ground=after_ground)
+        r21 = _stream_roughness(after_laz, bounds, res, nx, ny, after_ground=after_ground)
+        return dict(ground=Z21, spread=s21, count=n21, rough=r21, cloud=None,
+                    route="stream")
+
+    A = read_after_ground(after_laz, bounds, mode=after_ground, csf_pdal=csf_pdal)
+    if verbose:
+        print(f"  gen2 ground: {A['ground_mode']} ({A['x'].size} points)", flush=True)
+    return dict(
+        ground=groundest.cellstat(A["x"], A["y"], A["z"], "ground", grid, q),
+        spread=groundest.cellstat(A["x"], A["y"], A["z"], "spread", grid, q),
+        count=groundest.cellstat(A["x"], A["y"], A["z"], "count", grid, q),
+        rough=cell_plane_roughness(A["x"], A["y"], A["z"], X0, Y0, res, nx, ny),
+        cloud=A, route="memory")
+
+
 def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
                    gen2_curve=None, gen2_epoch="gen2_2021_control", valley_top_m=None,
                    tile_dir=None, curv_max=0.005,
@@ -553,20 +599,12 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
                                   _GQ_SCALAR if q is None else q)
 
     # --- after (reference) ground + within-cell spread/count ---
-    # stream=True grids the (dense) after cloud in chunks (O(cells) RAM) for
-    # statewide runs; else load it in memory. A stays None in streaming mode.
-    A = None
-    if stream:
-        Z21, s21, n21 = _stream_ground(after_laz, bounds, res, nx, ny, _GQ_SCALAR,
-                                       after_ground=after_ground)
-        r21 = _stream_roughness(after_laz, bounds, res, nx, ny, after_ground=after_ground)
-    else:
-        A = read_after_ground(after_laz, bounds, mode=after_ground, csf_pdal=csf_pdal)
-        print(f"  gen2 ground: {A['ground_mode']} ({A['x'].size} points)", flush=True)
-        Z21 = cellstat(A["x"], A["y"], A["z"], "ground")
-        s21 = cellstat(A["x"], A["y"], A["z"], "spread")
-        n21 = cellstat(A["x"], A["y"], A["z"], "count")
-        r21 = cell_plane_roughness(A["x"], A["y"], A["z"], X0, Y0, res, nx, ny)
+    # grid_reference says which of `spread` and `rough` means what, and why the streaming
+    # route cannot hand back the cloud. A stays None in streaming mode.
+    _ref = grid_reference(after_laz, bounds, _grid, _GQ_SCALAR, stream=stream,
+                          after_ground=after_ground, csf_pdal=csf_pdal)
+    Z21 = _ref["ground"]; s21 = _ref["spread"]; n21 = _ref["count"]; r21 = _ref["rough"]
+    A = _ref["cloud"]
 
     # terrain masks from the reference ground. DEFINED IN terrain.py, NOT here: this block
     # being inline is exactly why five other scripts re-derived it by hand, and why only the
