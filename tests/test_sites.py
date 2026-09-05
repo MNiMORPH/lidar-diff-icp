@@ -37,3 +37,17 @@ def test_the_record_is_immutable():
 def test_paths_derive_from_the_name_rather_than_being_repeated():
     s = Site("demo", "a.laz", "b.laz", "histogram")
     assert s.tile_dir.endswith("demo") and s.csf_cache.endswith("demo.las")
+
+
+def test_every_site_streams_so_the_calibrated_route_is_available_everywhere():
+    """ground_q="calibrated" REFUSES on the in-memory path -- it grids with pandas
+    groupby.quantile, which takes one quantile for all cells, so a per-cell percentile
+    cannot be applied there. A site with stream=False is therefore a site the vegetation
+    correction cannot run on, and a six-site run raises on it. battlecreek was that site
+    until 2026-09-05.
+
+    If a future site genuinely needs the in-memory path, this test should be changed
+    deliberately and the site named as correction-incapable -- not left to surface as a
+    refusal in the middle of a run."""
+    from lidar_diff_icp.sites import SITES
+    assert [n for n, s in SITES.items() if not s.stream] == []

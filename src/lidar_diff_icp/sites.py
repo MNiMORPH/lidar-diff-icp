@@ -74,9 +74,19 @@ SITES: dict[str, Site] = {
     # battlecreek's histogram cut removes 75.2% of the tile: a BUILT ENVIRONMENT, where
     # graded lots set the modal elevation rather than a valley floor. It needs a stated
     # elevation or a fraction guard; the value below is not trusted.
+    #
+    # stream=True since 2026-09-05 (Andy: "unblock"). It was False because the tile is the
+    # smallest here -- 615 x 870 m, 8.4 M points -- and fits in memory. But the in-memory
+    # path grids with pandas groupby.quantile, which takes ONE quantile for all cells, so
+    # ground_q="calibrated" refuses on it: battlecreek alone could not run the vegetation
+    # correction, and a six-site run raised there. Streaming costs nothing at this size.
+    # EXPECT ITS PRODUCTS TO MOVE SLIGHTLY on the next rebuild: the streaming route bins the
+    # column, so `spread` and the ground grid differ from the exact in-memory computation by
+    # under one bin. That is a route change, not an error, and it makes battlecreek
+    # comparable with the other five, which have always streamed.
     "battlecreek": Site("battlecreek", "data/before_battlecreek/4342-03-32_b_a.laz",
                         "data/after_battlecreek/battlecreek_3dep.laz", "histogram",
-                        (498750.0, 4975136.0, 499365.0, 4976006.0), stream=False),
+                        (498750.0, 4975136.0, 499365.0, 4976006.0)),
 }
 
 
