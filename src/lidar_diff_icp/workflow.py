@@ -163,11 +163,12 @@ STEPS: tuple[Step, ...] = (
                    "kappa_L30.npy", "ridgecrest_pixels.npz", "ridgecrest_pixels.csv"),
          requires=("z_after.npy", "slope.npy", "ridge_mask.npy"),
          command=f"{PY} analysis/ridgelines/convexity_dod_landcover.py --tile {{tile_name}} "
-                 f"--dod {{dod}} --without penetration",
+                 f"--dod {{dod}} --without cover",
          note="floodplain_mask gates reference_cells, so this comes before any q2 work. "
-              "--without penetration is now permanent, not a temporary state: the "
-              "penetration layer was RETIRED on 2026-09-05. The forest/open crest split it "
-              "once offered is canopy_cover_pfs's job."),
+              "Step 4 (the forest/open crest split) now comes from the PyForestScan masks "
+              "forest_pfs/open_pfs, not the retired penetration layer; it is skipped here "
+              "because pfs_cover is opt-in per site. Drop --without cover at a site where "
+              "the cover layer has been built."),
     Step("curvature",
          produces=("curv_xx.npy", "curv_yy.npy", "curv_laplacian.npy"),
          requires=("z_after.npy", "crest_mask.npy"),

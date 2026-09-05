@@ -10,11 +10,17 @@ A CREST cell = divide & convex (kappa>kmin) & near-crest (|b|<bmax) & on a topog
 Furrow-immune: tillage furrows are flat at +/-20 m -> kappa~0 -> rejected.
 
 Step 3 (DoD): a convex crest sheds -> real change <= 0, so any POSITIVE DoD is an artifact.
-Step 4 (land cover): forest (pen<0.25) vs open (pen>=0.45) crests, matched on slope.
+Step 4 (land cover): forest vs open crests, matched on slope, from the PyForestScan masks
+forest_pfs.npy / open_pfs.npy (cover >= 0.5 and <= 0.1, forest_metrics_pfs.py:200-201).
 
 Grid geometry comes from the tile's own corrections.json, so nothing here is tied to Elba.
-`penetration.npy` is REQUIRED for step 4 unless you state `--without penetration`, in which
-case steps 2-3 and the masks are still written and step 4 is skipped and said to be skipped.
+The cover masks are REQUIRED for step 4 unless you state `--without cover`, in which case
+steps 2-3 and the masks are still written and step 4 is skipped and said to be skipped.
+
+Step 4 used `penetration.npy` (forest pen<0.25, open pen>=0.45) until 2026-09-05. That layer
+is RETIRED: it was geometry-confounded -- ground-return fraction correlates -0.84 with scan
+angle -- so it never measured cover. canopy_cover_pfs is the cover measure, computed
+identically on every tile, and its forest/open masks carry a stated cut.
 Steps 2-3 need no cover layer at all, so `floodplain_mask.npy` and `crest_mask.npy` are
 produced for any tile with z_after + slope + ridge_mask.
 
@@ -38,7 +44,7 @@ _ap.add_argument("--dod", required=True,
                       "of the form <tile>/dod_*.npy reproduces it. Name the grid you mean.")
 _ap.add_argument("--without", default="",
                  help="comma-separated optional layers to run without, stated explicitly; "
-                      "only 'penetration' is optional here (it drives step 4 alone)")
+                      "only 'cover' is optional here (it drives step 4 alone)")
 _ap.add_argument("--valley-top", dest="valley_top", default="histogram",
                  help="valley top for floodplain_mask.npy: an elevation in metres, "
                       "'registry', or 'histogram'. Never chosen for you -- this file is the "
@@ -48,7 +54,7 @@ ARGS = _ap.parse_args()
 
 TILE = ARGS.tile
 D = f"data/derived/{TILE}"
-OPTIONAL_STRATA = ("penetration",)
+OPTIONAL_STRATA = ("cover",)
 WITHOUT = {t.strip() for t in ARGS.without.split(",") if t.strip()}
 _bad = WITHOUT - set(OPTIONAL_STRATA)
 if _bad:
@@ -68,24 +74,30 @@ def _grid(tile):                                    # (X0,Y0,RES) from the tile'
                      f"corrections.json exists under data/derived/{tile}")
 
 
-def _opt(name):
-    """REQUIRED unless named in --without. Missing and unstated -> refuse, because a layer
-    that is absent must not read as one that was measured and came back empty."""
-    if name in WITHOUT:
-        return None
-    p = f"{D}/{name}.npy"
-    if not os.path.exists(p):
-        raise SystemExit(f"{p} is missing. It is required for step 4 (the forest/open crest "
-                         f"split). Produce it, or state that you are running without it: "
-                         f"--without {name}")
-    return np.load(p)
+def _cover():
+    """The forest and open masks for step 4, or (None, None) if run without them.
+
+    REQUIRED unless "cover" is named in --without. Missing and unstated -> refuse, because a
+    layer that is absent must not read as one that was measured and came back empty.
+    """
+    if "cover" in WITHOUT:
+        return None, None
+    out = []
+    for name in ("forest_pfs", "open_pfs"):
+        p = f"{D}/{name}.npy"
+        if not os.path.exists(p):
+            raise SystemExit(f"{p} is missing. It is required for step 4 (the forest/open "
+                             f"crest split); run the pfs_cover step for this tile, or state "
+                             f"that you are running without it: --without cover")
+        out.append(np.load(p).astype(bool))
+    return out[0], out[1]
 
 
 X0, Y0, RES = _grid(TILE)
 z = np.load(f"{D}/z_after.npy")
 dod = np.load(ARGS.dod)
 slope = np.load(f"{D}/slope.npy")
-pen = _opt("penetration")
+forest_m, open_m = _cover()
 ridge = np.load(f"{D}/ridge_mask.npy")
 if dod.shape != z.shape:
     raise SystemExit(f"--dod {ARGS.dod} is {dod.shape} but {TILE}'s grid is {z.shape}; "
@@ -176,14 +188,12 @@ cr, cco = np.where(crest)
 rec = dict(row=cr, col=cco, E=X0+(cco+0.5)*RES, N=Y0+(cr+0.5)*RES,
            slope_deg=slope[cr, cco], curvature_kappa=kappa_g[cr, cco], cross_slope=b_g[cr, cco],
            dod_m=dod[cr, cco])
-# column ORDER is preserved from the single-tile version; the two cover columns are simply
-# absent when penetration is, rather than present and filled with a stand-in value
-if pen is not None:
-    rec["penetration"] = pen[cr, cco]
+# the landcover column is simply ABSENT when the cover masks are, rather than present and
+# filled with a stand-in value
 rec["tpi"] = tpi_large[cr, cco]
-if pen is not None:
-    rec["landcover"] = np.where(pen[cr, cco] < 0.25, "forest",
-                                np.where(pen[cr, cco] >= 0.45, "open", "mixed"))
+if forest_m is not None:
+    rec["landcover"] = np.where(forest_m[cr, cco], "forest",
+                                np.where(open_m[cr, cco], "open", "mixed"))
 np.savez(f"{D}/ridgecrest_pixels.npz", **rec)
 import csv
 with open(f"{D}/ridgecrest_pixels.csv", "w", newline="") as fh:
@@ -206,13 +216,14 @@ for lo,hi in [(0,3),(3,6),(6,10),(10,15),(15,90)]:
     if m.any(): print(f"    {lo:>2}-{hi:<2} deg: n={m.sum():>4}  medDoD={np.median(dod[m]*1000):+6.1f} mm")
 
 # ---- STEP 4: DoD on crests vs land cover ------------------------------------------------
-if pen is None:
-    print(f"\n=== STEP 4 SKIPPED: no penetration layer, stated via --without penetration ===")
+if forest_m is None:
+    print(f"\n=== STEP 4 SKIPPED: no cover masks, stated via --without cover ===")
     print("  the forest/open crest split is NOT reported for this tile; it is absent, not null")
 else:
-    print(f"\n=== STEP 4: convex-crest DoD by land cover (forest vs open), matched on slope ===")
+    print(f"\n=== STEP 4: convex-crest DoD by land cover (forest_pfs vs open_pfs), "
+          f"matched on slope ===")
     print(f"{'slope':>8} | {'forest n':>8} {'forest mm':>9} | {'open n':>7} {'open mm':>8}")
-    forest = pen < 0.25; openc = pen >= 0.45
+    forest = forest_m; openc = open_m
     for lo,hi in [(0,3),(3,6),(6,10),(10,15)]:
         s = cm & (slope>=lo)&(slope<hi)
         fn = s & forest; on = s & openc

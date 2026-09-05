@@ -94,7 +94,13 @@ else:
           f"(run convexity_dod_landcover.py --tile {TILE} first)")
 
 # --- (2) diffusion K on agricultural (open) crests (needs crest + cover + DoD + dates) ---
-_missing = [n for n in ("crest_mask.npy", "penetration.npy") if not os.path.exists(f"{D}/{n}")]
+# The OPEN class comes from open_pfs.npy -- the repo's own PyForestScan mask, written by
+# the declared pfs_cover step at a stated cut (cover <= 0.1, forest_metrics_pfs.py:201),
+# identical on every tile. It replaces `penetration >= 0.45`, retired 2026-09-05: penetration
+# was geometry-confounded (ground-return fraction correlates -0.84 with scan angle), so it
+# never measured cover in the first place. No threshold is invented here -- if open_pfs.npy
+# is absent, Part 2 does not run.
+_missing = [n for n in ("crest_mask.npy", "open_pfs.npy") if not os.path.exists(f"{D}/{n}")]
 if ARGS.dod is None: _missing.append("--dod")
 if not ARGS.gen1_date or not ARGS.gen2_date: _missing.append("--gen1-date/--gen2-date")
 if _missing:
@@ -102,14 +108,14 @@ if _missing:
     print("  K is NOT reported for this tile; it is absent, not zero. The flight dates are "
           "per-acquisition and are never defaulted -- a wrong dt rescales K directly.")
     sys.exit(0)
-crest = np.load(f"{D}/crest_mask.npy"); pen = np.load(f"{D}/penetration.npy")
+crest = np.load(f"{D}/crest_mask.npy"); openg = np.load(f"{D}/open_pfs.npy").astype(bool)
 dod = np.load(ARGS.dod)
 _d1 = date.fromisoformat(ARGS.gen1_date); _d2 = date.fromisoformat(ARGS.gen2_date)
 dt_yr = (_d2 - _d1).days / 365.25                               # flight-date span
 dzdt = dod / dt_yr                                       # m/yr per cell
-ag = crest & (pen >= 0.45) & np.isfinite(dod)
+ag = crest & openg & np.isfinite(dod)
 xx = zxx[ag]; rate = dzdt[ag]; lp = lap[ag]
-print(f"\n=== diffusion on AGRICULTURAL crests (open, pen>=0.45): dz/dt = K d2z/dx2 ===")
+print(f"\n=== diffusion on AGRICULTURAL crests (open_pfs, cover<=0.1): dz/dt = K d2z/dx2 ===")
 print(f"  dt = {dt_yr:.2f} yr ({_d1} -> {_d2})   n = {ag.sum()} ag-crest cells")
 print(f"  median dz/dt = {np.median(rate)*1000:+.2f} mm/yr   median d2z/dx2 = {np.median(xx):+.4f} 1/m")
 

@@ -5,15 +5,22 @@ stratum), and (elba only) plot the SLOPE DEPENDENCY of the forest-floor elevatio
 
 Incidence reconstruction validated in incidence_angle.py (flat ground -> |scan angle|).
 Generalized over tiles: grid (origin/res) read from the tile's meta/corrections JSON; the
-old penetration/floodplain/core strata are REQUIRED unless you say otherwise. The incidence
-and d_mm math is identical across tiles. Writes data/derived/<tile>/gen1_csf_angles.npz.
+cover and floodplain strata are REQUIRED unless you say otherwise. The incidence and d_mm
+math is identical across tiles. Writes data/derived/<tile>/gen1_csf_angles.npz.
+
+The `stratum` column (1 forest, 2 farmland/open) came from `penetration.npy` until
+2026-09-05. That layer is RETIRED -- it correlates -0.84 with SCAN ANGLE, which made it
+unsafe as a stratum inside a beam-angle analysis, the exact use it had here. The column is
+now built from the PyForestScan masks forest_pfs/open_pfs, which this script already carried
+alongside it for cross-tile comparison. core_forest/core_open went with strata_core, whose
+two classes penetration defined.
 
 A MISSING STRATUM REFUSES; it is not silently substituted. These layers used to default to
 zeros when absent, which turns "this tile has no forest_core layer" into a stratum that
 reads as MEASURED AND EMPTY -- a table that looks like a finding of "no forest". Running
 without them is allowed and often right, but it has to be stated:
 
-    --without penetration,core_forest,core_open      run without those strata
+    --without forest_pfs,open_pfs                    run without the cover strata
     --without all                                    run with none of the optional strata
 
     env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/ridgelines/gen1_save_angles_slope.py \
@@ -52,8 +59,7 @@ if m.any(): Zf = Zf[tuple(distance_transform_edt(m, return_distances=False, retu
 gy, gx = np.gradient(Zf, RES); slope_deg = np.degrees(np.arctan(np.hypot(gx, gy)))
 gxf = gx.ravel(); gyf = gy.ravel(); nnorm = np.sqrt(gxf**2 + gyf**2 + 1.0); Zflat = Zf.ravel()
 
-OPTIONAL_STRATA = ("penetration", "floodplain_mask", "core_forest", "core_open",
-                   "forest_pfs", "open_pfs", "canopy_cover_pfs")
+OPTIONAL_STRATA = ("floodplain_mask", "forest_pfs", "open_pfs", "canopy_cover_pfs")
 _ABSENT = []
 WITHOUT = set()
 for _w in _wo_vals:
@@ -82,13 +88,10 @@ def _opt(name, default):
         _ABSENT.append(name)
         return default
     return np.load(p).ravel()
-g2pen = _opt("penetration", None)
 fld   = _opt("floodplain_mask", None); fld = fld.astype(bool) if fld is not None else None
-core  = _opt("core_forest", None); copen = _opt("core_open", None)
-# PyForestScan cover, present on EVERY tile -- the cover definition used for
-# cross-tile comparison (the penetration-derived core_* masks above are kept for
-# continuity but correlate -0.84 with scan angle, so they are unsafe as a stratum
-# inside a beam-angle analysis).
+# PyForestScan cover: the cover definition used for cross-tile comparison, and now the only
+# one. It replaced penetration, which correlates -0.84 with SCAN ANGLE and was therefore
+# unsafe as a stratum inside a beam-angle analysis -- the very thing this archive feeds.
 pfsf  = _opt("forest_pfs", None); pfso = _opt("open_pfs", None)
 pfsc  = _opt("canopy_cover_pfs", None)
 
@@ -116,17 +119,15 @@ slp = slope_deg.ravel()[cell]
 xc = X0 + ((cell % NX)+0.5)*RES; yc = Y0 + ((cell // NX)+0.5)*RES
 d = (z - (Zflat[cell] + gxf[cell]*(x-xc) + gyf[cell]*(y-yc))) * (1.0/nnorm[cell]) * 1000  # mm
 
-# stratum code: 1 forest, 2 farmland(open), 0 other. When penetration or the floodplain mask
-# is absent this used to be written as ALL ZEROS -- i.e. "every return is 'other'", a claim,
-# where the truth is "not computed". Same for the two core flags as ALL FALSE. Those arrays
-# are now OMITTED instead, so a consumer raises KeyError naming the key.
+# stratum code: 1 forest, 2 farmland(open), 0 other. When a cover mask or the floodplain
+# mask is absent this used to be written as ALL ZEROS -- i.e. "every return is 'other'", a
+# claim, where the truth is "not computed". The array is OMITTED instead, so a consumer
+# raises KeyError naming the key.
 strat = None
-if g2pen is not None and fld is not None:
+if pfsf is not None and pfso is not None and fld is not None:
     strat = np.zeros(len(x), np.int8)
-    strat[ing & ((g2pen[cell] < 0.25) & ~fld[cell])] = 1
-    strat[ing & ((g2pen[cell] >= 0.45) & ~fld[cell])] = 2
-cf = (core[cell] & ing) if core is not None else None
-co = (copen[cell] & ing) if copen is not None else None
+    strat[ing & (pfsf[cell].astype(bool) & ~fld[cell])] = 1
+    strat[ing & (pfso[cell].astype(bool) & ~fld[cell])] = 2
 # A boolean has no "unmeasured" value, so an ABSENT pfs mask must not be written as all
 # False -- that is a claim of "no forest here" where the truth is "not measured", the same
 # zero-fill defect as penetration.npy's 677 no-return cells. Absent masks are OMITTED from
@@ -138,13 +139,12 @@ _out = dict(
     in_grid=ing,
     canopy_cover_pfs=(np.where(ing, pfsc[cell], np.nan) if pfsc is not None
                       else np.full(len(x), np.nan)).astype(np.float32))
-for _k, _v in (("stratum", strat), ("core_forest", cf), ("core_open", co),
+for _k, _v in (("stratum", strat),
                ("pfs_forest", pfsf[cell].astype(bool) & ing if pfsf is not None else None),
                ("pfs_open", pfso[cell].astype(bool) & ing if pfso is not None else None)):
     if _v is not None:
         _out[_k] = _v
-_omitted = [k for k in ("stratum", "core_forest", "core_open", "pfs_forest", "pfs_open")
-            if k not in _out]
+_omitted = [k for k in ("stratum", "pfs_forest", "pfs_open") if k not in _out]
 if _ABSENT:
     print(f"  layers absent in this tile: {sorted(set(_ABSENT))}", flush=True)
 if _omitted:
@@ -152,8 +152,8 @@ if _omitted:
 np.savez_compressed(f"{D}/gen1_csf_angles.npz", **_out)
 print(f"saved {D}/gen1_csf_angles.npz  (n=%d returns, grid {NX}x{NY})" % len(x))
 
-# --- SLOPE DEPENDENCY plot (elba only; needs the penetration strata) ---
-if TILE == "elba_fulldensity" and g2pen is not None:
+# --- SLOPE DEPENDENCY plot (elba only; needs the cover strata) ---
+if TILE == "elba_fulldensity" and strat is not None:
     F = ing & (strat == 1); O = ing & (strat == 2)
     def bin_med(mask, xv, nb=10, lo=0, hi=40):
         e = np.linspace(lo, hi, nb+1); mx=[];my=[];mc=[]
