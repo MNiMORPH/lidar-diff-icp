@@ -651,6 +651,188 @@ def apply_datum(x, y, z, ground, Zref, ground_of, grid, bounds, *, tie="referenc
     return dict(x=xc, y=yc, z=zc, tie_info=tie_info, drift_curves=curves)
 
 
+def correct_reference(Zref, Z21, after_laz, curve, grid, *, verbose=True):
+    """THE OPTIONAL VEGETATION CORRECTION. Apply the calibrated per-cell ground percentile
+    to the gen2 reference surface, as a DELTA.
+
+    Returns ``(Zref_corrected, gq_grids)``; with ``curve=None`` it returns ``Zref``
+    unchanged and ``None``, which is the pipeline's default and is not a fallback.
+
+    This runs at the END, after the registration, and both facts are the method:
+
+    AFTER THE REGISTRATION, because the gen1 tie and drift are fitted against Zref. Hand
+    them a corrected gen2 surface and they absorb the correction's spatial pattern, which
+    IS vegetation. At elba the registration terms (d_mm_corr) were likewise fitted against
+    the UNCORRECTED z_after grid, with the correction applied afterwards.
+
+    AS A DELTA, because the correction and the registration live in different frames. The
+    curve is indexed by the class-2 spread about the gen2 grid's OWN local plane (the tile
+    analogue of the order-2 surface fitted through each control mark's box), while Zref is
+    a quantile of the residual to the smoothed REGIONAL plane. Differencing the corrected
+    ground against the median ground IN THE SAME FRAME cancels the frame exactly, leaving
+    the correction and nothing else. Replacing Zref outright would smuggle the
+    low_q-vs-slope_normal difference in alongside it.
+
+    A SECOND PASS over the cloud by necessity: the reference surface IS the q = 0.50 grid,
+    so it has to exist before the correction can be measured.
+
+    A DECLINED cell drops out of the DoD rather than passing through uncorrected -- a cell
+    that was never corrected must not end up looking corrected.
+    """
+    X0, Y0, res, nx, ny = grid
+    _GQ_CURVE = curve
+    # THE CALIBRATED VEGETATION CORRECTION, applied HERE and not earlier, for two reasons.
+    #
+    # AFTER THE REGISTRATION, because the gen1 tie and drift are fitted against Zref: hand
+    # them a corrected gen2 surface and they absorb the correction's spatial pattern, which
+    # is vegetation. At Elba the registration terms (d_mm_corr) were likewise fitted against
+    # the UNCORRECTED z_after grid and the correction applied afterwards.
+    #
+    # AS A DELTA, because the correction and the registration live in different frames --
+    # the curve is indexed by the class-2 spread about the gen2 grid's OWN local plane (the
+    # tile analogue of the order-2 surface fitted through each control mark's box), while
+    # Zref is a quantile of the residual to the smoothed REGIONAL plane. Differencing the
+    # corrected ground against the median ground IN THE SAME FRAME cancels the frame
+    # exactly, leaving the correction and nothing else. Replacing Zref outright would have
+    # smuggled the low_q-vs-slope_normal difference in alongside it.
+    #
+    # It is a SECOND PASS over the cloud by necessity: the reference surface IS the q = 0.50
+    # grid, so it has to exist before the correction can be measured. Same
+    # groundq.correct_gen2 that analysis/ridgelines/dod_cover_corrected.py calls; there is
+    # no second implementation.
+    if _GQ_CURVE is not None:
+        _surf = groundq.surface_from_grid(Z21, X0, Y0, res)
+        _gq = groundq.correct_gen2(after_laz, _GQ_CURVE, surf=_surf, chunk=8_000_000)
+        _nn = _surf["nnorm"].reshape(ny, nx)
+        _dv = (_gq["h2_mm"] - _gq["h2_median_mm"]).reshape(ny, nx) / 1000.0 * _nn
+        _declined = np.isfinite(Zref) & ~np.isfinite(_dv)
+        Zref = Zref + _dv
+        if verbose:
+            print(f"  calibrated gen2 ground: median correction "
+                  f"{np.nanmedian(_dv) * 1000:+.1f} mm, p10 {np.nanpercentile(_dv, 10) * 1000:+.1f}; "
+                  f"{int(np.sum(_dv < -0.001)):,} cells lowered; {int(_declined.sum()):,} cells "
+                  f"DECLINED (fewer than 20 class-2 returns) and drop out of the DoD rather than "
+                  f"pass through uncorrected", flush=True)
+        gq_grids = {"ground_q": _gq["q"].reshape(ny, nx),
+                    "class2_sd_mm": _gq["sd_mm"].reshape(ny, nx),
+                    "gen2_correction_m": _dv}
+    else:
+        gq_grids = None
+
+    return Zref, gq_grids
+
+
+def difference(Zref, x, y, z, ground, ground_of, stable_geom, grid, q, *,
+               robust_stable=False):
+    """The DoD itself, and the stable population it is reported on.
+
+    Grids the registered gen1 ground with the SAME estimator that produced Zref, differences
+    the two, and refines the geometric stable mask for REPORTING only.
+
+        dod            Zref - gen1 ground, metres, gen2 - gen1                (ny, nx)
+        gen1_ground    the gridded gen1 ground                                (ny, nx)
+        spread         within-cell SD of the gen1 ground returns              (ny, nx)
+        count          gen1 ground returns per cell                           (ny, nx)
+        rough          plane-fit roughness of the gen1 ground                 (ny, nx)
+        stable         the reporting stable mask (see below)                  (ny, nx)
+        sigma          NMAD of the DoD on that mask, metres
+        stable_clip_fraction   how much of the geometric mask the clip removed
+        stable_geom_n  the geometric mask's size before any clipping
+
+    `robust_stable` refines the mask by an iterative 3-NMAD sigma-clip of the DoD, so the
+    REPORTED error is stable-ground error rather than real change bleeding into it. The
+    corrections are already robust and are not refitted, so THE DoD SURFACE IS IDENTICAL
+    either way -- this changes what is reported, never what is measured.
+    """
+    X0, Y0, res, nx, ny = grid
+    xc, yc, zc, be = x, y, z, ground
+    Z08c = ground_of(xc[be], yc[be], zc[be])
+    s08 = groundest.cellstat(xc[be], yc[be], zc[be], "spread", grid, q)
+    n08 = groundest.cellstat(xc[be], yc[be], zc[be], "count", grid, q)
+    r08 = cell_plane_roughness(xc[be], yc[be], zc[be], X0, Y0, res, nx, ny)
+
+    dod = Zref - Z08c
+
+    # Reporting stable mask. The geometric `stable` admits real change where its
+    # heuristics fail (a floodplain wider than the elevation cut reads as flat-stable),
+    # which inflates sigma and the LoD calibration. Refine it by an iterative
+    # 3-NMAD sigma-clip of the DoD so the reported error is the true stable-ground
+    # error, not the change bleeding into it. Corrections are untouched (already
+    # robust), so the DoD surface is identical either way.
+    stable_rep = stable_geom & np.isfinite(dod)
+    stable_geom_n = int(stable_rep.sum())
+    if robust_stable:
+        for _ in range(8):
+            v = dod[stable_rep]
+            med = np.median(v); nm = 1.4826 * np.median(np.abs(v - med))
+            keep = stable_rep & (np.abs(dod - med) < 3.0 * max(nm, 1e-3))
+            if keep.sum() == stable_rep.sum():
+                break
+            stable_rep = keep
+    stable_clip_frac = (1.0 - stable_rep.sum() / stable_geom_n) if stable_geom_n else 0.0
+    r = dod[stable_rep]
+    sigma = float(1.4826 * np.median(np.abs(r - np.median(r))))
+
+    return dict(dod=dod, gen1_ground=Z08c, spread=s08, count=n08, rough=r08,
+                stable=stable_rep, sigma=sigma, stable_clip_fraction=stable_clip_frac,
+                stable_geom_n=stable_geom_n)
+
+
+def estimate_lod(dod, slope_deg, abs_curv, stable, *, rough_gen1, count_gen1,
+                 rough_gen2, count_gen2, spread_gen1=None, spread_gen2=None, verbose=True):
+    """The per-cell limit of detection, and the name of the method that produced it.
+
+    Returns ``(lod, lod_method)``. `lod_method` travels into corrections.json because the
+    three routes below are NOT interchangeable and a product must say which it got.
+
+    Three routes, in order of preference:
+      1. xdem heteroscedastic on (slope, curvature, standard error)
+      2. the same on (slope, curvature) alone, if the standard-error model is degenerate
+      3. a within-cell spread proxy -- relief-inflated on slopes, a fallback only
+    """
+    # LoD: calibrated heteroscedastic model (xdem/Hugonnet 2022) if available,
+    # else a within-cell spread proxy (relief-inflated on slopes -- fallback only).
+    # Standard-error LoD covariate: the cell ground-estimate's DoD standard error,
+    # combining the two DISTINCT pieces of within-cell information in the form the
+    # statistics dictate -- detrended ROUGHNESS (surface variability, the numerator)
+    # over ground-return DENSITY (sample size, the denominator): the per-epoch
+    # standard errors sqrt(roughness^2 / n) added in quadrature. Roughness and
+    # density are not redundant (Aguilar 2005; Wheaton 2010): one scales the error,
+    # the other damps only its sampling part. Using the combined SE keeps both while
+    # feeding xdem a single covariate (a 4th independent covariate fragments its N-D
+    # bin space and the Delaunay fit fails on small stable sets). Roughness is
+    # detrended (cell_plane_roughness), so this is the principled form of the old
+    # relief-inflated within-cell-spread proxy.
+    # SE^2 = SE08^2 + SE21^2. An UNMEASURABLE term is not a zero one: nan_to_num used to
+    # set a missing epoch's variance to 0, which is the most optimistic value available, and
+    # it landed precisely on the cells that deserve the widest limit -- cell_plane_roughness
+    # returns NaN where a cell holds fewer than min_n=6 ground points, so the zeroed term was
+    # assigned exactly where that epoch's sampling was thinnest. At elba that is 7,608 of
+    # 341,239 DoD-bearing cells (2.23%) on the gen1 side alone.
+    #
+    # Plain arithmetic propagates it correctly -- NaN in either term gives NaN -- so the
+    # right code is shorter than the wrong code. A cell whose error cannot be measured gets
+    # no detection limit, rather than an optimistic one.
+    stderr = np.sqrt(rough_gen1 ** 2 / np.maximum(count_gen1, 1.0)
+                     + rough_gen2 ** 2 / np.maximum(count_gen2, 1.0))
+    _no_se = int(np.sum(~np.isfinite(stderr) & np.isfinite(dod)))
+    if _no_se and verbose:
+        print(f"  {_no_se:,} DoD cells have no measurable standard error (one or both epochs "
+              f"below cell_plane_roughness min_n); they get NO LoD rather than an optimistic "
+              f"one", flush=True)
+    lod = heteroscedastic_lod(dod, slope_deg, abs_curv, stable, stderr=stderr)
+    lod_method = ("xdem heteroscedastic (slope,curv,standard-error[roughness/sqrt(density)]), "
+                  "calibrated on stable ground")
+    if lod is None:                                   # stderr model degenerate -> slope,curv only
+        lod = heteroscedastic_lod(dod, slope_deg, abs_curv, stable)
+        lod_method = "xdem heteroscedastic (slope,curv), calibrated on stable ground"
+    if lod is None:
+        lod = 1.96 * np.sqrt(np.nan_to_num(spread_gen1**2 / np.maximum(count_gen1, 1))
+                             + np.nan_to_num(spread_gen2**2 / np.maximum(count_gen2, 1)))
+
+    return lod, lod_method
+
+
 def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
                    gen2_curve=None, gen2_epoch="gen2_2021_control", valley_top_m=None,
                    tile_dir=None, curv_max=0.005,
@@ -880,108 +1062,22 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
     tie_info = _dat["tie_info"]; curves = _dat["drift_curves"]
 
     # --- final gridded ground DoD + per-cell LoD ---
-    Z08c = groundg(xc[be], yc[be], zc[be])
-    s08 = cellstat(xc[be], yc[be], zc[be], "spread")
-    n08 = cellstat(xc[be], yc[be], zc[be], "count")
-    r08 = cell_plane_roughness(xc[be], yc[be], zc[be], X0, Y0, res, nx, ny)
-    # THE CALIBRATED VEGETATION CORRECTION, applied HERE and not earlier, for two reasons.
-    #
-    # AFTER THE REGISTRATION, because the gen1 tie and drift are fitted against Zref: hand
-    # them a corrected gen2 surface and they absorb the correction's spatial pattern, which
-    # is vegetation. At Elba the registration terms (d_mm_corr) were likewise fitted against
-    # the UNCORRECTED z_after grid and the correction applied afterwards.
-    #
-    # AS A DELTA, because the correction and the registration live in different frames --
-    # the curve is indexed by the class-2 spread about the gen2 grid's OWN local plane (the
-    # tile analogue of the order-2 surface fitted through each control mark's box), while
-    # Zref is a quantile of the residual to the smoothed REGIONAL plane. Differencing the
-    # corrected ground against the median ground IN THE SAME FRAME cancels the frame
-    # exactly, leaving the correction and nothing else. Replacing Zref outright would have
-    # smuggled the low_q-vs-slope_normal difference in alongside it.
-    #
-    # It is a SECOND PASS over the cloud by necessity: the reference surface IS the q = 0.50
-    # grid, so it has to exist before the correction can be measured. Same
-    # groundq.correct_gen2 that analysis/ridgelines/dod_cover_corrected.py calls; there is
-    # no second implementation.
-    if _GQ_CURVE is not None:
-        _surf = groundq.surface_from_grid(Z21, X0, Y0, res)
-        _gq = groundq.correct_gen2(after_laz, _GQ_CURVE, surf=_surf, chunk=8_000_000)
-        _nn = _surf["nnorm"].reshape(ny, nx)
-        _dv = (_gq["h2_mm"] - _gq["h2_median_mm"]).reshape(ny, nx) / 1000.0 * _nn
-        _declined = np.isfinite(Zref) & ~np.isfinite(_dv)
-        Zref = Zref + _dv
-        print(f"  calibrated gen2 ground: median correction "
-              f"{np.nanmedian(_dv) * 1000:+.1f} mm, p10 {np.nanpercentile(_dv, 10) * 1000:+.1f}; "
-              f"{int(np.sum(_dv < -0.001)):,} cells lowered; {int(_declined.sum()):,} cells "
-              f"DECLINED (fewer than 20 class-2 returns) and drop out of the DoD rather than "
-              f"pass through uncorrected", flush=True)
-        gq_grids = {"ground_q": _gq["q"].reshape(ny, nx),
-                    "class2_sd_mm": _gq["sd_mm"].reshape(ny, nx),
-                    "gen2_correction_m": _dv}
-    else:
-        gq_grids = None
+    # the optional vegetation correction: a DELTA on the gen2 reference, applied only
+    # now so the gen1 tie and drift (fitted against the UNCORRECTED Zref) cannot absorb
+    # it. Returns Zref unchanged when no curve was named.
+    Zref, gq_grids = correct_reference(Zref, Z21, after_laz, _GQ_CURVE, _grid)
 
-    dod = Zref - Z08c
-    # Reporting stable mask. The geometric `stable` admits real change where its
-    # heuristics fail (a floodplain wider than the TPI window reads as flat-stable),
-    # which inflates sigma and the LoD calibration. Refine it by an iterative
-    # 3-NMAD sigma-clip of the DoD so the reported error is the true stable-ground
-    # error, not the change bleeding into it. Corrections are untouched (already
-    # robust), so the DoD surface is identical either way.
-    stable_rep = stable & np.isfinite(dod)
-    stable_geom_n = int(stable_rep.sum())
-    if robust_stable:
-        for _ in range(8):
-            v = dod[stable_rep]
-            med = np.median(v); nm = 1.4826 * np.median(np.abs(v - med))
-            keep = stable_rep & (np.abs(dod - med) < 3.0 * max(nm, 1e-3))
-            if keep.sum() == stable_rep.sum():
-                break
-            stable_rep = keep
-    stable_clip_frac = (1.0 - stable_rep.sum() / stable_geom_n) if stable_geom_n else 0.0
-    r = dod[stable_rep]
-    sigma = float(1.4826 * np.median(np.abs(r - np.median(r))))
-    # LoD: calibrated heteroscedastic model (xdem/Hugonnet 2022) if available,
-    # else a within-cell spread proxy (relief-inflated on slopes -- fallback only).
-    abs_curv = _tm["abs_curv"]        # from terrain.terrain_masks; sigma 1 cell, not 5
-    # Standard-error LoD covariate: the cell ground-estimate's DoD standard error,
-    # combining the two DISTINCT pieces of within-cell information in the form the
-    # statistics dictate -- detrended ROUGHNESS (surface variability, the numerator)
-    # over ground-return DENSITY (sample size, the denominator): the per-epoch
-    # standard errors sqrt(roughness^2 / n) added in quadrature. Roughness and
-    # density are not redundant (Aguilar 2005; Wheaton 2010): one scales the error,
-    # the other damps only its sampling part. Using the combined SE keeps both while
-    # feeding xdem a single covariate (a 4th independent covariate fragments its N-D
-    # bin space and the Delaunay fit fails on small stable sets). Roughness is
-    # detrended (cell_plane_roughness), so this is the principled form of the old
-    # relief-inflated within-cell-spread proxy.
-    # SE^2 = SE08^2 + SE21^2. An UNMEASURABLE term is not a zero one: nan_to_num used to
-    # set a missing epoch's variance to 0, which is the most optimistic value available, and
-    # it landed precisely on the cells that deserve the widest limit -- cell_plane_roughness
-    # returns NaN where a cell holds fewer than min_n=6 ground points, so the zeroed term was
-    # assigned exactly where that epoch's sampling was thinnest. At elba that is 7,608 of
-    # 341,239 DoD-bearing cells (2.23%) on the gen1 side alone.
-    #
-    # Plain arithmetic propagates it correctly -- NaN in either term gives NaN -- so the
-    # right code is shorter than the wrong code. A cell whose error cannot be measured gets
-    # no detection limit, rather than an optimistic one.
-    stderr = np.sqrt(r08 ** 2 / np.maximum(n08, 1.0)
-                     + r21 ** 2 / np.maximum(n21, 1.0))
-    _no_se = int(np.sum(~np.isfinite(stderr) & np.isfinite(dod)))
-    if _no_se:
-        print(f"  {_no_se:,} DoD cells have no measurable standard error (one or both epochs "
-              f"below cell_plane_roughness min_n); they get NO LoD rather than an optimistic "
-              f"one", flush=True)
-    lod = heteroscedastic_lod(dod, sdeg, abs_curv, stable_rep, stderr=stderr)
-    lod_method = ("xdem heteroscedastic (slope,curv,standard-error[roughness/sqrt(density)]), "
-                  "calibrated on stable ground")
-    if lod is None:                                   # stderr model degenerate -> slope,curv only
-        lod = heteroscedastic_lod(dod, sdeg, abs_curv, stable_rep)
-        lod_method = "xdem heteroscedastic (slope,curv), calibrated on stable ground"
-    if lod is None:
-        lod = 1.96 * np.sqrt(np.nan_to_num(s08**2 / np.maximum(n08, 1))
-                             + np.nan_to_num(s21**2 / np.maximum(n21, 1)))
-        lod_method = "within-cell spread proxy (fallback; relief-inflated on slopes)"
+    _d = difference(Zref, xc, yc, zc, be, groundg, stable, _grid, _GQ_SCALAR,
+                    robust_stable=robust_stable)
+    dod = _d["dod"]; Z08c = _d["gen1_ground"]
+    s08 = _d["spread"]; n08 = _d["count"]; r08 = _d["rough"]
+    stable_rep = _d["stable"]; sigma = _d["sigma"]
+    stable_clip_frac = _d["stable_clip_fraction"]; stable_geom_n = _d["stable_geom_n"]
+
+    lod, lod_method = estimate_lod(dod, sdeg, _tm["abs_curv"], stable_rep,
+                                   rough_gen1=r08, count_gen1=n08,
+                                   rough_gen2=r21, count_gen2=n21,
+                                   spread_gen1=s08, spread_gen2=s21)
 
     # ABSOLUTE DATUM. Placing each epoch on surveyed NAVD88 removes the zero-line dependence
     # exactly: re-gauging by d shifts z by +d and the measured constant by -d, so the
