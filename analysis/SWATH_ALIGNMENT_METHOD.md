@@ -74,35 +74,44 @@ Nothing is filtered. Non-finite observations are dropped; everything else enters
 earned weight, and a bad observation surfaces as a large residual on its own edge rather than
 moving the solution.
 
-## 6. The gauge — and it is deliberately arbitrary
+## 6. The zero line — and it is deliberately arbitrary
 
 The network is solved **free**; only then is the reference swath's value subtracted
 (`coreg.py:577`). So the zero line touches no swath-to-swath *difference*. It does set the
 absolute level the whole mosaic inherits, because that level becomes the reference line's own
 error: at elbaext the six per-swath dz span **44.60 mm**.
 
+*Naming.* The object is the **zero line** — `corrections.json` records `zero_line`,
+`align_swaths` takes `ref`, and `swath_gauge_ref` / `gauge_ref` / `regauged_to()` were
+renamed away on 2026-09-01. The ADJECTIVE survives, deliberately and in current code:
+"gauge-invariant" is the property step 7 delivers, and `apply_datum.gauge_invariance_residual`
+is the function that demonstrates it. A COMMON LINE — a line present in two tiles, used to
+re-express both before comparing — is the related term.
+
 `corrections.json` records `zero_line`, `swath_tie` and
 `absolute_level_depends_on_zero_line: true`, so two products can be related.
 
 ## 7. Correct the reference line — the ground-control datum
 
-**This is what removes the arbitrariness of step 6, and it removes it exactly.**
+**This is what removes the arbitrariness of step 6, and it removes it exactly.** It is what
+makes a product's elevation *gauge-invariant* — the one place the adjective is the right word.
 
-Re-gauging by `d` shifts every elevation by `+d` and the measured control constant by `−d`,
+Re-expressing on a different zero line shifts every elevation by `+d` and the measured
+control constant by `−d`,
 so the corrected surface is unchanged (`pipeline.py:1093`). Applied to BOTH epochs, so the DoD
 moves by the *difference* of the two constants and true change on stable ground goes to zero.
 
 Demonstrated rather than asserted, on elbaext's real per-swath dz
 (`ground_control/tests/test_apply_datum.py`, 4 tests passing):
 
-    spread across gauge choices, uncorrected   44.60 mm
-    spread across gauge choices, corrected     < 1e-9 mm
-    ratio                                      > 1e9
-    re-gauging via on_zero_line() is reversible to 1e-9
+    spread across zero-line choices, uncorrected   44.60 mm
+    spread across zero-line choices, corrected     < 1e-9 mm
+    ratio                                          > 1e9
+    on_zero_line() re-expression is reversible to 1e-9
 
 `apply_datum` REFUSES if the datum's `zero_line` does not match the product's: a constant is
-tied to the gauge it was measured on, and applying it to a differently-gauged product would
-silently mis-level the tile.
+tied to the zero line it was measured on, and applying it to a product solved on a different
+one would silently mis-level the tile.
 
 Elba's constants, open ground only: gen1 delivered **+62.74 ± 23.38 mm**, ours
 **+58.70 ± 25.89**. The datum is measured on **open ground only** (gen1 `--covers L1O`,
@@ -119,11 +128,13 @@ exclusivity is grid-dependent and a swath can still be a shared cell's majority.
 
 ## Known weakness
 
-Both Elba tiles gauge on an **edge-cut swath** whose nadir track falls outside the tile
+Both Elba tiles take their **zero line from an edge-cut swath** whose nadir track falls
+outside the tile
 (elba/135 at 577,143 against x₀ = 577,492.8), so it is sampled over an 8–10° one-sided scan
 range and its constant and across-track slope correlate at 0.99
 (`SWATH_ACROSS_TRACK_TEST.md` §7). Gauging on the line with the widest two-sided scan
-coverage, or on the zero-mean gauge `align_swaths` already supports, costs nothing.
+coverage, or using the zero-mean origin `align_swaths` already supports (`ref=None`), costs
+nothing.
 
 It matters for an **uncorrected** product and for relating two tiles that carry no datum.
 Where step 7 is applied, it cancels.
