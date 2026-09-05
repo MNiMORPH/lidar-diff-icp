@@ -19,9 +19,14 @@ Every default criterion is therefore either geometric or vegetation-structural:
   hilltops shed rather than collect, so they are the geomorphic no-change population. This
   is THE population. A slope + TPI "low-gradient upland" proxy is not a substitute: it keeps
   ground that both receives and sheds, and it was removed from the tree on 2026-09-04.
-* **valley floor cut by ELEVATION**, at the antimode of this tile's own elevation histogram
-  -- not by the TPI floodplain mask, whose extent depends on the window width and which
-  keeps flat terrace ground at valley level.
+* **valley floor cut by ELEVATION**, and THE CALLER ALWAYS SAYS WHICH -- a stated
+  elevation, ``"registry"`` (the established value for the tile), or ``"histogram"``
+  (the first local minimum above the dominant mode of the LANDSCAPE's pooled elevations,
+  so every tile sharing ground gets the same cut, which per-tile computation cannot
+  promise). There is no default and no silent fallback: elba was once rebuilt on a
+  computed 226.9 m instead of its cited 230.0 m and nothing said so. Not by the TPI
+  floodplain mask, whose extent depends on the window width and which keeps flat terrace
+  ground at valley level.
 * **gentle slope** (``slope_max``) -- excludes cells where mass wasting is plausible and
   where intra-cell relief dominates the return column. On these tiles it does not move
   any answer; it trims the noise.
@@ -36,6 +41,21 @@ Every default criterion is therefore either geometric or vegetation-structural:
   ONE-SIDED on purpose: gen1 is leaf-off November and gen2 leaf-on May, so a deciduous
   stand legitimately gains canopy fraction between epochs. Excluding on ``|delta frac|``
   would strip deciduous stands for their phenology and bias the cover strata.
+
+TWO DIFFERENT QUESTIONS, TWO DIFFERENT POPULATIONS -- and they are NOT substitutes. This
+module answers "which ground provably did NOT CHANGE", for calibrating a CORRECTION, and is
+strict: divides only, low curvature, gentle slope, no buildings, no clear-cut, no gross
+change. :func:`lidar_diff_icp.terrain.terrain_masks` answers "which ground can calibrate
+the INSTRUMENT" -- the registration, ``stable_1sigma``, the LoD -- and is deliberately much
+wider, because the lateral (Nuth-Kaeaeb) shift is estimated from how ``dh`` varies with
+slope and aspect, so a mask that removes slope removes the very signal it is fitted on.
+
+Measured at elba, the difference is not marginal: terrain_masks keeps 223,230 cells (62.8%
+of the grid, slope p50 9.4 deg, p90 28.1) while reference_cells at its defaults keeps a
+small divide-only subset with slope < 12 deg. Substituting either for the other silently
+changes what a number means -- the strict population would starve the registration of the
+slope range it fits on, and the wide one would let real change into a correction that
+assumes there is none.
 """
 from __future__ import annotations
 

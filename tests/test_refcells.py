@@ -110,3 +110,35 @@ def test_working_without_the_mask_is_allowed_but_must_be_stated(tile):
     m, rep = reference_cells(tile, use_floodplain_mask=False, exclude_valley=False)
     assert m.sum() > 0
     assert not any("floodplain" in k for k in rep)
+
+
+# --- the two stable populations are not substitutes ---------------------------------------
+
+def test_the_two_stable_populations_answer_different_questions(tmp_path):
+    """refcells.reference_cells asks "which ground provably did NOT CHANGE" and cuts slope;
+    terrain.terrain_masks asks "which ground can calibrate the INSTRUMENT" and deliberately
+    does NOT, because the lateral Nuth-Kaeaeb shift is estimated from how dh varies with
+    slope and aspect -- a mask that removes slope removes the signal it is fitted on.
+
+    Pinned in behaviour, not only in prose: on a grid that is half gentle and half steep,
+    the strict population keeps only the gentle half and the wide one keeps both. If these
+    ever converged, one of the two calibrations would be running on the wrong ground."""
+    from lidar_diff_icp import terrain
+
+    n = 8
+    slope = np.zeros((n, n)); slope[n // 2:, :] = 30.0        # bottom half steep
+    np.save(tmp_path / "slope.npy", slope)
+    np.save(tmp_path / "ridge_mask.npy", np.ones((n, n), bool))
+    np.save(tmp_path / "curv_laplacian.npy", np.zeros((n, n)))
+    np.save(tmp_path / "dod.npy", np.zeros((n, n)))
+
+    strict, _ = reference_cells(tmp_path, exclude_valley=False)
+    strict = strict.reshape(n, n)
+    assert strict[:n // 2].all()          # gentle ground kept
+    assert not strict[n // 2:].any()      # steep ground cut by slope_max = 12
+
+    # the same terrain through terrain_masks: a plane tilted to match, no slope cut
+    z = np.tile(np.arange(n, dtype=float) * 0.5, (n, 1))
+    wide = terrain.terrain_masks(z, 5.0, valley_top_m=float(z.min()) - 1.0,
+                                 verbose=False)["stable"]
+    assert wide.all(), "terrain_masks must not apply a slope cut"
