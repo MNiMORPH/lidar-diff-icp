@@ -1,21 +1,48 @@
-# `penetration.npy`: it has a producer, and one shipped copy still carries a defect
+# `penetration.npy`: RETIRED 2026-09-05
 
-Resolves the standing question "retire it, or give it a producer". **Neither retire nor
-build: it already has one**, and it is far too widely consumed to retire.
+Andy's call: *"Let's let penetration go and remove it."* The layer, its producer and its
+library module are gone from the live pipeline as of commits 978ece3 and e0f962e. The code
+is recoverable from git history; this file records what was removed and what was not.
 
-    producer   scripts/make_penetration.py          (declared as Step("penetration"))
-    consumers  34 tracked files
-    tiles      battlecreek, carlton, cook, elba, elba_fulldensity, mnrv, whitewater
+## Why it went
 
-The caveat that matters is not about the producer but about the QUANTITY: penetration is
-**geometry-confounded** and is a poor canopy proxy. `canopy.py` states the verdict
-directly — *"do not use `penetration` as a canopy measure; `canopy_cover_pfs` is the cover
-measure, computed identically on every tile"* — and `AUDIT_findings.md` puts the layer in
-Tier 1 as a gen2-derived variable, warning against binning any gen1 quantity against it.
+It was not helping. The workflow graph settled it: the only step requiring
+`penetration.npy` was `strata_core`, itself optional AND blocked. The base chain never
+touched it, none of the five vegetation-correction steps touched it, and `convexity` ran
+`--without penetration` deliberately. `canopy.py` already carried the verdict — *"do not use
+`penetration` as a canopy measure; `canopy_cover_pfs` is the cover measure, computed
+identically on every tile."*
 
-The measurement behind that, as recorded in the repo: ground-return fraction correlates
-**-0.84 with scan angle** (`analysis/ridgelines/gen1_intensity_fit.py:6`, which names it as
-the source of the 0.6 bimodal split, and `gen1_save_angles_slope.py:90`).
+## Removed
+
+    src/lidar_diff_icp/canopy.py     the whole module (ground_penetration was the layer;
+                                     leafon_slope_flag and inflate_lod were reachable only
+                                     from their own tests, the flag having been retired
+                                     2026-09-02)
+    scripts/make_penetration.py      the producer
+    tests/test_canopy.py             its tests
+    Step("penetration")              from the graph
+    Step("strata_core")              its last consumer -- already blocked, and penetration
+                                     DEFINED its two classes, so it could not outlive it
+    run_all_sites                    the computation, the save, --no-penetration
+
+## NOT removed, and the distinction matters
+
+**The seven `data/derived/*/penetration.npy` files (17 MB) are still on disk.**
+`data/derived` is gitignored, so unlike the code above they were **never in git** — deleting
+them is not reversible by checkout, only by re-running the producer recovered from c616e68.
+
+**37 analysis scripts still load the layer by path.** They are the historical beam-angle and
+strata investigation, not the settled method. They will fail if the files go.
+
+Both are open questions for Andy, deliberately left rather than decided by a cleanup pass.
+
+## What the layer actually measured, for the record
+
+The quantity was **geometry-confounded** and a poor canopy proxy. As recorded in the repo,
+ground-return fraction correlates **-0.84 with scan angle**
+(`analysis/ridgelines/gen1_intensity_fit.py:6`, which names it as the source of the 0.6
+bimodal split, and `gen1_save_angles_slope.py:90`).
 
 CORRECTED 2026-09-05: an earlier version of this file added "-0.91" for overlap density and
 "-0.33" for canopy, and said both were stated in canopy.py and AUDIT_findings.md. Neither
@@ -51,24 +78,8 @@ where there is no information.
 
 `elba_fulldensity` is the tile roughly twenty analysis scripts hardcode by path.
 
-## The fix, and why it is not applied here
+## The zero-fill is now moot
 
-    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python scripts/make_penetration.py \
-        --tile elba_fulldensity --after data/after/3dep2021_fulldensity.laz
-
-The producer writes NaN by construction, so this yields exactly `elba`'s array.
-
-It is NOT run unprompted because it is a data product, not code. But the blast radius is
-SMALLER than first written here, and the workflow graph is what settles it: the only step
-that requires `penetration.npy` is `strata_core`, which is optional AND blocked
-(`canopy_struct.npz` has no producer). The base chain does not touch it, none of the five
-vegetation-correction steps touch it, and `convexity` runs `--without penetration`
-deliberately.
-
-So regenerating it would invalidate the HISTORICAL beam-angle and strata analyses that load
-the layer by path — `geology_forest_split`, `curvature_diffusion`, `run_steady_state_strata`
-and the rest — and nothing the current DoD or the current correction depends on. That makes
-it low priority rather than a decision blocking anything.
-
-The magnitude is small (0.19% of cells) and the direction is known (677 cells leave the
-forest class). Whether that is worth a re-run is exactly the judgement to be made out loud.
+The fix was one command against a layer nothing live consumes. With the layer retired it is
+not worth running: the 677 cells matter only to the historical scripts above, and only if
+those are ever revived.
