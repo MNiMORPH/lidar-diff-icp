@@ -20,12 +20,17 @@ import laspy
 from pyproj import Transformer
 
 sys.path.insert(0, "scripts")
-from run_all_sites import SITES, header_bounds
+from run_all_sites import header_bounds
 from lidar_diff_icp import threedep
+from lidar_diff_icp.sites import SITES, site
+from lidar_diff_icp import completeness
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--only", nargs="*", help="site names; default all")
 ap.add_argument("--cache", default="data/ept_index_cache.json")
+ap.add_argument("--write", action="store_true",
+                help="record the measurement in each tile's data_completeness.json, so "
+                     "the gate has something to read. Without this the run only prints.")
 A = ap.parse_args()
 
 
@@ -87,7 +92,8 @@ print("this cost two sites being read as short when they were complete.")
 print(f"\n{'site':13s} {'project':26s} {'node pts':>13s} {'in-bbox est':>13s} "
       f"{'our file':>13s} {'ratio':>7s}  deepest")
 for nm in names:
-    before, after, bnds, _ = SITES[nm]
+    S = site(nm)
+    before, after, bnds = S.gen1, S.gen2, S.bounds
     if bnds is None:
         bnds = header_bounds(before, 5.0)
     try:
@@ -100,3 +106,14 @@ for nm in names:
     deep = max(per_depth) if per_depth else -1
     print(f"{nm:13s} {proj[:26]:26s} {avail:13,} {inb:13,.0f} {have:13,} "
           f"{have/max(inb,1):7.2f}  d{deep}")
+    if A.write:
+        # gen2 only: this asks the 3DEP EPT source, which has no gen1 counterpart. gen1's
+        # completeness is a different question (a delivered county tile, not a fetch) and
+        # is deliberately left unrecorded rather than guessed at.
+        completeness.write(
+            S.tile_dir, epoch="gen2", cloud=after, points_in_file=have,
+            points_available=inb,
+            measured_by=f"analysis/ept_coverage_check.py against {proj}",
+            note="area-weighted share of the EPT node set inside the bbox; nodes clip the "
+                 "box, so a raw node-count sum overstates a complete fetch")
+        print(f"              -> wrote {completeness.record_path(S.tile_dir)}")

@@ -25,6 +25,7 @@ from lidar_diff_icp.pipeline import difference_dem
 from lidar_diff_icp.detect import detect_change_standard
 from lidar_diff_icp import figures
 from lidar_diff_icp.sites import SITES as _SITES, site as _site
+from lidar_diff_icp import completeness
 from lidar_diff_icp.viz import hillshade
 
 
@@ -45,7 +46,9 @@ def header_bounds(before, res):
 #: Named for its content now.
 FIGDIR = figures.DEFAULT_FIGDIR
 
-SITES = {n: (s.gen1, s.gen2, s.bounds, s.stream) for n, s in _SITES.items()}
+#: The site names, for drivers that iterate them. The DEFINITIONS live in sites.py and
+#: are reached with sites.site(name) -- there is no second shape for them here.
+SITES = _SITES
 
 def _tif(arr, res, x0, y0, ny, out):
     import rasterio
@@ -64,6 +67,15 @@ def run_site(name, figdir=FIGDIR, *, skip_penetration=False):
         bounds = header_bounds(before, res)
     outdir = Path(f"data/derived/{name}")
     outdir.mkdir(parents=True, exist_ok=True)
+
+    # DATA COMPLETENESS, stated before anything is measured from the cloud. A truncated
+    # fetch does not look like an error from inside the tile, and two sites shipped
+    # products built from one before it was noticed. Reported, never judged: no ratio
+    # threshold is applied here or in the module, because what counts as complete enough
+    # is a decision that must be made out loud.
+    _c = completeness.check(outdir, epochs=("gen2",), require=False)
+    print(f"[{name}] data completeness")
+    print(completeness.summary_line(outdir, "gen2", _c), flush=True)
     Path(figdir).mkdir(parents=True, exist_ok=True)
 
     t = time.time()
