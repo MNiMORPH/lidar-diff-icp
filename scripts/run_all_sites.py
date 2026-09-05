@@ -59,7 +59,7 @@ def _tif(arr, res, x0, y0, ny, out):
         d.write(np.flipud(arr).astype("float32"), 1)
 
 
-def run_site(name, figdir=FIGDIR, *, skip_penetration=False):
+def run_site(name, figdir=FIGDIR):
     S = _site(name)
     before, after, bounds, stream = S.gen1, S.gen2, S.bounds, S.stream
     res = 5.0
@@ -98,27 +98,6 @@ def run_site(name, figdir=FIGDIR, *, skip_penetration=False):
           "dropouts, interpolated in the shaded-relief backdrop ONLY, never on the map "
           "or in the DoD (recorded in regions.json)", flush=True)
 
-    # gen2 ground penetration. OPTIONAL, and it drives nothing -- it is saved for
-    # inspection only.
-    #
-    # The leaf-on/forest-slope flag that used to be derived here was RETIRED on 2026-09-02
-    # (Andy). It combined two undefended thresholds, penetration < 0.25 AND slope > 12 deg,
-    # and once its LoD widening was switched off it changed no output: nothing in the
-    # library, the scripts or analysis/ read leafon_flag.npy, and the detector takes no
-    # vegetation term. It was 98,143 cells (28%) at Elba that looked like a filter and was
-    # not one. The mechanism it rested on (gen2 ground STARVED under leaf-on canopy) is
-    # also contradicted by later work here: gen2 carries ~12x MORE ground than gen1, and
-    # the offset tracks the 2008 canopy rather than 2021 cover. See canopy.py's status
-    # section. Vegetation belongs in the cover-matched q2 chain, not in a flag on the LoD.
-    if skip_penetration:
-        print(f"[{name}] penetration: SKIPPED as stated (--no-penetration)", flush=True)
-    else:
-        from lidar_diff_icp.canopy import ground_penetration
-        pen = ground_penetration(after, r["bounds"], res, nx, ny)
-        print(f"[{name}] gen2 ground penetration: "
-              f"{int((~np.isfinite(pen)).sum())} cells have no gen2 returns and are NaN, "
-              f"not zero", flush=True)
-
     det = detect_change_standard(dod, lod, stable, res)
     change = det["change"]; regions = det["regions"]
     print(f"[{name}] detected {len(regions)} robust regions  "
@@ -137,17 +116,6 @@ def run_site(name, figdir=FIGDIR, *, skip_penetration=False):
                                           "tau_sys_m", "method")},
                    "gen2_null_cells": int((~np.isfinite(Z21)).sum())}, fh, indent=2)
 
-    # Written HERE, after the grid products, not where they are computed. penetration is
-    # built on this run's grid (bounds/res -> nx, ny) and the workflow graph says so, but
-    # saving it before corrections.json/z_after.npy made it one second OLDER than its own
-    # declared inputs -- so `lidar-diff-workflow` called it STALE the moment it was made,
-    # permanently, at every site. The dependency is real; only the write order was wrong.
-    # (Its VALUES do not come from z_after: make_penetration.py loads that array solely to
-    # assert the shape, and ground_penetration reads the gen2 cloud.) The computation stays
-    # above so that `pen` is computed while the gen2 cloud context is still open.
-    if not skip_penetration:
-        np.save(f"{outdir}/penetration.npy", pen)
-
     # The figures read the products just saved above, via the library, so either can
     # be rebuilt later without re-running any point-cloud work.
     fa = figures.dod_lod_figure(str(outdir), figdir, name)
@@ -161,18 +129,12 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--only", nargs="*", help="run only these site names")
     ap.add_argument("--figdir", default=FIGDIR)
-    ap.add_argument("--no-penetration", action="store_true",
-                    help="skip the gen2 ground-penetration layer entirely. It is flagged by "
-                         "analysis/ridgelines/AUDIT_findings.md as a gen2-derived variable "
-                         "that should not drive gen1-internal conclusions, and "
-                         "canopy_cover_pfs is the cover measure.")
     a = ap.parse_args()
     names = a.only if a.only else list(SITES)
     summary = []
     for nm in names:
         try:
-            summary.append(run_site(nm, figdir=a.figdir,
-                                    skip_penetration=a.no_penetration))
+            summary.append(run_site(nm, figdir=a.figdir))
         except Exception as exc:
             import traceback; traceback.print_exc()
             print(f"[{nm}] FAILED: {exc}", flush=True)

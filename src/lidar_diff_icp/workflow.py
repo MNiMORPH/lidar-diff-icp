@@ -165,8 +165,9 @@ STEPS: tuple[Step, ...] = (
          command=f"{PY} analysis/ridgelines/convexity_dod_landcover.py --tile {{tile_name}} "
                  f"--dod {{dod}} --without penetration",
          note="floodplain_mask gates reference_cells, so this comes before any q2 work. "
-              "Drop --without penetration once that layer exists to get the forest/open "
-              "crest split."),
+              "--without penetration is now permanent, not a temporary state: the "
+              "penetration layer was RETIRED on 2026-09-05. The forest/open crest split it "
+              "once offered is canopy_cover_pfs's job."),
     Step("curvature",
          produces=("curv_xx.npy", "curv_yy.npy", "curv_laplacian.npy"),
          requires=("z_after.npy", "crest_mask.npy"),
@@ -189,14 +190,6 @@ STEPS: tuple[Step, ...] = (
               "q2_fit / dod_cover / cover_calibration, where it is definitional. Building "
               "it anyway is not free -- a large tile needs an untwine COPC first, ~14 GB of "
               "scratch for a 1 GB cloud."),
-    Step("penetration",
-         produces=("penetration.npy",),
-         requires=("z_after.npy",),
-         command=f"{PY} scripts/make_penetration.py --tile {{tile_name}} --after {{gen2}}",
-         optional=True, needs=("gen2",),
-         note="gen2 ground-return fraction. AUDIT_findings.md warns it is gen2-derived and "
-              "should not drive gen1-internal conclusions; only strata_core and the "
-              "forest/open crest split need it."),
     Step("gen1_angles",
          produces=("gen1_csf_angles.npz",),
          requires=("z_after.npy", "corrections.json"),
@@ -290,13 +283,6 @@ STEPS: tuple[Step, ...] = (
          note="Per-cell canopy structure from the full unclassified gen2 cloud: veg_frac, "
               "understory/midstory fractions, canopy_height_p95, low_gap. Streams ~1.8e8 "
               "points."),
-    Step("strata_core",
-         produces=("core_forest.npy", "core_open.npy"),
-         requires=("penetration.npy", "floodplain_mask.npy", "canopy_struct.npz",
-                   "z_after.npy"),
-         command=f"{PY} analysis/ridgelines/strata_core.py --tile {{tile_name}}",
-         optional=True,
-         note="BLOCKED: canopy_struct.npz has no producer in this repo."),
 )
 
 
