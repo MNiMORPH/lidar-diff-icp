@@ -556,6 +556,101 @@ def register_gen1(before_laz, bounds, res, *, ground_source="csf", csf_pdal=None
                 boresight=boresight_used)
 
 
+def apply_datum(x, y, z, ground, Zref, ground_of, grid, bounds, *, tie="reference",
+                geoid_datum=None, correction_surface=False, floodplain=None,
+                along_track_drift=False, gps_time=None, source_id=None, stable=None,
+                verbose=True):
+    """Put the registered gen1 cloud onto gen2's datum, in the principled order: get x, y
+    right, THEN z.
+
+    This is the only stage that reads across the epochs, and it is deliberately separate
+    from register_gen1 for that reason -- the gen1 swath network is solved against gen1
+    alone, so it cannot absorb a cross-epoch correction.
+
+        x, y, z        the datum-corrected coordinates
+        tie_info       what was applied: geoid constant, tilt, centroid, lateral shift
+        drift_curves   per-swath along-track drift curves, {} if not fitted
+
+    The ORDER is the method. (1) HORIZONTAL: one constant Nuth & Kaeaeb lateral shift from
+    the full topography, so the two DEMs are registered in x, y before z is touched.
+    Drainage divides do not move to first order, so registering the whole DEM recovers the
+    shift, and the aspect-DIPOLE it fits is EROSION-robust because diffuse erosion has no
+    aspect dependence. (2) VERTICAL: the geoid-model datum shift N_gen1 - N_gen2 (e.g.
+    GEOID03 - GEOID18) -- a REQUIRED geodetic offset, auto-computed from the PROJ grids if
+    not supplied. No hard-coded constant, and no arbitrary plane fitted to "stable"
+    surfaces. Residual offsets are left for later analysis, not baked into the datum.
+
+    `ground_of(x, y, z) -> grid` is the caller's chosen ground estimator. It is passed in
+    rather than chosen here because the estimator must be the SAME one that produced
+    `Zref`, or the lateral tie is fitted between two different definitions of the ground.
+
+    MUTATES x, y AND z IN PLACE, and returns them. This is the behaviour it had inline and
+    it is kept deliberately: at statewide scale these are tens of millions of points and
+    three copies is real memory on a machine that is also doing other work. The returned
+    arrays ARE the arguments -- if a caller needs the registered cloud afterwards, it must
+    copy before calling.
+    """
+    X0, Y0, res, nx, ny = grid
+    xc, yc, zc = x, y, z
+    be = ground
+    gt8, ps8 = gps_time, source_id
+    groundg = ground_of
+    # cross-epoch vertical datum, in the principled order: get x,y right, then z.
+    # (1) HORIZONTAL: one constant Nuth & Kaeaeb lateral shift from the full topography
+    #     (order-0 tie) so the two DEMs are registered in x,y before z is touched.
+    #     Drainage divides / ridgelines do not move to first order, so registering the
+    #     whole DEM recovers the lateral shift; the aspect-DIPOLE it fits is EROSION-
+    #     robust (diffuse erosion has no aspect dependence). (2) VERTICAL: the geoid-model
+    #     datum shift N_gen1 - N_gen2 (e.g. GEOID03 - GEOID18) -- a REQUIRED geodetic
+    #     offset, auto-computed from the PROJ geoid grids if not supplied (no hard-coded
+    #     constant, no arbitrary plane fitted to "stable" surfaces). Residual offsets are
+    #     left for later analysis, not baked into the datum.
+    from . import references
+    if tie != "reference":
+        raise ValueError(
+            f"tie={tie!r} is not supported. The only cross-epoch datum is the geoid "
+            "difference applied after the lateral shift; the reference_plane fit and the "
+            "parabola tie were removed (see git history if ever needed).")
+    # ORDER 0 = a single CONSTANT (dx, dy) lateral shift (Nuth & Kaeaeb order-0 tie), NOT the
+    # removed order-2 parabola. tie_polynomial is a general polynomial fit; only order 0 is used
+    # here, and only its horizontal shift (hs["a"][0], hs["b"][0]) is applied to xc, yc.
+    hs = coreg.tie_polynomial(Zref, groundg(xc[be], yc[be], zc[be]),
+                              res, X0, Y0, order=0)
+    xc += coreg.eval_poly_field(hs["a"], xc, yc, hs["norm"], 0)
+    yc += coreg.eval_poly_field(hs["b"], xc, yc, hs["norm"], 0)
+    if geoid_datum is None:                          # auto-compute from the geoid grids
+        geoid_datum = references.geoid_difference(bounds, 26915)
+    gc, gb, gcc = geoid_datum        # (const_m, b East, c North) m,m/km of (N_gen1 - N_gen2), ADD to gen1
+    cxg = 0.5*(bounds[0]+bounds[2]); cyg = 0.5*(bounds[1]+bounds[3])
+    zc += gc + gb*(xc-cxg)/1000.0 + gcc*(yc-cyg)/1000.0
+    if verbose:
+        print(f"  geoid-difference datum: const {1000*gc:+.1f} mm, tilt "
+              f"({1000*gb:+.3f},{1000*gcc:+.3f}) mm/km; lateral shift "
+              f"({100*hs['a'][0]:+.1f},{100*hs['b'][0]:+.1f}) cm", flush=True)
+    tie_info = {"method": "geoid_difference", "const_m": gc, "tilt_b_m_per_km": gb,
+                "tilt_c_m_per_km": gcc, "centroid": [cxg, cyg],
+                "horizontal_shift_m": [round(float(hs["a"][0]),4), round(float(hs["b"][0]),4)]}
+
+    if correction_surface:
+        C = coreg.correction_surface(Zref, groundg(xc[be], yc[be], zc[be]),
+                                     res, X0, Y0, radius=400.0, exclude=floodplain)["C"]
+        ixp = np.clip(((xc - X0) / res).astype(int), 0, nx - 1)
+        iyp = np.clip(((yc - Y0) / res).astype(int), 0, ny - 1)
+        Cpt = C[iyp, ixp]; zc[np.isfinite(Cpt)] += Cpt[np.isfinite(Cpt)]
+
+    curves = {}
+    if along_track_drift:
+        ixp = np.clip(((xc - X0) / res).astype(int), 0, nx - 1)
+        iyp = np.clip(((yc - Y0) / res).astype(int), 0, ny - 1)
+        resid = Zref - groundg(xc[be], yc[be], zc[be])
+        chg = resid[iyp, ixp]
+        stab_pt = be & stable[iyp, ixp] & np.isfinite(chg) & (np.abs(chg) < 0.15)
+        drift, curves = coreg.fit_along_track_drift(gt8, chg, stab_pt, ps8)
+        zc += drift
+
+    return dict(x=xc, y=yc, z=zc, tie_info=tie_info, drift_curves=curves)
+
+
 def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
                    gen2_curve=None, gen2_epoch="gen2_2021_control", valley_top_m=None,
                    tile_dir=None, curv_max=0.005,
@@ -772,57 +867,17 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
     corr = _reg["swath_corr"]; swath_cov = _reg["swath_cov"]
     zero_line = _reg["zero_line"]; boresight_used = _reg["boresight"]
 
-    # cross-epoch vertical datum, in the principled order: get x,y right, then z.
-    # (1) HORIZONTAL: one constant Nuth & Kaeaeb lateral shift from the full topography
-    #     (order-0 tie) so the two DEMs are registered in x,y before z is touched.
-    #     Drainage divides / ridgelines do not move to first order, so registering the
-    #     whole DEM recovers the lateral shift; the aspect-DIPOLE it fits is EROSION-
-    #     robust (diffuse erosion has no aspect dependence). (2) VERTICAL: the geoid-model
-    #     datum shift N_gen1 - N_gen2 (e.g. GEOID03 - GEOID18) -- a REQUIRED geodetic
-    #     offset, auto-computed from the PROJ geoid grids if not supplied (no hard-coded
-    #     constant, no arbitrary plane fitted to "stable" surfaces). Residual offsets are
-    #     left for later analysis, not baked into the datum.
-    from . import references
-    if tie != "reference":
-        raise ValueError(
-            f"tie={tie!r} is not supported. The only cross-epoch datum is the geoid "
-            "difference applied after the lateral shift; the reference_plane fit and the "
-            "parabola tie were removed (see git history if ever needed).")
-    # ORDER 0 = a single CONSTANT (dx, dy) lateral shift (Nuth & Kaeaeb order-0 tie), NOT the
-    # removed order-2 parabola. tie_polynomial is a general polynomial fit; only order 0 is used
-    # here, and only its horizontal shift (hs["a"][0], hs["b"][0]) is applied to xc, yc.
-    hs = coreg.tie_polynomial(Zref, groundg(xc[be], yc[be], zc[be]),
-                              res, X0, Y0, order=0)
-    xc += coreg.eval_poly_field(hs["a"], xc, yc, hs["norm"], 0)
-    yc += coreg.eval_poly_field(hs["b"], xc, yc, hs["norm"], 0)
-    if geoid_datum is None:                          # auto-compute from the geoid grids
-        geoid_datum = references.geoid_difference(bounds, 26915)
-    gc, gb, gcc = geoid_datum        # (const_m, b East, c North) m,m/km of (N_gen1 - N_gen2), ADD to gen1
-    cxg = 0.5*(bounds[0]+bounds[2]); cyg = 0.5*(bounds[1]+bounds[3])
-    zc += gc + gb*(xc-cxg)/1000.0 + gcc*(yc-cyg)/1000.0
-    print(f"  geoid-difference datum: const {1000*gc:+.1f} mm, tilt "
-          f"({1000*gb:+.3f},{1000*gcc:+.3f}) mm/km; lateral shift "
-          f"({100*hs['a'][0]:+.1f},{100*hs['b'][0]:+.1f}) cm", flush=True)
-    tie_info = {"method": "geoid_difference", "const_m": gc, "tilt_b_m_per_km": gb,
-                "tilt_c_m_per_km": gcc, "centroid": [cxg, cyg],
-                "horizontal_shift_m": [round(float(hs["a"][0]),4), round(float(hs["b"][0]),4)]}
-
-    if correction_surface:
-        C = coreg.correction_surface(Zref, groundg(xc[be], yc[be], zc[be]),
-                                     res, X0, Y0, radius=400.0, exclude=floodplain)["C"]
-        ixp = np.clip(((xc - X0) / res).astype(int), 0, nx - 1)
-        iyp = np.clip(((yc - Y0) / res).astype(int), 0, ny - 1)
-        Cpt = C[iyp, ixp]; zc[np.isfinite(Cpt)] += Cpt[np.isfinite(Cpt)]
-
-    curves = {}
-    if along_track_drift:
-        ixp = np.clip(((xc - X0) / res).astype(int), 0, nx - 1)
-        iyp = np.clip(((yc - Y0) / res).astype(int), 0, ny - 1)
-        resid = Zref - groundg(xc[be], yc[be], zc[be])
-        chg = resid[iyp, ixp]
-        stab_pt = be & stable[iyp, ixp] & np.isfinite(chg) & (np.abs(chg) < 0.15)
-        drift, curves = coreg.fit_along_track_drift(gt8, chg, stab_pt, ps8)
-        zc += drift
+    # --- cross-epoch datum: lateral shift, then geoid ------------------------------
+    # apply_datum is the ONLY stage that reads across the epochs, and it runs AFTER
+    # register_gen1 so the gen1 swath network cannot absorb a cross-epoch correction.
+    # It mutates xc, yc, zc in place -- see its docstring for why.
+    _dat = apply_datum(xc, yc, zc, be, Zref, groundg, _grid, bounds, tie=tie,
+                       geoid_datum=geoid_datum,
+                       correction_surface=correction_surface, floodplain=floodplain,
+                       along_track_drift=along_track_drift, gps_time=gt8,
+                       source_id=ps8, stable=stable)
+    xc = _dat["x"]; yc = _dat["y"]; zc = _dat["z"]
+    tie_info = _dat["tie_info"]; curves = _dat["drift_curves"]
 
     # --- final gridded ground DoD + per-cell LoD ---
     Z08c = groundg(xc[be], yc[be], zc[be])
