@@ -164,7 +164,10 @@ STEPS: tuple[Step, ...] = (
          produces=("ridge_mask.npy",),
          requires=("z_after.npy",),
          command=f"{PY} analysis/ridgelines/trace_ridgelines.py {{tile}} --out ridge_mask.npy",
-         note="Scherler & Schwanghart divide network; the candidate ridge cells."),
+         note="Scherler & Schwanghart divide network; the candidate ridge cells. "
+              "LOAD-BEARING: convexity requires ridge_mask.npy, and "
+              "refcells.reference_cells uses it as the divide criterion of the strict "
+              "stable population. This is the S&S content, and it stays."),
     Step("convexity",
          produces=("floodplain_mask.npy", "crest_mask.npy", "kappa_L10.npy", "kappa_L20.npy",
                    "kappa_L30.npy", "ridgecrest_pixels.npz", "ridgecrest_pixels.csv"),
@@ -275,24 +278,6 @@ STEPS: tuple[Step, ...] = (
                  f"--valley-top {{valley_top}}",
          needs=("valley_top",),
          note="LoD refitted on the corrected DoD."),
-    Step("cover_calibration",
-         group="vegetation_correction",
-         produces=("cover_offset_calibration.json",),
-         requires=("beam_offset_table.parquet", "canopy_cover_pfs.npy", "slope.npy",
-                   "curv_laplacian.npy"),
-         command=f"{PY} analysis/ridgelines/cover_offset_reference.py --tile {{tile}} "
-                 f"--valley-top {{valley_top}}",
-         needs=("valley_top",),
-         optional=True,
-         note="offset-vs-cover on non-eroding ground; dod_cover_attribution.py reads it. "
-              "NAME MISMATCH, unresolved: it writes cover_offset_calibration_<tile>.json "
-              "for every tile EXCEPT elba_fulldensity (the note here used to say 'except "
-              "elba', which is wrong), so `produces` below is true only for that one tile "
-              "and this step reports MISSING everywhere else even after a clean run. The "
-              "suffix is not purely redundant -- it also carries --offset raw and --inc-max "
-              "variants -- so collapsing it is a naming decision, not a fix. Both consumers "
-              "(dod_cover_attribution, plot_cover_calibration) already try suffixed then "
-              "plain, so they are unaffected either way."),
     Step("canopy_struct",
          produces=("canopy_struct.npz",),
          requires=("z_after.npy",),

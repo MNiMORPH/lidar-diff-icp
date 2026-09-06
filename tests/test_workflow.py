@@ -294,8 +294,11 @@ def test_the_vegetation_correction_is_a_leaf_so_it_can_be_switched_off():
     WORSE than doing nothing on open ground."""
     assert W.group_is_a_leaf("vegetation_correction")
     members = {s.name for s in W.STEPS if s.group == "vegetation_correction"}
-    assert members == {"class2_spread", "q2_fit", "dod_cover", "lod_cover",
-                       "cover_calibration"}
+    # cover_calibration was removed from the graph 2026-09-06 (Andy: the route is no
+    # longer in use). Its script stays on disk and runnable; it was a leaf, so nothing
+    # required its output. The Scherler & Schwanghart divides it used are UNAFFECTED --
+    # that is Step("ridge_mask"), which convexity and refcells both depend on.
+    assert members == {"class2_spread", "q2_fit", "dod_cover", "lod_cover"}
 
 
 def test_every_step_in_an_optional_group_is_itself_optional():

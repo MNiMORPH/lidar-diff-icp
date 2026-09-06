@@ -1,6 +1,17 @@
 #!/usr/bin/env python3
 """Calibrate VERTICAL OFFSET against FOREST DENSITY on ground that should not be eroding.
 
+NOT PART OF THE PIPELINE (Andy, 2026-09-06). It was Step("cover_calibration") and was
+removed from the workflow graph: the route is no longer in use, and nothing required its
+output -- it was a leaf. The script stays, runnable by hand, because the measurement it
+makes is worth keeping and because it is the tile-internal counterpart to the control-mark
+ground-q route.
+
+The Scherler & Schwanghart divide network it depends on is UNAFFECTED and remains in the
+pipeline as Step("ridge_mask") -> trace_ridgelines.py -> ridge_mask.npy, which convexity
+requires and which refcells.reference_cells uses as its divide criterion.
+
+
 The problem with fitting an offset-vs-cover relationship anywhere else is that cover and
 erosion are both organised by topography, so a cover term fitted across a whole tile
 absorbs real geomorphic change. This picks a reference population where the change term is
@@ -8,7 +19,9 @@ as close to zero as the landscape allows and only the measurement effect should 
 
     LOW-CURVATURE DIVIDE CELLS, from lidar_diff_icp.refcells.reference_cells: the
     Scherler & Schwanghart divide network with |curv_laplacian| <= curv_max and gentle
-    slope, valley floor cut BY ELEVATION at this tile's own histogram antimode.
+    slope, valley floor cut BY ELEVATION at whatever --valley-top states. It is no longer
+    "this tile's own histogram antimode": the caller always says which, and may say a
+    stated elevation, "registry", or "histogram" (the LANDSCAPE's pooled elevations).
 
     The slope + TPI "low-gradient upland" proxy this script used to default to was REMOVED
     2026-09-04 (Andy). TPI > 0 keeps ground that both receives and sheds, so it is not the
