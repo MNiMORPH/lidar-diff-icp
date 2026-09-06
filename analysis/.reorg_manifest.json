@@ -258,6 +258,13 @@
   ],
   "status": "done"
  },
+ "analysis/ridgelines/HELP_open_vs_forest_control.py": {
+  "dest": "analysis/investigations/help_next_steps",
+  "files": [
+   "analysis/ridgelines/HELP_open_vs_forest_control.py"
+  ],
+  "status": "done"
+ },
  "analysis/ridgelines/beam_offset_table.py": {
   "dest": "analysis/modules/vegetation_correction",
   "files": [
