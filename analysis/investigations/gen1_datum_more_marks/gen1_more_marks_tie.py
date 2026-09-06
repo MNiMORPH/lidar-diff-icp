@@ -37,7 +37,7 @@ the ground-source dependence of this comparison at 6.5 mm median absolute over 1
 Usage
 -----
     SCRATCH=... env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python \
-        analysis/groundtruth/gen1_more_marks_tie.py [--radius-m 2000]
+        analysis/investigations/gen1_datum_more_marks/gen1_more_marks_tie.py [--radius-m 2000]
 """
 from __future__ import annotations
 

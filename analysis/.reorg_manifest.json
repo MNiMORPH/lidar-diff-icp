@@ -82,10 +82,25 @@
   ],
   "status": "done"
  },
+ "analysis/groundtruth/gen1_datum_at_site.py": {
+  "dest": "analysis/investigations/gen1_datum_module",
+  "files": [
+   "analysis/groundtruth/gen1_datum_at_site.py"
+  ],
+  "note": "gen1_datum_at_site.py walks 1 dirname level(s) up from __file__, and the move changes its depth (2 -> 3). A data path computed that way would break silently, so this is not moved automatically.",
+  "status": "blocked"
+ },
  "analysis/groundtruth/gen1_line_tracks.py": {
   "dest": "analysis/investigations/gen1_same_line_not_reproduced",
   "files": [
    "analysis/groundtruth/gen1_line_tracks.py"
+  ],
+  "status": "done"
+ },
+ "analysis/groundtruth/gen1_more_marks_report.py": {
+  "dest": "analysis/investigations/gen1_datum_more_marks",
+  "files": [
+   "analysis/groundtruth/gen1_more_marks_report.py"
   ],
   "status": "done"
  },
