@@ -88,6 +88,13 @@
   ],
   "status": "done"
  },
+ "analysis/ridgelines/gen1_save_angles_slope.py": {
+  "dest": "analysis/modules/vegetation_correction",
+  "files": [
+   "analysis/ridgelines/gen1_save_angles_slope.py"
+  ],
+  "status": "done"
+ },
  "analysis/ridgelines/plot_cover_calibration.py": {
   "dest": "analysis/tools",
   "files": [

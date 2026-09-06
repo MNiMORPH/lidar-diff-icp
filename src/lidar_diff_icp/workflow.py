@@ -283,7 +283,7 @@ STEPS: tuple[Step, ...] = (
          optional=True,
          produces=("lod_cover_q2.npy",),
          requires=("dod_cover_q2.npy", "slope.npy", "curv_laplacian.npy"),
-         command=f"{PY} analysis/ridgelines/lod_cover_q2.py --tile {{tile}} "
+         command=f"{PY} analysis/modules/vegetation_correction/lod_cover_q2.py --tile {{tile}} "
                  f"--valley-top {{valley_top}}",
          needs=("valley_top",),
          note="LoD refitted on the corrected DoD."),

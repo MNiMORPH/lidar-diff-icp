@@ -33,7 +33,7 @@ Both prior conditions in the brief were real and both are fixed here.
 1. **The shipped `V_acc_*.npy` products are stale** — written 13:34–13:35 on 2026-08-26,
    before the extent-invariant swath-tie rebuild at 17:16–17:39. They are not used.
    `lod_cover_q2.npy` was equally stale (13:29) and was rebuilt first with the project's
-   own producer, `analysis/ridgelines/lod_cover_q2.py`, which reports
+   own producer, `analysis/modules/vegetation_correction/lod_cover_q2.py`, which reports
    `dod.npy (uncorrected) 341,239 cells / 159,588 stable / sigma 51.2 mm / LoD med 98.3 mm`
    and `dod_cover_q2.npy 341,174 / 159,224 / 59.8 / 116.1`.
 2. **The prior runs violated the standing floodplain rule.** `floodplain_mask.npy` covers
@@ -392,7 +392,7 @@ survives the `q2` correction at high cover. It is not tested here.
 
 ## Reproduce
 
-    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/ridgelines/lod_cover_q2.py
+    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/modules/vegetation_correction/lod_cover_q2.py
     env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python \
         analysis/mass_balance/datum_from_mass_balance.py \
         --dod dod_cover_q2.npy --lod lod_cover_q2.npy --envelope correlated \

@@ -12,7 +12,7 @@ independent criteria of `refcells` WITHOUT the ridge and curvature cuts -- those
 |curv| at 0.015, which collapses the curvature axis and makes xdem's Delaunay fit fail --
 then the pipeline's iterative 3-NMAD clip of the DoD being fitted.
 
-    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/ridgelines/lod_cover_q2.py
+    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/modules/vegetation_correction/lod_cover_q2.py
 """
 import argparse
 import numpy as np
