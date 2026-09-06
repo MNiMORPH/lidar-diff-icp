@@ -4,7 +4,7 @@
 **Scripts:** `analysis/investigations/gen1_same_line_not_reproduced/gen1_line_tracks.py` (flight-line ground tracks),
 `analysis/investigations/gen1_datum_more_marks/gen1_swath_seam.py` (where the vendor's ground class is cut),
 `analysis/groundtruth/gen1_more_marks_tie.py` (every tie below),
-`analysis/groundtruth/gen1_more_marks_report.py` (every aggregate below)
+`analysis/investigations/gen1_datum_more_marks/gen1_more_marks_report.py` (every aggregate below)
 **Data:** `src/lidar_diff_icp/groundtruth/data/mn_dnr_2008_control_semn.csv`
 (1 004 rows, 986 distinct `point_id`), plus 46 gen1 tiles on disk
 **Follows:** `analysis/GEN1_OWN_CONTROL_TIE.md` (sign conventions, the 16-mark run),
