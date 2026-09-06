@@ -15,7 +15,7 @@ disk, downloading nothing:
    one chain (a link check), and west versus east (a chain check).
 
     env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python \\
-        analysis/groundtruth/elba_absolute_tie.py [--ground csf|vendor] [--east/--no-east]
+        analysis/investigations/gen1_datum_more_marks/elba_absolute_tie.py [--ground csf|vendor] [--east/--no-east]
 
 Every parameter printed is generated from the estimators' own Param records, not typed
 here. Sign convention: ``tie`` is the constant to ADD to gen1 (already in swath 133's
@@ -373,7 +373,7 @@ def main():
     if A.json:
         os.makedirs(os.path.dirname(A.json) or ".", exist_ok=True)
         rec = dict(
-            produced_by="analysis/groundtruth/elba_absolute_tie.py",
+            produced_by="analysis/investigations/gen1_datum_more_marks/elba_absolute_tie.py",
             ground_source=A.ground,
             reference_frame=f"elbaext swath {ref_line} (corrections_geoid.json gauge)",
             sign_convention=("tie_mm = surveyed - z_lidar_corrected: the constant to ADD "

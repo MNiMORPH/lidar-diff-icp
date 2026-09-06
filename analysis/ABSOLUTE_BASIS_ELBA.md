@@ -4,7 +4,7 @@
 **Scripts:** `analysis/groundtruth/reference_swath_bias.py` (the transport question),
 `analysis/groundtruth/gen2_checkpoint_tie.py` (gen2 against its own marks),
 `analysis/groundtruth/elba_datum_constant.py` (the constant, its budget, the product),
-`analysis/groundtruth/elba_absolute_tie.py --json` (the gen1 ties, re-run today)
+`analysis/investigations/gen1_datum_more_marks/elba_absolute_tie.py --json` (the gen1 ties, re-run today)
 **Module:** `src/lidar_diff_icp/groundtruth/datum.py`, tested in
 `tests/test_groundtruth_datum.py`
 **Product:** `data/derived/elba_fulldensity/z_before_absolute.npy` +

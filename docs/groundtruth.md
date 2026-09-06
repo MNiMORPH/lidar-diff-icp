@@ -2,7 +2,7 @@
 
 **Module:** `src/lidar_diff_icp/groundtruth/`
 **Runnable examples:** `analysis/groundtruth/gen1_datum_at_site.py` (gen1 against its
-OWN 2008 control, at any MN site), `analysis/groundtruth/elba_absolute_tie.py` (the gen1 ties),
+OWN 2008 control, at any MN site), `analysis/investigations/gen1_datum_more_marks/elba_absolute_tie.py` (the gen1 ties),
 `analysis/groundtruth/gen2_checkpoint_tie.py` (gen2 against the same marks, no chain),
 `analysis/groundtruth/elba_datum_constant.py` (one constant, its budget, the product),
 `analysis/groundtruth/reference_swath_bias.py` (is the reference swath biasing anything?)
@@ -353,7 +353,7 @@ ones and prints every point of the sweep; the result is written up in
 
 ## 6. What the example run produced
 
-`analysis/groundtruth/elba_absolute_tie.py`, seven gen1 tiles already on disk, nothing
+`analysis/investigations/gen1_datum_more_marks/elba_absolute_tie.py`, seven gen1 tiles already on disk, nothing
 downloaded at run time. Every checkpoint reported separately, before any combination:
 
 | checkpoint | type | line | links | n | tie (mm) | σ (mm) | median over radii | chain (mm) | geoid (mm) |
@@ -457,9 +457,9 @@ chains do not contradict each other", not as the accuracy of the tie.
     --mode common_datum --corrections data/derived/elbaext/corrections_geoid.json
 
 env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python \
-    analysis/groundtruth/elba_absolute_tie.py            # west + east, csf ground
+    analysis/investigations/gen1_datum_more_marks/elba_absolute_tie.py            # west + east, csf ground
 env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python \
-    analysis/groundtruth/elba_absolute_tie.py --no-east --ground vendor
+    analysis/investigations/gen1_datum_more_marks/elba_absolute_tie.py --no-east --ground vendor
 ```
 
 Needs, all local: `data/before/4342-29-6{1,2,3,4}.laz` (west corridor),

@@ -121,7 +121,7 @@ def main():
     R.param("res_m", res, src="repo", why=f"{ELBAEXT} res_m")
     R.param("csf_crop_halfwidth_m", A.csf_halfwidth, src="MINE",
             why="CSF is run on a crop, not a tile, to keep it seconds instead of minutes. "
-                "Copied unchanged from analysis/groundtruth/elba_absolute_tie.py so the "
+                "Copied unchanged from analysis/investigations/gen1_datum_more_marks/elba_absolute_tie.py so the "
                 "two runs are the same method; its effect is measured below by re-reading "
                 "every mark with the vendor class-2 ground, which uses no crop at all")
     R.param("siting_radius_m", A.siting_radius, src="repo",

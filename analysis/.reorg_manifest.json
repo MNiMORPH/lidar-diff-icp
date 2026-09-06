@@ -54,6 +54,13 @@
   ],
   "status": "done"
  },
+ "analysis/gen2_absolute_datum.py": {
+  "dest": "analysis/investigations/gen2_absolute_datum",
+  "files": [
+   "analysis/gen2_absolute_datum.py"
+  ],
+  "status": "done"
+ },
  "analysis/gen2_density_map.py": {
   "dest": "analysis/tools",
   "files": [

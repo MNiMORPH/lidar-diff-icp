@@ -54,12 +54,12 @@ from lidar_diff_icp.groundtruth import tie as T                     # noqa: E402
 BOXES = "data/after/checkpoints"
 CACHE = "data/derived/groundtruth"
 #: gen1's ties at the two marks that anchor the datum, from
-#: ``analysis/groundtruth/elba_absolute_tie.py`` (re-run 2026-08-26, csf ground). Used
+#: ``analysis/investigations/gen1_datum_more_marks/elba_absolute_tie.py`` (re-run 2026-08-26, csf ground). Used
 #: only to print the epoch difference beside each gen2 result; nothing here depends on
 #: them.
 GEN1_TIE_MM = {"2210_2021_MN": (21.3, 12.4), "2036_2021_MN": (28.9, 27.0),
                "3056_2021_MN": (-103.2, 52.3), "2024_2021_MN": (156.6, 54.5)}
-GEN1_SRC = ("analysis/groundtruth/elba_absolute_tie.py, csf ground, run 2026-08-26; "
+GEN1_SRC = ("analysis/investigations/gen1_datum_more_marks/elba_absolute_tie.py, csf ground, run 2026-08-26; "
             "docs/groundtruth.md section 6")
 #: 3DEP's own published accuracy for this block, used ONLY as the verdict tolerance --
 #: gen2 is being tested against the very marks that certify it, so its own specification
