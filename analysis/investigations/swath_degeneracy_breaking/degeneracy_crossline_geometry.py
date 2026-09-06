@@ -23,7 +23,7 @@ Ground selection is ``coreg.coregister_swaths``'s own: classification not in (5,
 Cell size is the pipeline's 5 m (``data/derived/elbaext/corrections.json`` res_m).
 Nothing is fetched and nothing in ``coreg.py`` or ``pipeline.py`` is modified.
 
-    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/degeneracy_crossline_geometry.py
+    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/investigations/swath_degeneracy_breaking/degeneracy_crossline_geometry.py
 """
 from __future__ import annotations
 
