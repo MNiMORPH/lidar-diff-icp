@@ -71,13 +71,20 @@ SITES: dict[str, Site] = {
     "carlton": Site("carlton", "data/before_carlton/2742-12-53.laz",
                     "data/after_carlton/carlton_3dep.laz", "histogram",
                     (547805.0, 5163676.0, 550225.0, 5167166.0)),
-    # battlecreek's histogram cut removes 72.4% of the tile -- measured on the 2026-09-06
+    # BATTLECREEK HAS NO RIVER VALLEY (Andy, 2026-09-06), so the valley cut is not a
+    # parameter that needs a better value here -- the CONCEPT does not apply. The histogram
+    # method finds the first local minimum above the dominant elevation mode and calls the
+    # ground below it floodplain; at a site whose modal elevation is set by graded lots
+    # rather than by a valley floor, that minimum is not a floodplain boundary and nothing
+    # it returns would be. Read battlecreek's stable set as "low-curvature ground above an
+    # arbitrary elevation", not as "upland above a valley".
+    #
+    # The measured effect of the cut, 2026-09-06 rebuild:
     # rebuild: 283.6 m, 15,494 of 21,402 cells excluded, leaving 4,841 stable (22.6%).
-    # (The 75.2% recorded here before was from an earlier run and is superseded.) A BUILT
-    # ENVIRONMENT, where graded lots set the modal elevation rather than a valley floor, so
-    # the cut is not defensible as a floodplain. Its stable_sigma = 0.044 m is computed on
-    # that set. It needs a stated elevation or a fraction guard; the value below is used
-    # because a run must use something, and it is NOT trusted.
+    # (The 75.2% recorded here before was from an earlier run and is superseded.)
+    # stable_sigma = 0.044 m is computed on what survives. "histogram" is kept because a run
+    # must use something and it is at least stated and reproducible -- not because the number
+    # means what it means elsewhere.
     #
     # stream=True since 2026-09-05 (Andy: "unblock"). It was False because the tile is the
     # smallest here -- 615 x 870 m, 8.4 M points -- and fits in memory. But the in-memory
