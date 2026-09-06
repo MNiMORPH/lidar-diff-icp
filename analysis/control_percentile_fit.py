@@ -36,7 +36,10 @@ import sys
 import numpy as np
 import pandas as pd
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+_REPO = os.path.dirname(os.path.abspath(__file__))
+while _REPO != "/" and not os.path.exists(os.path.join(_REPO, "pyproject.toml")):
+    _REPO = os.path.dirname(_REPO)   # depth-independent: find the repo root
+sys.path.insert(0, os.path.join(_REPO, "analysis"))
 from control_lowveg_offset import STRUCT, load          # same marks, same lowveg, same edges
 
 BAND_LO, BAND_HI = 0.15, 2.00       # CONTROL_LOWVEG_OFFSET.md's exact definition
