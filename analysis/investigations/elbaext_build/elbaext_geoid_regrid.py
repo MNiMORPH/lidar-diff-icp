@@ -6,7 +6,7 @@ cells are dominated by flat rural fields (leaf-on gen2 sits high -> over-drop), 
 deterministic geoid is the trustworthy shared frame. Writes *_geoid outputs alongside the
 reference_plane product (non-destructive); z_after/slope are tie-independent (reused).
 
-    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/slope_bias/elbaext_geoid_regrid.py
+    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/investigations/elbaext_build/elbaext_geoid_regrid.py
 """
 import json, numpy as np
 from lidar_diff_icp.pipeline import difference_dem

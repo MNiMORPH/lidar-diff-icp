@@ -436,5 +436,12 @@
   ],
   "note": "test suite: 1 warning, 1 error in 0.79s",
   "status": "blocked"
+ },
+ "analysis/slope_bias/elbaext_extract_gen2_ground.py": {
+  "dest": "analysis/investigations/elbaext_build",
+  "files": [
+   "analysis/slope_bias/elbaext_extract_gen2_ground.py"
+  ],
+  "status": "done"
  }
 }

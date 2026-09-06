@@ -77,4 +77,4 @@ for label, b in cases:
     span = max(b[2] - b[0], b[3] - b[1]) / 1000.0
     print(f"  {label:<26}{span:9.1f}{n:6d}{ptp:11.2f}{rms:11.2f}{mx:11.2f}")
 print("\nThe elba row's field ptp reproduces the 4.44 mm quoted in "
-      "analysis/slope_bias/elbaext_geoid_regrid.py.")
+      "analysis/investigations/elbaext_build/elbaext_geoid_regrid.py.")

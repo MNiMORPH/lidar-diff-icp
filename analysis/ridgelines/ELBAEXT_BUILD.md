@@ -147,7 +147,7 @@ plus `stable.npy` and `meta.json`.)
 
 ## Scripts
 
-- `analysis/slope_bias/elbaext_geoid_regrid.py` — the regrid driver (mirrors
+- `analysis/investigations/elbaext_build/elbaext_geoid_regrid.py` — the regrid driver (mirrors
   `fulldensity_regrid.py`; the differences are documented inline).
 - `analysis/slope_bias/csf_tiled.py` — tiled CSF that fills the gen1 ground cache.
 - `analysis/investigations/elbaext_build/elbaext_extract_gen2_ground.py` — extracts the gen2 class-2 ground.
