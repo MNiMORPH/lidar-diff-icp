@@ -39,7 +39,7 @@ Everything is measured against the shipped pipeline on the same inputs:
   ``analysis/investigations/stable_point_tilt_audit/stable_point_tilt_audit.py --dod`` on the old and the new rasters, so the two
   are produced by identical code.
 
-    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/swath_tie_intercept.py
+    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/investigations/swath_tie_intercept/swath_tie_intercept.py
 """
 from __future__ import annotations
 

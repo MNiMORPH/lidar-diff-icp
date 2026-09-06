@@ -3,10 +3,10 @@
 **Date:** 2026-08-26
 **Code:** `coreg.across_track_tie` + `tie=` on `coregister_swaths`/`align_swaths`
 (commit `89b6234`), regression test (`203c9c4`), measurement script
-`analysis/swath_tie_intercept.py` (`4456295`).
+`analysis/investigations/swath_tie_intercept/swath_tie_intercept.py` (`4456295`).
 **Runs:**
 
-    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/swath_tie_intercept.py
+    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/investigations/swath_tie_intercept/swath_tie_intercept.py
     env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/investigations/stable_point_tilt_audit/stable_point_tilt_audit.py --dod dod_cover_q2.npy
     env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/investigations/stable_point_tilt_audit/stable_point_tilt_audit.py --dod dod_cover_q2_tie.npy
 
