@@ -58,6 +58,13 @@ RECENT = "2026-09-01"          # rule 4: "still in use" means touched during the
 #: findings document claims it.
 META_DOCS = re.compile(
     r"(?:^|/)(?:README|TODO|AUDIT_findings|HIDDEN_FILTERS_AUDIT|SCRIPT_INVENTORY"
+    # DELETION_CANDIDATES.md is this exercise's own report. Left out of this list it
+    # became the most specific citer of 15 scripts and would have moved them into
+    # analysis/investigations/deletion_candidates/ -- a folder named after a report
+    # about them, created by writing the report. A document about the PROJECT must
+    # never confer membership of an investigation.
+    r"|DELETION_CANDIDATES|ACROSS_TRACK_TIE_LITERATURE|DATA_COMPLETENESS"
+    r"|PENETRATION_LAYER_STATUS|SWATH_ALIGNMENT_METHOD"
     r"|REORGANIZATION_PLAN|SESSION_[A-Za-z_]+|FRAME_[0-9-]+(?:-[A-Z]+)?"
     r"|HELP_[A-Za-z_]+|[A-Z_]*SESSION[A-Z_]*)\.md$", re.IGNORECASE)
 MANIFEST = os.path.join(REPO, "analysis", ".reorg_manifest.json")
@@ -169,6 +176,13 @@ def destination(p, f):
     if p in _W.TOOLS:
         return 1, os.path.dirname(p), "declared in workflow.TOOLS"
     importers = f["imported_by"].get(p, set())
+    # A SCRIPT A TEST IMPORTS IS BEING USED AS A LIBRARY. That is stronger evidence than any
+    # citation, and the count-based test below misses it: csf_tiled.py and crossline_fit.py
+    # each have exactly ONE importer, a test, and were being sent to an investigation folder
+    # named after a document that merely cites them -- burying a module a test depends on.
+    by_test = sorted(q for q in importers if q.startswith("tests/"))
+    if by_test:
+        return 2, "analysis/lib", f"imported by {', '.join(os.path.basename(q) for q in by_test)}"
     if any(q.startswith("src/") for q in importers) or len(importers) >= 2:
         return 2, "analysis/lib", f"imported by {len(importers)} file(s)"
     if st is not None and st.group:
