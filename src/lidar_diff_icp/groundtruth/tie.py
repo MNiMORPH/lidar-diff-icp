@@ -96,7 +96,7 @@ def scan_angle_deg(las) -> np.ndarray:
 
     Point formats <= 5 carry ``scan_angle_rank`` in integer degrees (0 = nadir); 6+
     carry ``scan_angle`` in 0.006-degree units. This is the same two-branch read as
-    ``analysis/ridgelines/gen1_save_angles_slope.py``. It RAISES when neither dimension
+    ``analysis/modules/vegetation_correction/gen1_save_angles_slope.py``. It RAISES when neither dimension
     is present rather than returning zeros: PDAL rewrites a point-format-1 crop as
     format 7, and a silent zero here would print "all beams at nadir" for a swath edge.
     """

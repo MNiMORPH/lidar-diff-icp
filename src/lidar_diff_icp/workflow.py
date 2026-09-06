@@ -207,7 +207,7 @@ STEPS: tuple[Step, ...] = (
          optional=True,
          produces=("gen1_csf_angles.npz",),
          requires=("z_after.npy", "corrections.json"),
-         command=f"{PY} analysis/ridgelines/gen1_save_angles_slope.py {{tile_name}} {{gen1}}",
+         command=f"{PY} analysis/modules/vegetation_correction/gen1_save_angles_slope.py {{tile_name}} {{gen1}}",
          needs=("gen1",),
          note="Per-return gen1 CSF ground offsets with beam geometry. No flags needed: a "
               "stratum the tile lacks is simply omitted from the archive and said to be "

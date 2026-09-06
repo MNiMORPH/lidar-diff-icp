@@ -23,7 +23,7 @@ without them is allowed and often right, but it has to be stated:
     --without forest_pfs,open_pfs                    run without the cover strata
     --without all                                    run with none of the optional strata
 
-    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/ridgelines/gen1_save_angles_slope.py \
+    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/modules/vegetation_correction/gen1_save_angles_slope.py \
         [tile=elba_fulldensity] [csf=data/csf_cache/elba.las] [--without ...]
 """
 import sys, os, json, numpy as np, laspy, math

@@ -100,7 +100,7 @@ The two remaining checkpoints, 2099 (`4342-26-61`) and 3089 (`4358-26-02`), were
 **Method.** For each `point_source_id`, the nadir ground track is fitted from
 returns with `|scan_angle_rank| <= 1` (near-vertical beams sit under the aircraft),
 binned by `gps_time` and fitted linearly in x and y. This is the heading fit of
-`analysis/ridgelines/gen1_save_angles_slope.py` made robust to tile clipping — a
+`analysis/modules/vegetation_correction/gen1_save_angles_slope.py` made robust to tile clipping — a
 plain centroid track is biased by up to ~1 km when a swath is cut by the tile edge,
 which is why the nadir version is used here. Swath half-width is the 99.5th
 percentile of |cross-track| over **all** returns of that line.
