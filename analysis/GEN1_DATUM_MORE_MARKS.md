@@ -1,7 +1,7 @@
 # Enlarging the 2008 control on gen1's own flight lines 133-138
 
 **Date:** 2026-08-26
-**Scripts:** `analysis/groundtruth/gen1_line_tracks.py` (flight-line ground tracks),
+**Scripts:** `analysis/investigations/gen1_same_line_not_reproduced/gen1_line_tracks.py` (flight-line ground tracks),
 `analysis/groundtruth/gen1_swath_seam.py` (where the vendor's ground class is cut),
 `analysis/groundtruth/gen1_more_marks_tie.py` (every tie below),
 `analysis/groundtruth/gen1_more_marks_report.py` (every aggregate below)

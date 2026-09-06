@@ -44,7 +44,7 @@ Not a sign or estimator problem: a **different discovery mode**.
   kilometres from the site, and is the correct search for a per-line quantity.
 
 `discover_near_lines` needs a track geometry per line. Its producer,
-`analysis/groundtruth/gen1_line_tracks.py`, writes `line_tracks.json` **to the
+`analysis/investigations/gen1_same_line_not_reproduced/gen1_line_tracks.py`, writes `line_tracks.json` **to the
 scratchpad**, which is gone. Regenerating it means re-reading the 47 gen1 tiles in
 `data/before/`.
 

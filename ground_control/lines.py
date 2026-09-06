@@ -2,7 +2,7 @@
 
 Why this module exists rather than a scratchpad script
 -----------------------------------------------------
-``analysis/groundtruth/gen1_line_tracks.py`` derives the same thing but writes
+``analysis/investigations/gen1_same_line_not_reproduced/gen1_line_tracks.py`` derives the same thing but writes
 ``line_tracks.json`` to ``$SCRATCH``.  That file is gone, and with it the ability to
 reproduce or extend the gen1 same-line datum -- see
 ``ground_control/GEN1_SAME_LINE_NOT_REPRODUCED.md``.  The tracks here are written into
@@ -49,7 +49,7 @@ from pathlib import Path
 
 import numpy as np
 
-#: Inherited verbatim from ``analysis/groundtruth/gen1_line_tracks.py`` so the tracks are
+#: Inherited verbatim from ``analysis/investigations/gen1_same_line_not_reproduced/gen1_line_tracks.py`` so the tracks are
 #: the same object that module built.  They are that module's author's choices, not new
 #: ones; each is passed explicitly and printed by the driver.
 INHERITED_PARAMS = {

@@ -4,7 +4,7 @@
         --tiles 'data/before/*.laz' --exclude-substring merged \
         --out ground_control/data/gen1_line_tracks.json --chunk-size 2000000
 
-The four method parameters are inherited from analysis/groundtruth/gen1_line_tracks.py,
+The four method parameters are inherited from analysis/investigations/gen1_same_line_not_reproduced/gen1_line_tracks.py,
 not re-chosen, so these tracks are the object that module built.  Pass --stride etc. to
 override and the banner will record it.
 
@@ -60,7 +60,7 @@ def main(argv=None):
     for k in L.INHERITED_PARAMS:
         got, base = getattr(a, k), L.INHERITED_PARAMS[k]
         R.param(k, got, src="repo" if got == base else "MINE",
-                why=("inherited verbatim from analysis/groundtruth/gen1_line_tracks.py "
+                why=("inherited verbatim from analysis/investigations/gen1_same_line_not_reproduced/gen1_line_tracks.py "
                      "so these tracks are the object that module built"
                      if got == base else
                      f"OVERRIDDEN on the command line; that module used {base}"))
