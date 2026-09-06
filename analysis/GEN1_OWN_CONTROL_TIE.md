@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-26
 **Scripts:** `analysis/investigations/additional_ground_control/parse_mndnr_2008_control.py` (the reports → a bundled
-checkpoint CSV, with the sign test), `analysis/groundtruth/gen1_own_control_tie.py`
+checkpoint CSV, with the sign test), `analysis/investigations/gen1_own_control_tie/gen1_own_control_tie.py`
 (every measurement below)
 **Data added:** `src/lidar_diff_icp/groundtruth/data/mn_dnr_2008_control_semn.csv`,
 1 004 surveyed control points across gen1's eight-county footprint

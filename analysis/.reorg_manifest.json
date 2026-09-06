@@ -104,6 +104,13 @@
   ],
   "status": "done"
  },
+ "analysis/groundtruth/gen1_more_marks_tie.py": {
+  "dest": "analysis/investigations/gen1_datum_more_marks",
+  "files": [
+   "analysis/groundtruth/gen1_more_marks_tie.py"
+  ],
+  "status": "done"
+ },
  "analysis/groundtruth/gen1_swath_seam.py": {
   "dest": "analysis/investigations/gen1_datum_more_marks",
   "files": [

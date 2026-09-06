@@ -30,7 +30,7 @@ subtracts the geoid shift it adds, ``tie21`` and ``tie08`` are the same quantity
 Usage
 -----
     env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python \
-        analysis/groundtruth/gen1_own_control_tie.py [--ground csf|vendor]
+        analysis/investigations/gen1_own_control_tie/gen1_own_control_tie.py [--ground csf|vendor]
 """
 from __future__ import annotations
 
