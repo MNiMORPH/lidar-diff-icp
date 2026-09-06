@@ -443,5 +443,12 @@
    "analysis/slope_bias/elbaext_extract_gen2_ground.py"
   ],
   "status": "done"
+ },
+ "analysis/slope_bias/elbaext_geoid_regrid.py": {
+  "dest": "analysis/investigations/elbaext_build",
+  "files": [
+   "analysis/slope_bias/elbaext_geoid_regrid.py"
+  ],
+  "status": "done"
  }
 }
