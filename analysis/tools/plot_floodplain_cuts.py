@@ -8,7 +8,7 @@ valley, it keeps flat terrace ground sitting at valley level, and on a wide vall
 interior reads as flat-stable rather than as floodplain. The elevation antimode cuts on the
 quantity that actually defines a floodplain.
 
-    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/plot_floodplain_cuts.py \
+    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/tools/plot_floodplain_cuts.py \
         --tiles data/derived/elba data/derived/whitewater
 """
 import argparse, json, os, re

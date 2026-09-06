@@ -5,5 +5,12 @@
    "analysis/gen2_density_map.py"
   ],
   "status": "done"
+ },
+ "analysis/plot_dod_comparison.py": {
+  "dest": "analysis/tools",
+  "files": [
+   "analysis/plot_dod_comparison.py"
+  ],
+  "status": "done"
  }
 }
