@@ -68,6 +68,12 @@ All six rebuilt on current code. Five are byte-identical across the reorganizati
     mnrv            0.056        0.103         UNMEASURABLE (bbox spans two 3DEP projects)
     battlecreek     0.044        0.090         0.998
 
+## The queue
+
+`analysis/NEXT_SESSION.md` holds the prepared plan: the last 7 moves (ready, needs a
+one-line fix in three tests first), the decisions waiting, the open science, and what NOT
+to redo.
+
 ## Open, and needing Andy
 
 1. **Battle Creek's valley top.** Its histogram cut removes 72.4% of the grid (283.6 m) in
