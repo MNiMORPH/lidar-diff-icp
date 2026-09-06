@@ -37,7 +37,10 @@ import argparse, json, os, sys
 import numpy as np, pandas as pd
 import matplotlib; matplotlib.use("Agg"); import matplotlib.pyplot as plt
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
+_REPO = os.path.dirname(os.path.abspath(__file__))
+while _REPO != "/" and not os.path.exists(os.path.join(_REPO, "pyproject.toml")):
+    _REPO = os.path.dirname(_REPO)   # depth-independent: find the repo root
+sys.path.insert(0, os.path.join(_REPO, "src"))
 from lidar_diff_icp.binstats import block_ids, quantile_edges, binned_stats, nmad
 
 ap = argparse.ArgumentParser()
