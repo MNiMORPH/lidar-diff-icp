@@ -47,6 +47,13 @@
   ],
   "status": "done"
  },
+ "analysis/degeneracy_water_surface.py": {
+  "dest": "analysis/investigations/swath_degeneracy_breaking",
+  "files": [
+   "analysis/degeneracy_water_surface.py"
+  ],
+  "status": "done"
+ },
  "analysis/gen2_density_map.py": {
   "dest": "analysis/tools",
   "files": [

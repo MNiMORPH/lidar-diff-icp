@@ -1,7 +1,7 @@
 # gen2's absolute datum: the 2021 project publishes per-point residuals
 
 **Date:** 2026-08-27
-**Driver:** `analysis/gen2_absolute_datum.py` – one run prints every table below
+**Driver:** `analysis/investigations/gen2_absolute_datum/gen2_absolute_datum.py` – one run prints every table below
 **Parser:** `analysis/investigations/gen2_absolute_datum/parse_gen2_control.py` – rebuilds the bundled CSV
 **Data:** `src/lidar_diff_icp/groundtruth/data/mn_se_driftless_2021_control.csv`
 (**534** marks; **390** of them carry a residual)
@@ -433,7 +433,7 @@ python analysis/investigations/gen2_absolute_datum/parse_gen2_control.py \
   --out src/lidar_diff_icp/groundtruth/data/mn_se_driftless_2021_control.csv
 
 TRUST_GIT_REV=$(git rev-parse --short HEAD) env -u PROJ_DATA -u GDAL_DATA \
-  ./lidar-icp/bin/python analysis/gen2_absolute_datum.py \
+  ./lidar-icp/bin/python analysis/investigations/gen2_absolute_datum/gen2_absolute_datum.py \
   --site-name Elba --site-easting 578762.8 --site-northing 4884487.6 \
   --sign-tol-m 1e-9 --surfaces laz,dem --block-preference QL1,QL0 \
   --band-radii-km 5,10,15,20,30,50,100,200 \
