@@ -26,6 +26,12 @@ dependencies = [
     "pyshp",               # groundtruth/checkpoints.py -- reads control shapefiles
     "shapely",             # threedep.py -- 3DEP coverage geometry
     "catchment-dod-balance @ git+https://github.com/MNiMORPH/catchment-dod-balance.git",  # routed sediment mass-balance (own repo; edit there, consumed here)
+    # Scherler & Schwanghart (2020) divide network, via Andy's verified reimplementation.
+    # trace_ridgelines.py used to reach it with sys.path.insert("/home/awickert/dataanalysis/
+    # r.fluvial") -- an absolute path into one machine's home directory, for a step
+    # (ridge_mask) that is part of the six-step pipeline. Declared here 2026-09-06 so the
+    # pipeline builds anywhere.
+    "rivernetworkx @ git+https://github.com/awickert/r.fluvial.git",
 ]
 
 [project.optional-dependencies]

@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """Trace ridgelines on ANY tile with the Scherler & Schwanghart (2020) divide network,
-via Andy's verified reimplementation (rivernetworkx.dreich.drainage_divides).
+via Andy's verified reimplementation (rivernetworkx.dreich.drainage_divides), declared as a
+dependency: git+https://github.com/awickert/r.fluvial. Until 2026-09-06 this was reached
+with sys.path.insert("/home/awickert/dataanalysis/r.fluvial") -- an absolute path into one
+machine's home directory, for a step that is part of the pipeline, so the pipeline did not
+build anywhere else.
 
 Divides are basin BOUNDARIES of the channel network (the dual of the drainage net), so
 sub-channelization-threshold farm-furrow micro-topography cannot create spurious ridges --
@@ -20,8 +24,7 @@ remains the QC that decides the threshold.
         TILE_DIR default data/derived/elba_fulldensity; e.g. data/derived/elbaext
 """
 import sys, os, json, argparse, numpy as np
-sys.path.insert(0, "/home/awickert/dataanalysis/r.fluvial")
-from rivernetworkx import dreich as D
+from rivernetworkx import dreich as D          # git+https://github.com/awickert/r.fluvial
 from scipy.ndimage import uniform_filter, distance_transform_edt, gaussian_filter
 
 

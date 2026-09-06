@@ -49,12 +49,11 @@ OTHER_ENV = {"pdal", "pyforestscan"}
 def _static_syspath(path):
     """Directories a file adds to sys.path with a literal string, so the lint can follow it.
 
-    analysis/ridgelines/trace_ridgelines.py:23 inserts an ABSOLUTE path OUTSIDE THIS
-    REPOSITORY -- /home/awickert/dataanalysis/r.fluvial, for Andy's rivernetworkx.dreich
-    reimplementation of the Scherler & Schwanghart divide network. It is a PIPELINE step
-    (ridge_mask), so the pipeline does not build on a machine that lacks that directory.
-    Following the insert is what let this test find that rather than mislabel it a broken
-    import.
+    This found the one that mattered: trace_ridgelines.py used to insert an ABSOLUTE path
+    outside the repository -- /home/awickert/dataanalysis/r.fluvial -- for a PIPELINE step,
+    so the pipeline did not build on any other machine. rivernetworkx is now a declared
+    dependency (git+https://github.com/awickert/r.fluvial) and the insert is gone. Following
+    inserts is still how this test tells a real external dependency from a broken import.
     """
     out = []
     with open(os.path.join(REPO, path), errors="ignore") as fh:
@@ -129,19 +128,18 @@ def test_the_lint_is_looking_at_the_real_tree():
 
 
 def test_the_only_out_of_repo_dependency_is_the_one_we_know_about():
-    """A pipeline step reaching outside the repository is a reproducibility limit, so it is
-    pinned rather than left to be discovered. analysis/ridgelines/trace_ridgelines.py adds
-    /home/awickert/dataanalysis/r.fluvial for rivernetworkx.dreich, the Scherler &
-    Schwanghart divide network. ridge_mask is a PIPELINE step, so the pipeline does not
-    build on a machine without that directory.
+    """A step reaching outside the repository by absolute path is a reproducibility limit:
+    the pipeline then builds on one machine only. There is now NONE -- rivernetworkx, the
+    last one, is a declared git dependency as of 2026-09-06.
 
-    If a second one appears, this fails and the decision gets made deliberately."""
+    If one appears, this fails and the decision gets made deliberately rather than
+    discovered when someone else tries to run the pipeline."""
     external = {}
     for p in _tracked_py("analysis") + _tracked_py("scripts") + _tracked_py("src"):
         for d in _static_syspath(p):
             if os.path.isabs(d) and not d.startswith(REPO):
                 external.setdefault(d, []).append(p)
-    assert set(external) == {"/home/awickert/dataanalysis/r.fluvial"}, external
+    assert external == {}, f"absolute paths outside the repo: {external}"
 
 
 def test_the_other_env_allowlist_stays_small():
