@@ -223,6 +223,10 @@
    "mission_time_drift_fit.py",
    "provenance.py"
   ],
+  "NEXT_SESSION.md": [
+   "gen1_datum_at_site.py",
+   "reorganize_analysis.py"
+  ],
   "PENETRATION_LAYER_STATUS.md": [
    "canopy.py",
    "gen1_intensity_fit.py",
@@ -335,7 +339,7 @@
    "reference_swath_bias.py"
   ]
  },
- "n_md": 88,
+ "n_md": 90,
  "n_py": 295,
  "sibling_imports": {
   "calibrate_ground_q.py": [
