@@ -1,7 +1,7 @@
 # An absolute elevation basis for Elba, and what it is worth
 
 **Date:** 2026-08-26
-**Scripts:** `analysis/groundtruth/reference_swath_bias.py` (the transport question),
+**Scripts:** `analysis/investigations/absolute_basis_elba/reference_swath_bias.py` (the transport question),
 `analysis/investigations/gen2_absolute_datum/gen2_checkpoint_tie.py` (gen2 against its own marks),
 `analysis/investigations/absolute_basis_elba/elba_datum_constant.py` (the constant, its budget, the product),
 `analysis/investigations/gen1_datum_more_marks/elba_absolute_tie.py --json` (the gen1 ties, re-run today)

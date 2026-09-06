@@ -5,7 +5,7 @@
 OWN 2008 control, at any MN site), `analysis/investigations/gen1_datum_more_marks/elba_absolute_tie.py` (the gen1 ties),
 `analysis/investigations/gen2_absolute_datum/gen2_checkpoint_tie.py` (gen2 against the same marks, no chain),
 `analysis/investigations/absolute_basis_elba/elba_datum_constant.py` (one constant, its budget, the product),
-`analysis/groundtruth/reference_swath_bias.py` (is the reference swath biasing anything?)
+`analysis/investigations/absolute_basis_elba/reference_swath_bias.py` (is the reference swath biasing anything?)
 **Tests:** `tests/test_groundtruth_{checkpoints,tie,chain,datum,gen1_datum}.py`
 **Reports:** `analysis/ABSOLUTE_BASIS_ELBA.md` (the 2021-checkpoint route),
 `analysis/GEN1_DATUM_MODULE.md` (the 2008-own-control route)

@@ -34,7 +34,7 @@ two tiles isolates the across-track term from every other difference between the
 because only that one term changes.
 
     env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python \\
-        analysis/groundtruth/reference_swath_bias.py [--n-boot 200]
+        analysis/investigations/absolute_basis_elba/reference_swath_bias.py [--n-boot 200]
 
 Sign note: ``d_mm`` in the angle tables is gen1 ground minus the gen2 reference plane, so
 a between-line difference ``d_a - d_b`` is "line a reads higher than line b". The tiles

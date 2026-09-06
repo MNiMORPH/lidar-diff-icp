@@ -125,6 +125,13 @@
   ],
   "status": "done"
  },
+ "analysis/groundtruth/gen2_checkpoint_tie.py": {
+  "dest": "analysis/investigations/gen2_absolute_datum",
+  "files": [
+   "analysis/groundtruth/gen2_checkpoint_tie.py"
+  ],
+  "status": "done"
+ },
  "analysis/groundtruth/parse_gen2_control.py": {
   "dest": "analysis/investigations/gen2_absolute_datum",
   "files": [
