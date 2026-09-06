@@ -4,7 +4,7 @@
 **Scripts:** `analysis/investigations/swath_degeneracy_breaking/degeneracy_flightline_inventory.py` (headings, spacings, water),
 `analysis/investigations/swath_degeneracy_breaking/degeneracy_crossline_geometry.py` (the cross line against the N-S lines),
 `analysis/degeneracy_identifiability.py` (what the null space *is*, ground control, gen2),
-`analysis/degeneracy_water_surface.py` (a level water surface as a single-line reference)
+`analysis/investigations/swath_degeneracy_breaking/degeneracy_water_surface.py` (a level water surface as a single-line reference)
 **Run:** `env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/<script>.py`
 **Read, not redone:** `analysis/SWATH_ACROSS_TRACK_TEST.md`, `analysis/ELBAEXT2_SCOPE.md`,
 `analysis/ABSOLUTE_BASIS_ELBA.md`, `docs/groundtruth.md`, `analysis/ADDITIONAL_GROUND_CONTROL.md`.

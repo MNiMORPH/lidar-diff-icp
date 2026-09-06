@@ -19,7 +19,7 @@ in sign with the line's body-fixed side, while a per-line roll would not -- prin
 ``c_over_h``, which is the implied cross-track tilt and must be common to all three lines if
 the signal is the pool rather than the instrument.
 
-    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/degeneracy_water_surface.py
+    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/investigations/swath_degeneracy_breaking/degeneracy_water_surface.py
 """
 from __future__ import annotations
 
