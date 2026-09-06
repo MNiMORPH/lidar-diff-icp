@@ -606,7 +606,7 @@ def _state_with_code(tile_dir, steps=STEPS):
 
 
 def runnable(tile_dir, *, gen1=None, gen2=None, dod=None, steps=STEPS,
-             include_optional=True, skip_groups=(), only_stale=True):
+             include_optional=True, skip_groups=(), only_stale=True, only=()):
     """What :func:`run` would execute, in dependency order, and WHY each was chosen.
 
     Returns ``[(step, command, state, detail), ...]``. Pure -- it executes nothing, so the
@@ -615,21 +615,43 @@ def runnable(tile_dir, *, gen1=None, gen2=None, dod=None, steps=STEPS,
     ``only_stale=True`` (the default) selects steps whose outputs are not current: the whole
     point of tracking staleness is not to redo work that is already right. ``False`` runs
     every selected step regardless, for a forced rebuild.
+
+    ``only=("slope", ...)`` restricts the run to named steps. It is a FILTER OVER THE FULL
+    ORDERING, not a smaller graph: passing a subset to ``steps=`` instead makes ``order()``
+    refuse, because a subset's requirements are produced outside it (``slope`` needs
+    ``z_after.npy``, which ``base`` makes). The requirements of a filtered step are checked
+    ON DISK rather than scheduled, so running one step never silently runs its inputs --
+    and refuses if they are absent.
     """
+    for n in only:
+        if n not in {s.name for s in steps}:
+            raise ValueError(f"unknown step {n!r}; known: {sorted(s.name for s in steps)}")
     st = _state_with_code(tile_dir, steps=steps)
     out = []
     for s, cmd, missing in plan(tile_dir, gen1=gen1, gen2=gen2, dod=dod, steps=steps,
                                 include_optional=include_optional,
                                 skip_groups=skip_groups):
+        if only and s.name not in only:
+            continue
         k, d = st[s.name]
         if only_stale and k not in NOT_CURRENT:
             continue
         out.append((s, cmd, k, d))
+    if only:
+        # a filtered step's inputs are NOT scheduled, so they must already exist
+        made = {f for x, _, _, _ in out for f in x.produces}
+        absent = sorted({r for x, _, _, _ in out for r in x.requires
+                         if r not in made and not os.path.exists(os.path.join(tile_dir, r))})
+        if absent:
+            raise ValueError(
+                f"--only was given, so the inputs of the named steps are not scheduled, and "
+                f"these are absent from {tile_dir}: {absent}. Run the producing steps first, "
+                f"or drop --only.")
     return out
 
 
 def run(tile_dir, *, gen1=None, gen2=None, dod=None, steps=STEPS, include_optional=True,
-        skip_groups=(), only_stale=True, dry_run=False, verbose=True):
+        skip_groups=(), only_stale=True, only=(), dry_run=False, verbose=True):
     """Execute the graph in dependency order, STOPPING AT THE FIRST FAILURE.
 
     Returns ``(ran, failure)``: the steps that completed, and ``(step, returncode)`` for the
@@ -646,7 +668,7 @@ def run(tile_dir, *, gen1=None, gen2=None, dod=None, steps=STEPS, include_option
     """
     todo = runnable(tile_dir, gen1=gen1, gen2=gen2, dod=dod, steps=steps,
                     include_optional=include_optional, skip_groups=skip_groups,
-                    only_stale=only_stale)
+                    only_stale=only_stale, only=only)
     supplied = {"gen1": gen1, "gen2": gen2}
     blocked = [(s.name, [n for n in s.needs if n != "site" and supplied.get(n) is None])
                for s, _, _, _ in todo]
@@ -672,7 +694,7 @@ def run(tile_dir, *, gen1=None, gen2=None, dod=None, steps=STEPS, include_option
         fresh = {x.name: (c, k, d) for x, c, k, d in
                  runnable(tile_dir, gen1=gen1, gen2=gen2, dod=dod, steps=steps,
                           include_optional=include_optional, skip_groups=skip_groups,
-                          only_stale=only_stale)}
+                          only_stale=only_stale, only=only)}
         if s.name not in fresh:
             if verbose:
                 print(f"[{i}/{len(todo)}] {s.name}: now current, skipped", flush=True)
@@ -713,6 +735,9 @@ def main(argv=None):
                     help="with --run: list what would execute, and execute nothing")
     ap.add_argument("--force", action="store_true",
                     help="with --run: run every selected step, not only the stale ones")
+    ap.add_argument("--only", nargs="*", default=[], metavar="STEP",
+                    help="with --run: restrict to these steps. Their inputs are checked on "
+                         "disk, not scheduled, so this never silently runs a producer.")
     a = ap.parse_args(argv)
     if a.run:
         a.check = a.plan = False          # --run reports its own progress
@@ -752,7 +777,8 @@ def main(argv=None):
             ran, failure = run(a.tile, gen1=a.gen1, gen2=a.gen2, dod=a.dod,
                                include_optional=not a.skip_optional,
                                skip_groups=tuple(a.skip_group),
-                               only_stale=not a.force, dry_run=a.dry_run)
+                               only_stale=not a.force, only=tuple(a.only),
+                               dry_run=a.dry_run)
         except ValueError as e:
             print(f"REFUSED: {e}")
             return 2

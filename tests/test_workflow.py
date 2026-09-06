@@ -421,3 +421,30 @@ def test_runnable_is_pure(tmp_path):
     sel = W.runnable(tmp_path, steps=_toy(tmp_path))
     assert [s.name for s, _, _, _ in sel] == ["s0", "s1", "s2"]
     assert not any((tmp_path / f"f{i}.npy").exists() for i in range(3))
+
+
+def test_only_is_a_filter_over_the_full_ordering_not_a_smaller_graph(tmp_path):
+    """FOUND BY VALIDATING ON A REAL TILE, 2026-09-06. Passing a subset via steps= makes
+    order() refuse -- a subset's requirements are produced OUTSIDE it, so `slope` alone
+    fails on z_after.npy, which base makes. "Rebuild just this step" is a normal thing to
+    want, and was impossible."""
+    steps = _toy(tmp_path, 3)
+    W.run(tmp_path, steps=steps, verbose=False)                  # build everything
+    sel = W.runnable(tmp_path, steps=steps, only=("s1",), only_stale=False)
+    assert [s.name for s, _, _, _ in sel] == ["s1"], "ordering is preserved, s0 filtered out"
+
+
+def test_only_checks_a_filtered_steps_inputs_on_disk_rather_than_scheduling_them(tmp_path):
+    """The guard that makes --only safe: running one step must never silently run its
+    producer. A "rebuild just this step" that quietly rebuilds the DoD is worse than one
+    that refuses."""
+    steps = _toy(tmp_path, 3)
+    with pytest.raises(ValueError, match="are not scheduled, and these are absent"):
+        W.runnable(tmp_path, steps=steps, only=("s1",))          # f0.npy does not exist yet
+    W.run(tmp_path, steps=steps, verbose=False)                  # now it does
+    assert W.runnable(tmp_path, steps=steps, only=("s1",), only_stale=False)
+
+
+def test_only_rejects_an_unknown_step_name(tmp_path):
+    with pytest.raises(ValueError, match="unknown step"):
+        W.runnable(tmp_path, steps=_toy(tmp_path), only=("no_such_step",))
