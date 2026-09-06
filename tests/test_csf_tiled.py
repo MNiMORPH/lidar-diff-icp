@@ -10,14 +10,11 @@ The half-open [cx0, cx1) rule handles interior seams; the ``i == 0`` / ``i == nx
 widenings handle the outer edges, where floating-point on ``x.min()``/``x.max()`` can put
 a point just outside its own domain. Both are tested here.
 """
-import os
-import sys
 
 import numpy as np
 import pytest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "analysis", "slope_bias"))
-from csf_tiled import core_mask  # noqa: E402
+from lidar_diff_icp.csf_tiled import core_mask
 
 
 def _partition_counts(x, y, nx, ny, overlap=150.0):

@@ -22,8 +22,8 @@ computation, not a different one.
 Defaults reproduce the elbaext build exactly (3x3, 150 m halo). Any other cloud is a
 matter of ``--src``/``--out``; ``--nx``/``--ny`` size the memory peak only.
 
-    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/slope_bias/csf_tiled.py
-    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/slope_bias/csf_tiled.py \
+    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python -m lidar_diff_icp.csf_tiled
+    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python -m lidar_diff_icp.csf_tiled \
         --src data/before/4342-28-64.laz --out data/csf_cache/4342-28-64.las --nx 2 --ny 2
 """
 import argparse

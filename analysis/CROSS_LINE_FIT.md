@@ -1,11 +1,11 @@
 # The cross line: what it settles, and the thing it settles against the model
 
 **Date:** 2026-08-26
-**Code:** `analysis/crossline_fit.py` (the fit), `analysis/slope_bias/csf_tiled.py` (the CSF pass)
+**Code:** `analysis/crossline_fit.py` (the fit), `src/lidar_diff_icp/csf_tiled.py` (the CSF pass)
 **Tests:** `tests/test_crossline_fit.py`, `tests/test_csf_tiled.py` — 12 pass
 **Runs:**
 
-    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/slope_bias/csf_tiled.py \
+    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python src/lidar_diff_icp/csf_tiled.py \
         --src data/before/4342-28-64.laz --out data/csf_cache/4342-28-64.las --nx 2 --ny 2
     env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/crossline_fit.py
 
@@ -45,7 +45,7 @@ per-line `c_s` correction is not the object to build.
 
 ## 1. The CSF pass: it worked
 
-`analysis/slope_bias/csf_tiled.py`, 2×2 tiles with the standard 150 m halo, calling
+`src/lidar_diff_icp/csf_tiled.py`, 2×2 tiles with the standard 150 m halo, calling
 `ground.classify_ground_csf` at its repo defaults (rigidness 1, everything else PDAL's own).
 Nothing retuned. **6,941,881 class-2 ground points** written to `data/csf_cache/4342-28-64.las`.
 

@@ -298,7 +298,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--cross-las", default="data/csf_cache/4342-28-64.las",
-                    help="CSF ground of the cross-line tile (analysis/slope_bias/csf_tiled.py)")
+                    help="CSF ground of the cross-line tile (src/lidar_diff_icp/csf_tiled.py)")
     ap.add_argument("--cross-raw", default="data/before/4342-28-64.laz",
                     help="the raw tile, read only for the per-line class census of Sec 1")
     ap.add_argument("--valid-las", default="data/csf_cache/elbaext.las",
@@ -415,7 +415,7 @@ def main():
     R.input(A.cross_raw, role="raw 2008 gen1 LAZ tile carrying the cross line 10010 and the "
                               "N-S lines 135-138, vendor classification")
     R.input(A.cross_las, role="our CSF ground (class 2) for that tile, from "
-                              "analysis/slope_bias/csf_tiled.py at classify_ground_csf defaults")
+                              "src/lidar_diff_icp/csf_tiled.py at classify_ground_csf defaults")
     if not A.skip_validation:
         R.input(A.valid_las, role="our CSF ground for elbaext -- the same cache the elbaext "
                                   "pipeline product was built from")
