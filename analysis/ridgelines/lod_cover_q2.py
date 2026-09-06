@@ -21,8 +21,23 @@ from scipy.ndimage import gaussian_filter
 from lidar_diff_icp.pipeline import heteroscedastic_lod
 from lidar_diff_icp.refcells import reference_cells
 
+def _vt(v):
+    """'registry'/'histogram' pass through; anything else must parse as an elevation."""
+    if v in ("registry", "histogram"):
+        return v
+    try:
+        return float(v)
+    except ValueError:
+        raise SystemExit(f"--valley-top {v!r} is neither 'registry', 'histogram', nor a "
+                         f"number of metres")
+
+
 ap = argparse.ArgumentParser()
 ap.add_argument("--tile", default="data/derived/elba_fulldensity")
+ap.add_argument("--valley-top", dest="valley_top", required=True,
+                help="how the floodplain cut is decided, and it is NEVER chosen for you: an "
+                     "elevation in metres, 'registry', or 'histogram'. refcells "
+                     "refuses without it.")
 A = ap.parse_args()
 D = A.tile
 
@@ -32,7 +47,8 @@ res = 5.0
 _z = np.where(np.isfinite(Zf), Zf, np.nanmedian(Zf))
 abs_curv = np.abs(np.gradient(np.gradient(gaussian_filter(_z, 1.0), res, axis=0), res, axis=0)
                   + np.gradient(np.gradient(gaussian_filter(_z, 1.0), res, axis=1), res, axis=1))
-stable0, _ = reference_cells(D, slope_max=90.0, gross_change_mm=500.0,
+stable0, _ = reference_cells(D, valley_top_m=_vt(A.valley_top),
+                             slope_max=90.0, gross_change_mm=500.0,
                             curv_max=np.inf, require_ridge=False)
 stable0 = stable0.reshape(Zf.shape)
 

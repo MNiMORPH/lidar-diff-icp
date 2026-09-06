@@ -226,7 +226,7 @@ STEPS: tuple[Step, ...] = (
          produces=("nearground_gen2_class_split.npz",),
          requires=("z_after.npy", "nearground_cells_sn.npz"),
          command=f"{PY} analysis/ridgelines/nearground_class_split.py --tile {{tile}} "
-                 f"--gen2 {{gen2}}",
+                 f"--gen2 {{gen2}} --valley-top {{valley_top}}",
          needs=("gen2",),
          note="gen2 class-2 near-ground histogram; the column q2 indexes into."),
     Step("class2_spread",
@@ -271,17 +271,28 @@ STEPS: tuple[Step, ...] = (
          optional=True,
          produces=("lod_cover_q2.npy",),
          requires=("dod_cover_q2.npy", "slope.npy", "curv_laplacian.npy"),
-         command=f"{PY} analysis/ridgelines/lod_cover_q2.py --tile {{tile}}",
+         command=f"{PY} analysis/ridgelines/lod_cover_q2.py --tile {{tile}} "
+                 f"--valley-top {{valley_top}}",
+         needs=("valley_top",),
          note="LoD refitted on the corrected DoD."),
     Step("cover_calibration",
          group="vegetation_correction",
          produces=("cover_offset_calibration.json",),
          requires=("beam_offset_table.parquet", "canopy_cover_pfs.npy", "slope.npy",
                    "curv_laplacian.npy"),
-         command=f"{PY} analysis/ridgelines/cover_offset_reference.py --tile {{tile}}",
+         command=f"{PY} analysis/ridgelines/cover_offset_reference.py --tile {{tile}} "
+                 f"--valley-top {{valley_top}}",
+         needs=("valley_top",),
          optional=True,
          note="offset-vs-cover on non-eroding ground; dod_cover_attribution.py reads it. "
-              "Writes cover_offset_calibration_<tile>.json for tiles other than elba."),
+              "NAME MISMATCH, unresolved: it writes cover_offset_calibration_<tile>.json "
+              "for every tile EXCEPT elba_fulldensity (the note here used to say 'except "
+              "elba', which is wrong), so `produces` below is true only for that one tile "
+              "and this step reports MISSING everywhere else even after a clean run. The "
+              "suffix is not purely redundant -- it also carries --offset raw and --inc-max "
+              "variants -- so collapsing it is a naming decision, not a fix. Both consumers "
+              "(dod_cover_attribution, plot_cover_calibration) already try suffixed then "
+              "plain, so they are unaffected either way."),
     Step("canopy_struct",
          produces=("canopy_struct.npz",),
          requires=("z_after.npy",),
@@ -569,7 +580,12 @@ def plan(tile_dir, *, gen1=None, gen2=None, dod=None, steps=STEPS, include_optio
     # than printing one that dies -- a plan that cannot be run is worse than no plan.
     from . import sites as _sites
     site = name if name in _sites.SITES else None
-    supplied = {"gen1": gen1, "gen2": gen2, "site": site}
+    # The valley top is a per-site DECISION, recorded in sites.py -- "the caller always says
+    # which" (Andy, 2026-09-04), and refcells refuses without it. The graph has to carry that
+    # decision to the scripts, or every consumer re-decides or dies. Found by the first
+    # end-to-end run: cover_calibration had been unrunnable since the rule landed.
+    valley_top = str(_sites.SITES[site].valley_top) if site else None
+    supplied = {"gen1": gen1, "gen2": gen2, "site": site, "valley_top": valley_top}
     cmds = []
     for s in order(steps):
         if s.optional and not include_optional:
@@ -581,10 +597,17 @@ def plan(tile_dir, *, gen1=None, gen2=None, dod=None, steps=STEPS, include_optio
              .replace("{gen1}", gen1 or "<--gen1 NOT GIVEN>")
              .replace("{gen2}", gen2 or "<--gen2 NOT GIVEN>")
              .replace("{dod}", dod or f"{tile_dir}/dod.npy")
-             .replace("{site}", site or f"<no Site registered for {name!r}; see sites.py>"))
+             .replace("{site}", site or f"<no Site registered for {name!r}; see sites.py>")
+             .replace("{valley_top}", valley_top
+                      or f"<no Site registered for {name!r}; state --valley-top>"))
         cmds.append((s, c, missing))
     return cmds
 
+
+#: `needs` entries that are NOT supplied by the caller: they are resolved from the Site
+#: record, so run() must not block on them. Keeping them in `needs` is deliberate -- it is
+#: what makes --plan print "NEEDS --site" for a tile that has no Site.
+SITE_DERIVED_NEEDS = ("site", "valley_top")
 
 #: States that mean a step's outputs are not current. Anything else is left alone.
 NOT_CURRENT = ("MISSING", "STALE", "CODE-STALE", "STALE+CODE", "MISSING+CODE")
@@ -670,7 +693,8 @@ def run(tile_dir, *, gen1=None, gen2=None, dod=None, steps=STEPS, include_option
                     include_optional=include_optional, skip_groups=skip_groups,
                     only_stale=only_stale, only=only)
     supplied = {"gen1": gen1, "gen2": gen2}
-    blocked = [(s.name, [n for n in s.needs if n != "site" and supplied.get(n) is None])
+    blocked = [(s.name, [n for n in s.needs
+                         if n not in SITE_DERIVED_NEEDS and supplied.get(n) is None])
                for s, _, _, _ in todo]
     blocked = [(n, m) for n, m in blocked if m]
     if blocked:

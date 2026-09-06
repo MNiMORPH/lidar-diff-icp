@@ -25,10 +25,25 @@ from scipy.ndimage import distance_transform_edt
 
 from lidar_diff_icp.refcells import reference_cells
 
+def _vt(v):
+    """'registry'/'histogram' pass through; anything else must parse as an elevation."""
+    if v in ("registry", "histogram"):
+        return v
+    try:
+        return float(v)
+    except ValueError:
+        raise SystemExit(f"--valley-top {v!r} is neither 'registry', 'histogram', nor a "
+                         f"number of metres")
+
+
 ap = argparse.ArgumentParser()
 ap.add_argument("--tile", default="data/derived/elba_fulldensity")
 ap.add_argument("--gen2", default="data/after/3dep2021_fulldensity.laz")
 ap.add_argument("--chunk", type=int, default=3_000_000)
+ap.add_argument("--valley-top", dest="valley_top", required=True,
+                help="how the floodplain cut is decided, and it is NEVER chosen for you: an "
+                     "elevation in metres, 'registry', or 'histogram'. refcells "
+                     "refuses without it.")
 A = ap.parse_args()
 
 STRATA = [("open   <0.05", -0.01, 0.05), ("light .05-.20", 0.05, 0.20),
@@ -89,7 +104,8 @@ np.savez_compressed(f"{A.tile}/nearground_gen2_class_split.npz",
                     zlo=zlo, dz=dz)
 print(f"saved {A.tile}/nearground_gen2_class_split.npz", flush=True)
 cover = np.load(f"{A.tile}/canopy_cover_pfs.npy").ravel()[cells]
-stable, _ = reference_cells(A.tile, cells=cells, slope_max=90.0)
+stable, _ = reference_cells(A.tile, cells=cells, slope_max=90.0,
+                            valley_top_m=_vt(A.valley_top))
 Cg = np.cumsum(Hg, 1).astype(float); Cn = np.cumsum(Hn, 1).astype(float)
 ng = Cg[:, -1]; nn = Cn[:, -1]; nt = ng + nn
 k0 = int(round((0.0 - zlo)/dz))

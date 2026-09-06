@@ -43,6 +43,11 @@ ap.add_argument("--inc-max", type=float, default=None,
                      "but note incidence ~ slope for near-nadir beams, so this also selects "
                      "near-flat ground and cannot speak to the cover effect on steep slopes")
 ap.add_argument("--curv-max", type=float, default=None)
+ap.add_argument("--valley-top", dest="valley_top", required=True,
+                help="how the floodplain cut is decided, and it is NEVER chosen for you: an "
+                     "elevation in metres, 'registry' (the established value for this tile), "
+                     "or 'histogram' (the landscape's pooled elevations). refcells refuses "
+                     "without it; this script used to omit it and so could not run at all.")
 ap.add_argument("--min-n", type=int, default=1,
                 help="minimum returns per cover bin. 1 is the definitional floor (a median "
                      "needs a return). It removes nothing at 200 on these tiles either, but "
@@ -78,7 +83,19 @@ if A.curv_max is not None:
     df = df[(df.curv_laplacian.abs() <= A.curv_max).to_numpy()].copy()
 cell = df.cell.to_numpy()
 from lidar_diff_icp.refcells import reference_cells
-_mask, _rep = reference_cells(A.tile, curv_max=(A.curv_max if A.curv_max is not None
+
+
+def _vt(v):
+    """'registry'/'histogram' pass through; anything else must parse as an elevation."""
+    if v in ("registry", "histogram"):
+        return v
+    try:
+        return float(v)
+    except ValueError:
+        raise SystemExit(f"--valley-top {v!r} is neither 'registry', 'histogram', nor a "
+                         f"number of metres")
+_mask, _rep = reference_cells(A.tile, valley_top_m=_vt(A.valley_top),
+                              curv_max=(A.curv_max if A.curv_max is not None
                                                 else 0.015),
                               slope_max=A.slope_max)
 ref = _mask.ravel()[cell]
