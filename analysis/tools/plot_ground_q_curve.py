@@ -10,7 +10,7 @@ from the tile's gen2_psid_counts.npy (written by analysis/marks_by_flight_line.p
 marks are drawn on top of, not instead of, the fitted population -- a site rarely has enough
 control of its own to carry a curve, and the figure should show that rather than hide it.
 
-    ./lidar-icp/bin/python analysis/plot_ground_q_curve.py --point-types NVA \
+    ./lidar-icp/bin/python analysis/tools/plot_ground_q_curve.py --point-types NVA \
         --lines data/derived/whitewater
 """
 import argparse, os

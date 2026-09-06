@@ -12,5 +12,12 @@
    "analysis/plot_dod_comparison.py"
   ],
   "status": "done"
+ },
+ "analysis/plot_floodplain_cuts.py": {
+  "dest": "analysis/tools",
+  "files": [
+   "analysis/plot_floodplain_cuts.py"
+  ],
+  "status": "done"
  }
 }
