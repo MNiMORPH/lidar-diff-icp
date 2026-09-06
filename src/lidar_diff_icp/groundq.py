@@ -201,7 +201,7 @@ def resolve_ground_q(ground_q, *, gen2_curve=None, gen2_epoch=None, stream=True,
 # ---------------------------------------------------------------------------------------
 # APPLYING THE CURVE TO A TILE
 #
-# Lifted from analysis/ridgelines/dod_cover_corrected.py, which is the code that actually
+# Lifted from analysis/modules/vegetation_correction/dod_cover_corrected.py, which is the code that actually
 # produced Elba's corrected DoD. It is moved here rather than rewritten, because the one
 # time it was rewritten -- inside pipeline._stream_ground -- the residual frame silently
 # changed (no plane on one call, the REGIONAL plane on the other, an anchor-relative window

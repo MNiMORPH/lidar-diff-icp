@@ -270,7 +270,7 @@ STEPS: tuple[Step, ...] = (
          produces=("dod_cover_q2.npy", "dod_cover_q2.json", "dod_gen2_median.npy",
                    "gen2_q2_used.npy"),
          requires=("z_after.npy", "beam_offset_table.parquet"),
-         command=f"{PY} analysis/ridgelines/dod_cover_corrected.py --tile {{tile}} "
+         command=f"{PY} analysis/modules/vegetation_correction/dod_cover_corrected.py --tile {{tile}} "
                  f"--gen2 {{gen2}} --q-from-class2-spread {GROUND_Q_CURVE}",
          needs=("gen2",),
          code=("src/lidar_diff_icp/groundq.py", GROUND_Q_CURVE),

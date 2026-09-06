@@ -39,10 +39,10 @@ the registration it is built on. The statistics barely move:
     -0.1835 (current)    341,174 159,248   59.8    116.2
 
 Either version is one deterministic command away -- the slope is recorded here, the
-producer is `analysis/ridgelines/dod_cover_corrected.py --slope`, and its inputs are
+producer is `analysis/modules/vegetation_correction/dod_cover_corrected.py --slope`, and its inputs are
 unchanged since 17:31:
 
-    ./lidar-icp/bin/python analysis/ridgelines/dod_cover_corrected.py \
+    ./lidar-icp/bin/python analysis/modules/vegetation_correction/dod_cover_corrected.py \
         --tile data/derived/elba_fulldensity --slope -0.1922
 
 ## Why linear, and why one parameter

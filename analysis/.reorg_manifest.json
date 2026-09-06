@@ -60,6 +60,13 @@
   ],
   "status": "done"
  },
+ "analysis/ridgelines/canopy_struct.py": {
+  "dest": "analysis/modules/vegetation_correction",
+  "files": [
+   "analysis/ridgelines/canopy_struct.py"
+  ],
+  "status": "done"
+ },
  "analysis/ridgelines/cover_offset_reference.py": {
   "dest": "analysis/tools",
   "files": [

@@ -203,7 +203,7 @@ makes the per-line check above a one-liner rather than a project.
         apply     : surface_from_grid . reference_surface . column_histogram .
                     spread_from_histogram . ground_at_q . ground_at_median . correct_gen2
 
-    analysis/ridgelines/dod_cover_corrected.py --q-from-class2-spread <curve.npz>
+    analysis/modules/vegetation_correction/dod_cover_corrected.py --q-from-class2-spread <curve.npz>
     pipeline.difference_dem(ground_q="calibrated", gen2_curve=<curve.npz>)
 
 Both callers use `groundq.correct_gen2`; there is no second implementation. The application is

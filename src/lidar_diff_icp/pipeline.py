@@ -698,7 +698,7 @@ def correct_reference(Zref, Z21, after_laz, curve, grid, *, verbose=True):
     #
     # It is a SECOND PASS over the cloud by necessity: the reference surface IS the q = 0.50
     # grid, so it has to exist before the correction can be measured. Same
-    # groundq.correct_gen2 that analysis/ridgelines/dod_cover_corrected.py calls; there is
+    # groundq.correct_gen2 that analysis/modules/vegetation_correction/dod_cover_corrected.py calls; there is
     # no second implementation.
     if _GQ_CURVE is not None:
         _surf = groundq.surface_from_grid(Z21, X0, Y0, res)

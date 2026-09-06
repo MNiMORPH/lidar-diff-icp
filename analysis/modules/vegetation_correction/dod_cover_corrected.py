@@ -15,7 +15,7 @@ Requires one streaming pass over the gen2 cloud to build the class-2 near-ground
 for EVERY grid cell (the existing class-split cube covers only the divide reference cells).
 
     env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python \\
-        analysis/ridgelines/dod_cover_corrected.py
+        analysis/modules/vegetation_correction/dod_cover_corrected.py
 """
 import argparse, json, os
 import numpy as np, laspy, pyarrow.parquet as pq
