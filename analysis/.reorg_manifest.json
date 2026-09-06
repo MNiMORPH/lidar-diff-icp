@@ -179,6 +179,13 @@
   ],
   "status": "done"
  },
+ "analysis/mass_balance/datum_from_mass_balance.py": {
+  "dest": "analysis/investigations/datum_from_mass_balance",
+  "files": [
+   "analysis/mass_balance/datum_from_mass_balance.py"
+  ],
+  "status": "done"
+ },
  "analysis/plot_dod_comparison.py": {
   "dest": "analysis/tools",
   "files": [

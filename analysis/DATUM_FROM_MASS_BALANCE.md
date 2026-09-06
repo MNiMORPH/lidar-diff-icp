@@ -42,7 +42,7 @@ Both prior conditions in the brief were real and both are fixed here.
    rather than accumulating in it. The evaluated population is **209,451 cells =
    5.236 km² = 58.9 % of the grid** (evaluable 214,562 of 217,609 routed = 98.60 %; the
    difference between evaluable and evaluated is cells with no known DoD).
-3. **The prior runs also used the wrong error envelope** (`analysis/mass_balance/elba.py:28`
+3. **The prior runs also used the wrong error envelope** (`analysis/investigations/datum_from_mass_balance/elba.py:28`
    passes no `corr_sill`/`corr_range`). Everything here uses the correlated N_eff envelope
    with a variogram fitted on the REBUILT DoD, and reports the independent envelope beside
    it as a sensitivity.
