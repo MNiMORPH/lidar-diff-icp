@@ -31,7 +31,7 @@ Everything about the error envelope, the off-map boundary terms and the variogra
 ``catchment-dod-balance/scripts/validate_site.py`` so the two are the same method.
 
     env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python \
-        analysis/mass_balance/datum_from_mass_balance.py
+        analysis/investigations/datum_from_mass_balance/datum_from_mass_balance.py
 """
 from __future__ import annotations
 

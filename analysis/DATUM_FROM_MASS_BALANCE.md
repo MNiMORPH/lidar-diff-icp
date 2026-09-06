@@ -20,7 +20,7 @@ budget is exactly balanced (zero net export), and that assumption is what puts t
 tension with the marks. Both readings are given below; the choice between them is a
 geomorphic judgement, not a statistical one.
 
-Producer: `analysis/mass_balance/datum_from_mass_balance.py` (this task's script);
+Producer: `analysis/investigations/datum_from_mass_balance/datum_from_mass_balance.py` (this task's script);
 comparison arithmetic `analysis/investigations/datum_from_mass_balance/compare_to_control.py`. Raw run logs under
 `analysis/mass_balance/out/`. Everything below is pasted from those runs.
 
@@ -394,7 +394,7 @@ survives the `q2` correction at high cover. It is not tested here.
 
     env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/modules/vegetation_correction/lod_cover_q2.py
     env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python \
-        analysis/mass_balance/datum_from_mass_balance.py \
+        analysis/investigations/datum_from_mass_balance/datum_from_mass_balance.py \
         --dod dod_cover_q2.npy --lod lod_cover_q2.npy --envelope correlated \
         --floodplain-mode routing --z 1.0 --n-boot 300 --null-real 100 \
         --save analysis/mass_balance/out/S_q2_corr_z1.npz
