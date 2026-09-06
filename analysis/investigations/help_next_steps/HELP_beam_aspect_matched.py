@@ -24,7 +24,7 @@ to ~0.  Only then is the sloped-ground split trustworthy.
 Same data sources as HELP #2 (all gen1; aspect from gen2 reference plane; forest
 label from gen1-only above-ground return fraction; NO gen2 canopy magnitude).
 
-    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/ridgelines/HELP_beam_aspect_matched.py
+    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/investigations/help_next_steps/HELP_beam_aspect_matched.py
 """
 import numpy as np, laspy, math
 from scipy.ndimage import distance_transform_edt
