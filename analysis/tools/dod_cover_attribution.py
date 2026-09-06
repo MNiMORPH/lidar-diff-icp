@@ -15,7 +15,7 @@ The calibration is deliberately fitted OFF the slopes it is used to correct, so 
 prediction being tested, not a fit being re-reported.
 
     env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python \
-        analysis/ridgelines/dod_cover_attribution.py --tile data/derived/elba_fulldensity
+        analysis/tools/dod_cover_attribution.py --tile data/derived/elba_fulldensity
 """
 import argparse, json, os
 import numpy as np

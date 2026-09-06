@@ -26,5 +26,12 @@
    "analysis/plot_ground_q_curve.py"
   ],
   "status": "done"
+ },
+ "analysis/ridgelines/cover_offset_reference.py": {
+  "dest": "analysis/tools",
+  "files": [
+   "analysis/ridgelines/cover_offset_reference.py"
+  ],
+  "status": "done"
  }
 }
