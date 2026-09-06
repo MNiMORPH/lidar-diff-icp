@@ -148,7 +148,7 @@ def main():
                     help="pipeline grid resolution setting the radius ladder; required "
                          "with --boxes-dir, no default")
     ap.add_argument("--tie-json", default=None,
-                    help="output of analysis/groundtruth/gen2_checkpoint_tie.py --json; "
+                    help="output of analysis/investigations/gen2_absolute_datum/gen2_checkpoint_tie.py --json; "
                          "section 5 compares our estimator with USGS's where both exist")
     A = ap.parse_args()
 

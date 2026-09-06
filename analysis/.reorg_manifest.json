@@ -111,6 +111,13 @@
   ],
   "status": "done"
  },
+ "analysis/groundtruth/gen1_own_control_tie.py": {
+  "dest": "analysis/investigations/gen1_own_control_tie",
+  "files": [
+   "analysis/groundtruth/gen1_own_control_tie.py"
+  ],
+  "status": "done"
+ },
  "analysis/groundtruth/gen1_swath_seam.py": {
   "dest": "analysis/investigations/gen1_datum_more_marks",
   "files": [

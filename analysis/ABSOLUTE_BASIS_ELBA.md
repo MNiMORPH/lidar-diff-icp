@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-26
 **Scripts:** `analysis/groundtruth/reference_swath_bias.py` (the transport question),
-`analysis/groundtruth/gen2_checkpoint_tie.py` (gen2 against its own marks),
+`analysis/investigations/gen2_absolute_datum/gen2_checkpoint_tie.py` (gen2 against its own marks),
 `analysis/investigations/absolute_basis_elba/elba_datum_constant.py` (the constant, its budget, the product),
 `analysis/investigations/gen1_datum_more_marks/elba_absolute_tie.py --json` (the gen1 ties, re-run today)
 **Module:** `src/lidar_diff_icp/groundtruth/datum.py`, tested in

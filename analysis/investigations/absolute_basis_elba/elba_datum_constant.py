@@ -266,7 +266,7 @@ def main():
         BudgetTerm("estimator + mark scatter", g2_nva, "random",
                    f"measured here on gen2, where no chain, geoid or lateral term exists: "
                    f"{g2_nva:.1f} mm RMS over {g2['n_nva']} open-ground marks "
-                   f"(analysis/groundtruth/gen2_checkpoint_tie.py). UPPER bound -- it "
+                   f"(analysis/investigations/gen2_absolute_datum/gen2_checkpoint_tie.py). UPPER bound -- it "
                    f"cannot be separated from real gen2 spatial error.",
                    "each mark independently"),
         BudgetTerm("alignment extent-dependence into the elbaext frame", ext_alignment,

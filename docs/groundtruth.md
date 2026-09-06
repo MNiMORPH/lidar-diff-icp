@@ -3,7 +3,7 @@
 **Module:** `src/lidar_diff_icp/groundtruth/`
 **Runnable examples:** `analysis/groundtruth/gen1_datum_at_site.py` (gen1 against its
 OWN 2008 control, at any MN site), `analysis/investigations/gen1_datum_more_marks/elba_absolute_tie.py` (the gen1 ties),
-`analysis/groundtruth/gen2_checkpoint_tie.py` (gen2 against the same marks, no chain),
+`analysis/investigations/gen2_absolute_datum/gen2_checkpoint_tie.py` (gen2 against the same marks, no chain),
 `analysis/investigations/absolute_basis_elba/elba_datum_constant.py` (one constant, its budget, the product),
 `analysis/groundtruth/reference_swath_bias.py` (is the reference swath biasing anything?)
 **Tests:** `tests/test_groundtruth_{checkpoints,tie,chain,datum,gen1_datum}.py`
@@ -416,7 +416,7 @@ chains do not contradict each other", not as the accuracy of the tie.
   valid at the along-track position of the mark, and carries ~16 mm/km of unmodelled drift
   in transferring that to Elba. This is the single largest known gap.
 * **gen2 at the marks: now done, and it moved the budget.**
-  `analysis/groundtruth/gen2_checkpoint_tie.py` reads gen2 against all six marks with no
+  `analysis/investigations/gen2_absolute_datum/gen2_checkpoint_tie.py` reads gen2 against all six marks with no
   chain, no geoid and no lateral term, from six full-density 400 m boxes. gen2 is not
   systematically low (median +17.2 mm over four NVA marks), but those four span **103 mm**
   and give **40.8 mm RMS** on the cleanest case the method has. That scatter is a property

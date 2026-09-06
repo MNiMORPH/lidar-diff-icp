@@ -32,7 +32,7 @@ the lidar sits LOW.
 
     scripts/fetch_3dep_checkpoint_boxes.sh          # one 400 m box per mark
     env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python \\
-        analysis/groundtruth/gen2_checkpoint_tie.py
+        analysis/investigations/gen2_absolute_datum/gen2_checkpoint_tie.py
 """
 from __future__ import annotations
 
@@ -241,7 +241,7 @@ def main():
         os.makedirs(os.path.dirname(A.json) or ".", exist_ok=True)
         v_nva = [r["est"].tie_mm for r in nva]
         rec = dict(
-            produced_by="analysis/groundtruth/gen2_checkpoint_tie.py",
+            produced_by="analysis/investigations/gen2_absolute_datum/gen2_checkpoint_tie.py",
             ground_source=A.ground,
             sign_convention=("tie_mm = surveyed - z_gen2: the constant to ADD to gen2. "
                              "POSITIVE means gen2 sits LOW of the survey. No geoid, no "

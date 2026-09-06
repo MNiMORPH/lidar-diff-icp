@@ -582,7 +582,7 @@ re-verify them and they should be checked before sending.)*
 | 16 of them inside tiles on disk | tile header bounds vs control coordinates, printed by the run |
 | every tie, ladder, spread and percentile in §3-§5 | `gen1_own_control_tie.py --ground csf`, one provenance run, ledger in `.trust/runs/` |
 | the ground-source sensitivity | the same script re-run `--ground vendor` |
-| gen2's -0.7 ± 11.5 mm at mark 2210 | read from `z_before_absolute.json`, `gen2_absolute_offsets`; produced by `analysis/groundtruth/gen2_checkpoint_tie.py`, not re-run here |
+| gen2's -0.7 ± 11.5 mm at mark 2210 | read from `z_before_absolute.json`, `gen2_absolute_offsets`; produced by `analysis/investigations/gen2_absolute_datum/gen2_checkpoint_tie.py`, not re-run here |
 | the anchor's +22.7 ± 39.7 mm and its budget | read from `z_before_absolute.json`; not recomputed here |
 | the NAD83 realization term | **attempted and failed** – PROJ returns a Ballpark/null operation. Named, not measured. |
 | the bias adjustment value | **searched and not found** in any public source listed in §9 |

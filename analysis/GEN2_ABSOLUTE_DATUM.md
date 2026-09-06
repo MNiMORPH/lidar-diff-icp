@@ -7,7 +7,7 @@
 (**534** marks; **390** of them carry a residual)
 **Ledger:** `.trust/runs/20260827T072813-1731650.json`
 **Bears on:** `analysis/CONTROL_RESIDUAL_FIELD.md` (gen1's side of the same measurement),
-`analysis/groundtruth/gen2_checkpoint_tie.py` (the six-mark estimate this supersedes)
+`analysis/investigations/gen2_absolute_datum/gen2_checkpoint_tie.py` (the six-mark estimate this supersedes)
 
 Sign convention throughout, unchanged from `groundtruth.tie`: **positive = the surface
 reads LOW**, i.e. the number is the constant to ADD. Section 1 re-derives it from the
@@ -446,7 +446,7 @@ TRUST_GIT_REV=$(git rev-parse --short HEAD) env -u PROJ_DATA -u GDAL_DATA \
 ```
 
 The `--tie-json` input is the output of
-`analysis/groundtruth/gen2_checkpoint_tie.py --json`, run unchanged.
+`analysis/investigations/gen2_absolute_datum/gen2_checkpoint_tie.py --json`, run unchanged.
 
 ---
 
