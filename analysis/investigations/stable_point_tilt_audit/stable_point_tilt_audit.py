@@ -34,7 +34,7 @@ This run answers five questions and invents no threshold to do it:
 Nothing in ``pipeline.py`` or ``coreg.py`` is modified. Every input, parameter, mask and
 column is declared through ``trust/provenance.py``.
 
-    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/stable_point_tilt_audit.py
+    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/investigations/stable_point_tilt_audit/stable_point_tilt_audit.py
 """
 from __future__ import annotations
 

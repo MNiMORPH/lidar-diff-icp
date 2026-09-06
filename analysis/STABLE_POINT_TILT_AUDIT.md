@@ -1,8 +1,8 @@
 # Where do the "stable" points come from, and is the DoD tilt over them real?
 
 **Date:** 2026-08-26
-**Script:** `analysis/stable_point_tilt_audit.py`
-**Run:** `env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/stable_point_tilt_audit.py`
+**Script:** `analysis/investigations/stable_point_tilt_audit/stable_point_tilt_audit.py`
+**Run:** `env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/investigations/stable_point_tilt_audit/stable_point_tilt_audit.py`
 **Inputs:** `dod_cover_q2.npy`, `z_after.npy`, `canopy_cover_pfs.npy`, `floodplain_mask.npy`,
 `ag_region.npy`, `corrections.json` and `beam_offset_table.parquet` for `elba_fulldensity`.
 Every input, parameter, mask and column is declared through `trust/provenance.py`; the full

@@ -146,6 +146,13 @@
   ],
   "status": "done"
  },
+ "analysis/groundtruth/reference_swath_bias.py": {
+  "dest": "analysis/investigations/absolute_basis_elba",
+  "files": [
+   "analysis/groundtruth/reference_swath_bias.py"
+  ],
+  "status": "done"
+ },
  "analysis/investigations/datum_from_mass_balance/elba.py": {
   "dest": "analysis/tools",
   "files": [

@@ -36,7 +36,7 @@ Everything is measured against the shipped pipeline on the same inputs:
   itself validated by reproducing an independently computed number
   (``analysis/STABLE_POINT_TILT_AUDIT.md`` section 5c, "per-swath constants" removed);
 * the tilt and the stable-ground scatter are then read by running
-  ``analysis/stable_point_tilt_audit.py --dod`` on the old and the new rasters, so the two
+  ``analysis/investigations/stable_point_tilt_audit/stable_point_tilt_audit.py --dod`` on the old and the new rasters, so the two
   are produced by identical code.
 
     env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/swath_tie_intercept.py
@@ -468,11 +468,11 @@ def main():
                      f2(ch[f].max())])
     R.table(["raster", "md_mm", "lo_mm", "hi_mm"], rows)
     print("\n  The tilt and the stable-ground scatter are read off these rasters by\n"
-          "  analysis/stable_point_tilt_audit.py, so before and after come from identical\n"
+          "  analysis/investigations/stable_point_tilt_audit/stable_point_tilt_audit.py, so before and after come from identical\n"
           "  code. `noswath` is the validation case, not a proposal:\n")
     for tag in cases:
         print(f"    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python "
-              f"analysis/stable_point_tilt_audit.py --tile {T} "
+              f"analysis/investigations/stable_point_tilt_audit/stable_point_tilt_audit.py --tile {T} "
               f"--dod {A.dod.replace('.npy', f'_{tag}.npy')}")
 
     R.done(headline="intercept tie changes elba's constants by "

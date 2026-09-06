@@ -7,8 +7,8 @@
 **Runs:**
 
     env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/swath_tie_intercept.py
-    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/stable_point_tilt_audit.py --dod dod_cover_q2.npy
-    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/stable_point_tilt_audit.py --dod dod_cover_q2_tie.npy
+    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/investigations/stable_point_tilt_audit/stable_point_tilt_audit.py --dod dod_cover_q2.npy
+    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/investigations/stable_point_tilt_audit/stable_point_tilt_audit.py --dod dod_cover_q2_tie.npy
 
 Every input, parameter, mask and column is declared through `trust/provenance.py`.
 **Nothing in `coreg.py` or `pipeline.py` changes behaviour**: the new tie is an opt-in
@@ -165,7 +165,7 @@ easting term. The comparison below is therefore run **twice**, and in each case 
 and the after are produced by the same code on the same population — the only thing that
 differs is the raster.
 
-The tilt is re-derived by `analysis/stable_point_tilt_audit.py` (committed at `199cef3`,
+The tilt is re-derived by `analysis/investigations/stable_point_tilt_audit/stable_point_tilt_audit.py` (committed at `199cef3`,
 before this work), not inline. It reproduces `−14.19 / −16.70 / n = 24,287 / intercept
 −10.30` exactly on the old population. (One correction to the note that recorded it: those
 SEs of 5.15 and 3.65 are not what the block bootstrap returns — 500 replicates at 50 m
