@@ -16,7 +16,7 @@ into class-2 and non-class-2, and checking three things:
   3. 0.5 * w_g reproduces the measured full-column rank.
 
     env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python \\
-        analysis/ridgelines/nearground_class_split.py --tile data/derived/elba_fulldensity \\
+        analysis/modules/vegetation_correction/nearground_class_split.py --tile data/derived/elba_fulldensity \\
         --gen2 data/after/3dep2021_fulldensity.laz
 """
 import argparse, json, os

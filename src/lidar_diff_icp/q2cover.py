@@ -180,7 +180,7 @@ def fit_tile(tile_dir, *, exclude_valley=True, valley_top_m=None,
         raise FileNotFoundError(
             f"{D} is missing {missing}. Each has a --tile-parameterized producer; "
             f"nearground_gen2_class_split.npz comes from "
-            f"analysis/ridgelines/nearground_class_split.py.")
+            f"analysis/modules/vegetation_correction/nearground_class_split.py.")
 
     cube = np.load(f"{D}/nearground_cells_sn.npz")
     cells = cube["cells"]; dz = float(cube["dz"]); zlo = float(cube["zlo"])

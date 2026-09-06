@@ -237,7 +237,7 @@ STEPS: tuple[Step, ...] = (
          optional=True,
          produces=("nearground_gen2_class_split.npz",),
          requires=("z_after.npy", "nearground_cells_sn.npz"),
-         command=f"{PY} analysis/ridgelines/nearground_class_split.py --tile {{tile}} "
+         command=f"{PY} analysis/modules/vegetation_correction/nearground_class_split.py --tile {{tile}} "
                  f"--gen2 {{gen2}} --valley-top {{valley_top}}",
          needs=("gen2",),
          note="gen2 class-2 near-ground histogram; the column q2 indexes into."),
