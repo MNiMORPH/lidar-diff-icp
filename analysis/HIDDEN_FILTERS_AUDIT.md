@@ -417,8 +417,8 @@ Ranked. Nothing here has been changed or regenerated; this is the list for Andy 
 `m3c2_lesson.py` 93 · `mass_balance/elba.py` 47 ·
 `roughness_characterization/oak_forest.py` 78 · `slope_bias/ground_class_structure.py` 25 ·
 `slope_bias/ground_return_stats.py` 56,118 · `slope_bias/understory_from_lidar.py` 36,37,44 ·
-`scripts/naip_cover_error.py` 105 · `src/detect.py` 81,84,129 · `src/coreg.py` 96,274,416 ·
-`src/pipeline.py` 163,204
+`scripts/naip_cover_error.py` 105 · `src/lidar_diff_icp/detect.py` 81,84,129 · `src/lidar_diff_icp/coreg.py` 96,274,416 ·
+`src/lidar_diff_icp/pipeline.py` 163,204
 
 ---
 

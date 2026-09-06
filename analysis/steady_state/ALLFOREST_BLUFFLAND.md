@@ -87,5 +87,5 @@ than a canopy-penetration origin.
 ## Files
 
 - Figure: `figures/refdatum/steady_state_allforest_bluffland_pdf.png` (836×505 px)
-- Driver: `analysis/steady_state/run_steady_state_strata.py`
+- Driver: `analysis/steady_state/run_steady_state_strata.py` (removed 2026-09-05, see git history)
 - Reused module: `analysis/steady_state/steady_state_cells.py`

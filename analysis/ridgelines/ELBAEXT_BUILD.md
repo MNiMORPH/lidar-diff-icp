@@ -2,7 +2,7 @@
 
 **Goal.** Extend the Elba pilot tile to a larger study area (`elbaext`) so a set of
 vertical tie-point coordinates spread across the Whitewater valley fall inside the
-grid. The build mirrors `analysis/slope_bias/fulldensity_regrid.py` exactly in
+grid. The build mirrors `analysis/slope_bias/fulldensity_regrid.py` (removed 2026-09-05, see git history; superseded as slope.npy's producer by scripts/make_slope.py, which reproduces it bit-identically) exactly in
 method — the only changes are the extent, the input clouds, and the CSF cache path.
 
 ## Extent
@@ -147,7 +147,7 @@ plus `stable.npy` and `meta.json`.)
 
 ## Scripts
 
-- `analysis/slope_bias/elbaext_regrid.py` — the regrid driver (mirrors
+- `analysis/slope_bias/elbaext_geoid_regrid.py` — the regrid driver (mirrors
   `fulldensity_regrid.py`; the differences are documented inline).
 - `analysis/slope_bias/csf_tiled.py` — tiled CSF that fills the gen1 ground cache.
 - `analysis/slope_bias/elbaext_extract_gen2_ground.py` — extracts the gen2 class-2 ground.

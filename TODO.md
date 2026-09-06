@@ -121,7 +121,8 @@ the crest suite should read from here.**
 ### 2. STILL OPEN: retire `penetration.npy`, or give it a producer
 
 **How it was produced -- established 2026-09-01, by reproducing it.** No tracked code writes
-the file, but `src/lidar_diff_icp/canopy.py:19` `ground_penetration()` does compute it, and it
+the file, but `src/lidar_diff_icp/canopy.py:19` (removed 2026-09-05, see git history)
+`ground_penetration()` did compute it, and it
 is the producer. Recomputing that function's arithmetic on
 `data/after/3dep2021_fulldensity.laz` (182,923,322 points) over elba's bounds, res 5.0,
 `ground_class=2`, `noise_class=7`, accumulating the bincounts in chunks so the computation is
@@ -225,7 +226,8 @@ the "unknown producer" of `ridge_mask.npy` listed below as a loose end),
 `forest_metrics_pfs.py` (`tile_dir`, `after_laz`), `beam_offset_table.py` and
 `gen1_save_angles_slope.py` (positional), `convexity_dod_landcover.py`, `strata_core.py`,
 `curvature_diffusion.py`, `cover_offset_reference.py`, `dod_cover_attribution.py`,
-`q2_cover_fit.py`, `dod_cover_corrected.py`, `lod_cover_q2.py`, `scripts/make_penetration.py`.
+`q2_cover_fit.py`, `dod_cover_corrected.py`, `lod_cover_q2.py`,
+`scripts/make_penetration.py` (removed 2026-09-05, see git history).
 
 ### DONE 2026-09-01 (1), (2), (3) and the packaging question
 

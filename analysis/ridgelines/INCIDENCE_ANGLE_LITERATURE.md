@@ -26,7 +26,7 @@ whether inter-acquisition geometry is a recognized false-change source — close
 Throughout, **incidence angle** means the beam angle to the local surface normal.
 On flat ground it equals the off-nadir scan angle; on a slope it is a joint function
 of scan angle, slope, and beam azimuth relative to aspect (our
-`analysis/ridgelines/incidence_angle.py` reconstructs it per flight line and
+`analysis/ridgelines/incidence_angle.py` (removed 2026-09-05, see git history) reconstructs it per flight line and
 validates that it reduces to |scan angle| on flat farmland).
 
 ---

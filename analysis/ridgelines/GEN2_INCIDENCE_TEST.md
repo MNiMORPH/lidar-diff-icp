@@ -39,7 +39,7 @@ Per flight line (`point_source_id`): heading H from fitting (x,y) vs `gps_time`;
 `c=(-sinH,cosH)`; side of +scan_angle from `sign(corr(cross-track pos, scan_angle))`. Beam
 horizontal unit (ground->sensor) `= -sign(scan_angle)*sgn*c`; beam `b = sin|θ|·ĥ + cos|θ|·ẑ`.
 Surface normal `n=(-gx,-gy,1)/|.|`; `incidence = arccos(b·n)`. `d_mm` = slope-normal distance of
-each ground return to the `z_after` plane, ×1000. (`analysis/ridgelines/incidence_angle.py`,
+each ground return to the `z_after` plane, ×1000. (`analysis/ridgelines/incidence_angle.py` (removed 2026-09-05, see git history),
 `gen1_save_angles_slope.py`.) The in-grid returns belong to flight lines 3039-3043;
 **corr(cross-track, scan_angle) = -1.00** for the four large lines (-0.83 for the smallest),
 confirming a clean side-sign reconstruction.
@@ -129,7 +129,7 @@ is a gen1-only fix.
 
 ```
 PROJ_DATA=/home/awickert/anaconda3/envs/lidar-icp/share/proj \
-  /home/awickert/anaconda3/envs/lidar-icp/bin/python analysis/ridgelines/gen2_incidence_test.py
+  /home/awickert/anaconda3/envs/lidar-icp/bin/python analysis/ridgelines/gen2_incidence_test.py  # (removed 2026-09-05, see git history)
 ```
 
 Outputs: `data/derived/elba_fulldensity/gen2_csf_angles.npz` (incidence, scan_angle, slope, d_mm,

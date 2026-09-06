@@ -15,11 +15,12 @@ identically on every tile."*
 
 ## Removed
 
-    src/lidar_diff_icp/canopy.py     the whole module (ground_penetration was the layer;
+    src/lidar_diff_icp/canopy.py     (removed 2026-09-05) the whole module
+                                     (ground_penetration was the layer;
                                      leafon_slope_flag and inflate_lod were reachable only
                                      from their own tests, the flag having been retired
                                      2026-09-02)
-    scripts/make_penetration.py      the producer
+    scripts/make_penetration.py      the producer (removed 2026-09-05)
     tests/test_canopy.py             its tests
     Step("penetration")              from the graph
     Step("strata_core")              its last consumer -- already blocked, and penetration
@@ -41,7 +42,7 @@ Both are open questions for Andy, deliberately left rather than decided by a cle
 
 The quantity was **geometry-confounded** and a poor canopy proxy. As recorded in the repo,
 ground-return fraction correlates **-0.84 with scan angle**
-(`analysis/ridgelines/gen1_intensity_fit.py:6`, which names it as the source of the 0.6
+(`analysis/ridgelines/gen1_intensity_fit.py:6` (removed 2026-09-05, see git history), which names it as the source of the 0.6
 bimodal split, and `gen1_save_angles_slope.py:90`).
 
 CORRECTED 2026-09-05: an earlier version of this file added "-0.91" for overlap density and

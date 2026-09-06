@@ -55,9 +55,9 @@ not stop and it does not patch around. Blocked clusters are the report.
 
 ## The program
 
-    scripts/reorganize_analysis.py --plan     compute and print every destination; move nothing
-    scripts/reorganize_analysis.py --apply    execute, one commit per cluster, gated
-    scripts/reorganize_analysis.py --report   what moved, what is blocked, what is unsorted
+    reorganize_analysis.py --plan     compute and print every destination; move nothing
+    reorganize_analysis.py --apply    execute, one commit per cluster, gated
+    reorganize_analysis.py --report   what moved, what is blocked, what is unsorted
 
 `--plan` is committed as an artifact BEFORE `--apply` runs, so the intended end state is
 reviewable as a diff rather than discovered afterwards.
@@ -73,7 +73,7 @@ reviewable as a diff rather than discovered afterwards.
 
 ### Phase 1 — the program, and its plan. Nothing moves.
 
-    1a  write scripts/reorganize_analysis.py implementing the rule and the clustering
+    1a  write scripts/reorganize_analysis.py (planned; this phase creates it) implementing the rule and the clustering
     1b  commit the output of --plan: all 143 destinations, and the cluster list
     1c  TOOLS registry entries for whatever lands in analysis/tools/ and analysis/lib/
 
