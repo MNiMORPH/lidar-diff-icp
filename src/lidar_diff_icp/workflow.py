@@ -189,6 +189,7 @@ STEPS: tuple[Step, ...] = (
               "and the convexity producer rewrites that file from scratch, so the reverse "
               "order drops the three columns silently."),
     Step("pfs_cover",
+         group="vegetation_correction",
          produces=("canopy_cover_pfs.npy", "forest_pfs.npy", "open_pfs.npy", "pai_pfs.npy"),
          requires=("z_after.npy",),
          command=f"{PY_PFS} analysis/forest_metrics_pfs.py {{tile}} {{gen2}}",
@@ -202,6 +203,8 @@ STEPS: tuple[Step, ...] = (
               "it anyway is not free -- a large tile needs an untwine COPC first, ~14 GB of "
               "scratch for a 1 GB cloud."),
     Step("gen1_angles",
+         group="vegetation_correction",
+         optional=True,
          produces=("gen1_csf_angles.npz",),
          requires=("z_after.npy", "corrections.json"),
          command=f"{PY} analysis/ridgelines/gen1_save_angles_slope.py {{tile_name}} {{gen1}}",
@@ -210,6 +213,8 @@ STEPS: tuple[Step, ...] = (
               "stratum the tile lacks is simply omitted from the archive and said to be "
               "omitted. --without is for EXCLUDING a layer that is present."),
     Step("beam_table",
+         group="vegetation_correction",
+         optional=True,
          produces=("beam_offset_table.parquet", "beam_offset_table.head.csv"),
          requires=("gen1_csf_angles.npz", "corrections.json", "curv_laplacian.npy"),
          command=f"{PY} analysis/ridgelines/beam_offset_table.py {{tile}} {{gen1}}",
@@ -219,6 +224,8 @@ STEPS: tuple[Step, ...] = (
               "is newer than this table, every q2 number downstream is on superseded "
               "registration."),
     Step("nearground",
+         group="vegetation_correction",
+         optional=True,
          produces=("nearground_cells_sn.npz",),
          requires=("z_after.npy", "curv_laplacian.npy"),
          command=f"{PY} analysis/ridgelines/nearground_cells.py --tile {{tile}} "
@@ -226,6 +233,8 @@ STEPS: tuple[Step, ...] = (
          needs=("gen1", "gen2"),
          note="Slope-normal near-ground column, both epochs."),
     Step("nearground_split",
+         group="vegetation_correction",
+         optional=True,
          produces=("nearground_gen2_class_split.npz",),
          requires=("z_after.npy", "nearground_cells_sn.npz"),
          command=f"{PY} analysis/ridgelines/nearground_class_split.py --tile {{tile}} "
@@ -279,6 +288,7 @@ STEPS: tuple[Step, ...] = (
          needs=("valley_top",),
          note="LoD refitted on the corrected DoD."),
     Step("canopy_struct",
+         group="vegetation_correction",
          produces=("canopy_struct.npz",),
          requires=("z_after.npy",),
          command=f"{PY} analysis/ridgelines/canopy_struct.py --tile {{tile_name}} "
@@ -306,7 +316,15 @@ _BASE_STEP = next(s for s in STEPS if s.name == "base")
 #: open ground must not look like part of producing it.
 GROUPS = {
     "vegetation_correction":
-        "The gen2 leaf-on ground correction. NOT part of the shipped DoD: the pipeline "
+        "The gen2 leaf-on ground correction AND ITS FEEDERS. Extended 2026-09-06 (Andy: "
+        "'if this group is the feeder for the vegetation correction, then they should also "
+        "sit alongside') to take in pfs_cover, gen1_angles, beam_table, nearground and "
+        "nearground_split -- the beam-angle and near-ground apparatus, whose products are "
+        "read ONLY by q2cover.py, this correction's own library module, and by the "
+        "correction steps. The four terrain steps that look similar do NOT move: slope, "
+        "ridge_mask, convexity and curvature are read by refcells.py, the strict stable "
+        "population that 20+ scripts use, so they are pipeline. "
+        "NOT part of the shipped DoD: the pipeline "
         "default is ground_q = 0.50, and 'calibrated' must name its curve, because on open "
         "ground the calibrated curve measured WORSE than the median (RMS 52.5 vs 49.1 mm, "
         "held out on the 227 NVA marks). Held out AT THE MARKS the correction is real "

@@ -117,9 +117,15 @@ def test_plan_substitutes_the_tile_and_flags_unsupplied_clouds():
     assert all("{" not in c for _, c, _ in cmds), "every placeholder is substituted"
     assert any("data/derived/somewhere" in c for _, c, _ in cmds)
 
-    # a step that reads a cloud says so, both in the command and in its missing list
+    # THE BASE PIPELINE TAKES NO CLOUD FLAGS. Its only cloud reader is `base`, which gets
+    # them from the Site record (run_all_sites --only <site>), so nothing in the default
+    # plan needs --gen1/--gen2. Every step that does is alongside, in a group -- which is
+    # why this looks at the plan WITH the group reached over to.
+    assert not [s for s, _, _ in cmds if {"gen1", "gen2"} & set(s.needs)], \
+        "the pipeline gets its clouds from sites.py, not from flags"
+    cmds = W.plan("data/derived/somewhere", with_groups=("vegetation_correction",))
     needs_gen2 = [(s, c, m) for s, c, m in cmds if "gen2" in s.needs]
-    assert needs_gen2, "some steps read the gen2 cloud"
+    assert needs_gen2, "the alongside apparatus does read the gen2 cloud"
     assert all("<--gen2 NOT GIVEN>" in c and "gen2" in m for _, c, m in needs_gen2)
 
     supplied = W.plan("data/derived/somewhere", gen2="X.laz")
@@ -294,11 +300,17 @@ def test_the_vegetation_correction_is_a_leaf_so_it_can_be_switched_off():
     WORSE than doing nothing on open ground."""
     assert W.group_is_a_leaf("vegetation_correction")
     members = {s.name for s in W.STEPS if s.group == "vegetation_correction"}
-    # cover_calibration was removed from the graph 2026-09-06 (Andy: the route is no
-    # longer in use). Its script stays on disk and runnable; it was a leaf, so nothing
-    # required its output. The Scherler & Schwanghart divides it used are UNAFFECTED --
-    # that is Step("ridge_mask"), which convexity and refcells both depend on.
-    assert members == {"class2_spread", "q2_fit", "dod_cover", "lod_cover"}
+    # Extended 2026-09-06 to take in the FEEDERS (Andy: "if this group is the feeder for
+    # the vegetation correction, then they should also sit alongside"). The membership test
+    # is what decides which steps are pipeline and which are apparatus, so the rule is
+    # written here rather than inferred: a step belongs to the group when its products are
+    # read ONLY by q2cover.py -- the correction's own library module -- and by the
+    # correction's steps. slope, ridge_mask, convexity and curvature look similar and do
+    # NOT belong: refcells.py reads them for the strict stable population that 20+ scripts
+    # use, so they are pipeline.
+    assert members == {"class2_spread", "q2_fit", "dod_cover", "lod_cover",
+                       "pfs_cover", "gen1_angles", "beam_table", "nearground",
+                       "nearground_split", "canopy_struct"}
 
 
 def test_every_step_in_an_optional_group_is_itself_optional():
