@@ -5,7 +5,7 @@ A truncated fetch is invisible in a tile average -- whitewater's shipped file re
 11.39 returns/m2 while being 15.45 west of one easting and 5.52 east. It is obvious in a map.
 Compares any number of clouds on one colour scale over the same grid.
 
-    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/gen2_density_map.py \
+    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/tools/gen2_density_map.py \
         --bounds 709531 5323589 711986 5327144 --name cook \
         --clouds data/after_ne/ne_3dep.laz data/after_ne/ne_3dep_fulldensity.laz \
         --labels "before re-fetch" "full density"

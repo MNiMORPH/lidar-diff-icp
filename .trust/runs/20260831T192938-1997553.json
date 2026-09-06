@@ -1,0 +1,459 @@
+{
+ "question": "does gen1's own 2008 ground control agree with the +22.7 mm datum anchor carried in from the 2021 3DEP marks, and with what sign?",
+ "started": "2026-08-31T19:20:08+02:00",
+ "argv": [
+  "analysis/groundtruth/gen1_own_control_tie.py"
+ ],
+ "seconds": 569.3,
+ "cwd": "/home/awickert/projects/lidar-diff-icp",
+ "inputs": [
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-20-62.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 23919870,
+   "mtime": "2026-08-26T18:53:27",
+   "digest": "27d4ecc178aa"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-20-63.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 19950022,
+   "mtime": "2026-08-26T18:25:21",
+   "digest": "59ca7348e547"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-21-63.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 24219191,
+   "mtime": "2026-08-26T18:25:26",
+   "digest": "fbee92d83ffc"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-21-64.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 19634710,
+   "mtime": "2026-08-26T18:25:32",
+   "digest": "5565dfa312dd"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-22-63.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 24355090,
+   "mtime": "2026-08-26T18:25:37",
+   "digest": "f54929161818"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-25-63.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 21483318,
+   "mtime": "2026-08-26T18:22:46",
+   "digest": "c13b9495aab1"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-27-59.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 20431554,
+   "mtime": "2026-08-26T18:22:40",
+   "digest": "4647f6969ea6"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-27-63.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 22424577,
+   "mtime": "2026-08-26T18:22:25",
+   "digest": "8aa0483f06c0"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-28-56.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 18467048,
+   "mtime": "2026-08-26T18:24:42",
+   "digest": "b5764011611f"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-28-61.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 29631859,
+   "mtime": "2026-08-26T15:02:18",
+   "digest": "6a7028360799"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-28-63.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 22761742,
+   "mtime": "2026-08-22T09:19:19",
+   "digest": "0fc935e1790d"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-28-64.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 28042351,
+   "mtime": "2026-08-22T09:19:13",
+   "digest": "24646accb38c"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-29-61.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 32790678,
+   "mtime": "2026-08-26T15:02:18",
+   "digest": "6a98ff7ffc50"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-29-62.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 23552454,
+   "mtime": "2026-08-26T15:02:18",
+   "digest": "a05e627a3e7c"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-29-63.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 22473227,
+   "mtime": "2026-08-22T09:18:55",
+   "digest": "ab1ef1217a25"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-29-64.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 27153945,
+   "mtime": "2026-08-15T14:33:13",
+   "digest": "436012d25b08"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-30-62.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 21117272,
+   "mtime": "2026-08-26T18:22:09",
+   "digest": "c933ef08084b"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-30-63.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 24409455,
+   "mtime": "2026-08-22T09:19:07",
+   "digest": "d3397f2cbed1"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4342-30-64.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 24356647,
+   "mtime": "2026-08-22T09:19:01",
+   "digest": "a787a1181f2e"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4358-23-01.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 19730629,
+   "mtime": "2026-08-26T18:25:43",
+   "digest": "24af1dd7e855"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4358-26-03.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 23902428,
+   "mtime": "2026-08-18T07:46:07",
+   "digest": "905bc2844edf"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4358-26-05.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 7705391,
+   "mtime": "2026-08-26T18:23:49",
+   "digest": "2b0ab0538471"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4358-27-07.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 18495986,
+   "mtime": "2026-08-26T18:24:21",
+   "digest": "0564694d1267"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4358-28-01.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 29521560,
+   "mtime": "2026-08-26T18:17:46",
+   "digest": "945ee7c2816d"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4358-28-07.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 25332694,
+   "mtime": "2026-08-26T18:24:37",
+   "digest": "6ff66e2475eb"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4358-29-01.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 26002321,
+   "mtime": "2026-08-26T14:44:45",
+   "digest": "4f5ef09e23f3"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4358-29-02.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 21463728,
+   "mtime": "2026-08-26T14:44:53",
+   "digest": "52d6f5139e70"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4358-29-03.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 19934950,
+   "mtime": "2026-08-26T15:02:18",
+   "digest": "3a5f046a8f9f"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4358-29-06.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 28520340,
+   "mtime": "2026-08-26T18:24:05",
+   "digest": "9f93880ee9f0"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4358-30-02.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 20260777,
+   "mtime": "2026-08-26T18:22:14",
+   "digest": "3a447e6af4bd"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4358-30-03.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 19967524,
+   "mtime": "2026-08-26T18:22:19",
+   "digest": "8e849abea7ce"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4358-32-03.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 20081082,
+   "mtime": "2026-08-26T18:22:35",
+   "digest": "4fc00b6fd88c"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/4358-32-06.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 22180320,
+   "mtime": "2026-08-26T18:24:16",
+   "digest": "e65ef35f8939"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/5142-01-60.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 23365251,
+   "mtime": "2026-08-26T18:24:27",
+   "digest": "9b0be8574d0c"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/5142-01-62.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 19549623,
+   "mtime": "2026-08-26T18:23:54",
+   "digest": "eaf43516c0a3"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/5142-02-62.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 21185006,
+   "mtime": "2026-08-26T18:24:11",
+   "digest": "818205c04f18"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/5142-04-62.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 20234082,
+   "mtime": "2026-08-26T18:53:32",
+   "digest": "e48321d4ede7"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/5142-11-62.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 21104644,
+   "mtime": "2026-08-26T18:53:37",
+   "digest": "f82a31fc04d1"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/5142-14-64.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 19617946,
+   "mtime": "2026-08-26T18:25:48",
+   "digest": "31e8e937f72d"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/5142-15-63.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 18641992,
+   "mtime": "2026-08-26T18:25:56",
+   "digest": "a3045417b3fb"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/5142-15-64.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 20424892,
+   "mtime": "2026-08-26T18:26:05",
+   "digest": "08d30e44eaf0"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/5158-01-01.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 18748862,
+   "mtime": "2026-08-26T18:22:30",
+   "digest": "988851b2b2da"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/5158-01-02.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 17579498,
+   "mtime": "2026-08-26T18:23:59",
+   "digest": "67a1fbde55d8"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/5158-01-05.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 23017208,
+   "mtime": "2026-08-26T18:24:32",
+   "digest": "6c74cab27b48"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/5158-04-01.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 18689230,
+   "mtime": "2026-08-26T18:53:42",
+   "digest": "182f21c8d1f9"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/before/5158-10-01.laz",
+   "role": "gen1 2008 MN DNR tile already on disk",
+   "bytes": 23060752,
+   "mtime": "2026-08-26T18:53:48",
+   "digest": "2c948368dc46"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/src/lidar_diff_icp/groundtruth/data/mn_dnr_2008_control_semn.csv",
+   "role": "MnDNR 2008 control, 8 SE-MN counties, parsed from the MnGeo county validation reports (NAVD88/GEOID03 -- gen1's own geoid)",
+   "bytes": 313278,
+   "mtime": "2026-08-31T16:30:49",
+   "digest": "9792fcd677e7"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elbaext/corrections_geoid.json",
+   "role": "elbaext datum + lateral shift (the Nuth-Kaaeb term)",
+   "bytes": 27679,
+   "mtime": "2026-08-26T17:24:39",
+   "digest": "12bb6df04808"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/src/lidar_diff_icp/groundtruth/data/mn_se_driftless_2021_ql1_near_elba.csv",
+   "role": "the 2021 3DEP marks the +22.7 mm anchor is built on, for a same-estimator siting comparison",
+   "bytes": 1738,
+   "mtime": "2026-08-31T16:30:49",
+   "digest": "8a290a446353"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elba_fulldensity/z_before_absolute.json",
+   "role": "the +22.7 mm 2021-anchor constant, as shipped and since RETRACTED -- read deliberately, as the thing this script compares against",
+   "bytes": 9793,
+   "mtime": "2026-08-26T15:53:48",
+   "digest": "3f38d2c9f34f"
+  }
+ ],
+ "params": [
+  {
+   "name": "ground_source",
+   "value": "'csf'",
+   "src": "repo",
+   "why": "data/derived/elbaext/corrections_geoid.json ground_source; the same source the anchor's ties were read on"
+  },
+  {
+   "name": "res_m",
+   "value": "5.0",
+   "src": "repo",
+   "why": "data/derived/elbaext/corrections_geoid.json res_m"
+  },
+  {
+   "name": "csf_crop_halfwidth_m",
+   "value": "300.0",
+   "src": "MINE",
+   "why": "CSF is run on a crop, not a tile, to keep it seconds instead of minutes. Copied unchanged from analysis/groundtruth/elba_absolute_tie.py so the two runs are the same method; its effect is measured below by re-reading every mark with the vendor class-2 ground, which uses no crop at all"
+  },
+  {
+   "name": "siting_radius_m",
+   "value": "5.0",
+   "src": "repo",
+   "why": "ADDITIONAL_GROUND_CONTROL.md section 7.1 states the screen at R = 5 m; kept at 5 m so this run is comparable to the 17 measurements there"
+  },
+  {
+   "name": "geoid_shift_m",
+   "value": "0.0",
+   "src": "repo",
+   "why": "the 2008 control and the raw gen1 cloud are both NAVD88(GEOID03) (lidar_semn2008.html); no conversion enters this comparison"
+  },
+  {
+   "name": "lateral_shift_m",
+   "value": "(-0.7519, -0.1896)",
+   "src": "repo",
+   "why": "data/derived/elbaext/corrections_geoid.json cross_epoch_datum.horizontal_shift_m: the elbaext Nuth-Kaaeb shift, reported applied AND withheld because the 2008 control is in gen1's own horizontal frame"
+  },
+  {
+   "name": "swath_chain",
+   "value": "'none'",
+   "src": "repo",
+   "why": "every mark here lies under a gen1 flight line in a tile on disk, so no chain link is needed -- which is the whole point of this control set"
+  }
+ ],
+ "masks": [],
+ "columns": {
+  "tie_mm": "surveyed - z_lidar, mm; POSITIVE = gen1 reads BELOW the mark",
+  "dnr_mm": "the MnDNR table's own Error = Control Z - delivered 2008 DEM, mm; same sign family, different surface",
+  "spread_mm": "p05-p95 of ground returns within the siting radius (section 7.1)",
+  "ctrl_pct": "percentile of the surveyed elevation within those returns; near 50 is well sited, a tail is not",
+  "sigma_mm": "half the tie spread over the pipeline-scale radii (res/2..2*res)",
+  "point": "MnDNR 2008 control point name; the prefix is its land-cover class",
+  "cover": "land-cover class from the point name: L1O open, L2T tall weeds/crops, L3B brush/low trees, L4F forested, L5U urban",
+  "what": "what the land-cover class means, from lidar_semn2008.html",
+  "km": "distance from the Elba reference point (579705.72, 4883677.71), km",
+  "tile": "the gen1 tile the mark falls in, already on disk",
+  "n": "ground returns inside the report radius (or the siting radius, in the siting tables)",
+  "lines": "distinct flight lines contributing inside the report radius",
+  "tie_nolat_mm": "the same tie with the elbaext lateral shift WITHHELD",
+  "mean_tie_mm": "mean of tie_mm over the marks of this class",
+  "median_tie_mm": "median of tie_mm over the marks of this class",
+  "SE_mm": "standard error of the mean over the marks in the row",
+  "mean_spread_mm": "mean of spread_mm over the marks of this class",
+  "mean_dnr_mm": "mean of dnr_mm over the marks of this class",
+  "quantity": "which estimate of the gen1 datum constant this row holds",
+  "mm": "its value in mm, on the tie = surveyed - z_lidar convention",
+  "note": "how the row was obtained, or what qualifies it",
+  "line": "gen1 flight line (LAS point_source_id) the tie was read on alone",
+  "mixed_tie_mm": "the tie for this mark with all lines pooled, mm, for comparison with the per-line reads",
+  "mark": "2021 3DEP vertical-accuracy mark id",
+  "type": "3DEP accuracy class: NVA open ground, VVA under vegetation",
+  "mean_mm": "mean of the MnDNR Error over the marks in the row, mm",
+  "median_mm": "median of the MnDNR Error over the marks in the row, mm",
+  "L1O_mean_mm": "mean MnDNR Error over the OPEN-cover marks of the row only",
+  "n_L1O": "how many of the row's marks are open cover",
+  "stat": "which statistic of (our point-cloud tie - the MnDNR table's own Error) is on this row, with its units",
+  "value": "the value of the statistic named in the 'stat' column, in the units that column states (mm, or dimensionless for a count or a correlation)",
+  "stratum": "which marks the plane was fitted to",
+  "radius_km": "marks within this distance of the Elba reference point",
+  "intercept_mm": "the fitted plane's value AT the Elba reference point, mm",
+  "dE_mm_per_km": "east gradient of the fitted plane, mm/km",
+  "dN_mm_per_km": "north gradient of the fitted plane, mm/km",
+  "resid_rms_mm": "RMS of the marks about the fitted plane, mm",
+  "county": "MnGeo validation report the mark came from",
+  "R=2.5": "tie_mm read at radius 2.5 m",
+  "R=5": "tie_mm read at radius 5 m",
+  "R=7.5": "tie_mm read at radius 7.5 m",
+  "R=10": "tie_mm read at radius 10 m",
+  "R=15": "tie_mm read at radius 15 m",
+  "R=20": "tie_mm read at radius 20 m",
+  "R=25": "tie_mm read at radius 25 m"
+ },
+ "notes": [],
+ "headline": "gen1's own 2008 control, measured on the point cloud with the anchor's estimator",
+ "unasked": [
+  "csf_crop_halfwidth_m"
+ ],
+ "session": ""
+}
