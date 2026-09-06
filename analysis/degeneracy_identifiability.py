@@ -47,9 +47,12 @@ import sys
 import numpy as np
 import pandas as pd
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+_REPO = os.path.dirname(os.path.abspath(__file__))
+while _REPO != "/" and not os.path.exists(os.path.join(_REPO, "pyproject.toml")):
+    _REPO = os.path.dirname(_REPO)   # depth-independent: find the repo root
+sys.path.insert(0, os.path.join(_REPO, "src"))
+sys.path.insert(0, _REPO)
+sys.path.insert(0, os.path.join(_REPO, "analysis"))
 
 from lidar_diff_icp import binstats as bs
 from lidar_diff_icp.registration import surface_gradients
