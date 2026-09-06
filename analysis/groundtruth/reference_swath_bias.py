@@ -51,7 +51,10 @@ import sys
 import numpy as np
 import pandas as pd
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
+_REPO = os.path.dirname(os.path.abspath(__file__))
+while _REPO != "/" and not os.path.exists(os.path.join(_REPO, "pyproject.toml")):
+    _REPO = os.path.dirname(_REPO)   # depth-independent: find the repo root
+sys.path.insert(0, _REPO)
 from trust.provenance import Run                                    # noqa: E402
 from lidar_diff_icp import coreg                                    # noqa: E402
 from lidar_diff_icp.boresight import estimate_boresight             # noqa: E402
