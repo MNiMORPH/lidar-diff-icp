@@ -3,8 +3,8 @@
 Written 2026-09-06. Verify every structural claim against git and the files before relying
 on it: this is a map of ROLES and NEXT ACTIONS, not a results log.
 
-    ./lidar-icp/bin/python -m pytest -q        expect 431 passed
-    git rev-list --count origin/main..HEAD     expect ~105, all UNPUSHED
+    ./lidar-icp/bin/python -m pytest -q        expect 432 passed
+    git rev-list --count origin/main..HEAD     expect ~115, all UNPUSHED
     lidar-diff-workflow --tile data/derived/elba --check
 
 ## The pipeline is six steps
@@ -37,6 +37,38 @@ look similar but are read by `refcells.py`, which 20+ scripts use, so they are p
 
 `analysis/tools/` holds nine hand-run tools, declared in `workflow.TOOLS` with each
 script's own docstring line.
+
+## The product / record split — measured 2026-09-06, and the reason the package moved
+
+`analysis/` held 157 scripts. **30 were reachable from the pipeline, tests or tools; 127
+were not.** The boundary ran through the middle of every directory, which is why the folder
+names stopped telling anyone anything:
+
+    analysis/ridgelines                61 scripts -- 3 reachable
+    analysis/slope_bias                14         -- 1
+    analysis/investigations            24         -- 0
+    analysis (top level)               34         -- 8
+    analysis/tools, modules/veg_corr    9 + 9     -- all
+
+The three reachable ridgeline scripts were the producers for `ridge_mask`, `convexity` and
+`curvature`: **half the six-step pipeline was inside a folder that reads as a concluded
+investigation.** They are now `lidar_diff_icp.steps`, run as `python -m`. Verified
+byte-identical on elba across the move, all 11 products -- and the baseline was checked by
+re-running the steps BEFORE any move, so the gate is known to mean something.
+
+`script_of` had to learn `-m` at the same time: it found producers by matching `.py` paths
+in the command string, so a module command names no source and the step silently loses
+CODE-STALE detection. `_MODULE_RE` resolves a `-m` module name to its file under `src/`.
+
+**Why the package and not an `analysis/lib`:** a test reached its subject with a
+`sys.path.insert` naming the subject's directory, so a move was a code change and the move
+plus the test fix could not be split. In the package the insert is DELETED, not repointed.
+That closed the blocker the previous plan was stuck on. 38 such hacks remain under
+`analysis/`, and `analysis/` still has no `__init__.py` anywhere.
+
+**One step keeps a file-path invocation:** `pfs_cover` runs under the conda env, which does
+not have `lidar_diff_icp` installed (verified: ModuleNotFoundError). Its module imports
+nothing from the package, so the path form is correct there, not a workaround.
 
 ## The swath alignment — see analysis/SWATH_ALIGNMENT_METHOD.md
 
@@ -75,6 +107,29 @@ one-line fix in three tests first), the decisions waiting, the open science, and
 to redo.
 
 ## Open, and needing Andy
+
+0. **Five structural decisions are queued** (tasks #54, #56, #57, #58, and the "alongside"
+   question). They block further promotion, so nothing more should move until they are made:
+   * **Two ground-control trees.** `src/lidar_diff_icp/groundtruth/` (7 modules) and
+     top-level `ground_control/` (29 scripts) BOTH have a `datum.py` -- 230 vs 236 lines,
+     **not identical** -- and both have `data/`. Duplication in load-bearing datum code
+     decides which answer you get.
+   * **`trust/` is a package at the repo root, not under `src/`,** so it imports only
+     because everything runs with the repo root as CWD. 43 files import it. This blocks
+     moving `crossline_fit.py` + `swath_across_track_test.py`, a coupled pair.
+   * **The 127 unreached scripts.** Andy 2026-09-06: delete if we want; investigations were
+     exploratory and can go if not needed. Both preservation conditions are ALREADY met --
+     `rivernetworkx` and `catchment-dod-balance` are declared git dependencies, installed
+     and importable. The value is the findings documents, not the scripts; git holds the
+     scripts.
+   * **`ground_control/FRAME.md` is a SECOND unmarked "READ FIRST" frame** (2026-08-27),
+     missed by the consolidation that marked six others superseded.
+   * **Does "alongside" mean outside the package?** The 9 vegetation-correction modules and
+     9 tools are all reachable. "Alongside" was about DEPENDENCY DIRECTION, not file
+     location, so they could live in the package as a subpackage the pipeline optionally
+     reaches over to -- but that is Andy's architecture call, not a cleanup.
+
+## Also open, and needing Andy
 
 1. **Battle Creek's valley top.** Its histogram cut removes 72.4% of the grid (283.6 m) in
    a built environment where graded lots set the modal elevation. Its `stable_sigma` is
