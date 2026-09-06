@@ -26,7 +26,7 @@ ap.add_argument("--tile", default="data/derived/elba_fulldensity")
 ap.add_argument("--gen2", default="data/after/3dep2021_fulldensity.laz")
 ap.add_argument("--slope", type=float, default=None,
                 help="q2 = intercept + slope * cover. Default: READ from the tile's own "
-                     "q2_cover_fit.json (analysis/ridgelines/q2_cover_fit.py), never typed. "
+                     "q2_cover_fit.json (analysis/modules/vegetation_correction/q2_cover_fit.py), never typed. "
                      "It used to default to -0.1922, which was Elba's number AND stale -- "
                      "the shipped dod_cover_q2.json records -0.1835 -- so on any other "
                      "region it silently applied Elba's correction. Refuses if absent.")
@@ -72,7 +72,7 @@ def _q2_slope(tile_dir):
             f"no {p}. The q2 slope is NOT defaulted: it is per-site, and a value carried "
             f"from another tile would be applied here without saying so. Produce it:\n"
             f"    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python "
-            f"analysis/ridgelines/q2_cover_fit.py --tile {tile_dir}\n"
+            f"analysis/modules/vegetation_correction/q2_cover_fit.py --tile {tile_dir}\n"
             f"or state your own with --slope.")
     j = json.load(open(p))
     st, pop = j["settings"], j["population"]
@@ -102,7 +102,7 @@ def _q2_intercept(tile_dir):
             f"{p} carries no linear_intercept: it predates 2026-09-02, when the intercept "
             f"stopped being pinned to 0.5. Its slope was fitted UNDER that pin, so it cannot "
             f"be combined with a fitted intercept. Re-run "
-            f"analysis/ridgelines/q2_cover_fit.py --tile {tile_dir} (add --pin-intercept to "
+            f"analysis/modules/vegetation_correction/q2_cover_fit.py --tile {tile_dir} (add --pin-intercept to "
             f"reproduce the old relation deliberately).")
     return float(j["linear_intercept"])
 

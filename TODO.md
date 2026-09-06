@@ -15,7 +15,7 @@ grass. The DoD is `gen2 - gen1`, so the result reads as **false erosion**.
 
 This is a SAMPLING argument, not a leaf-state one. It is independent of, and opposite in
 sign to, the leaf-on canopy bias that lifts gen2 and reads as false deposition, which the
-DoD already corrects via `q2(cover)` (`analysis/ridgelines/q2_cover_fit.py`). Two epochs,
+DoD already corrects via `q2(cover)` (`analysis/modules/vegetation_correction/q2_cover_fit.py`). Two epochs,
 two mechanisms, opposite signs.
 
 **What is measured** (`analysis/gen1_grass_lift.py`, commit `6e41db1`; gen1-INTERNAL,

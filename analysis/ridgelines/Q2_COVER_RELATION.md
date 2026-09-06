@@ -95,7 +95,7 @@ at q2* = 0.199, with enough leverage to set an exponent. Binned uniformly it spl
 - **cover**: `canopy_cover_pfs.npy` (PyForestScan, >2 m, gen2).
 - q2* per bin solved by Brent root-find on `median(gen1_q50 - gen2_q(q2)) = 0`.
 
-Reproduce: `./lidar-icp/bin/python analysis/ridgelines/q2_cover_fit.py --binw 0.05 --weight cells`
+Reproduce: `./lidar-icp/bin/python analysis/modules/vegetation_correction/q2_cover_fit.py --binw 0.05 --weight cells`
 
 ## Scope and caveats
 

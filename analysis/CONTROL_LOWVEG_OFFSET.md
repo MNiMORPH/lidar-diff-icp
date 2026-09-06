@@ -91,7 +91,7 @@ delivered surface is unbiased against survey.** The bias is vegetation, essentia
 > `-324.2 +/- 44.4`), on a (0.15, 4.0] window rather than (0.15, 2.0].
 >
 > **This is a control-mark result, not a DoD correction.** The DoD's vegetation filter is
-> `q2(cover)` -- `analysis/ridgelines/q2_cover_fit.py`, products `dod_cover_q2.npy`.
+> `q2(cover)` -- `analysis/modules/vegetation_correction/q2_cover_fit.py`, products `dod_cover_q2.npy`.
 
 ```
 offset_mm  =  -290 * lowveg          (through the origin, 1/SE^2 weighted on uniform bins)

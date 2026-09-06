@@ -259,7 +259,7 @@ STEPS: tuple[Step, ...] = (
          requires=("nearground_cells_sn.npz", "z_after.npy", "canopy_cover_pfs.npy",
                    "beam_offset_table.parquet", "nearground_gen2_class_split.npz",
                    "floodplain_mask.npy", "curv_laplacian.npy"),
-         command=f"{PY} analysis/ridgelines/q2_cover_fit.py --tile {{tile}}",
+         command=f"{PY} analysis/modules/vegetation_correction/q2_cover_fit.py --tile {{tile}}",
          note="SUPERSEDED cover route, kept because it is still the only per-site relation "
               "and because dod_cover_corrected.py still accepts it via --relation/--slope. "
               "The shipped DoD no longer uses it: the correction is now indexed by the "

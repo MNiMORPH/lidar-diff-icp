@@ -109,6 +109,13 @@
   ],
   "status": "done"
  },
+ "analysis/ridgelines/nearground_class_split.py": {
+  "dest": "analysis/modules/vegetation_correction",
+  "files": [
+   "analysis/ridgelines/nearground_class_split.py"
+  ],
+  "status": "done"
+ },
  "analysis/ridgelines/plot_cover_calibration.py": {
   "dest": "analysis/tools",
   "files": [

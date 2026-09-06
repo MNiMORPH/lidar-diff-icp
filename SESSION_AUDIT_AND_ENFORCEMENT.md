@@ -55,7 +55,7 @@ best."*
 **Cost:** 10:37 → 11:11 = **34 min** of direct dialogue, plus every fit produced between
 10:38 and 10:56 was on censored data and was thrown away.
 
-**This failure is not fixed.** `--minn` in `analysis/ridgelines/q2_cover_fit.py` was changed to
+**This failure is not fixed.** `--minn` in `analysis/modules/vegetation_correction/q2_cover_fit.py` was changed to
 default 1. Eight other live analysis scripts still carry undisclosed count filters, including
 the producer of the figures Andy called "very useful":
 

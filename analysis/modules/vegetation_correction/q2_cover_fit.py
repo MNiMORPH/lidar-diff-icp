@@ -20,7 +20,7 @@ Inputs: gen1 = per-cell median of `d_mm_corr` (CSF ground + the four registratio
 gen2 = the per-cell vendor class-2 near-ground column. Bins carry cluster-robust SEs from
 50 m spatial blocks, converted from mm to rank units by the bin's own mm-per-rank slope.
 
-    ./lidar-icp/bin/python analysis/ridgelines/q2_cover_fit.py
+    ./lidar-icp/bin/python analysis/modules/vegetation_correction/q2_cover_fit.py
 """
 import argparse, json, os
 import numpy as np, pyarrow.parquet as pq
