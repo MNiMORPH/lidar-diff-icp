@@ -300,6 +300,43 @@ STEPS: tuple[Step, ...] = (
 )
 
 
+#: HAND-RUN TOOLS. Not Steps: they are not part of the dependency graph, they take
+#: arguments a person chooses, and they answer a question rather than producing an
+#: input to something else. Declared anyway, because "what produced this figure?" was
+#: unanswerable for 143 scripts and that is how a sweep of mine nearly deleted two live
+#: producers. The one-line purpose is each script's OWN first docstring line, not a
+#: description I wrote: if the script cannot say what it is for, that is the finding.
+#:
+#: A tool is here because it landed in analysis/tools/ under the reorganization rule --
+#: it draws figures and was touched during the current work. Adding one by hand is fine;
+#: a test asserts the directory and this list agree, so they cannot drift.
+TOOLS: dict[str, str] = {
+    "analysis/tools/cover_offset_reference.py":
+        "Calibrate VERTICAL OFFSET against FOREST DENSITY on ground that should not be eroding.",
+    "analysis/tools/dod_cover_attribution.py":
+        "How much of the DoD's apparent hillslope AGGRADATION is the canopy measurement effect?",
+    "analysis/tools/gen2_density_map.py":
+        "Map gen2 return density over a tile, to see a truncated download as a PICTURE.",
+    "analysis/tools/plot_cover_calibration.py":
+        "The cover calibration, as measured: what the binned medians do, and which candidate",
+    "analysis/tools/plot_dod_comparison.py":
+        "Corrected vs uncorrected DoD, side by side, on one colour scale.",
+    "analysis/tools/plot_floodplain_cuts.py":
+        "What the floodplain cut actually REMOVES: the TPI mask against the elevation cut.",
+    "analysis/tools/plot_ground_q_curve.py":
+        "Plot the ground-q curve and the marks it rests on -- what --diagnostics prints, drawn.",
+    "analysis/tools/plot_q2_fit.py":
+        "q2(cover) fits with the floodplain masked, and the DEMs showing what the mask removes.",
+    "analysis/tools/plot_q2_population.py":
+        "Map WHERE a q2 fit was calculated: the cells behind it, on the tile's own hillshade.",
+}
+
+
+def tools():
+    """The declared hand-run tools: path -> what it is for."""
+    return dict(TOOLS)
+
+
 #: The base step, by name, for the callers that ask about it specifically.
 _BASE_STEP = next(s for s in STEPS if s.name == "base")
 

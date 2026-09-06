@@ -470,3 +470,37 @@ def test_only_checks_a_filtered_steps_inputs_on_disk_rather_than_scheduling_them
 def test_only_rejects_an_unknown_step_name(tmp_path):
     with pytest.raises(ValueError, match="unknown step"):
         W.runnable(tmp_path, steps=_toy(tmp_path), only=("no_such_step",))
+
+
+# --- the declared hand-run tools ----------------------------------------------------------
+
+def test_the_tools_registry_matches_the_tools_directory():
+    """The registry and analysis/tools/ must agree, or "what produced this figure?" goes
+    back to being unanswerable -- which is how a static sweep nearly deleted two live
+    producers on 2026-09-05."""
+    import glob
+    on_disk = set(glob.glob("analysis/tools/*.py"))
+    assert set(W.TOOLS) == on_disk, (
+        f"declared but absent: {sorted(set(W.TOOLS) - on_disk)}; "
+        f"present but undeclared: {sorted(on_disk - set(W.TOOLS))}")
+
+
+def test_every_tool_says_what_it_is_for_in_its_own_words():
+    """The purpose is each script's OWN first docstring line, not a description written
+    into the registry. If a tool cannot say what it is for, that is the finding, and this
+    test makes it visible rather than letting the registry paper over it."""
+    import ast
+    for path, purpose in W.TOOLS.items():
+        assert purpose.strip(), f"{path} has no stated purpose"
+        doc = ast.get_docstring(ast.parse(open(path).read())) or ""
+        first = doc.strip().splitlines()[0].rstrip() if doc.strip() else ""
+        assert purpose == first, (
+            f"{path}: the registry has drifted from the script's own docstring.\n"
+            f"  registry: {purpose}\n  docstring: {first}")
+
+
+def test_a_tool_is_not_also_a_declared_step():
+    """The two declarations answer different questions -- a Step is scheduled and gated, a
+    tool is run by hand -- so a script must not claim to be both."""
+    in_steps = {t for s in W.STEPS for t in s.command.split() if t.endswith(".py")}
+    assert not (set(W.TOOLS) & in_steps), set(W.TOOLS) & in_steps
