@@ -1,0 +1,61 @@
+157 scripts under analysis/, in 143 clusters; 70 would move
+
+    49  analysis/ridgelines
+    24  analysis
+    13  analysis/slope_bias
+     9  analysis/modules/vegetation_correction
+     9  analysis/tools
+     6  analysis/investigations/help_next_steps
+     5  analysis/lib
+     4  analysis/investigations/gen1_datum_more_marks
+     3  analysis/investigations/datum_from_mass_balance
+     3  analysis/investigations/gen2_absolute_datum
+     3  analysis/investigations/swath_degeneracy_breaking
+     2  analysis/investigations/absolute_basis_elba
+     2  analysis/investigations/elbaext_build
+     2  analysis/investigations/mission_time_drift
+     2  analysis/investigations/results
+     2  analysis/investigations/steady_state_stable_cells
+     1  analysis/investigations/additional_ground_control
+     1  analysis/investigations/banding_source_investigation
+     1  analysis/investigations/control_residual_field
+     1  analysis/investigations/cross_line_fit
+     1  analysis/investigations/flagpole_absolute_test
+     1  analysis/investigations/gen1_datum_module
+     1  analysis/investigations/gen1_own_control_tie
+     1  analysis/investigations/gen1_same_line_not_reproduced
+     1  analysis/investigations/glennie_scanangle_swath_test
+     1  analysis/investigations/incidence_angle_literature
+     1  analysis/investigations/local_tie_chaining
+     1  analysis/investigations/near_ground_mixture
+     1  analysis/investigations/nearnadir_slope_dependence
+     1  analysis/investigations/return_structure_finding
+     1  analysis/investigations/stable_point_tilt_audit
+     1  analysis/investigations/swath_tie_intercept
+     1  analysis/investigations/trust_system
+     1  analysis/investigations/zerofill_sweep
+     1  analysis/steady_state
+
+clusters larger than one file (these MUST move together):
+  rule 7  -> analysis
+    * analysis/calibrate_ground_q.py                             (own verdict: rule 5, most specific of 1 citing document(s): analysis/GROUND_Q_FROM_CLASS2_SPREAD.md (cites 6))
+    * analysis/control_band_window_sweep.py                      (own verdict: rule 5, most specific of 1 citing document(s): analysis/ZEROFILL_SWEEP.md (cites 8))
+    * analysis/control_lowveg_offset.py                          (own verdict: rule 2, imported by 7 file(s))
+      analysis/control_mat_fit_nowindow.py                       (own verdict: rule 7, no findings document claims it; left where the work put it)
+      analysis/control_mixture_validation.py                     (own verdict: rule 7, no findings document claims it; left where the work put it)
+    * analysis/control_mode_shift.py                             (own verdict: rule 2, imported by 5 file(s))
+      analysis/control_percentile_fit.py                         (own verdict: rule 7, no findings document claims it; left where the work put it)
+      analysis/control_q_in_ground.py                            (own verdict: rule 7, no findings document claims it; left where the work put it)
+      analysis/control_shift_predictors.py                       (own verdict: rule 7, no findings document claims it; left where the work put it)
+    * analysis/marks_by_flight_line.py                           (own verdict: rule 5, most specific of 1 citing document(s): analysis/GROUND_Q_FROM_CLASS2_SPREAD.md (cites 6))
+    * analysis/plot_correction_method.py                         (own verdict: rule 4, draws figures and was touched since 2026-09-01)
+  rule 2  -> analysis/lib
+    * analysis/crossline_fit.py                                  (own verdict: rule 5, most specific of 1 citing document(s): analysis/CROSS_LINE_FIT.md (cites 4))
+    * analysis/degeneracy_identifiability.py                     (own verdict: rule 5, most specific of 1 citing document(s): analysis/SWATH_DEGENERACY_BREAKING.md (cites 5))
+      analysis/swath_across_track_test.py                        (own verdict: rule 2, imported by 2 file(s))
+  rule 2  -> analysis/lib
+    * analysis/cover_at_control_marks.py                         (own verdict: rule 5, most specific of 1 citing document(s): analysis/CONTROL_LOWVEG_OFFSET.md (cites 3))
+      analysis/forest_metrics_pfs.py                             (own verdict: rule 2, imported by 2 file(s))
+  rule 5  -> analysis/investigations/steady_state_stable_cells
+      analysis/steady_state/run_steady_state.py                  (own verdict: rule 5, most specific of 2 citing document(s): analysis/steady_state/STEADY_STATE_STABLE_CELLS.md (cites 2))
+      analysis/steady_state/steady_state_cells.py                (own verdict: rule 5, most specific of 2 citing document(s): analysis/steady_state/STEADY_STATE_STABLE_CELLS.md (cites 2))
