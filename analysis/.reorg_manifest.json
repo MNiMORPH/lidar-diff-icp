@@ -33,5 +33,12 @@
    "analysis/ridgelines/cover_offset_reference.py"
   ],
   "status": "done"
+ },
+ "analysis/ridgelines/dod_cover_attribution.py": {
+  "dest": "analysis/tools",
+  "files": [
+   "analysis/ridgelines/dod_cover_attribution.py"
+  ],
+  "status": "done"
  }
 }

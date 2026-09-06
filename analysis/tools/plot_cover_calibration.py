@@ -15,7 +15,7 @@ content. Two things it makes visible that the per-tile figures do not:
      AIC comparison reports: linear leaves a systematic arc, the selected form does not.
 
     env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python \
-        analysis/ridgelines/plot_cover_calibration.py
+        analysis/tools/plot_cover_calibration.py
 """
 import argparse, json, os
 import numpy as np
