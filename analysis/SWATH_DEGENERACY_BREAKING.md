@@ -1,7 +1,7 @@
 # What breaks the per-line across-track degeneracy, and what does not
 
 **Date:** 2026-08-26
-**Scripts:** `analysis/degeneracy_flightline_inventory.py` (headings, spacings, water),
+**Scripts:** `analysis/investigations/swath_degeneracy_breaking/degeneracy_flightline_inventory.py` (headings, spacings, water),
 `analysis/investigations/swath_degeneracy_breaking/degeneracy_crossline_geometry.py` (the cross line against the N-S lines),
 `analysis/degeneracy_identifiability.py` (what the null space *is*, ground control, gen2),
 `analysis/degeneracy_water_surface.py` (a level water surface as a single-line reference)

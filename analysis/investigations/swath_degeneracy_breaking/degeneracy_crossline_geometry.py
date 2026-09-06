@@ -6,7 +6,7 @@
 consecutive lines fly there-and-back and every overlap therefore fixes ``tan th_A + tan th_B``
 to a constant, so the pair fit returns only the SUM ``(c_A + c_B)/2``.
 
-``analysis/degeneracy_flightline_inventory.py`` found one line whose heading is not N-S:
+``analysis/investigations/swath_degeneracy_breaking/degeneracy_flightline_inventory.py`` found one line whose heading is not N-S:
 **psid 10010, heading 271.0 deg**, in the already-local tile ``4342-28-64``.  A due-west
 line crosses each N-S line at an across-track position set by the N-S coordinate, which is
 INDEPENDENT of the N-S line's own across-track coordinate.  This run measures whether the

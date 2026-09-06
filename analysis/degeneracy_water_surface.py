@@ -6,7 +6,7 @@ global cross-track tilt of the mosaic (``analysis/degeneracy_identifiability.py`
 verifies the two are the same null direction).  Breaking that needs a reference that is
 level in the GRAVITY sense, not merely shared between two lines.
 
-``analysis/degeneracy_flightline_inventory.py`` found 562,664 vendor class-9 (water)
+``analysis/investigations/swath_degeneracy_breaking/degeneracy_flightline_inventory.py`` found 562,664 vendor class-9 (water)
 returns in the local gen1 tiles, and 458,239 of them are in one tile: ``4358-26-03``, at a
 modal elevation near 201 m over N 4,893,254-4,896,747 -- the Mississippi River Pool 5
 backwaters (Weaver Bottoms).  A navigation pool above a lock and dam is a level surface.

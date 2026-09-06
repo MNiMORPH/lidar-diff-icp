@@ -20,7 +20,7 @@ Method for the track fit is the one already used in ``analysis/ELBAEXT2_SCOPE.md
 returns with |scan_angle_rank| <= 1 sit under the aircraft, and x and y are regressed on
 gps_time.  Nothing is fetched; every LAZ is streamed in chunks.
 
-    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/degeneracy_flightline_inventory.py
+    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/investigations/swath_degeneracy_breaking/degeneracy_flightline_inventory.py
 """
 from __future__ import annotations
 
