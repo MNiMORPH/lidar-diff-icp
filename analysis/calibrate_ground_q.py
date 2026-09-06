@@ -34,6 +34,9 @@ ground_control/run_bridge_gen2.py, where --point-types has been required all alo
 """
 import argparse
 import numpy as np, pandas as pd, os, sys, laspy
+_REPO = os.path.dirname(os.path.abspath(__file__))
+while _REPO != "/" and not os.path.exists(os.path.join(_REPO, "pyproject.toml")):
+    _REPO = os.path.dirname(_REPO)   # depth-independent: find the repo root
 sys.path.insert(0, "analysis")
 from control_mode_shift import CONTROL, STRUCT, BOX, marks
 from lidar_diff_icp import groundq
@@ -147,7 +150,7 @@ for nm, e in (("q = 0.50 (pipeline default)", e50),
           f"{np.sqrt(np.mean(e**2)):8.1f} {np.percentile(np.abs(e),90):9.1f}")
 if _A.diagnostics:
     from scipy.stats import spearmanr, mannwhitneyu
-    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    sys.path.insert(0, os.path.join(_REPO, "analysis"))
     from control_lowveg_offset import lowveg
     F["lowveg"] = [lowveg(p, 0.15, 2.00, setname=SET) for p in F.point_id]
     print(f"\n  RANK OF SURVEYED GROUND WITHIN THE CLASS-2 RETURNS")
