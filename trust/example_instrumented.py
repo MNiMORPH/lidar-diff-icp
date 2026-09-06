@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""WORKED EXAMPLE -- analysis/ridgelines/gen2_csf_compare.py, instrumented.
+"""WORKED EXAMPLE -- analysis/investigations/trust_system/gen2_csf_compare.py, instrumented.
 
 A copy, not a replacement: the original is untouched. The science is byte-identical; the
 only additions are the Run() calls. Compare the two outputs to see exactly what the

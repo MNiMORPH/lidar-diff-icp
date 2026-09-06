@@ -265,6 +265,13 @@
   ],
   "status": "done"
  },
+ "analysis/ridgelines/HELP_perline_slope_test.py": {
+  "dest": "analysis/investigations/help_next_steps",
+  "files": [
+   "analysis/ridgelines/HELP_perline_slope_test.py"
+  ],
+  "status": "done"
+ },
  "analysis/ridgelines/beam_offset_table.py": {
   "dest": "analysis/modules/vegetation_correction",
   "files": [

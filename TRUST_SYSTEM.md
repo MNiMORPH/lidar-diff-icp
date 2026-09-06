@@ -93,7 +93,7 @@ from a banner-carrying run. **Do not enable strict until scripts carry banners**
 historical block rate is meaningless, because no historical script had a banner.
 
 **A worked example is committed:** `trust/example_instrumented.py` is
-`analysis/ridgelines/gen2_csf_compare.py` with the science untouched and `Run()` calls
+`analysis/investigations/trust_system/gen2_csf_compare.py` with the science untouched and `Run()` calls
 added. Run it and read the banner. It reports, unprompted, that the invented
 `slope_max=90.0` removed `slope >= 90 deg=0` cells – the parameter disabled a criterion
 entirely – and that the population called "stable" is 26.0% of the tile.

@@ -11,7 +11,7 @@ Everything is in the cube's slope-normal frame, so `h = 0` is `z_after` by const
 and the per-cell median of the CSF ground's `h` IS `z_csf - z_after`.
 
     env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python \\
-        analysis/ridgelines/gen2_csf_compare.py
+        analysis/investigations/trust_system/gen2_csf_compare.py
 """
 import argparse, json, os
 import numpy as np, laspy, pyarrow.parquet as pq
