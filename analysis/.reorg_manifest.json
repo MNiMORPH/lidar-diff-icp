@@ -193,6 +193,22 @@
   ],
   "status": "done"
  },
+ "analysis/mission_time_drift.py": {
+  "dest": "analysis/investigations/mission_time_drift",
+  "files": [
+   "analysis/mission_time_drift.py"
+  ],
+  "note": "mission_time_drift.py walks 2 dirname level(s) up from __file__, and the move changes its depth (1 -> 3). A data path computed that way would break silently, so this is not moved automatically.",
+  "status": "blocked"
+ },
+ "analysis/mission_time_drift_fit.py": {
+  "dest": "analysis/investigations/mission_time_drift",
+  "files": [
+   "analysis/mission_time_drift_fit.py"
+  ],
+  "note": "mission_time_drift_fit.py walks 2 dirname level(s) up from __file__, and the move changes its depth (1 -> 3). A data path computed that way would break silently, so this is not moved automatically.",
+  "status": "blocked"
+ },
  "analysis/plot_dod_comparison.py": {
   "dest": "analysis/tools",
   "files": [
@@ -211,6 +227,13 @@
   "dest": "analysis/tools",
   "files": [
    "analysis/plot_ground_q_curve.py"
+  ],
+  "status": "done"
+ },
+ "analysis/ridgelines/AUDIT_corrected_floor_signal.py": {
+  "dest": "analysis/investigations/help_next_steps",
+  "files": [
+   "analysis/ridgelines/AUDIT_corrected_floor_signal.py"
   ],
   "status": "done"
  },

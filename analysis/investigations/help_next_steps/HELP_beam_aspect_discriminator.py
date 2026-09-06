@@ -41,7 +41,7 @@ DATA SOURCES (labeled):
   - forest label : gen1-only above-ground return fraction (as in HELP_gen1only_strata.py),
     recomputed here so this script is standalone and uses NO gen2-cut stratum.
 
-    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/ridgelines/HELP_beam_aspect_discriminator.py
+    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/investigations/help_next_steps/HELP_beam_aspect_discriminator.py
 """
 import numpy as np, laspy, math
 from scipy.ndimage import distance_transform_edt
