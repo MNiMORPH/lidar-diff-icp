@@ -1,113 +1,109 @@
-# Reorganizing `analysis/`: a plan
+# Reorganizing `analysis/`: a plan that runs autonomously
 
-Written 2026-09-06 at Andy's instruction, after the pipeline itself was reduced to six
-declared steps and everything else was found to be undeclared. Hard now for better later.
+Written 2026-09-06 at Andy's instruction. Hard now for better later.
+
+The first draft of this plan needed a person at four points — naming investigation folders,
+mapping clusters to findings, choosing deletions, folding documents. **This version removes
+every one of those, or defers it explicitly.** What remains is a program with a dry-run mode.
 
 ## The problem, measured
 
-    analysis/*.py                    157      in the workflow graph        16
-    analysis/*.md                     67      undeclared                  143
+    analysis/*.py                    157      declared in the workflow graph   16
+    analysis/*.md                     67      undeclared                      143
 
-Of the 143 undeclared:
+      imported by other code           7   de facto libraries in the wrong place
+      cited in a .md                 107   the reproduction path for a finding
+      touched since 2026-09-01        18   live tools from the current work
+      none of the above               11   the only clear delete candidates
 
-    imported by other code             7   de facto libraries in the wrong place
-    cited in a .md                   107   the reproduction path for a written finding
-    touched since 2026-09-01          18   live tools from the current work
-    none of the above                 11   the only clear delete candidates
+They are not junk. **Nothing says what they are**, so they cannot be told from junk — which
+is how a static sweep of mine nearly deleted two live producers this morning.
 
-It is not that the scripts are junk. **Nothing says what they are**, so they cannot be told
-apart from junk — which is how a static sweep of mine nearly deleted two live producers, and
-how three separate name-matching scans over-reported by 10-100x in one day.
+## Why it can be autonomous: every destination is COMPUTED
 
-## Two hazards that decide the sequence
+The rule below is total, deterministic, and uses only facts already on disk. It is applied
+in order; first match wins. **No step asks a question, and no step encodes my opinion of
+what a script is "about".**
 
-    39 scripts manipulate sys.path      they depend on their own depth in the tree
-    61 import a sibling by bare name    they depend on their neighbours' location
-    173 .md citations name a script     they depend on the path
+    1  named in a workflow Step command or `code`     -> stays put (declared)
+    2  imported by src/, or by >= 2 other scripts     -> analysis/lib/
+    3  named in a vegetation_correction Step command  -> analysis/modules/vegetation_correction/
+    4  calls savefig() AND touched since 2026-09-01   -> analysis/tools/
+    5  cited by exactly one .md                       -> analysis/investigations/<doc-stem>/
+    6  cited by two or more .md                       -> analysis/investigations/_shared/
+    7  anything else                                  -> analysis/investigations/_unsorted/
 
-So a move is never one file. **The sibling-import graph defines the units that can move**, and
-the citation graph defines what must be rewritten with them. Both are computable, which is
-what makes this safe rather than a judgement call per file.
+Rule 5 is the load-bearing trick: **the investigation's folder is named by the document that
+cites it**, not by my reading of the script. If the finding was worth writing down, its name
+already exists. `_unsorted/` is where the rule admits it does not know, rather than guessing.
 
-## Target layout
+## Why it is safe: clusters, gates, and revert-on-red
 
-    src/lidar_diff_icp/        the library                                  (unchanged)
-    scripts/                   drivers the graph declares                   (unchanged)
-    ground_control/            a distinct instrument, self-contained        (unchanged)
-    trust/                     provenance tooling                           (unchanged)
-    analysis/
-      tools/                   hand-run producers, audits, figure makers -- DECLARED in a
-                               TOOLS registry, so provenance is answerable
-      modules/
-        vegetation_correction/ the alongside module's own scripts, beside the group that
-                               declares them
-      investigations/          the record of questions asked, one directory per question,
-                               each carrying its own findings .md
-      findings/                cross-cutting conclusions and the single FRAME
+**Clusters.** 39 scripts manipulate `sys.path` and 61 import a sibling by bare name, so a
+move is never one file. The connected components of the sibling-import graph are the units
+that move. A component's destination is the destination of its majority member; ties break
+to the lowest-numbered rule. Deterministic, and it never splits a component.
 
-## Phases, each verifiable before the next
+**Gates.** After every cluster, in this order: citation lint, import lint, full pytest.
 
-### Phase 0 — safety nets, BEFORE anything moves
+**Revert-on-red is the autonomy policy.** A cluster whose gate fails is `git revert`-ed,
+recorded as BLOCKED with the failure text, and the run CONTINUES to the next cluster. It does
+not stop and it does not patch around. Blocked clusters are the report.
 
-  0a  citation lint: a test asserting every `(analysis|scripts|src)/*.py` named in a `.md`
-      exists. Fixes the 12 already broken and makes every later move fail loudly.
-  0b  import lint: a test that every `analysis/**/*.py` still parses and resolves its
-      imports. This is what catches the 61 sibling imports when a move breaks one.
-  0c  baseline: record the import graph and the citation graph as a committed artifact, so
-      "did the move change anything?" is answerable rather than argued.
+**Resumable.** `analysis/.reorg_manifest.json` records per cluster: destination, status
+(pending / done / blocked), and the failing gate. Re-running continues where it stopped.
 
-  GATE: 0a and 0b pass on the tree as it stands today.
+## The program
 
-### Phase 1 — make the structure explicit WITHOUT moving anything
+    scripts/reorganize_analysis.py --plan     compute and print every destination; move nothing
+    scripts/reorganize_analysis.py --apply    execute, one commit per cluster, gated
+    scripts/reorganize_analysis.py --report   what moved, what is blocked, what is unsorted
 
-  1a  compute the connected components of the sibling-import graph. These are the clusters
-      that must move together. Publish the list.
-  1b  TOOLS registry: declare the 18 live tools and the 7 imported libraries -- name, what
-      it produces, what question it serves. Provenance becomes answerable here, before any
-      file changes location.
-  1c  map each cluster to its findings document, or record that it has none.
+`--plan` is committed as an artifact BEFORE `--apply` runs, so the intended end state is
+reviewable as a diff rather than discovered afterwards.
 
-  GATE: every one of the 143 is in exactly one bucket, by evidence, with the rule written
-  down. No file has moved.
+## Phases
 
-### Phase 2 — move, one cluster at a time
+### Phase 0 — safety nets. Must pass on today's tree before anything moves.
 
-  For each cluster, in one commit: `git mv` (history preserved) -> fix `sys.path` depth ->
-  fix sibling imports -> rewrite the citations that name it -> full test suite green.
+    0a  citation lint  every (analysis|scripts|src)/*.py named in a .md exists
+                       (fixes the 12 already broken)
+    0b  import lint    every analysis/**/*.py parses and resolves its imports
+    0c  baseline       import graph + citation graph committed as an artifact
 
-  GATE per cluster: 0a and 0b still pass, and the test suite is green. A cluster that cannot
-  be made green is REVERTED, not patched around.
+### Phase 1 — the program, and its plan. Nothing moves.
 
-  Order: `tools/` first (smallest, most used), then `modules/vegetation_correction/`
-  (already declared as a group, so its membership is known), then `investigations/`
-  (largest, least coupled to the pipeline).
+    1a  write scripts/reorganize_analysis.py implementing the rule and the clustering
+    1b  commit the output of --plan: all 143 destinations, and the cluster list
+    1c  TOOLS registry entries for whatever lands in analysis/tools/ and analysis/lib/
 
-### Phase 3 — delete the residue
+### Phase 2 — `--apply`. Autonomous, gated, resumable.
 
-  The 11 that are uncited, unimported and untouched since before 2026-09-01. One at a time,
-  with the evidence in the commit message, as the penetration sweep was done. Everything
-  else is kept.
+One commit per cluster: `git mv` -> fix `sys.path` depth -> fix sibling imports -> rewrite
+citations naming it -> run the three gates -> commit, or revert and mark BLOCKED.
 
-### Phase 4 — the documents
+### Phase 3 — report only. NOT autonomous, and deliberately so.
 
-  Six FRAME files, each saying "read this FIRST", become one. Findings documents move to
-  `findings/`. The citation lint from 0a keeps every path in them honest.
+Produces `analysis/DELETION_CANDIDATES.md`: the 11 uncited/unimported/untouched, plus
+whatever landed in `_unsorted/`, each with its evidence. **Deletes nothing.** Deletion of a
+tracked record is Andy's call, and a 17%-wrong classifier is not allowed to make it.
 
-## What this does NOT do, and why
+### Phase 4 — deferred, and named as deferred.
 
-  - **No bulk classification-driven deletion.** My classifier was 17% wrong on a
-    twelve-item hand check. Deletion happens in Phase 3, on 11 files, individually.
-  - **No invented categories.** The clusters come from the import graph and the citation
-    graph, not from my reading of what a script is "about".
-  - **No move before the lints exist.** Phase 0 is what makes Phase 2 reversible in
-    practice rather than in principle.
+Folding six FRAME documents into one is prose about what is currently true. It is not
+mechanical, so it stays a human task rather than being faked by a rule.
 
-## Honest cost
+## What I will need from Andy: nothing, until Phase 3
 
-Phase 0 is a few hours and pays for itself immediately. Phase 1 is mostly computation plus
-the TOOLS entries. Phase 2 is the long one -- 143 files in maybe 15-25 clusters, each with a
-test-green gate -- and it is where the "hard now" is. Phase 3 is an hour. Phase 4 is a day
-of prose.
+Phases 0-2 run start to finish without a decision. Phase 3 produces a list and stops.
+Phase 4 waits.
 
-The alternative is what we have: a directory where 91% of the contents cannot be told from
-debris, which has already cost real errors today.
+## Honest cost and failure modes
+
+Phase 0 is a few hours. Phase 1 is the program, half a day, and is where care is repaid.
+Phase 2 is machine time plus whatever the blocked list costs afterwards.
+
+The likely failure: a cluster whose `sys.path` depth cannot be mechanically fixed because it
+walks upward a fixed number of levels. Those revert, land on the blocked list, and are fixed
+by hand later. I expect a handful, not dozens — but I will not know until `--plan` runs, and
+the plan is committed before `--apply` precisely so that estimate is checkable.
