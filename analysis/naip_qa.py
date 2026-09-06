@@ -16,7 +16,10 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
+_REPO = os.path.dirname(os.path.abspath(__file__))
+while _REPO != "/" and not os.path.exists(os.path.join(_REPO, "pyproject.toml")):
+    _REPO = os.path.dirname(_REPO)   # depth-independent: find the repo root
+sys.path.insert(0, os.path.join(_REPO, "scripts"))
 from naip_cover_error import classify   # reuse the committed classifier
 
 
