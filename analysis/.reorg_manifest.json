@@ -414,5 +414,12 @@
    "analysis/ridgelines/test_incidence_veg_hypothesis.py"
   ],
   "status": "done"
+ },
+ "analysis/roughness_characterization/oak_forest.py": {
+  "dest": "analysis/investigations/results",
+  "files": [
+   "analysis/roughness_characterization/oak_forest.py"
+  ],
+  "status": "done"
  }
 }

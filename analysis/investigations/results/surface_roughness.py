@@ -26,7 +26,7 @@ DATA PROVENANCE (all under data/, git-ignored; reacquire as below)
         scripts/fetch_naip.py --bounds <frame> --year 2010 --res 2
 
 Run:  env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python \
-        analysis/roughness_characterization/surface_roughness.py
+        analysis/investigations/results/surface_roughness.py
 """
 import os
 import numpy as np
