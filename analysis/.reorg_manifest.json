@@ -484,5 +484,21 @@
    "analysis/stable_point_tilt_audit.py"
   ],
   "status": "done"
+ },
+ "analysis/steady_state/run_steady_state.py": {
+  "dest": "analysis/investigations/steady_state_stable_cells",
+  "files": [
+   "analysis/steady_state/run_steady_state.py",
+   "analysis/steady_state/steady_state_cells.py"
+  ],
+  "note": "run_steady_state.py walks 1 dirname level(s) up from __file__, and the move changes its depth (2 -> 3). A data path computed that way would break silently, so this is not moved automatically.",
+  "status": "blocked"
+ },
+ "analysis/swath_tie_intercept.py": {
+  "dest": "analysis/investigations/swath_tie_intercept",
+  "files": [
+   "analysis/swath_tie_intercept.py"
+  ],
+  "status": "done"
  }
 }
