@@ -63,7 +63,7 @@ the producer of the figures Andy called "very useful":
 |---|---|---|
 | `analysis/ridgelines/offset_vs_angle.py` | 38 | `MIN_N = 300` – "drop bins below this" |
 | `analysis/ridgelines/incidence_correction_fit.py` | 38 | `--min-n` default `500` |
-| `analysis/ridgelines/cover_offset_reference.py` | 48 | `--min-n` default `200` |
+| `analysis/tools/cover_offset_reference.py` | 48 | `--min-n` default `200` |
 | `analysis/ridgelines/cover_offset_regression.py` | 126 | `min_n=200` |
 | `analysis/ridgelines/offset_by_beam_selection.py` | 34, 53 | `--min-n` 3, `MIN_BIN = 100` |
 | `analysis/ridgelines/nearnadir_slope_dependence.py` | 57 | `MIN_N = 30` |

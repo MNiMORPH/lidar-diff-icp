@@ -19,5 +19,12 @@
    "analysis/plot_floodplain_cuts.py"
   ],
   "status": "done"
+ },
+ "analysis/plot_ground_q_curve.py": {
+  "dest": "analysis/tools",
+  "files": [
+   "analysis/plot_ground_q_curve.py"
+  ],
+  "status": "done"
  }
 }

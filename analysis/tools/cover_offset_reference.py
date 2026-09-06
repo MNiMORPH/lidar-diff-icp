@@ -39,7 +39,7 @@ Uses the REGISTRATION-CORRECTED offset by default: on raw d_mm the per-swath mis
 would be read as a cover effect wherever cover and flight-line geometry covary.
 
     env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python \
-        analysis/ridgelines/cover_offset_reference.py --tile data/derived/elbaext
+        analysis/tools/cover_offset_reference.py --tile data/derived/elbaext
 """
 import argparse, json, os
 import numpy as np, pandas as pd

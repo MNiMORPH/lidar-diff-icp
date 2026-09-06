@@ -53,7 +53,7 @@ def read_k(tile_dir, tile):
         f"no cover_offset_calibration*.json under {tile_dir}. k is NOT defaulted -- a value "
         f"carried over from another tile would be applied to this one without saying so. "
         f"Produce it:\n    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python "
-        f"analysis/ridgelines/cover_offset_reference.py --tile {tile_dir}\n"
+        f"analysis/tools/cover_offset_reference.py --tile {tile_dir}\n"
         f"or state your own value with --k-cover.")
 
 
