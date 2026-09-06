@@ -131,10 +131,20 @@ def _facts():
         src = open(os.path.join(REPO, p), errors="ignore").read()
         if "savefig" in src:
             savefig.add(p)
-        d = subprocess.run(["git", "-C", REPO, "log", "-1", "--format=%ad",
-                            "--date=short", "--", p],
-                           capture_output=True, text=True).stdout.strip()
-        if d >= RECENT:
+        # The LAST SUBSTANTIVE commit, skipping this exercise's own mechanical passes.
+        # `reorg:` and `anchor:` touched 63 files today, which made half of them look like
+        # current work: rule 4 then claimed three that had already been placed, and the plan
+        # stopped converging. The same trap dated the deletion candidates wrongly.
+        log = subprocess.run(["git", "-C", REPO, "log", "--format=%ad|%s",
+                              "--date=short", "--", p],
+                             capture_output=True, text=True).stdout.strip().splitlines()
+        d = ""
+        for line in log:
+            when, subject = line.split("|", 1)
+            if not subject.startswith(("reorg:", "anchor:")):
+                d = when
+                break
+        if d and d >= RECENT:
             recent.add(p)
     cites = collections.defaultdict(set)            # document -> scripts it cites
     for script, docs in cited_by.items():
@@ -150,6 +160,14 @@ def destination(p, f):
     st = f["step_of"].get(p)
     if st is not None and not st.group:
         return 1, os.path.dirname(p), f"declared by pipeline step {st.name}"
+    # A DECLARED TOOL STAYS PUT, for the same reason a declared Step does: a declaration
+    # is a statement by a person, and it outranks any rule inferring from evidence. Without
+    # this, plot_q2_fit.py -- declared in workflow.TOOLS -- was queued to move out of
+    # analysis/tools/ the moment its last substantive commit aged past the rule-4 window,
+    # and the plan had no fixed point.
+    from lidar_diff_icp import workflow as _W
+    if p in _W.TOOLS:
+        return 1, os.path.dirname(p), "declared in workflow.TOOLS"
     importers = f["imported_by"].get(p, set())
     if any(q.startswith("src/") for q in importers) or len(importers) >= 2:
         return 2, "analysis/lib", f"imported by {len(importers)} file(s)"
@@ -166,6 +184,18 @@ def destination(p, f):
         # many scripts a document cites, which needs no threshold: the document that talks
         # about fewest scripts is the one this script is most plausibly ABOUT. Ties break on
         # the document name, so the answer does not depend on set ordering.
+        # IF ANY CITING DOCUMENT LIVES BESIDE THE SCRIPT, THE DIRECTORY IS ALREADY THE
+        # INVESTIGATION. Checked over ALL citers, not just the most specific: a narrower
+        # document elsewhere can outrank a co-located one and drag the script out of the
+        # folder that already described it. That is what sent
+        # analysis/roughness_characterization/*.py to analysis/investigations/results/ --
+        # a worse name -- and what made the plan NON-IDEMPOTENT, queueing 7 files to move
+        # again on the next run, two of them files I had moved back by hand.
+        here = [m for m in docs if os.path.dirname(m) == os.path.dirname(p)]
+        if here:
+            return 5, os.path.dirname(p), (
+                f"claimed by {os.path.basename(min(here))}, which lives here: this "
+                f"directory is already the investigation")
         best = min(docs, key=lambda m: (len(f["cites"][m]), m))
         d = os.path.splitext(os.path.basename(best))[0].lower()
         return 5, f"analysis/investigations/{d}", (
