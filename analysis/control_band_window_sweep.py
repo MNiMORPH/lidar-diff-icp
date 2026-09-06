@@ -28,7 +28,10 @@ Scored on HELD-OUT 10 km spatial blocks, 5 folds, 20 fold seeds; mean and sd ove
 import argparse, os, sys
 import numpy as np, pandas as pd
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+_REPO = os.path.dirname(os.path.abspath(__file__))
+while _REPO != "/" and not os.path.exists(os.path.join(_REPO, "pyproject.toml")):
+    _REPO = os.path.dirname(_REPO)   # depth-independent: find the repo root
+sys.path.insert(0, os.path.join(_REPO, "analysis"))
 import control_lowveg_offset as M
 
 # Values recovered from the inline sweeps of 2026-08-27T18:15-18:19Z, kept so that any change
