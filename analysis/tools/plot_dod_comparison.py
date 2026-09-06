@@ -7,7 +7,7 @@ goes degenerate when the correction shrinks the stable set (whitewater: 60,568 -
 cells, "initial simplex is flat"). Pairing the corrected DoD with the uncorrected LoD to
 fill the panel would be a mislabel, so this figure compares the two DoDs instead.
 
-    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/plot_dod_comparison.py \
+    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/tools/plot_dod_comparison.py \
         --tile data/derived/whitewater
 """
 import argparse, os
