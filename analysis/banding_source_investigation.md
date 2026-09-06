@@ -98,7 +98,7 @@ so the slope is robust and not a per-cell overfit): `resid = (z − [Z_reg(cell)
 Δx·∂z/∂east + Δy·∂z/∂north]) · cos(slope)`. Grid the 10th percentile of `resid`
 per cell, per epoch. The shared plane cancels in the difference, so
 `DoD = low10(resid_2021) − low10(resid_2008)` preserves real change while dropping
-the slope-driven bias. Reproducible driver: `analysis/slope_normal_ground.py`.
+the slope-driven bias. Reproducible driver: `analysis/investigations/banding_source_investigation/slope_normal_ground.py`.
 Figure: `figures/slope_normal_dod.png`.
 
 ## Status and remaining work

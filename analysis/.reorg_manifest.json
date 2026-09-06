@@ -450,5 +450,12 @@
    "analysis/slope_bias/elbaext_geoid_regrid.py"
   ],
   "status": "done"
+ },
+ "analysis/slope_bias/save_incidence_linked.py": {
+  "dest": "analysis/investigations/zerofill_sweep",
+  "files": [
+   "analysis/slope_bias/save_incidence_linked.py"
+  ],
+  "status": "done"
  }
 }
