@@ -12,7 +12,7 @@ once: which ground the relation rests on, and whether the cover range is spread 
 concentrated in one corner.
 
     env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python \
-        analysis/ridgelines/plot_q2_population.py --tile data/derived/whitewater \
+        analysis/tools/plot_q2_population.py --tile data/derived/whitewater \
         --fit q2_cover_fit_lowveg.json
 """
 import argparse

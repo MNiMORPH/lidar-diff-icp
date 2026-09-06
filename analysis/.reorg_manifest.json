@@ -47,5 +47,12 @@
    "analysis/ridgelines/plot_cover_calibration.py"
   ],
   "status": "done"
+ },
+ "analysis/ridgelines/plot_q2_fit.py": {
+  "dest": "analysis/tools",
+  "files": [
+   "analysis/ridgelines/plot_q2_fit.py"
+  ],
+  "status": "done"
  }
 }
