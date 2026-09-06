@@ -224,6 +224,12 @@ def depth_sensitive(path):
 
     Returns the number of dirname() levels applied to __file__, or 0.
     """
+    src = open(os.path.join(REPO, path), errors="ignore").read()
+    # An ANCHORED file walks up until it finds pyproject.toml, so its target does not depend
+    # on depth at all -- even though the idiom starts with dirname(abspath(__file__)) and
+    # would otherwise trip the detector below. scripts/anchor_paths.py writes this marker.
+    if 'os.path.join(_REPO, "pyproject.toml")' in src:
+        return 0
     tree = _ast(path)
     if tree is None:
         return 0
