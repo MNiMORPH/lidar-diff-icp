@@ -25,7 +25,7 @@ Sign convention throughout: the datum constant is what you **ADD to gen1**.
 raises gen1 and therefore LOWERS the DoD by the same amount.
 
     env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python \\
-        analysis/groundtruth/elba_datum_constant.py
+        analysis/investigations/absolute_basis_elba/elba_datum_constant.py
 """
 from __future__ import annotations
 
@@ -360,7 +360,7 @@ def main():
                   "dod.npy - datum_constant/1000 in metres; a positive datum constant "
                   "raises gen1 and therefore lowers gen2-minus-gen1."),
         gen2_absolute_offsets=g2["checkpoints"],
-        produced_by="analysis/groundtruth/elba_datum_constant.py")
+        produced_by="analysis/investigations/absolute_basis_elba/elba_datum_constant.py")
     if not A.no_write:
         for p in (OUT_NPY, OUT_JSON):
             if os.path.exists(p):

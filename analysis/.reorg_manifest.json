@@ -68,6 +68,13 @@
   ],
   "status": "done"
  },
+ "analysis/groundtruth/elba_absolute_tie.py": {
+  "dest": "analysis/investigations/gen1_datum_more_marks",
+  "files": [
+   "analysis/groundtruth/elba_absolute_tie.py"
+  ],
+  "status": "done"
+ },
  "analysis/groundtruth/gen1_line_tracks.py": {
   "dest": "analysis/investigations/gen1_same_line_not_reproduced",
   "files": [
