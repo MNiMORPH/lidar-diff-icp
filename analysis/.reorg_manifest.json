@@ -6,6 +6,14 @@
   ],
   "status": "done"
  },
+ "analysis/control_residual_field.py": {
+  "dest": "analysis/investigations/control_residual_field",
+  "files": [
+   "analysis/control_residual_field.py"
+  ],
+  "note": "control_residual_field.py walks 1 dirname level(s) up from __file__, and the move changes its depth (1 -> 3). A data path computed that way would break silently, so this is not moved automatically.",
+  "status": "blocked"
+ },
  "analysis/cover_at_control_marks.py": {
   "dest": "analysis/lib",
   "files": [
@@ -25,10 +33,73 @@
   "note": "crossline_fit.py walks 1 dirname level(s) up from __file__, and the move changes its depth (1 -> 2). A data path computed that way would break silently, so this is not moved automatically.",
   "status": "blocked"
  },
+ "analysis/degeneracy_crossline_geometry.py": {
+  "dest": "analysis/investigations/swath_degeneracy_breaking",
+  "files": [
+   "analysis/degeneracy_crossline_geometry.py"
+  ],
+  "note": "degeneracy_crossline_geometry.py walks 1 dirname level(s) up from __file__, and the move changes its depth (1 -> 3). A data path computed that way would break silently, so this is not moved automatically.",
+  "status": "blocked"
+ },
+ "analysis/degeneracy_flightline_inventory.py": {
+  "dest": "analysis/investigations/swath_degeneracy_breaking",
+  "files": [
+   "analysis/degeneracy_flightline_inventory.py"
+  ],
+  "note": "degeneracy_flightline_inventory.py walks 1 dirname level(s) up from __file__, and the move changes its depth (1 -> 3). A data path computed that way would break silently, so this is not moved automatically.",
+  "status": "blocked"
+ },
+ "analysis/degeneracy_water_surface.py": {
+  "dest": "analysis/investigations/swath_degeneracy_breaking",
+  "files": [
+   "analysis/degeneracy_water_surface.py"
+  ],
+  "note": "degeneracy_water_surface.py walks 1 dirname level(s) up from __file__, and the move changes its depth (1 -> 3). A data path computed that way would break silently, so this is not moved automatically.",
+  "status": "blocked"
+ },
+ "analysis/gen2_absolute_datum.py": {
+  "dest": "analysis/investigations/gen2_absolute_datum",
+  "files": [
+   "analysis/gen2_absolute_datum.py"
+  ],
+  "note": "gen2_absolute_datum.py walks 1 dirname level(s) up from __file__, and the move changes its depth (1 -> 3). A data path computed that way would break silently, so this is not moved automatically.",
+  "status": "blocked"
+ },
  "analysis/gen2_density_map.py": {
   "dest": "analysis/tools",
   "files": [
    "analysis/gen2_density_map.py"
+  ],
+  "status": "done"
+ },
+ "analysis/groundtruth/elba_absolute_tie.py": {
+  "dest": "analysis/investigations/gen1_datum_more_marks",
+  "files": [
+   "analysis/groundtruth/elba_absolute_tie.py"
+  ],
+  "note": "elba_absolute_tie.py walks 1 dirname level(s) up from __file__, and the move changes its depth (2 -> 3). A data path computed that way would break silently, so this is not moved automatically.",
+  "status": "blocked"
+ },
+ "analysis/groundtruth/elba_datum_constant.py": {
+  "dest": "analysis/investigations/absolute_basis_elba",
+  "files": [
+   "analysis/groundtruth/elba_datum_constant.py"
+  ],
+  "note": "elba_datum_constant.py walks 1 dirname level(s) up from __file__, and the move changes its depth (2 -> 3). A data path computed that way would break silently, so this is not moved automatically.",
+  "status": "blocked"
+ },
+ "analysis/groundtruth/gen1_datum_at_site.py": {
+  "dest": "analysis/investigations/gen1_datum_module",
+  "files": [
+   "analysis/groundtruth/gen1_datum_at_site.py"
+  ],
+  "note": "gen1_datum_at_site.py walks 1 dirname level(s) up from __file__, and the move changes its depth (2 -> 3). A data path computed that way would break silently, so this is not moved automatically.",
+  "status": "blocked"
+ },
+ "analysis/groundtruth/gen1_line_tracks.py": {
+  "dest": "analysis/investigations/gen1_same_line_not_reproduced",
+  "files": [
+   "analysis/groundtruth/gen1_line_tracks.py"
   ],
   "status": "done"
  },
