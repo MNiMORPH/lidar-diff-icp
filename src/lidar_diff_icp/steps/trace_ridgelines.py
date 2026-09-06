@@ -20,7 +20,7 @@ The field-furrow and forest QC percentages that used to appear here were derived
 correlates -0.84 with scan angle) and a poor canopy measure. `pct_on_highs` is unaffected and
 remains the QC that decides the threshold.
 
-    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/ridgelines/trace_ridgelines.py [TILE_DIR]
+    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python -m lidar_diff_icp.steps.trace_ridgelines [TILE_DIR]
         TILE_DIR default data/derived/elba_fulldensity; e.g. data/derived/elbaext
 """
 import sys, os, json, argparse, numpy as np

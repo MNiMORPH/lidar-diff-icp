@@ -163,7 +163,7 @@ STEPS: tuple[Step, ...] = (
     Step("ridge_mask",
          produces=("ridge_mask.npy",),
          requires=("z_after.npy",),
-         command=f"{PY} analysis/ridgelines/trace_ridgelines.py {{tile}} --out ridge_mask.npy",
+         command=f"{PY} -m lidar_diff_icp.steps.trace_ridgelines {{tile}} --out ridge_mask.npy",
          note="Scherler & Schwanghart divide network; the candidate ridge cells. "
               "LOAD-BEARING: convexity requires ridge_mask.npy, and "
               "refcells.reference_cells uses it as the divide criterion of the strict "
@@ -172,7 +172,7 @@ STEPS: tuple[Step, ...] = (
          produces=("floodplain_mask.npy", "crest_mask.npy", "kappa_L10.npy", "kappa_L20.npy",
                    "kappa_L30.npy", "ridgecrest_pixels.npz", "ridgecrest_pixels.csv"),
          requires=("z_after.npy", "slope.npy", "ridge_mask.npy"),
-         command=f"{PY} analysis/ridgelines/convexity_dod_landcover.py --tile {{tile_name}} "
+         command=f"{PY} -m lidar_diff_icp.steps.convexity_dod_landcover --tile {{tile_name}} "
                  f"--dod {{dod}} --without cover",
          note="floodplain_mask gates reference_cells, so this comes before any q2 work. "
               "Step 4 (the forest/open crest split) now comes from the PyForestScan masks "
@@ -183,7 +183,7 @@ STEPS: tuple[Step, ...] = (
          produces=("curv_xx.npy", "curv_yy.npy", "curv_laplacian.npy"),
          requires=("z_after.npy", "crest_mask.npy"),
          mutates=("ridgecrest_pixels.npz",),
-         command=f"{PY} analysis/ridgelines/curvature_diffusion.py --tile {{tile_name}}",
+         command=f"{PY} -m lidar_diff_icp.steps.curvature_diffusion --tile {{tile_name}}",
          note="MUST follow convexity, which crest_mask.npy already enforces: this ADDS "
               "curv_xx/curv_yy/curv_laplacian columns to ridgecrest_pixels.npz in place, "
               "and the convexity producer rewrites that file from scratch, so the reverse "
@@ -493,11 +493,17 @@ def effective_mtime(tile_dir, name, man, *, update=True):
 
 
 _SCRIPT_RE = re.compile(r"(?:^|\s)((?:analysis|scripts|src)/[\w/]+\.py)")
+# A step run as `python -m pkg.mod` names no .py path, so _SCRIPT_RE finds nothing and
+# the step would silently lose CODE-STALE detection -- the failure would look like a
+# product that is simply never out of date. Resolved to its file under src/ instead.
+_MODULE_RE = re.compile(r"(?:^|\s)-m\s+([\w.]+)")
 
 
 def script_of(step):
     """Source files whose change should invalidate this step's outputs."""
     found = tuple(_SCRIPT_RE.findall(step.command))
+    found += tuple("src/" + m.replace(".", "/") + ".py"
+                   for m in _MODULE_RE.findall(step.command))
     return tuple(dict.fromkeys(found + tuple(step.code)))
 
 

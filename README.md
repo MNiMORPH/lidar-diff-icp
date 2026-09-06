@@ -417,7 +417,7 @@ non-mosaic) and refuses to proceed unless its boundary fully covers the tile bbo
   RAM and OOMs on big tiles; **untwine** (conda-forge, isolated env) builds it out-of-core
   (~0.4 GB RAM, external-sorted to disk). The COPC spatial index turns per-tile crops into
   fast indexed seeks — the enabler for forest metrics at statewide scale.
-- **Ridgeline tracer** (`analysis/ridgelines/trace_ridgelines.py`) — ridgelines as the
+- **Ridgeline tracer** (`src/lidar_diff_icp/steps/trace_ridgelines.py`) — ridgelines as the
   Scherler & Schwanghart (2020) divide network (via `rivernetworkx.dreich`), generalized
   to run on any tile (grid read from the tile's corrections JSON).
 

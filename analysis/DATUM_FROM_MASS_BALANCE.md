@@ -379,7 +379,7 @@ survives the `q2` correction at high cover. It is not tested here.
    make it weaker still; a shorter one (Carlton fits 166 m) would make it much stronger.
    The range is the single most influential fitted number here.
 4. **The floodplain mask is `TPI(800 m) < −2 m`**, described in its own producer
-   (`analysis/ridgelines/convexity_dod_landcover.py`) as crude. It removes 38.35 % of the
+   (`src/lidar_diff_icp/steps/convexity_dod_landcover.py`) as crude. It removes 38.35 % of the
    grid. *UNVERIFIED — the package's own principled `trunk_floodplain` detector selects
    1.85–2.11 % of the tile and overlaps the crude mask at IoU 0.104, quoted from
    `catchment-dod-balance/docs/validation.md`, not recomputed here* — so these are

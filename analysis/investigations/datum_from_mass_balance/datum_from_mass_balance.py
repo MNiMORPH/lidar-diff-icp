@@ -144,7 +144,7 @@ valid = valid_all & ~flood if A.floodplain_mode == "routing" else valid_all
 
 R.mask("floodplain", flood, of=flood.size,
        defn=f"{A.floodplain} as shipped (TPI over an 800 m window < -2 m; "
-            "analysis/ridgelines/convexity_dod_landcover.py)")
+            "src/lidar_diff_icp/steps/convexity_dod_landcover.py)")
 R.mask("routed", valid, of=valid.size,
        defn=("D-infinity graph after breaching, floodplain cells REMOVED"
              if A.floodplain_mode == "routing" else "D-infinity graph after breaching"))

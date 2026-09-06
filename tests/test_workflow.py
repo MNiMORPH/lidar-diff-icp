@@ -14,6 +14,8 @@ import pytest
 
 from lidar_diff_icp import workflow as W
 
+_REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 
 def test_every_requirement_has_a_producer_or_is_a_base_input():
     """The graph refuses to order if a step needs something nothing makes."""
@@ -161,11 +163,31 @@ def test_a_mutation_of_a_later_step_is_caught():
 
 def test_script_of_finds_the_producing_source_and_extras():
     conv = next(s for s in W.STEPS if s.name == "convexity")
-    assert W.script_of(conv) == ("analysis/ridgelines/convexity_dod_landcover.py",)
+    assert W.script_of(conv) == ("src/lidar_diff_icp/steps/convexity_dod_landcover.py",)
 
     s = W.Step("x", produces=("o.npy",), requires=(), command="python scripts/a.py --tile t",
                code=("src/lidar_diff_icp/b.py",))
     assert W.script_of(s) == ("scripts/a.py", "src/lidar_diff_icp/b.py")
+
+
+def test_a_step_run_as_a_module_still_names_its_source():
+    """A `-m pkg.mod` command contains no .py path, so the path regex alone finds NOTHING
+    and the step loses CODE-STALE detection -- a failure that looks like a product which
+    is simply never out of date. That is not hypothetical: the three ridgeline steps moved
+    into lidar_diff_icp.steps on 2026-09-06 and would have gone silently unwatched.
+
+    Every source named must also EXIST, or the resolution is wrong in a way that leaves
+    code_time() reading a missing file and reporting fresh.
+    """
+    import os
+    s = W.Step("x", produces=("o.npy",), requires=(),
+               command="python -m lidar_diff_icp.steps.trace_ridgelines {tile}")
+    assert W.script_of(s) == ("src/lidar_diff_icp/steps/trace_ridgelines.py",)
+
+    for step in W.STEPS:
+        for src in W.script_of(step):
+            assert os.path.exists(os.path.join(_REPO, src)), (
+                f"step {step.name!r} names a source that does not exist: {src}")
 
 
 def test_every_step_resolves_at_least_one_source_file():

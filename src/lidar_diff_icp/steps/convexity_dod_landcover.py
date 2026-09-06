@@ -24,7 +24,7 @@ identically on every tile, and its forest/open masks carry a stated cut.
 Steps 2-3 need no cover layer at all, so `floodplain_mask.npy` and `crest_mask.npy` are
 produced for any tile with z_after + slope + ridge_mask.
 
-    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/ridgelines/convexity_dod_landcover.py \
+    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python -m lidar_diff_icp.steps.convexity_dod_landcover \
         --tile elba_fulldensity --dod data/derived/elba_refdatum/dod_geoid.npy
 """
 import argparse, json, os

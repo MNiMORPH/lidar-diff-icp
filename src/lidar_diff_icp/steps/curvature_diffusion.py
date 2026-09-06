@@ -21,7 +21,7 @@ NOTE ON ORDER: part (1) AUGMENTS ridgecrest_pixels.npz in place with curv_xx / c
 curv_laplacian. convexity_dod_landcover.py rewrites that file from scratch, so run this
 AFTER it, or those three columns are dropped.
 
-    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/ridgelines/curvature_diffusion.py \
+    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python -m lidar_diff_icp.steps.curvature_diffusion \
         --tile elba_fulldensity --dod data/derived/elba_refdatum/dod_geoid.npy \
         --gen1-date 2008-11-21 --gen2-date 2021-05-01
 """
