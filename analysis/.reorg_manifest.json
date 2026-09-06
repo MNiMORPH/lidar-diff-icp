@@ -365,6 +365,14 @@
   ],
   "status": "done"
  },
+ "analysis/ridgelines/nearnadir_slope_dependence.py": {
+  "dest": "analysis/investigations/nearnadir_slope_dependence",
+  "files": [
+   "analysis/ridgelines/nearnadir_slope_dependence.py"
+  ],
+  "note": "nearnadir_slope_dependence.py walks 1 dirname level(s) up from __file__, and the move changes its depth (2 -> 3). A data path computed that way would break silently, so this is not moved automatically.",
+  "status": "blocked"
+ },
  "analysis/ridgelines/plot_cover_calibration.py": {
   "dest": "analysis/tools",
   "files": [
@@ -390,6 +398,13 @@
   "dest": "analysis/modules/vegetation_correction",
   "files": [
    "analysis/ridgelines/q2_cover_fit.py"
+  ],
+  "status": "done"
+ },
+ "analysis/ridgelines/tail_form_pooling_test.py": {
+  "dest": "analysis/investigations/near_ground_mixture",
+  "files": [
+   "analysis/ridgelines/tail_form_pooling_test.py"
   ],
   "status": "done"
  }

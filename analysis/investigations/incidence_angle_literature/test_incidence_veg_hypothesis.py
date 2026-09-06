@@ -7,7 +7,7 @@
 Veg proxy: canopy_height_p95 (gen2 canopy_struct) -- a height, less scan-geometry-confounded
 than a return fraction.
 
-    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/ridgelines/test_incidence_veg_hypothesis.py
+    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/investigations/incidence_angle_literature/test_incidence_veg_hypothesis.py
 """
 import numpy as np
 import matplotlib; matplotlib.use("Agg"); import matplotlib.pyplot as plt
