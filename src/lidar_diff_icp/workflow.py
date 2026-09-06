@@ -291,7 +291,7 @@ STEPS: tuple[Step, ...] = (
          group="vegetation_correction",
          produces=("canopy_struct.npz",),
          requires=("z_after.npy",),
-         command=f"{PY} analysis/ridgelines/canopy_struct.py --tile {{tile_name}} "
+         command=f"{PY} analysis/modules/vegetation_correction/canopy_struct.py --tile {{tile_name}} "
                  f"--after {{gen2}}",
          optional=True, needs=("gen2",),
          note="Per-cell canopy structure from the full unclassified gen2 cloud: veg_frac, "

@@ -53,6 +53,13 @@
   ],
   "status": "done"
  },
+ "analysis/ridgelines/beam_offset_table.py": {
+  "dest": "analysis/modules/vegetation_correction",
+  "files": [
+   "analysis/ridgelines/beam_offset_table.py"
+  ],
+  "status": "done"
+ },
  "analysis/ridgelines/cover_offset_reference.py": {
   "dest": "analysis/tools",
   "files": [

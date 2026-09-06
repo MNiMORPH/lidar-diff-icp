@@ -12,7 +12,7 @@ than guessed because it is not derivable from the tile directory.
 
 Run:
   cd /home/awickert/projects/lidar-diff-icp
-  env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/ridgelines/canopy_struct.py \
+  env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/modules/vegetation_correction/canopy_struct.py \
       --tile elba_fulldensity --after data/after/3dep2021_fulldensity.laz
 """
 import argparse, json, os

@@ -236,7 +236,7 @@ the "unknown producer" of `ridge_mask.npy` listed below as a loose end),
   `-0.1922` typed in the code, `-0.1835` in the shipped product, `-0.1792` from today's
   refit -- and the JSON records its inputs' mtimes, so the consumer warns that the refit
   itself read a `beam_offset_table` older than `corrections.json`.
-* **(2) canopy_struct.npz was NOT an orphan.** `analysis/ridgelines/canopy_struct.py`
+* **(2) canopy_struct.npz was NOT an orphan.** `analysis/modules/vegetation_correction/canopy_struct.py`
   produces it; my write-form search missed it because the path is a module constant. It was
   hardcoded to elba. Parameterized; all six fields byte-identical on elba.
 * **(3) `97c0001`** -- `src/lidar_diff_icp/workflow.py` declares the 15-step graph and
