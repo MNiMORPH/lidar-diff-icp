@@ -317,26 +317,33 @@ def test_every_declared_group_has_a_description_and_members():
         assert s.group == "" or s.group in W.GROUPS, f"{s.name}: undeclared group {s.group!r}"
 
 
-def test_skipping_a_group_drops_exactly_its_steps(tmp_path):
-    full = {s.name for s, _, _ in W.plan(tmp_path)}
-    cut = {s.name for s, _, _ in W.plan(tmp_path,
-                                        skip_groups=("vegetation_correction",))}
-    assert full - cut == {s.name for s in W.STEPS if s.group == "vegetation_correction"}
-    assert cut  # the base pipeline survives
+def test_a_group_is_omitted_until_the_pipeline_reaches_over_to_it(tmp_path):
+    """Andy, 2026-09-06: the vegetation-correction chain sits ALONGSIDE the pipeline, and
+    the pipeline reaches over to use it optionally. So the default plan must not contain it
+    -- the default is what the project claims, and a correction that measured WORSE than
+    doing nothing on open ground must not look like part of producing the DoD."""
+    members = {s.name for s in W.STEPS if s.group == "vegetation_correction"}
+    base = {s.name for s, _, _ in W.plan(tmp_path)}
+    assert not (base & members), "an opt-in group must be absent by default"
+    reached = {s.name for s, _, _ in W.plan(tmp_path,
+                                            with_groups=("vegetation_correction",))}
+    assert reached - base == members
+    assert base < reached
 
 
 def test_an_unknown_group_is_refused_not_ignored(tmp_path):
     with pytest.raises(ValueError, match="unknown group"):
-        W.plan(tmp_path, skip_groups=("no_such_module",))
+        W.plan(tmp_path, with_groups=("no_such_module",))
 
 
-def test_a_group_something_depends_on_cannot_be_skipped(tmp_path):
-    """Refusing beats dropping: a plan missing a step another step needs is unbuildable,
-    and a plan that cannot be run is worse than no plan."""
+def test_a_group_something_outside_it_depends_on_is_refused(tmp_path):
+    """A group whose products a base step requires is not optional AT ALL, whatever it is
+    flagged -- omitting it by default would leave the pipeline unbuildable. That is a
+    declaration error, so it raises whichever way the group is asked for."""
     steps = W.STEPS + (W.Step("downstream", produces=("z.npy",),
                               requires=("dod_cover_q2.npy",), command="true"),)
-    with pytest.raises(ValueError, match="cannot be skipped"):
-        W.plan(tmp_path, steps=steps, skip_groups=("vegetation_correction",))
+    with pytest.raises(ValueError, match="not optional at all"):
+        W.plan(tmp_path, steps=steps)
 
 
 def test_completeness_is_the_first_step():

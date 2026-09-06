@@ -294,9 +294,16 @@ STEPS: tuple[Step, ...] = (
 _BASE_STEP = next(s for s in STEPS if s.name == "base")
 
 
-#: Optional module groups: sets of steps that stand or fall together, and that NOTHING
-#: outside them requires. Declared so a module can be switched off as a unit and so the
-#: graph states which products are the base method's and which are an experiment's.
+#: OPT-IN module groups: sets of steps that stand or fall together, that NOTHING outside
+#: them requires, and that are NOT part of the pipeline unless asked for.
+#:
+#: Andy, 2026-09-06: "the vegetation-correction chain should be alongside the pipeline; the
+#: only difference is that the pipeline can reach over to the vegetation-correction chain to
+#: use it (optionally)." So a group's steps sit BESIDE the graph and are pulled in by name --
+#: `--with vegetation_correction` -- rather than running by default and needing to be
+#: skipped. The inversion matters because the default states what the project claims: the
+#: shipped DoD comes from `base`, and a correction that measured WORSE than doing nothing on
+#: open ground must not look like part of producing it.
 GROUPS = {
     "vegetation_correction":
         "The gen2 leaf-on ground correction. NOT part of the shipped DoD: the pipeline "
@@ -545,20 +552,22 @@ def state(tile_dir, steps=STEPS):
 
 
 def plan(tile_dir, *, gen1=None, gen2=None, dod=None, steps=STEPS, include_optional=True,
-         skip_groups=()):
+         with_groups=()):
     """The commands, in dependency order, with the tile substituted.
 
-    `skip_groups` drops whole modules -- see GROUPS. A group that something outside it
-    requires is REFUSED rather than dropped, because dropping it would leave the graph
-    unbuildable and the plan would be a lie.
+    Steps belonging to a GROUP are OMITTED unless their group is named in `with_groups`:
+    a group is alongside the pipeline, and the pipeline reaches over to it. A group that
+    something outside it requires is REFUSED, because then it is not optional at all and
+    omitting it would leave the graph unbuildable.
     """
-    for g in skip_groups:
+    for g in with_groups:
         if g not in GROUPS:
             raise ValueError(f"unknown group {g!r}; known: {sorted(GROUPS)}")
+    for g in GROUPS:
         if not group_is_a_leaf(g, steps):
             raise ValueError(
-                f"group {g!r} cannot be skipped: steps outside it require its products. "
-                f"It is not an optional module, whatever its steps are flagged.")
+                f"group {g!r} is declared optional but steps outside it require its "
+                f"products, so it is not optional at all. Fix the declaration.")
     name = os.path.basename(str(tile_dir).rstrip("/"))
     # A tile directory is not necessarily a registered site: elbaext, elba_fulldensity and
     # the analysis scratch directories are products, not sites. Say so in the command rather
@@ -575,7 +584,7 @@ def plan(tile_dir, *, gen1=None, gen2=None, dod=None, steps=STEPS, include_optio
     for s in order(steps):
         if s.optional and not include_optional:
             continue
-        if s.group and s.group in skip_groups:
+        if s.group and s.group not in with_groups:
             continue
         missing = [n for n in s.needs if supplied.get(n) is None]
         c = (s.command.replace("{tile_name}", name).replace("{tile}", str(tile_dir))
@@ -614,7 +623,7 @@ def _state_with_code(tile_dir, steps=STEPS):
 
 
 def runnable(tile_dir, *, gen1=None, gen2=None, dod=None, steps=STEPS,
-             include_optional=True, skip_groups=(), only_stale=True, only=()):
+             include_optional=True, with_groups=(), only_stale=True, only=()):
     """What :func:`run` would execute, in dependency order, and WHY each was chosen.
 
     Returns ``[(step, command, state, detail), ...]``. Pure -- it executes nothing, so the
@@ -638,7 +647,7 @@ def runnable(tile_dir, *, gen1=None, gen2=None, dod=None, steps=STEPS,
     out = []
     for s, cmd, missing in plan(tile_dir, gen1=gen1, gen2=gen2, dod=dod, steps=steps,
                                 include_optional=include_optional,
-                                skip_groups=skip_groups):
+                                with_groups=with_groups):
         if only and s.name not in only:
             continue
         k, d = st[s.name]
@@ -659,7 +668,7 @@ def runnable(tile_dir, *, gen1=None, gen2=None, dod=None, steps=STEPS,
 
 
 def run(tile_dir, *, gen1=None, gen2=None, dod=None, steps=STEPS, include_optional=True,
-        skip_groups=(), only_stale=True, only=(), dry_run=False, verbose=True):
+        with_groups=(), only_stale=True, only=(), dry_run=False, verbose=True):
     """Execute the graph in dependency order, STOPPING AT THE FIRST FAILURE.
 
     Returns ``(ran, failure)``: the steps that completed, and ``(step, returncode)`` for the
@@ -675,7 +684,7 @@ def run(tile_dir, *, gen1=None, gen2=None, dod=None, steps=STEPS, include_option
     read makes them stale as it goes -- the plan cannot be computed once and trusted.
     """
     todo = runnable(tile_dir, gen1=gen1, gen2=gen2, dod=dod, steps=steps,
-                    include_optional=include_optional, skip_groups=skip_groups,
+                    include_optional=include_optional, with_groups=with_groups,
                     only_stale=only_stale, only=only)
     supplied = {"gen1": gen1, "gen2": gen2}
     blocked = [(s.name, [n for n in s.needs
@@ -702,7 +711,7 @@ def run(tile_dir, *, gen1=None, gen2=None, dod=None, steps=STEPS, include_option
         # unnecessary, or changed what it should be told.
         fresh = {x.name: (c, k, d) for x, c, k, d in
                  runnable(tile_dir, gen1=gen1, gen2=gen2, dod=dod, steps=steps,
-                          include_optional=include_optional, skip_groups=skip_groups,
+                          include_optional=include_optional, with_groups=with_groups,
                           only_stale=only_stale, only=only)}
         if s.name not in fresh:
             if verbose:
@@ -732,8 +741,11 @@ def main(argv=None):
     ap.add_argument("--check", action="store_true", help="report each step's state")
     ap.add_argument("--plan", action="store_true", help="print the commands in order")
     ap.add_argument("--skip-optional", action="store_true")
-    ap.add_argument("--skip-group", action="append", default=[], metavar="NAME",
-                    help=f"drop a whole module from the plan; known: {sorted(GROUPS)}")
+    ap.add_argument("--with", dest="with_group", action="append", default=[],
+                    metavar="NAME",
+                    help=f"reach over to an optional module and include it; these sit "
+                         f"ALONGSIDE the pipeline and are omitted unless named. "
+                         f"Known: {sorted(GROUPS)}")
     ap.add_argument("--groups", action="store_true",
                     help="describe the optional module groups and exit")
     ap.add_argument("--run", action="store_true",
@@ -785,7 +797,7 @@ def main(argv=None):
         try:
             ran, failure = run(a.tile, gen1=a.gen1, gen2=a.gen2, dod=a.dod,
                                include_optional=not a.skip_optional,
-                               skip_groups=tuple(a.skip_group),
+                               with_groups=tuple(a.with_group),
                                only_stale=not a.force, only=tuple(a.only),
                                dry_run=a.dry_run)
         except ValueError as e:
@@ -798,7 +810,7 @@ def main(argv=None):
         print(f"\n# {a.tile} -- in dependency order")
         for s, c, missing in plan(a.tile, gen1=a.gen1, gen2=a.gen2, dod=a.dod,
                                   include_optional=not a.skip_optional,
-                                  skip_groups=tuple(a.skip_group)):
+                                  with_groups=tuple(a.with_group)):
             tags = ([" (optional)"] if s.optional else []) + ([f" [{s.group}]"] if s.group else [])
             print(f"\n# {s.name}{''.join(tags)}: {s.note}")
             if missing:
