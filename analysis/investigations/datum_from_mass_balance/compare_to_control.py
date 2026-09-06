@@ -13,7 +13,7 @@ in mm/yr, so the two instruments can be compared in the units geomorphology is m
 in rather than argued about in the abstract.
 
     env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python \
-        analysis/mass_balance/compare_to_control.py --delta-mb <mm> --se-mb <mm>
+        analysis/investigations/datum_from_mass_balance/compare_to_control.py --delta-mb <mm> --se-mb <mm>
 """
 import argparse
 import datetime as dt

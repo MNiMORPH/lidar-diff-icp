@@ -149,6 +149,13 @@
   ],
   "status": "done"
  },
+ "analysis/groundtruth/parse_mndnr_2008_control.py": {
+  "dest": "analysis/investigations/additional_ground_control",
+  "files": [
+   "analysis/groundtruth/parse_mndnr_2008_control.py"
+  ],
+  "status": "done"
+ },
  "analysis/plot_dod_comparison.py": {
   "dest": "analysis/tools",
   "files": [

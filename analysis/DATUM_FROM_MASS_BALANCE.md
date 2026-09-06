@@ -21,7 +21,7 @@ tension with the marks. Both readings are given below; the choice between them i
 geomorphic judgement, not a statistical one.
 
 Producer: `analysis/mass_balance/datum_from_mass_balance.py` (this task's script);
-comparison arithmetic `analysis/mass_balance/compare_to_control.py`. Raw run logs under
+comparison arithmetic `analysis/investigations/datum_from_mass_balance/compare_to_control.py`. Raw run logs under
 `analysis/mass_balance/out/`. Everything below is pasted from those runs.
 
 ---
