@@ -421,5 +421,20 @@
    "analysis/roughness_characterization/oak_forest.py"
   ],
   "status": "done"
+ },
+ "analysis/roughness_characterization/surface_roughness.py": {
+  "dest": "analysis/investigations/results",
+  "files": [
+   "analysis/roughness_characterization/surface_roughness.py"
+  ],
+  "status": "done"
+ },
+ "analysis/slope_bias/csf_tiled.py": {
+  "dest": "analysis/investigations/cross_line_fit",
+  "files": [
+   "analysis/slope_bias/csf_tiled.py"
+  ],
+  "note": "test suite: 1 warning, 1 error in 0.79s",
+  "status": "blocked"
  }
 }

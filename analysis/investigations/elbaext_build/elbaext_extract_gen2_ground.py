@@ -12,7 +12,7 @@ tractable and is exactly what read_after_ground(mode="class2") consumes.
 Streams the source in chunks (O(one chunk) RAM), keeps Classification==2 in the
 elbaext buffer, preserves point_source_id / gps_time / return numbers / class.
 
-    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/slope_bias/elbaext_extract_gen2_ground.py
+    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/investigations/elbaext_build/elbaext_extract_gen2_ground.py
 """
 import numpy as np, laspy
 
