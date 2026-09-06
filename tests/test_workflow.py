@@ -354,3 +354,70 @@ def test_completeness_applies_no_threshold():
     src = inspect.getsource(completeness)
     for op in ("ratio >", "ratio <", "ratio >=", "ratio <="):
         assert op not in src, f"completeness.py applies a threshold: {op}"
+
+
+# --- the runner: it executes the graph, and it stops -------------------------------------
+
+def _toy(tmp_path, n=3):
+    """A tiny linear graph of steps that touch files, so a run can be observed."""
+    steps = []
+    for i in range(n):
+        prev = () if i == 0 else (f"f{i-1}.npy",)
+        steps.append(W.Step(f"s{i}", produces=(f"f{i}.npy",), requires=prev,
+                            command=f"touch {tmp_path}/f{i}.npy"))
+    return tuple(steps)
+
+
+def test_the_runner_executes_in_dependency_order(tmp_path):
+    ran, failure = W.run(tmp_path, steps=_toy(tmp_path), verbose=False)
+    assert failure is None
+    assert [s.name for s in ran] == ["s0", "s1", "s2"]
+    for i in range(3):
+        assert (tmp_path / f"f{i}.npy").exists()
+
+
+def test_the_runner_stops_at_the_first_failure_and_says_what_was_not_attempted(tmp_path):
+    """Andy's choice, 2026-09-06, and the conservative one: a later step consuming a
+    half-written product turns one failure into a corrupted tile that LOOKS built."""
+    steps = list(_toy(tmp_path, 4))
+    steps[1] = W.Step("s1", produces=("f1.npy",), requires=("f0.npy",), command="exit 3")
+    ran, failure = W.run(tmp_path, steps=tuple(steps), verbose=False)
+    assert [s.name for s in ran] == ["s0"]
+    assert failure is not None and failure[0].name == "s1" and failure[1] == 3
+    # and it really stopped -- s2 and s3 never ran
+    assert not (tmp_path / "f2.npy").exists()
+    assert not (tmp_path / "f3.npy").exists()
+
+
+def test_the_runner_refuses_before_running_anything_when_an_argument_is_missing(tmp_path):
+    """Discovering at step 7 that step 8 wanted --gen2 means seven steps of point-cloud
+    work thrown away. The check is free, so it happens first."""
+    steps = _toy(tmp_path, 2) + (
+        W.Step("hungry", produces=("z.npy",), requires=("f1.npy",),
+               command="touch {gen2}", needs=("gen2",)),)
+    with pytest.raises(ValueError, match="nothing was run"):
+        W.run(tmp_path, steps=steps, verbose=False)
+    assert not (tmp_path / "f0.npy").exists(), "it must refuse BEFORE running step 1"
+
+
+def test_a_dry_run_executes_nothing(tmp_path):
+    ran, failure = W.run(tmp_path, steps=_toy(tmp_path), dry_run=True, verbose=False)
+    assert ran == [] and failure is None
+    assert not (tmp_path / "f0.npy").exists()
+
+
+def test_the_runner_skips_what_is_already_current(tmp_path):
+    """only_stale is the point of tracking staleness: do not redo work that is right."""
+    steps = _toy(tmp_path, 3)
+    W.run(tmp_path, steps=steps, verbose=False)                 # build everything
+    ran, _ = W.run(tmp_path, steps=steps, verbose=False)        # nothing left to do
+    assert ran == []
+    ran, _ = W.run(tmp_path, steps=steps, only_stale=False, verbose=False)
+    assert [s.name for s in ran] == ["s0", "s1", "s2"], "--force runs them anyway"
+
+
+def test_runnable_is_pure(tmp_path):
+    """The selection can be shown before anything runs, so it executes nothing itself."""
+    sel = W.runnable(tmp_path, steps=_toy(tmp_path))
+    assert [s.name for s, _, _, _ in sel] == ["s0", "s1", "s2"]
+    assert not any((tmp_path / f"f{i}.npy").exists() for i in range(3))

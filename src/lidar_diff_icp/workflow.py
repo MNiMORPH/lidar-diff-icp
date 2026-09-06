@@ -586,6 +586,112 @@ def plan(tile_dir, *, gen1=None, gen2=None, dod=None, steps=STEPS, include_optio
     return cmds
 
 
+#: States that mean a step's outputs are not current. Anything else is left alone.
+NOT_CURRENT = ("MISSING", "STALE", "CODE-STALE", "STALE+CODE", "MISSING+CODE")
+
+
+def _state_with_code(tile_dir, steps=STEPS):
+    """Per step, the single state string --check prints, code staleness folded in."""
+    st = state(tile_dir, steps=steps)
+    cs = code_state(tile_dir, steps=steps)
+    out = {}
+    for s in steps:
+        k, d = st[s.name]
+        if s.name in cs:
+            k = "CODE-STALE" if k == "OK" else k + "+CODE"
+            d = (d + "; " if d else "") + "changed since: " + ", ".join(
+                os.path.basename(c) for c in cs[s.name])
+        out[s.name] = (k, d)
+    return out
+
+
+def runnable(tile_dir, *, gen1=None, gen2=None, dod=None, steps=STEPS,
+             include_optional=True, skip_groups=(), only_stale=True):
+    """What :func:`run` would execute, in dependency order, and WHY each was chosen.
+
+    Returns ``[(step, command, state, detail), ...]``. Pure -- it executes nothing, so the
+    selection can be tested and shown before anything runs.
+
+    ``only_stale=True`` (the default) selects steps whose outputs are not current: the whole
+    point of tracking staleness is not to redo work that is already right. ``False`` runs
+    every selected step regardless, for a forced rebuild.
+    """
+    st = _state_with_code(tile_dir, steps=steps)
+    out = []
+    for s, cmd, missing in plan(tile_dir, gen1=gen1, gen2=gen2, dod=dod, steps=steps,
+                                include_optional=include_optional,
+                                skip_groups=skip_groups):
+        k, d = st[s.name]
+        if only_stale and k not in NOT_CURRENT:
+            continue
+        out.append((s, cmd, k, d))
+    return out
+
+
+def run(tile_dir, *, gen1=None, gen2=None, dod=None, steps=STEPS, include_optional=True,
+        skip_groups=(), only_stale=True, dry_run=False, verbose=True):
+    """Execute the graph in dependency order, STOPPING AT THE FIRST FAILURE.
+
+    Returns ``(ran, failure)``: the steps that completed, and ``(step, returncode)`` for the
+    one that failed, or ``None``. Stopping is deliberate and is the conservative choice --
+    a later step consuming a half-written product would turn one failure into a corrupted
+    tile that looks built.
+
+    REFUSES BEFORE RUNNING ANYTHING if any selected step has unmet ``needs``. Discovering at
+    step 7 that step 8 wanted ``--gen2`` means seven steps of point-cloud work thrown away;
+    the check is free, so it happens first.
+
+    State is re-derived after every step, because a step that rewrites a file its successors
+    read makes them stale as it goes -- the plan cannot be computed once and trusted.
+    """
+    todo = runnable(tile_dir, gen1=gen1, gen2=gen2, dod=dod, steps=steps,
+                    include_optional=include_optional, skip_groups=skip_groups,
+                    only_stale=only_stale)
+    supplied = {"gen1": gen1, "gen2": gen2}
+    blocked = [(s.name, [n for n in s.needs if n != "site" and supplied.get(n) is None])
+               for s, _, _, _ in todo]
+    blocked = [(n, m) for n, m in blocked if m]
+    if blocked:
+        raise ValueError(
+            "these selected steps need arguments that were not given, so nothing was run: "
+            + "; ".join(f"{n} needs --{' --'.join(m)}" for n, m in blocked)
+            + ". Supply them, or --skip-optional / --skip-group to drop the steps.")
+
+    if verbose:
+        print(f"{tile_dir}: {len(todo)} step(s) to run"
+              + (" (DRY RUN, nothing will execute)" if dry_run else ""), flush=True)
+        for s, _, k, d in todo:
+            print(f"  {s.name:<20} {k:<12} {d}", flush=True)
+    if dry_run or not todo:
+        return [], None
+
+    ran = []
+    for i, (s, _, _, _) in enumerate(todo, 1):
+        # RE-RESOLVE the command from current state: an earlier step may have made this one
+        # unnecessary, or changed what it should be told.
+        fresh = {x.name: (c, k, d) for x, c, k, d in
+                 runnable(tile_dir, gen1=gen1, gen2=gen2, dod=dod, steps=steps,
+                          include_optional=include_optional, skip_groups=skip_groups,
+                          only_stale=only_stale)}
+        if s.name not in fresh:
+            if verbose:
+                print(f"[{i}/{len(todo)}] {s.name}: now current, skipped", flush=True)
+            continue
+        cmd = fresh[s.name][0]
+        if verbose:
+            print(f"\n[{i}/{len(todo)}] {s.name}\n  $ {cmd}", flush=True)
+        rc = subprocess.run(cmd, shell=True).returncode
+        if rc != 0:
+            if verbose:
+                print(f"\nSTOPPED: {s.name} exited {rc}. "
+                      f"{len(todo) - i} step(s) not attempted.", flush=True)
+            return ran, (s, rc)
+        ran.append(s)
+    if verbose:
+        print(f"\nall {len(ran)} step(s) completed", flush=True)
+    return ran, None
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--tile", required=True, help="tile directory under data/derived/")
@@ -599,7 +705,17 @@ def main(argv=None):
                     help=f"drop a whole module from the plan; known: {sorted(GROUPS)}")
     ap.add_argument("--groups", action="store_true",
                     help="describe the optional module groups and exit")
+    ap.add_argument("--run", action="store_true",
+                    help="EXECUTE the steps that are not current, in dependency order, "
+                         "STOPPING AT THE FIRST FAILURE. Refuses before running anything "
+                         "if a selected step needs an argument you did not give.")
+    ap.add_argument("--dry-run", action="store_true",
+                    help="with --run: list what would execute, and execute nothing")
+    ap.add_argument("--force", action="store_true",
+                    help="with --run: run every selected step, not only the stale ones")
     a = ap.parse_args(argv)
+    if a.run:
+        a.check = a.plan = False          # --run reports its own progress
     if a.groups:
         for g, why in sorted(GROUPS.items()):
             members = [s.name for s in STEPS if s.group == g]
@@ -608,7 +724,7 @@ def main(argv=None):
             for line in textwrap.wrap(why, 76):
                 print(f"  {line}")
         return 0
-    if not (a.check or a.plan):
+    if not (a.check or a.plan or a.run):
         a.check = True
 
     if a.check:
@@ -630,6 +746,18 @@ def main(argv=None):
         print("  CODE-STALE = the SOURCE that produced it changed since. A code change "
               "invalidates every")
         print("  tile at once, so nothing inside one tile directory reveals it.")
+
+    if a.run:
+        try:
+            ran, failure = run(a.tile, gen1=a.gen1, gen2=a.gen2, dod=a.dod,
+                               include_optional=not a.skip_optional,
+                               skip_groups=tuple(a.skip_group),
+                               only_stale=not a.force, dry_run=a.dry_run)
+        except ValueError as e:
+            print(f"REFUSED: {e}")
+            return 2
+        if failure is not None:
+            return 1
 
     if a.plan:
         print(f"\n# {a.tile} -- in dependency order")
