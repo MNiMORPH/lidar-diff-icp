@@ -48,9 +48,9 @@ from scipy.ndimage import distance_transform_edt
 _REPO = os.path.dirname(os.path.abspath(__file__))
 while _REPO != "/" and not os.path.exists(os.path.join(_REPO, "pyproject.toml")):
     _REPO = os.path.dirname(_REPO)   # depth-independent: find the repo root
-sys.path.insert(0, os.path.join(_REPO, "analysis"))
-from forest_metrics_pfs import canopy_cover_raster, _write_dtm
-sys.path.insert(0, os.path.join(os.path.join(_REPO, "analysis"), "..", "src"))
+sys.path.insert(0, os.path.join(_REPO, "src"))
+from lidar_diff_icp.steps.forest_metrics_pfs import (canopy_cover_raster,   # noqa: E402
+                                                     _write_dtm)
 from lidar_diff_icp.groundtruth.tie import _design, ground_elevation_at  # noqa: E402
 
 # NEAR-GROUND window: EXACTLY Elba's nearground_cells_sn.npz (zlo -1.0, zhi +2.0, dz 0.02,

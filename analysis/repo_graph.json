@@ -340,7 +340,7 @@
   ]
  },
  "n_md": 90,
- "n_py": 295,
+ "n_py": 296,
  "sibling_imports": {
   "calibrate_ground_q.py": [
    "control_lowveg_offset",
@@ -374,9 +374,6 @@
   ],
   "control_shift_predictors.py": [
    "control_mode_shift"
-  ],
-  "cover_at_control_marks.py": [
-   "forest_metrics_pfs"
   ],
   "crossline_fit.py": [
    "swath_across_track_test"

@@ -408,7 +408,7 @@ non-mosaic) and refuses to proceed unless its boundary fully covers the tile bbo
 
 ## Forest structure and large clouds
 
-- **Forest metrics** (`analysis/forest_metrics_pfs.py`) — per-cell canopy cover and
+- **Forest metrics** (`src/lidar_diff_icp/steps/forest_metrics_pfs.py`) — per-cell canopy cover and
   PAI from the gen2 cloud via **PyForestScan** (plant-area density), a geometry-robust
   land-cover signal that replaces the scan-angle-confounded ground-return "penetration"
   proxy. Runs in the conda `lidar-icp` env, tiles small (400 m) to stay memory-bounded,

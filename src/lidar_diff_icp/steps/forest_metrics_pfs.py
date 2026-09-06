@@ -8,7 +8,7 @@ metric derived from the vertical distribution of returns above a height threshol
 MUST run in the conda `lidar-icp` env (PDAL + GDAL + pyforestscan), with the env's own PROJ:
     PROJ_DATA=/home/awickert/anaconda3/envs/lidar-icp/share/proj \
     GDAL_DATA=/home/awickert/anaconda3/envs/lidar-icp/share/gdal \
-    /home/awickert/anaconda3/envs/lidar-icp/bin/python analysis/forest_metrics_pfs.py <TILE_DIR> <AFTER_COPC>
+    /home/awickert/anaconda3/envs/lidar-icp/bin/python src/lidar_diff_icp/steps/forest_metrics_pfs.py <TILE_DIR> <AFTER_COPC>
 
 The full LAZ is too big to read whole (OOM on voxelize), so we crop grid-aligned tiles
 (+halo) and mosaic. Give it a **COPC** cloud (`pdal translate in.laz out.copc.laz`): the

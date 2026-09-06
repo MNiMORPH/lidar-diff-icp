@@ -8,8 +8,7 @@ import sys, os
 import numpy as np
 import pytest
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "analysis"))
-from forest_metrics_pfs import classify, report
+from lidar_diff_icp.steps.forest_metrics_pfs import classify, report
 
 
 def test_masks_are_not_a_partition_and_the_accounting_closes():

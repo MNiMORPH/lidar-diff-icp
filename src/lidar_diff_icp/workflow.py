@@ -192,7 +192,11 @@ STEPS: tuple[Step, ...] = (
          group="vegetation_correction",
          produces=("canopy_cover_pfs.npy", "forest_pfs.npy", "open_pfs.npy", "pai_pfs.npy"),
          requires=("z_after.npy",),
-         command=f"{PY_PFS} analysis/forest_metrics_pfs.py {{tile}} {{gen2}}",
+         # Run by FILE PATH, not `-m`, unlike every other step in the package: PY_PFS is
+         # the conda env, which does NOT have lidar_diff_icp installed. The module imports
+         # nothing from the package, so a path invocation is correct rather than a
+         # workaround -- but `-m` here would fail with ModuleNotFoundError.
+         command=f"{PY_PFS} src/lidar_diff_icp/steps/forest_metrics_pfs.py {{tile}} {{gen2}}",
          optional=True, needs=("gen2",),
          note="PyForestScan cover. OPT-IN (Andy, 2026-09-02): run it only when a COVER "
               "CORRECTION is actually wanted at this site -- do not build it as a matter "
