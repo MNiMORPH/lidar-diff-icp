@@ -407,5 +407,12 @@
    "analysis/ridgelines/tail_form_pooling_test.py"
   ],
   "status": "done"
+ },
+ "analysis/ridgelines/test_incidence_veg_hypothesis.py": {
+  "dest": "analysis/investigations/incidence_angle_literature",
+  "files": [
+   "analysis/ridgelines/test_incidence_veg_hypothesis.py"
+  ],
+  "status": "done"
  }
 }
