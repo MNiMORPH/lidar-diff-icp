@@ -6,7 +6,7 @@ it -- so the population the fit rests on is visible, not just asserted.
 Bottom row: the fit. Points are cover bins, sized by the cells behind them; the anchor at
 q2(0) = 0.50 is imposed, not fitted, and is drawn as such.
 
-    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/ridgelines/plot_q2_fit.py
+    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/tools/plot_q2_fit.py
 """
 import argparse, json, os
 import numpy as np

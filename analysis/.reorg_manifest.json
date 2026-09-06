@@ -40,5 +40,12 @@
    "analysis/ridgelines/dod_cover_attribution.py"
   ],
   "status": "done"
+ },
+ "analysis/ridgelines/plot_cover_calibration.py": {
+  "dest": "analysis/tools",
+  "files": [
+   "analysis/ridgelines/plot_cover_calibration.py"
+  ],
+  "status": "done"
  }
 }
