@@ -16,7 +16,7 @@ Continuous forest cover comes from the PyForestScan canopy raster indexed by the
 per-cell code the producer used for the categorical strata.
 
     env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python \
-        analysis/ridgelines/beam_offset_table.py [tile_dir] [cached_las]
+        analysis/modules/vegetation_correction/beam_offset_table.py [tile_dir] [cached_las]
 
 Defaults to the elba pilot. Writes <tile_dir>/beam_offset_table.parquet (the CANONICAL
 per-beam file we compare against and fit corrections from) plus a small CSV head sample

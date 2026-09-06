@@ -217,7 +217,7 @@ STEPS: tuple[Step, ...] = (
          optional=True,
          produces=("beam_offset_table.parquet", "beam_offset_table.head.csv"),
          requires=("gen1_csf_angles.npz", "corrections.json", "curv_laplacian.npy"),
-         command=f"{PY} analysis/ridgelines/beam_offset_table.py {{tile}} {{gen1}}",
+         command=f"{PY} analysis/modules/vegetation_correction/beam_offset_table.py {{tile}} {{gen1}}",
          needs=("gen1",),
          note="Applies the four registration terms. Does NOT require canopy cover: it only "
               "carries it as a column, omitted when the layer is absent. If corrections.json "

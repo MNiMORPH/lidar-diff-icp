@@ -1,4 +1,30 @@
 {
+ "analysis/class2_spread_grid.py": {
+  "dest": "analysis/modules/vegetation_correction",
+  "files": [
+   "analysis/class2_spread_grid.py"
+  ],
+  "status": "done"
+ },
+ "analysis/cover_at_control_marks.py": {
+  "dest": "analysis/lib",
+  "files": [
+   "analysis/cover_at_control_marks.py",
+   "analysis/forest_metrics_pfs.py"
+  ],
+  "note": "cover_at_control_marks.py walks 1 dirname level(s) up from __file__, and the move changes its depth (1 -> 2). A data path computed that way would break silently, so this is not moved automatically.",
+  "status": "blocked"
+ },
+ "analysis/crossline_fit.py": {
+  "dest": "analysis/lib",
+  "files": [
+   "analysis/crossline_fit.py",
+   "analysis/degeneracy_identifiability.py",
+   "analysis/swath_across_track_test.py"
+  ],
+  "note": "crossline_fit.py walks 1 dirname level(s) up from __file__, and the move changes its depth (1 -> 2). A data path computed that way would break silently, so this is not moved automatically.",
+  "status": "blocked"
+ },
  "analysis/gen2_density_map.py": {
   "dest": "analysis/tools",
   "files": [
