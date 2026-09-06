@@ -46,6 +46,34 @@
    "elba.py",
    "lod_cover_q2.py"
   ],
+  "DELETION_CANDIDATES.md": [
+   "andy_spot.py",
+   "aspect_audit.py",
+   "blufftop_margin_forest.py",
+   "boresight_lateral_coupling.py",
+   "cliff_cells.py",
+   "coarsen_resolution.py",
+   "control_mat_fit_nowindow.py",
+   "control_mixture_validation.py",
+   "control_percentile_fit.py",
+   "control_q_in_ground.py",
+   "control_shift_predictors.py",
+   "curvature_cdf.py",
+   "elbaext_tie_offsets.py",
+   "flat_forest_offset.py",
+   "forest_on_flat_map.py",
+   "gen1_csf_pdal_defaults.py",
+   "gen2_coverage_audit.py",
+   "geoid_plane_vs_extent.py",
+   "ground_class_structure.py",
+   "ground_return_stats.py",
+   "lod_on_steady_cells.py",
+   "plot_correction_method.py",
+   "provenance_of.py",
+   "recoverability_test.py",
+   "swath_network_weighting.py",
+   "understory_from_lidar.py"
+  ],
   "ELBAEXT2_SCOPE.md": [
    "coreg.py",
    "fetch_3dep_curl.py",
@@ -307,8 +335,8 @@
    "reference_swath_bias.py"
   ]
  },
- "n_md": 87,
- "n_py": 293,
+ "n_md": 88,
+ "n_py": 294,
  "sibling_imports": {
   "calibrate_ground_q.py": [
    "control_lowveg_offset",
