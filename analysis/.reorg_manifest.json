@@ -307,10 +307,25 @@
   ],
   "status": "done"
  },
+ "analysis/ridgelines/flagpole_absolute_test.py": {
+  "dest": "analysis/investigations/flagpole_absolute_test",
+  "files": [
+   "analysis/ridgelines/flagpole_absolute_test.py"
+  ],
+  "note": "flagpole_absolute_test.py walks 1 dirname level(s) up from __file__, and the move changes its depth (2 -> 3). A data path computed that way would break silently, so this is not moved automatically.",
+  "status": "blocked"
+ },
  "analysis/ridgelines/gen1_save_angles_slope.py": {
   "dest": "analysis/modules/vegetation_correction",
   "files": [
    "analysis/ridgelines/gen1_save_angles_slope.py"
+  ],
+  "status": "done"
+ },
+ "analysis/ridgelines/gen2_csf_compare.py": {
+  "dest": "analysis/investigations/trust_system",
+  "files": [
+   "analysis/ridgelines/gen2_csf_compare.py"
   ],
   "status": "done"
  },
