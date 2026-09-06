@@ -172,7 +172,7 @@ forest-slope change is claimed — exactly as the incidence effect (audit STEP 3
    step 1, rather than an inference from the slope/land-cover pattern.
 
 ## Files
-- `analysis/ridgelines/HELP_gen1only_strata.py` — gen1-only stratification, test 1
+- `analysis/investigations/help_next_steps/HELP_gen1only_strata.py` — gen1-only stratification, test 1
 - `analysis/investigations/help_next_steps/HELP_beam_aspect_discriminator.py` — retired discriminator (kept, failure documented)
 - `analysis/investigations/help_next_steps/HELP_beam_aspect_matched.py` — incidence-matched retry, also retired (kept)
 - `analysis/ridgelines/HELP_perline_slope_test.py` — per-flight-line test, test 3
