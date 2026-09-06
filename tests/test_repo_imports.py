@@ -145,3 +145,26 @@ def test_the_only_out_of_repo_dependency_is_the_one_we_know_about():
 def test_the_other_env_allowlist_stays_small():
     """The exemption must not become the answer to every failure."""
     assert len(OTHER_ENV) <= 4, OTHER_ENV
+
+
+def test_the_committed_graph_baseline_is_current():
+    """PHASE 0c. The graph is recorded so Phase 2 can prove it moved files without changing
+    structure. Keyed by BASENAME, which is invariant under exactly the operation Phase 2
+    performs -- so if this ever differs after a move, the move changed something real.
+
+    Regenerate deliberately: ./lidar-icp/bin/python scripts/repo_graph.py > analysis/repo_graph.json
+    """
+    import json
+    baseline = os.path.join(REPO, "analysis", "repo_graph.json")
+    assert os.path.exists(baseline), "the graph baseline is missing"
+    now = subprocess.run([sys.executable, os.path.join(REPO, "scripts", "repo_graph.py")],
+                         capture_output=True, text=True, cwd=REPO)
+    assert now.returncode == 0, now.stderr[-2000:]
+    with open(baseline) as fh:
+        old = json.load(fh)
+    new = json.loads(now.stdout)
+    for key in ("sibling_imports", "citations"):
+        assert old[key] == new[key], (
+            f"the {key} graph differs from analysis/repo_graph.json. If a move caused this, "
+            f"the move changed structure and not just location. Regenerate only when the "
+            f"change is intended.")

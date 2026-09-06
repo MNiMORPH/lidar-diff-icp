@@ -1,0 +1,426 @@
+{
+ "citations": {
+  "ABSOLUTE_BASIS_ELBA.md": [
+   "datum.py",
+   "elba_absolute_tie.py",
+   "elba_datum_constant.py",
+   "gen2_checkpoint_tie.py",
+   "provenance.py",
+   "reference_swath_bias.py"
+  ],
+  "ADDITIONAL_GROUND_CONTROL.md": [
+   "merge_gen1_tiles.py",
+   "parse_mndnr_2008_control.py"
+  ],
+  "ALLFOREST_BLUFFLAND.md": [
+   "run_steady_state_strata.py",
+   "steady_state_cells.py"
+  ],
+  "AUDIT_findings.md": [
+   "AUDIT_corrected_floor_signal.py"
+  ],
+  "CONTROL_LOWVEG_OFFSET.md": [
+   "control_lowveg_offset.py",
+   "cover_at_control_marks.py",
+   "q2_cover_fit.py"
+  ],
+  "CONTROL_RESIDUAL_FIELD.md": [
+   "control_residual_field.py",
+   "residual_field.py"
+  ],
+  "CROSS_LINE_FIT.md": [
+   "crossline_fit.py",
+   "csf_tiled.py",
+   "provenance.py"
+  ],
+  "CSF_PARAMETER_LITERATURE.md": [
+   "ground.py"
+  ],
+  "DATA_COMPLETENESS.md": [
+   "ept_coverage_check.py"
+  ],
+  "DATUM_FROM_MASS_BALANCE.md": [
+   "compare_to_control.py",
+   "convexity_dod_landcover.py",
+   "datum_from_mass_balance.py",
+   "elba.py",
+   "lod_cover_q2.py"
+  ],
+  "ELBAEXT2_SCOPE.md": [
+   "coreg.py",
+   "fetch_3dep_curl.py",
+   "gen1_save_angles_slope.py"
+  ],
+  "ELBAEXT_BUILD.md": [
+   "csf_tiled.py",
+   "elbaext_extract_gen2_ground.py",
+   "elbaext_geoid_regrid.py",
+   "fetch_3dep_curl.py",
+   "fulldensity_regrid.py",
+   "make_slope.py"
+  ],
+  "FLAGPOLE_ABSOLUTE_TEST.md": [
+   "flagpole_absolute_test.py"
+  ],
+  "FRAME.md": [
+   "apply_datum.py",
+   "provenance.py",
+   "run_nearfar_and_holdout.py"
+  ],
+  "FRAME_2026-08-26-PM.md": [
+   "dod_cover_corrected.py",
+   "elba_absolute_tie.py",
+   "q2_cover_fit.py"
+  ],
+  "FRAME_2026-08-26.md": [
+   "binstats.py",
+   "nearground_cells.py",
+   "nearground_class_codes.py",
+   "nearground_q_for_gen2_median.py",
+   "nearground_rank.py",
+   "registration.py"
+  ],
+  "FRAME_2026-08-27.md": [
+   "control_lowveg_offset.py",
+   "cover_at_control_marks.py"
+  ],
+  "FRAME_2026-09-02.md": [
+   "datum_method_audit.py",
+   "run_all_sites.py",
+   "run_elba_dod.py"
+  ],
+  "FRAME_2026-09-04.md": [
+   "calibrate_ground_q.py",
+   "control_lowveg_offset.py",
+   "cover_offset_reference.py",
+   "dod_cover_corrected.py",
+   "groundq.py",
+   "run_all_sites.py",
+   "run_bridge_gen2.py"
+  ],
+  "GEN1_DATUM_MODULE.md": [
+   "gen1_datum.py",
+   "gen1_datum_at_site.py"
+  ],
+  "GEN1_DATUM_MORE_MARKS.md": [
+   "gen1_line_tracks.py",
+   "gen1_more_marks_report.py",
+   "gen1_more_marks_tie.py",
+   "gen1_swath_seam.py"
+  ],
+  "GEN1_OWN_CONTROL_TIE.md": [
+   "gen1_own_control_tie.py",
+   "gen2_checkpoint_tie.py",
+   "parse_mndnr_2008_control.py",
+   "provenance.py"
+  ],
+  "GEN1_SAME_LINE_NOT_REPRODUCED.md": [
+   "gen1_datum_at_site.py",
+   "gen1_line_tracks.py"
+  ],
+  "GEN2_ABSOLUTE_DATUM.md": [
+   "gen2_absolute_datum.py",
+   "gen2_checkpoint_tie.py",
+   "parse_gen2_control.py"
+  ],
+  "GEN2_BRIDGE_NOT_MEASURABLE.md": [
+   "run_bridge_gen2.py"
+  ],
+  "GEN2_INCIDENCE_TEST.md": [
+   "gen2_incidence_test.py",
+   "incidence_angle.py"
+  ],
+  "GROUND_Q_FROM_CLASS2_SPREAD.md": [
+   "calibrate_ground_q.py",
+   "control_lowveg_offset.py",
+   "dod_cover_corrected.py",
+   "groundq.py",
+   "marks_by_flight_line.py",
+   "run_bridge_gen2.py"
+  ],
+  "HANDOFF.md": [
+   "chain.py",
+   "gen1_datum.py",
+   "gen1_datum_at_site.py",
+   "localtie.py",
+   "parse_gen2_control.py",
+   "residual_field.py",
+   "tie.py",
+   "tiles.py",
+   "variogram.py"
+  ],
+  "HANDOFF_FROM_GROUND_CONTROL.md": [
+   "pipeline.py"
+  ],
+  "HANDOFF_TRUST_HOOK.md": [
+   "banner_gate.py",
+   "stop_gate.py"
+  ],
+  "HELP_next_steps.md": [
+   "HELP_beam_aspect_discriminator.py",
+   "HELP_beam_aspect_matched.py",
+   "HELP_gen1only_strata.py",
+   "HELP_open_vs_forest_control.py",
+   "HELP_perline_slope_test.py"
+  ],
+  "HIDDEN_FILTERS_AUDIT.md": [
+   "coreg.py",
+   "cover_offset_isotonic.py",
+   "cover_offset_reference.py",
+   "cover_offset_regression.py",
+   "detect.py",
+   "incidence_correction_fit.py",
+   "naip_cover_error.py",
+   "nearnadir_slope_dependence.py",
+   "offset_by_beam_selection.py",
+   "offset_model.py",
+   "offset_model_slope_cover.py",
+   "offset_vs_angle.py",
+   "percentile_float_fit.py",
+   "pipeline.py",
+   "q2_cover_fit.py"
+  ],
+  "INCIDENCE_ANGLE_LITERATURE.md": [
+   "incidence_angle.py"
+  ],
+  "LIDAR_DOCUMENTATION_MINE.md": [
+   "fetch_3dep_curl.py"
+  ],
+  "LOCAL_TIE_CHAINING.md": [
+   "local_tie_chaining.py",
+   "localtie.py"
+  ],
+  "MISSION_TIME_DRIFT.md": [
+   "mission_time_drift.py",
+   "mission_time_drift_fit.py",
+   "provenance.py"
+  ],
+  "PENETRATION_LAYER_STATUS.md": [
+   "canopy.py",
+   "gen1_intensity_fit.py",
+   "make_penetration.py"
+  ],
+  "Q2_COVER_RELATION.md": [
+   "dod_cover_corrected.py",
+   "q2_cover_fit.py"
+  ],
+  "README.md": [
+   "parse_gen2_control.py",
+   "parse_mndnr_2008_control.py"
+  ],
+  "REORGANIZATION_PLAN.md": [
+   "reorganize_analysis.py"
+  ],
+  "REPLY_TO_CROSS_CHECK.md": [
+   "pipeline.py",
+   "run_grass_lift_check.py"
+  ],
+  "REPORT.md": [
+   "provenance.py"
+  ],
+  "SCRIPT_INVENTORY.md": [
+   "classify_scripts.py",
+   "epoch_canopy_frac.py",
+   "plot_dod.py"
+  ],
+  "SESSION_AUDIT_AND_ENFORCEMENT.md": [
+   "binstats.py",
+   "cover_offset_isotonic.py",
+   "cover_offset_reference.py",
+   "cover_offset_regression.py",
+   "incidence_correction_fit.py",
+   "nearnadir_slope_dependence.py",
+   "offset_by_beam_selection.py",
+   "offset_model_slope_cover.py",
+   "offset_vs_angle.py",
+   "q2_cover_fit.py"
+  ],
+  "STABLE_POINT_TILT_AUDIT.md": [
+   "provenance.py",
+   "stable_point_tilt_audit.py"
+  ],
+  "STEADY_STATE_STABLE_CELLS.md": [
+   "run_steady_state.py",
+   "steady_state_cells.py"
+  ],
+  "SWATH_ACROSS_TRACK_TEST.md": [
+   "provenance.py",
+   "swath_across_track_test.py"
+  ],
+  "SWATH_ALIGNMENT_METHOD.md": [
+   "apply_datum.py",
+   "test_apply_datum.py"
+  ],
+  "SWATH_DEGENERACY_BREAKING.md": [
+   "degeneracy_crossline_geometry.py",
+   "degeneracy_flightline_inventory.py",
+   "degeneracy_identifiability.py",
+   "degeneracy_water_surface.py",
+   "provenance.py"
+  ],
+  "SWATH_TIE_DEGENERACY.md": [
+   "merge_gen1_tiles.py"
+  ],
+  "SWATH_TIE_INTERCEPT.md": [
+   "backfill_zero_line.py",
+   "provenance.py",
+   "stable_point_tilt_audit.py",
+   "swath_tie_intercept.py"
+  ],
+  "TILT_NEXT_SESSION.md": [
+   "provenance.py"
+  ],
+  "TODO.md": [
+   "canopy.py",
+   "canopy_struct.py",
+   "control_lowveg_offset.py",
+   "datum_method_audit.py",
+   "gen1_grass_lift.py",
+   "make_penetration.py",
+   "make_slope.py",
+   "q2_cover_fit.py",
+   "run_all_sites.py",
+   "workflow.py"
+  ],
+  "TRUST_SYSTEM.md": [
+   "__init__.py",
+   "banner_gate.py",
+   "check_ledgers.py",
+   "example_instrumented.py",
+   "gen2_csf_compare.py",
+   "provenance.py",
+   "stop_gate.py"
+  ],
+  "ZEROFILL_SWEEP.md": [
+   "our_surface.py",
+   "swath_consistency.py"
+  ],
+  "banding_source_investigation.md": [
+   "slope_normal_ground.py"
+  ],
+  "groundtruth.md": [
+   "control_residual_field.py",
+   "elba_absolute_tie.py",
+   "elba_datum_constant.py",
+   "gen1_datum_at_site.py",
+   "gen2_checkpoint_tie.py",
+   "reference_swath_bias.py"
+  ]
+ },
+ "n_md": 87,
+ "n_py": 291,
+ "sibling_imports": {
+  "calibrate_ground_q.py": [
+   "control_lowveg_offset",
+   "control_mode_shift"
+  ],
+  "check_ledgers.py": [
+   "provenance"
+  ],
+  "compare_gen1_routes.py": [
+   "lines",
+   "same_line"
+  ],
+  "control_band_window_sweep.py": [
+   "control_lowveg_offset"
+  ],
+  "control_mat_fit_nowindow.py": [
+   "control_lowveg_offset"
+  ],
+  "control_mixture_validation.py": [
+   "control_lowveg_offset"
+  ],
+  "control_mode_shift.py": [
+   "control_lowveg_offset"
+  ],
+  "control_percentile_fit.py": [
+   "control_lowveg_offset"
+  ],
+  "control_q_in_ground.py": [
+   "control_lowveg_offset",
+   "control_mode_shift"
+  ],
+  "control_shift_predictors.py": [
+   "control_mode_shift"
+  ],
+  "cover_at_control_marks.py": [
+   "forest_metrics_pfs"
+  ],
+  "crossline_fit.py": [
+   "swath_across_track_test"
+  ],
+  "datum.py": [
+   "control"
+  ],
+  "degeneracy_identifiability.py": [
+   "swath_across_track_test"
+  ],
+  "lod.py": [
+   "naip_cover_error"
+  ],
+  "marks_by_flight_line.py": [
+   "control_mode_shift"
+  ],
+  "plot_correction_method.py": [
+   "control_mode_shift"
+  ],
+  "run_alongtrack_test.py": [
+   "lines",
+   "same_line"
+  ],
+  "run_bridge.py": [
+   "lines",
+   "same_line"
+  ],
+  "run_bridge_gen2.py": [
+   "control",
+   "our_surface"
+  ],
+  "run_bridge_wide.py": [
+   "our_surface"
+  ],
+  "run_catchment_check.py": [
+   "lines",
+   "same_line"
+  ],
+  "run_datum_at_site.py": [
+   "control",
+   "datum"
+  ],
+  "run_datum_by_returns.py": [
+   "lines",
+   "same_line"
+  ],
+  "run_derive_tracks.py": [
+   "lines"
+  ],
+  "run_gen2_swath_deviation.py": [
+   "gen2_swath_deviation"
+  ],
+  "run_nearfar_and_holdout.py": [
+   "control"
+  ],
+  "run_same_line.py": [
+   "lines",
+   "same_line"
+  ],
+  "run_site_datum.py": [
+   "site_datum"
+  ],
+  "run_steady_state.py": [
+   "steady_state_cells"
+  ],
+  "same_line.py": [
+   "lines"
+  ],
+  "site_datum.py": [
+   "apply_datum",
+   "datum",
+   "lines",
+   "same_line"
+  ],
+  "test_graph_end_to_end.py": [
+   "test_pipeline"
+  ]
+ }
+}
