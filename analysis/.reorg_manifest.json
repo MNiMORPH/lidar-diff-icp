@@ -54,5 +54,12 @@
    "analysis/ridgelines/plot_q2_fit.py"
   ],
   "status": "done"
+ },
+ "analysis/ridgelines/plot_q2_population.py": {
+  "dest": "analysis/tools",
+  "files": [
+   "analysis/ridgelines/plot_q2_population.py"
+  ],
+  "status": "done"
  }
 }

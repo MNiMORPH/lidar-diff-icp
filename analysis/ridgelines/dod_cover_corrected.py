@@ -238,7 +238,7 @@ if QSD is not None:
     # are left out rather than given the default -- the curve says nothing about them.
     sd_mm, q2 = GQ["sd_mm"], GQ["q"]
     ok_sd = np.isfinite(sd_mm) & (sd_mm > 0)
-    # class2_sd_mm.npy is NOT written here: analysis/class2_spread_grid.py owns it. Two
+    # class2_sd_mm.npy is NOT written here: analysis/modules/vegetation_correction/class2_spread_grid.py owns it. Two
     # producers for one file is how a grid ends up disagreeing with the correction read
     # off it.
     print(f"class-2 spread: {int(ok_sd.sum()):,} cells with >=20 returns; "

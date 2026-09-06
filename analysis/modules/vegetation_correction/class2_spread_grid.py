@@ -5,7 +5,7 @@ The covariate the correction is actually indexed by -- NOT a cover layer, no win
 external product. Written as its own producer because it was previously computed inside
 whichever consumer needed it and thrown away, so a second consumer had to recompute it.
 
-    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/class2_spread_grid.py \
+    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/modules/vegetation_correction/class2_spread_grid.py \
         --tile data/derived/whitewater --gen2 data/after/3dep_4358_fulltile.laz
 """
 import argparse, numpy as np
