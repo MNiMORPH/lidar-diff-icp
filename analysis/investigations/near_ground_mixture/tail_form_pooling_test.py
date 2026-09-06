@@ -22,7 +22,7 @@ Form is judged by which straight line fits better, on the same pooled counts:
     exponential   log p   vs   d          linear
     power law     log p   vs   log d      linear
 
-    ./lidar-icp/bin/python analysis/ridgelines/tail_form_pooling_test.py --tile data/derived/elba
+    ./lidar-icp/bin/python analysis/investigations/near_ground_mixture/tail_form_pooling_test.py --tile data/derived/elba
 """
 import argparse
 import os

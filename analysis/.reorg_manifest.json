@@ -329,6 +329,21 @@
   ],
   "status": "done"
  },
+ "analysis/ridgelines/glennie_scanangle_swath_test.py": {
+  "dest": "analysis/investigations/glennie_scanangle_swath_test",
+  "files": [
+   "analysis/ridgelines/glennie_scanangle_swath_test.py"
+  ],
+  "note": "glennie_scanangle_swath_test.py walks 1 dirname level(s) up from __file__, and the move changes its depth (2 -> 3). A data path computed that way would break silently, so this is not moved automatically.",
+  "status": "blocked"
+ },
+ "analysis/ridgelines/ground_mixture_fit2.py": {
+  "dest": "analysis/investigations/return_structure_finding",
+  "files": [
+   "analysis/ridgelines/ground_mixture_fit2.py"
+  ],
+  "status": "done"
+ },
  "analysis/ridgelines/lod_cover_q2.py": {
   "dest": "analysis/modules/vegetation_correction",
   "files": [
