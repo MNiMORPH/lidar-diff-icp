@@ -44,7 +44,10 @@ import numpy as np
 from scipy.ndimage import gaussian_filter1d
 from scipy.stats import exponnorm, norm, spearmanr
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+_REPO = os.path.dirname(os.path.abspath(__file__))
+while _REPO != "/" and not os.path.exists(os.path.join(_REPO, "pyproject.toml")):
+    _REPO = os.path.dirname(_REPO)   # depth-independent: find the repo root
+sys.path.insert(0, os.path.join(_REPO, "analysis"))
 from control_lowveg_offset import STRUCT, load
 
 SET = "gen2_2021_control"
