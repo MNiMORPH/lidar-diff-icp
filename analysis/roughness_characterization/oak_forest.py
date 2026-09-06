@@ -19,7 +19,7 @@ cached to ``data/derived/oak_forest.npz``; delete it to recompute. Roughness
 rasters come from surface_roughness.py's cache.
 
 Run:  env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python \
-        analysis/investigations/results/oak_forest.py
+        analysis/roughness_characterization/oak_forest.py
 """
 import os
 import numpy as np

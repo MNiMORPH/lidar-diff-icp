@@ -18,7 +18,7 @@ percentile over all of them peaks near 6 GB. A production version should stream
 the quantile (chunk by cell block) rather than materialise all residuals.
 
 Usage:
-    ./lidar-icp/bin/python analysis/investigations/banding_source_investigation/slope_normal_ground.py \
+    ./lidar-icp/bin/python analysis/slope_normal_ground.py \
         data/before/4342-29-64.laz data/after/3dep2021_last.laz \
         --bounds 577492.8 4886237.6 --res 5 --shape 700 508
 """

@@ -29,7 +29,7 @@ DATA SOURCES (labeled):
     stratum.  The only role gen2 plays is as the reference PLANE inside d_mm, which
     is unavoidable for a DoD and whose constant is removed by the open anchor.
 
-    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/investigations/help_next_steps/HELP_gen1only_strata.py
+    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/ridgelines/HELP_gen1only_strata.py
 """
 import numpy as np, laspy
 

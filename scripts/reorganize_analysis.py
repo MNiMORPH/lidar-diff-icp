@@ -58,8 +58,8 @@ RECENT = "2026-09-01"          # rule 4: "still in use" means touched during the
 #: findings document claims it.
 META_DOCS = re.compile(
     r"(?:^|/)(?:README|TODO|AUDIT_findings|HIDDEN_FILTERS_AUDIT|SCRIPT_INVENTORY"
-    r"|REORGANIZATION_PLAN|SESSION_[A-Z_]+|FRAME_[0-9-]+(?:-[A-Z]+)?"
-    r"|HELP_NEXT_STEPS|[A-Z_]*SESSION[A-Z_]*)\.md$")
+    r"|REORGANIZATION_PLAN|SESSION_[A-Za-z_]+|FRAME_[0-9-]+(?:-[A-Z]+)?"
+    r"|HELP_[A-Za-z_]+|[A-Z_]*SESSION[A-Z_]*)\.md$", re.IGNORECASE)
 MANIFEST = os.path.join(REPO, "analysis", ".reorg_manifest.json")
 CITE = re.compile(r"(?<![\w/.])((?:analysis|scripts|src|ground_control|trust)"
                   r"/[A-Za-z0-9_./-]+\.py)")

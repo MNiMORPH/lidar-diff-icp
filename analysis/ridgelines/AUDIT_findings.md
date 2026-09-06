@@ -5,7 +5,7 @@ sparse ~0.87 pts/m²); gen2 = 2021 3DEP (leaf-on, ~24× denser). All numbers bel
 were re-derived by running code against the data, not taken from prior summaries.
 
 Reproduce the corrected numbers with:
-`env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/investigations/help_next_steps/AUDIT_corrected_floor_signal.py`
+`env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/ridgelines/AUDIT_corrected_floor_signal.py`
 
 ---
 

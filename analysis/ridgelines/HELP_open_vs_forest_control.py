@@ -22,7 +22,7 @@ steep-open cells are geographically special (eroding banks, road/quarry cuts) wh
 REAL change is also plausible.  So this control is directional, not conclusive on
 its own; read it together with HELP #3.
 
-    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/investigations/help_next_steps/HELP_open_vs_forest_control.py [--tile elbaext]
+    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/ridgelines/HELP_open_vs_forest_control.py [--tile elbaext]
 
 The cover proxy stays GEN1-INTERNAL (gen1 above-ground return fraction) on purpose:
 this asks a gen1-only mechanism question, so it must not be stratified by a

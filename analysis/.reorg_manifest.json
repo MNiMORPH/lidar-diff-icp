@@ -457,5 +457,12 @@
    "analysis/slope_bias/save_incidence_linked.py"
   ],
   "status": "done"
+ },
+ "analysis/slope_normal_ground.py": {
+  "dest": "analysis/investigations/banding_source_investigation",
+  "files": [
+   "analysis/slope_normal_ground.py"
+  ],
+  "status": "done"
  }
 }

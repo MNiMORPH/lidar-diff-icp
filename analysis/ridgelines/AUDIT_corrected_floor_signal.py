@@ -29,7 +29,7 @@ penetration.  We use them ONLY as a coarse land-cover label to separate the
 open reference from forest; we do NOT use any gen2 canopy MAGNITUDE (penetration,
 understory_frac, canopy_height) as an explanatory covariate for gen1 behavior.
 
-    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/investigations/help_next_steps/AUDIT_corrected_floor_signal.py
+    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/ridgelines/AUDIT_corrected_floor_signal.py
 """
 import numpy as np
 

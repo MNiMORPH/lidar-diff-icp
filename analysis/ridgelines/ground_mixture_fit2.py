@@ -9,7 +9,7 @@ Frame-INVARIANT diagnostics (independent of the reference plane, which is gen2 b
     percentiles; deeper gen1 PENETRATION makes it grow toward low percentiles.
   - 1-Gaussian vs 2-Gaussian AIC: is a plant component even identifiable?
 
-    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/investigations/return_structure_finding/ground_mixture_fit2.py
+    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/ridgelines/ground_mixture_fit2.py
 """
 import numpy as np
 from scipy.optimize import minimize

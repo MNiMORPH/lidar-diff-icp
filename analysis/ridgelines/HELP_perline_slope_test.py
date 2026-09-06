@@ -31,7 +31,7 @@ DATA SOURCES: all gen1 (CSF ground returns; open/forest label from gen1-only
 above-ground return fraction; incidence from validated reconstruction).  Aspect/
 gen2 canopy NOT used.  d_mm's constant is removed per-line via the open anchor.
 
-    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/investigations/help_next_steps/HELP_perline_slope_test.py
+    env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/ridgelines/HELP_perline_slope_test.py
 """
 import numpy as np, laspy, math
 from scipy.ndimage import distance_transform_edt
