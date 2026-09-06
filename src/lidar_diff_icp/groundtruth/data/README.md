@@ -46,7 +46,7 @@ Eight counties: Dodge, Fillmore, Houston, Mower, Olmsted, Steele, Wabasha, Winon
 ones for which the dataset metadata publishes a per-county RMSE. A ninth report exists
 for Freeborn; Freeborn is **not** in that list and is not part of this acquisition, so it
 is excluded. Regenerate with
-`analysis/groundtruth/parse_mndnr_2008_control.py --pdf-dir <dir> --check`; `--check`
+`analysis/investigations/additional_ground_control/parse_mndnr_2008_control.py --pdf-dir <dir> --check`; `--check`
 reproduces each report's own printed RMSE from the parsed rows.
 
 **Sign.** The reports' `Error` column is **`Control Z - Surface Z`**, established by

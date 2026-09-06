@@ -863,7 +863,7 @@ Having read them, in order of what now limits the answer:
    points measured: `analysis/GEN1_OWN_CONTROL_TIE.md`.
 2. ~~**Fetch the six remaining validation reports** (~4 MB) and parse them with
    the §5 recipe.~~ – **DONE**, 3 557 501 bytes; 1 004 points bundled as
-   `mn_dnr_2008_control_semn.csv` by `analysis/groundtruth/parse_mndnr_2008_control.py`.
+   `mn_dnr_2008_control_semn.csv` by `analysis/investigations/additional_ground_control/parse_mndnr_2008_control.py`.
 3. **Measure the §7.1 screening statistics** for every candidate that falls in a
    local tile, and choose the threshold from that distribution.
 4. **Send the §5.2 email.**

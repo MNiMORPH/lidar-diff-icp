@@ -27,7 +27,7 @@ class is taken from the digit.
 
 Usage
 -----
-    python analysis/groundtruth/parse_mndnr_2008_control.py --pdf-dir <dir> [--check]
+    python analysis/investigations/additional_ground_control/parse_mndnr_2008_control.py --pdf-dir <dir> [--check]
         [--out src/lidar_diff_icp/groundtruth/data/mn_dnr_2008_control_semn.csv]
 """
 from __future__ import annotations

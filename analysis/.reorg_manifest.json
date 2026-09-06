@@ -134,6 +134,21 @@
   ],
   "status": "done"
  },
+ "analysis/groundtruth/gen2_checkpoint_tie.py": {
+  "dest": "analysis/investigations/gen2_absolute_datum",
+  "files": [
+   "analysis/groundtruth/gen2_checkpoint_tie.py"
+  ],
+  "note": "gen2_checkpoint_tie.py walks 1 dirname level(s) up from __file__, and the move changes its depth (2 -> 3). A data path computed that way would break silently, so this is not moved automatically.",
+  "status": "blocked"
+ },
+ "analysis/groundtruth/parse_gen2_control.py": {
+  "dest": "analysis/investigations/gen2_absolute_datum",
+  "files": [
+   "analysis/groundtruth/parse_gen2_control.py"
+  ],
+  "status": "done"
+ },
  "analysis/plot_dod_comparison.py": {
   "dest": "analysis/tools",
   "files": [

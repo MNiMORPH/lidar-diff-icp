@@ -1,7 +1,7 @@
 # gen1 against its OWN 2008 ground control
 
 **Date:** 2026-08-26
-**Scripts:** `analysis/groundtruth/parse_mndnr_2008_control.py` (the reports → a bundled
+**Scripts:** `analysis/investigations/additional_ground_control/parse_mndnr_2008_control.py` (the reports → a bundled
 checkpoint CSV, with the sign test), `analysis/groundtruth/gen1_own_control_tie.py`
 (every measurement below)
 **Data added:** `src/lidar_diff_icp/groundtruth/data/mn_dnr_2008_control_semn.csv`,
