@@ -213,6 +213,50 @@ def plan(f):
     return rows
 
 
+def depth_sensitive(path):
+    """Does this file compute a path by walking up from __file__?
+
+    36 scripts do, and a move that changes their DEPTH silently changes where they look.
+    `os.path.dirname(os.path.dirname(os.path.abspath(__file__)))` from analysis/ridgelines
+    resolves to analysis/; from analysis/modules/vegetation_correction it resolves to
+    analysis/modules/. The import lint cannot see this when the target is a DATA directory
+    rather than a module, so it would fail at runtime, later, quietly.
+
+    Returns the number of dirname() levels applied to __file__, or 0.
+    """
+    tree = _ast(path)
+    if tree is None:
+        return 0
+    best = 0
+    for n in ast.walk(tree):
+        if not (isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
+                and n.func.attr == "dirname"):
+            continue
+        depth, cur = 0, n
+        while (isinstance(cur, ast.Call) and isinstance(cur.func, ast.Attribute)
+               and cur.func.attr in ("dirname", "abspath") and cur.args):
+            if cur.func.attr == "dirname":
+                depth += 1
+            cur = cur.args[0]
+        if isinstance(cur, ast.Name) and cur.id == "__file__":
+            best = max(best, depth)
+    return best
+
+
+def blocked_reason(comp, dest):
+    """Why this cluster must NOT be moved automatically, or None."""
+    for p in comp:
+        if os.path.dirname(p) == dest:
+            continue
+        d = depth_sensitive(p)
+        if d and p.count("/") != dest.count("/") + 1:
+            return (f"{os.path.basename(p)} walks {d} dirname level(s) up from __file__, and "
+                    f"the move changes its depth ({p.count('/')} -> {dest.count('/') + 1}). "
+                    f"A data path computed that way would break silently, so this is not "
+                    f"moved automatically.")
+    return None
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     g = ap.add_mutually_exclusive_group(required=True)
@@ -252,9 +296,91 @@ def main(argv=None):
                 r, dd, why = verdicts[p]
                 mark = " " if dd == dest else "*"
                 print(f"    {mark} {p:58s} (own verdict: rule {r}, {why})")
-    if a.apply:
-        print("\n--apply is Phase 2 and is not implemented yet.")
-        return 2
+    if not a.apply:
+        return 0
+
+    # ---- PHASE 2 -----------------------------------------------------------------------
+    # tools and lib first (smallest, most used), then the declared module, then the rest.
+    def order_key(dest):
+        for i, k in enumerate(("analysis/tools", "analysis/lib", "analysis/modules")):
+            if dest.startswith(k):
+                return i
+        return 3
+
+    man = json.load(open(MANIFEST)) if os.path.exists(MANIFEST) else {}
+    todo = [(c, d) for c, d, _, _ in rows if any(os.path.dirname(p) != d for p in c)]
+    todo.sort(key=lambda cd: (order_key(cd[1]), cd[0][0]))
+
+    done = failed = skipped = 0
+    for comp, dest in todo:
+        key = comp[0]
+        if man.get(key, {}).get("status") in ("done", "blocked"):
+            continue
+        why = blocked_reason(comp, dest)
+        if why:
+            man[key] = {"status": "blocked", "dest": dest, "files": comp, "note": why}
+            skipped += 1
+            continue
+
+        print(f"\n-> {dest}  ({len(comp)} file(s))", flush=True)
+        moved = []
+        for src in comp:
+            dst = os.path.join(dest, os.path.basename(src))
+            os.makedirs(os.path.join(REPO, dest), exist_ok=True)
+            subprocess.run(["git", "-C", REPO, "mv", src, dst], check=True)
+            moved.append((src, dst))
+            print(f"     {src} -> {dst}", flush=True)
+
+        # Every reference to the old path, in code and in prose. This is what keeps the
+        # workflow Step commands and the 192 citation edges pointing at real files.
+        refs = 0
+        for f_ in _tracked("*.py") + _tracked("*.md") + _tracked("*.toml"):
+            fp = os.path.join(REPO, f_)
+            try:
+                t = open(fp, errors="ignore").read()
+            except OSError:
+                continue
+            new = t
+            for src, dst in moved:
+                new = new.replace(src, dst)
+            if new != t:
+                open(fp, "w").write(new)
+                refs += 1
+        if refs:
+            print(f"     rewrote references in {refs} file(s)", flush=True)
+
+        gates = [("citation lint", [sys.executable, "-m", "pytest", "-q",
+                                    "tests/test_repo_links.py"]),
+                 ("import lint", [sys.executable, "-m", "pytest", "-q",
+                                  "tests/test_repo_imports.py"]),
+                 ("test suite", [sys.executable, "-m", "pytest", "-q"])]
+        bad = None
+        for name, cmd in gates:
+            r = subprocess.run(cmd, cwd=REPO, capture_output=True, text=True)
+            if r.returncode != 0:
+                bad = f"{name}: {r.stdout.strip().splitlines()[-1] if r.stdout else r.stderr[-300:]}"
+                break
+        if bad:
+            print(f"     RED: {bad}\n     reverting", flush=True)
+            subprocess.run(["git", "-C", REPO, "checkout", "--", "."], check=False)
+            subprocess.run(["git", "-C", REPO, "reset", "--hard", "HEAD"], check=False)
+            man[key] = {"status": "blocked", "dest": dest, "files": comp, "note": bad}
+            failed += 1
+        else:
+            subprocess.run(["git", "-C", REPO, "add", "-A"], check=True)
+            subprocess.run(["git", "-C", REPO, "commit", "-q", "-m",
+                            f"reorg: {len(comp)} file(s) -> {dest}\n\n"
+                            + "\n".join(f"{a_} -> {b_}" for a_, b_ in moved)
+                            + f"\n\nGates green: citation lint, import lint, full suite. "
+                              f"References rewritten in {refs} file(s).\n\n"
+                              f"Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"],
+                           check=True)
+            man[key] = {"status": "done", "dest": dest, "files": comp}
+            done += 1
+        json.dump(man, open(MANIFEST, "w"), indent=1, sort_keys=True)
+
+    print(f"\nmoved {done} cluster(s); {failed} reverted; {skipped} not attempted "
+          f"(depth-sensitive). See --report.")
     return 0
 
 
