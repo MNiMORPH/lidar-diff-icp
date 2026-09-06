@@ -103,6 +103,37 @@
   ],
   "status": "done"
  },
+ "analysis/groundtruth/gen1_more_marks_report.py": {
+  "dest": "analysis/investigations/gen1_datum_more_marks",
+  "files": [
+   "analysis/groundtruth/gen1_more_marks_report.py"
+  ],
+  "note": "gen1_more_marks_report.py walks 1 dirname level(s) up from __file__, and the move changes its depth (2 -> 3). A data path computed that way would break silently, so this is not moved automatically.",
+  "status": "blocked"
+ },
+ "analysis/groundtruth/gen1_more_marks_tie.py": {
+  "dest": "analysis/investigations/gen1_datum_more_marks",
+  "files": [
+   "analysis/groundtruth/gen1_more_marks_tie.py"
+  ],
+  "note": "gen1_more_marks_tie.py walks 1 dirname level(s) up from __file__, and the move changes its depth (2 -> 3). A data path computed that way would break silently, so this is not moved automatically.",
+  "status": "blocked"
+ },
+ "analysis/groundtruth/gen1_own_control_tie.py": {
+  "dest": "analysis/investigations/gen1_own_control_tie",
+  "files": [
+   "analysis/groundtruth/gen1_own_control_tie.py"
+  ],
+  "note": "gen1_own_control_tie.py walks 1 dirname level(s) up from __file__, and the move changes its depth (2 -> 3). A data path computed that way would break silently, so this is not moved automatically.",
+  "status": "blocked"
+ },
+ "analysis/groundtruth/gen1_swath_seam.py": {
+  "dest": "analysis/investigations/gen1_datum_more_marks",
+  "files": [
+   "analysis/groundtruth/gen1_swath_seam.py"
+  ],
+  "status": "done"
+ },
  "analysis/plot_dod_comparison.py": {
   "dest": "analysis/tools",
   "files": [

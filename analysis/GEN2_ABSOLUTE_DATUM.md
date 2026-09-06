@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-27
 **Driver:** `analysis/gen2_absolute_datum.py` – one run prints every table below
-**Parser:** `analysis/groundtruth/parse_gen2_control.py` – rebuilds the bundled CSV
+**Parser:** `analysis/investigations/gen2_absolute_datum/parse_gen2_control.py` – rebuilds the bundled CSV
 **Data:** `src/lidar_diff_icp/groundtruth/data/mn_se_driftless_2021_control.csv`
 (**534** marks; **390** of them carry a residual)
 **Ledger:** `.trust/runs/20260827T072813-1731650.json`
@@ -425,7 +425,7 @@ changes the vegetated row.
 ## 10. Reproducing
 
 ```
-python analysis/groundtruth/parse_gen2_control.py \
+python analysis/investigations/gen2_absolute_datum/parse_gen2_control.py \
   --report-pdf <MN_SE_Driftless_2021_B21_Ground_Control_Survey_Report.pdf> \
   --usgs-dir <dir with USGS_MN_SE_Driftless_2021_B21_QL{0,1}.dbf> \
   --contractor-dir <dir with MN_Driftless_NVA_VVA_UTM15_QL{0,1}.dbf> \

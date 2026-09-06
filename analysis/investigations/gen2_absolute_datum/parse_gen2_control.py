@@ -56,7 +56,7 @@ report's §1.8.4 says so in words.
 
 Usage
 -----
-    python analysis/groundtruth/parse_gen2_control.py \
+    python analysis/investigations/gen2_absolute_datum/parse_gen2_control.py \
         --report-pdf <survey_report.pdf> --usgs-dir <dir> --contractor-dir <dir> \
         [--check --tol-m 1e-6] \
         [--out src/lidar_diff_icp/groundtruth/data/mn_se_driftless_2021_control.csv]

@@ -97,7 +97,7 @@ rather than silently writing a second copy.
 | `src/lidar_diff_icp/groundtruth/chain.py` | — | path planning across the swath graph. |
 | `src/lidar_diff_icp/tiles.py` | — | `find_tile`, `download_tile`, `centroid_index`. |
 | `analysis/groundtruth/gen1_datum_at_site.py` | — | the existing driver; a good CLI shape to imitate. |
-| `analysis/groundtruth/parse_gen2_control.py` | — | how the gen2 tables were parsed. |
+| `analysis/investigations/gen2_absolute_datum/parse_gen2_control.py` | — | how the gen2 tables were parsed. |
 
 **These four modules are essentially unconnected** — `gen1_datum.py` carries `dnr_error_m` as
 a dataclass field and does nothing with it, and imports neither `residual_field` nor

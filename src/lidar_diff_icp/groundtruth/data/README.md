@@ -77,7 +77,7 @@ own control** -- with, for 390 of them, the **per-point residual USGS publishes*
 supersedes the six-mark file above for everything except the offline-fallback role that
 file's docstring describes.
 
-Regenerate with `analysis/groundtruth/parse_gen2_control.py --check --tol-m <tol>`; the
+Regenerate with `analysis/investigations/gen2_absolute_datum/parse_gen2_control.py --check --tol-m <tol>`; the
 script's docstring names all three sources and `--check` reproduces every published
 aggregate from the parsed rows.
 

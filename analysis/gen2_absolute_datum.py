@@ -3,7 +3,7 @@
 
 The 2021 3DEP project publishes, for every held-out accuracy checkpoint, the surveyed
 height and the delivered surface read at the mark -- see
-``analysis/groundtruth/parse_gen2_control.py``. That is the gen2 analogue of the 963-mark
+``analysis/investigations/gen2_absolute_datum/parse_gen2_control.py``. That is the gen2 analogue of the 963-mark
 gen1 residual field, and it needs no point cloud.
 
 This driver answers, in order:
