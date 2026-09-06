@@ -95,6 +95,13 @@
   ],
   "status": "done"
  },
+ "analysis/ridgelines/lod_cover_q2.py": {
+  "dest": "analysis/modules/vegetation_correction",
+  "files": [
+   "analysis/ridgelines/lod_cover_q2.py"
+  ],
+  "status": "done"
+ },
  "analysis/ridgelines/plot_cover_calibration.py": {
   "dest": "analysis/tools",
   "files": [

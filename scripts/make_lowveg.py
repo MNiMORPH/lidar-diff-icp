@@ -124,7 +124,7 @@ if A.gen2:
 cube_path = os.path.join(D, A.cube)
 if not os.path.exists(cube_path):
     raise SystemExit(f"{cube_path} is missing. It is the product of "
-                     f"analysis/ridgelines/nearground_cells.py --tile {D} "
+                     f"analysis/modules/vegetation_correction/nearground_cells.py --tile {D} "
                      f"--out {A.cube}; lowveg is a slice of that cube and cannot be "
                      f"computed without it.")
 

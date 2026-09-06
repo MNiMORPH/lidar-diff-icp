@@ -228,7 +228,7 @@ STEPS: tuple[Step, ...] = (
          optional=True,
          produces=("nearground_cells_sn.npz",),
          requires=("z_after.npy", "curv_laplacian.npy"),
-         command=f"{PY} analysis/ridgelines/nearground_cells.py --tile {{tile}} "
+         command=f"{PY} analysis/modules/vegetation_correction/nearground_cells.py --tile {{tile}} "
                  f"--gen1 {{gen1}} --gen2 {{gen2}} --out nearground_cells_sn.npz",
          needs=("gen1", "gen2"),
          note="Slope-normal near-ground column, both epochs."),

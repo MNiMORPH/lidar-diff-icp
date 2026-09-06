@@ -11,7 +11,7 @@ that is where the offset is measured. ALL returns in those cells are kept: no
 classification, no ground/vegetation decision, no height threshold beyond the window.
 
     env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python \
-        analysis/ridgelines/nearground_cells.py --tile data/derived/elba_fulldensity \
+        analysis/modules/vegetation_correction/nearground_cells.py --tile data/derived/elba_fulldensity \
         --gen1 data/before/4342-29-64.laz --gen2 data/after/3dep2021_fulldensity.laz
 """
 import argparse, json, os
