@@ -74,7 +74,7 @@ nothing from the package, so the path form is correct there, not a workaround.
 
 Eight steps, and step 7 is the one that is easy to miss: the free network deliberately
 leaves the absolute level free, and **the ground-control datum is what fixes it**, exactly
-(44.60 mm of zero-line spread -> < 1e-9).
+(42.40 mm of zero-line spread -> < 1e-9).
 
 Since 2026-09-05 the network is weighted by **1/variance, not by cell count**. That changed
 a shipped product: Battle Creek's swath 1102 moved +13.7 -> +27.1 mm, because its only edge
@@ -267,13 +267,7 @@ WITHIN one product; it does not carry a constant from elbaext's surface onto elb
 independently-solved one, and ties are known to be extent-dependent. elba and whitewater
 each need their own `run_site_datum.py` run.
 
-**Stale-number warning.** `ground_control/FRAME.md`, `apply_datum.py`'s docstring, README,
-this file and `SWATH_ALIGNMENT_METHOD.md` all quote the dz spread as **44.60 mm** from a
-build older than 2026-09-01. The product now gives **42.40 mm**. The argument is untouched
-— still 20x the correction — but the number a reader is told to verify does not reproduce.
-elbaext was last built 2026-09-01, BEFORE the 1/variance weighting of 09-05; rebuilding it
-will move these again and invalidate its constant, which was measured against the 09-01
-corrections three minutes after they were written.
+**Stale-number note.** The dz spread quoted throughout the repo was **44.60 mm**, from an elbaext build older than 2026-09-01. It was corrected to **42.40 mm** on 2026-09-07 in README, this file, `SWATH_ALIGNMENT_METHOD.md`, `apply_datum.py`, `pipeline.py`, `ground_control/FRAME.md` and the handoff, together with the per-swath table each quotes. It will move again: elbaext was last built 2026-09-01, BEFORE the 1/variance weighting of 09-05, and rebuilding it also invalidates `SITE_DATUM_elbaext.json`, measured against those corrections three minutes after they were written.
 
 ## The queue
 

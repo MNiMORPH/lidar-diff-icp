@@ -354,6 +354,8 @@ Note **line 133 is the pipeline's reference** (dz = 0), not 135.
      RMS residual, relative to 135   47.0 mm                                        mark minus pipeline, n = 5
    RMS residual, both mean-removed   32.2 mm                                                             n = 6
          spread of the pipeline dz   44.6 mm                                          max - min over six lines
+         (that 44.6 mm is what the product read WHEN THIS WAS MEASURED; the
+          current elbaext build gives 42.40 mm. The record is left as measured.)
      spread of the mark line means  115.3 mm                                          max - min over six lines
   SE of a single line mean, median   25.1 mm  over the five lines with more than one mark; line 136 has one mark and no SE
 ```

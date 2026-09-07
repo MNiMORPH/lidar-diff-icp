@@ -465,7 +465,7 @@ def register_gen1(before_laz, bounds, res, *, ground_source="csf", csf_pdal=None
     THE ZERO LINE IS NOT ARBITRARY IN ITS EFFECT. align_swaths solves a FREE NETWORK and
     only then subtracts the reference swath's value, so this choice does not touch any
     swath-to-swath DIFFERENCE -- but it DOES set the absolute level the whole mosaic
-    inherits. Measured on elbaext, the six per-swath dz span 44.60 mm, so re-gauging on a
+    inherits. Measured on elbaext, the six per-swath dz span 42.40 mm, so re-gauging on a
     different line moves every elevation by up to that much. It is returned, and recorded
     in corrections.json, so two products can be related.
     """
@@ -522,8 +522,8 @@ def register_gen1(before_laz, bounds, res, *, ground_source="csf", csf_pdal=None
     # ZERO LINE. align_swaths solves a FREE NETWORK and only then subtracts the reference
     # swath's value, so this choice does not touch any swath-to-swath DIFFERENCE -- but it
     # DOES set the absolute level the whole mosaic inherits, because that level becomes the
-    # reference line's own error. Measured on elbaext: the six per-swath dz span 44.60 mm
-    # (-22.60 .. +22.00), so re-gauging on a different line moves every elevation by up to
+    # reference line's own error. Measured on elbaext: the six per-swath dz span 42.40 mm
+    # (-23.60 .. +18.80), so re-gauging on a different line moves every elevation by up to
     # that much. The product's absolute level therefore DEPENDS ON THE ZERO LINE until a
     # ground-control datum constant is applied; see `zero_line` and
     # `absolute_datum_mm` in corrections.json, and ground_control/apply_datum.py.
@@ -907,7 +907,7 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
     **The absolute level of the output depends on the ZERO LINE and is not a measured
     elevation.** ``align_swaths`` uses the lowest-numbered flight line as the ZERO LINE, so the
     mosaic inherits that line's own vertical error; re-gauging on another line shifts every
-    elevation (measured span 44.60 mm at elbaext). Swath-to-swath DIFFERENCES are
+    elevation (measured span 42.40 mm at elbaext). Swath-to-swath DIFFERENCES are
     unaffected. To obtain an absolute elevation, apply a ground-control datum constant
     measured against this zero line -- ``ground_control/apply_datum.py``. The output records
     ``zero_line`` and leaves ``absolute_datum_mm`` None until one is supplied.
@@ -1155,7 +1155,7 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
         "absolute_datum_mm": datum_applied,
         "absolute_datum_note": (
             "The absolute level of this product is the ZERO LINE's own error, not a "
-            "measured elevation: using another line as zero shifts every elevation (44.60 "
+            "measured elevation: using another line as zero shifts every elevation (42.40 "
             "mm across the six lines at elbaext). Apply a ground-control datum constant "
             "measured against THIS zero line to make the result independent of it -- "
             "corrected = z + c, and if the zero line moves by d then z moves by +d and c "

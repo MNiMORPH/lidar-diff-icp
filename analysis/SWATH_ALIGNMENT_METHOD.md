@@ -85,7 +85,7 @@ moving the solution.
 The network is solved **free**; only then is the reference swath's value subtracted
 (`coreg.py:577`). So the zero line touches no swath-to-swath *difference*. It does set the
 absolute level the whole mosaic inherits, because that level becomes the reference line's own
-error: at elbaext the six per-swath dz span **44.60 mm**.
+error: at elbaext the six per-swath dz span **42.40 mm**.
 
 *Naming.* The object is the **zero line** — `corrections.json` records `zero_line`,
 `align_swaths` takes `ref`, and `swath_gauge_ref` / `gauge_ref` / `regauged_to()` were
@@ -110,7 +110,7 @@ moves by the *difference* of the two constants and true change on stable ground 
 Demonstrated rather than asserted, on elbaext's real per-swath dz
 (`ground_control/tests/test_ground_control_apply_datum.py`, 4 tests passing):
 
-    spread across zero-line choices, uncorrected   44.60 mm
+    spread across zero-line choices, uncorrected   42.40 mm
     spread across zero-line choices, corrected     < 1e-9 mm
     ratio                                          > 1e9
     on_zero_line() re-expression is reversible to 1e-9

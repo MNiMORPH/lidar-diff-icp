@@ -96,7 +96,7 @@ def test_the_zero_line_is_the_lowest_source_id_and_carries_no_correction(tmp_pat
     """The network is solved free and the reference swath's value then subtracted, so the
     zero line's own correction is exactly zero by construction. Its identity is returned
     because it sets the absolute level the whole mosaic inherits -- measured on elbaext the
-    six per-swath dz span 44.60 mm, so a different zero line moves every elevation by up to
+    six per-swath dz span 42.40 mm, so a different zero line moves every elevation by up to
     that much."""
     r = _reg(_strips(tmp_path))
     assert r["zero_line"] == 10

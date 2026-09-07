@@ -7,8 +7,8 @@ afterwards. That gauge does not touch any swath-to-swath difference — but it s
 absolute level the whole mosaic inherits, because that level becomes **the reference
 line's own vertical error**. Measured on elbaext, the six per-swath ``dz`` span
 
-    133  +0.00   134 +22.00   135  +6.20   136  -9.80   137 -18.40   138 -22.60
-    => re-gauging on a different line moves EVERY elevation by up to 44.60 mm
+    133  +0.00   134 +18.80   135  +2.70   136 -13.20   137 -20.00   138 -23.60
+    => re-gauging on a different line moves EVERY elevation by up to 42.40 mm
 
 So an uncorrected product's elevation is an arbitrary implementation detail
 (``ref=int(ps.min())``), not a measurement.
@@ -19,7 +19,7 @@ measured against the SAME gauged product, re-gauging by ``d`` shifts ``z`` by ``
 :func:`gauge_invariance_residual` demonstrates this rather than asserting it.
 
 That is the reason to apply the constant even where it looks negligible. At Elba the
-correction is only +2.12 mm — but the gauge choice there is worth 44.60 mm, **21×
+correction is only +2.12 mm — but the gauge choice there is worth 42.40 mm, **21×
 larger**. The smallness is a property of line 133 having been a lucky pin, not of the data.
 """
 

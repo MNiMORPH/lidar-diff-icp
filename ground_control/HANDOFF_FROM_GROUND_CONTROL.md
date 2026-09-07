@@ -32,8 +32,8 @@ diagram in `README.md` and `FRAME.md`.
 
 `align_swaths` is gauged on the lowest-numbered line, so the mosaic inherits **that line's
 own vertical error** as its absolute level. Re-gauging moves every elevation by up to
-**44.60 mm** at elbaext — **21× the correction**. Applying a control datum cancels that
-exactly (`tests/test_apply_datum.py`: uncorrected spread 44.60 mm across six gauges,
+**42.40 mm** at elbaext — **21× the correction**. Applying a control datum cancels that
+exactly (`tests/test_apply_datum.py`: uncorrected spread 42.40 mm across six gauges,
 corrected below 1e-9). **Judge a correction by what it removes, not by its magnitude.**
 
 ## 3. Changes outside `ground_control/` — please review

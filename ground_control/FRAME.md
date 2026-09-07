@@ -59,8 +59,8 @@ measurement failure** — check your own arithmetic first.
 swath-to-swath difference, but it sets the absolute level the mosaic inherits — which
 becomes **the reference line's own vertical error**. Measured on elbaext:
 
-    133 +0.00   134 +22.00   135 +6.20   136 -9.80   137 -18.40   138 -22.60
-    => re-gauging on a different line moves EVERY elevation by up to 44.60 mm
+    133 +0.00   134 +18.80   135 +2.70   136 -13.20   137 -20.00   138 -23.60
+    => re-gauging on a different line moves EVERY elevation by up to 42.40 mm
 
 **The gauge choice is worth 21x the correction.** So an uncorrected elevation is an
 arbitrary implementation detail (`ref=int(ps.min())`), not a measurement, and the
@@ -69,7 +69,7 @@ correction's smallness at Elba is a property of line 133 having been a lucky pin
 Applying a control datum removes the dependence *exactly*: `corrected = z + c` with `c`
 measured against the same gauged product, so re-gauging by `d` shifts `z` by `+d` and `c`
 by `-d` and they cancel. `tests/test_apply_datum.py` demonstrates this — uncorrected
-spread 44.60 mm across the six gauges, corrected spread < 1e-9.
+spread 42.40 mm across the six gauges, corrected spread < 1e-9.
 
 **This is now a required pipeline step.** `pipeline.difference_dem` records
 `zero_line` and leaves `absolute_datum_mm` None until a constant is supplied, and

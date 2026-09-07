@@ -7,7 +7,12 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "ground_control"))
 import apply_datum as A  # noqa: E402
 
-# elbaext's measured per-swath dz, mm (corrections_geoid.json)
+# A FROZEN elbaext per-swath dz, mm, read from corrections_geoid.json before
+# 2026-09-01. It is deliberately NOT tracked against the live product, which now
+# reads 133 +0.00 / 134 +18.80 / 135 +2.70 / 136 -13.20 / 137 -20.00 / 138 -23.60,
+# spread 42.40 mm. What these tests demonstrate -- that the correction makes the
+# elevation gauge-invariant -- is a property of the ALGEBRA and holds for any dz set,
+# so pinning the fixture keeps the test stable instead of churning on every rebuild.
 DZ = {133: 0.00, 134: 22.00, 135: 6.20, 136: -9.80, 137: -18.40, 138: -22.60}
 
 

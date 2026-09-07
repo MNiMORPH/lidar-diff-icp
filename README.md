@@ -75,7 +75,8 @@ measured at ~6.5 mm median absolute on the pilot.
 6. **Apply the absolute datum to both epochs**, each from its own contemporaneous control
    (`ground_control/run_site_datum.py` → `difference_dem(absolute_datum=...)`). Until it is
    applied, the surface's absolute level is whichever flight line `align_swaths` happened
-   to pin, which is worth **44.60 mm** at Elba. Applying it makes the elevation
+   to pin, which is worth **42.40 mm** at elbaext (38.60 mm at elba itself).
+   Applying it makes the elevation
    zero-line-invariant. Three rules govern it: epoch-matched control, open ground only, and the
    flight line as the unit of replication.
 7. **Grid at the working resolution with the slope-normal estimator**, identically for both
@@ -196,9 +197,9 @@ zero line's value afterwards, so the zero line touches no swath-to-swath differe
 but the mosaic inherits **the reference line's own vertical error** as its absolute level.
 Measured on elbaext, the six per-swath `dz` span
 
-    133  +0.00   134 +22.00   135  +6.20   136  -9.80   137 -18.40   138 -22.60
+    133  +0.00   134 +18.80   135  +2.70   136 -13.20   137 -20.00   138 -23.60
 
-so re-gauging on a different line moves every elevation by up to **44.60 mm**. An
+so re-gauging on a different line moves every elevation by up to **42.40 mm**. An
 uncorrected elevation is therefore an arbitrary implementation detail, not a measurement.
 
 **Ground control supplies the one number the network is blind to.** Each epoch is tied to
@@ -208,7 +209,7 @@ both, so the DoD moves by the difference. Applying it removes the zero-line depe
 exactly: with `corrected = z + c` and `c` measured against a product on the same zero line,
 re-gauging by `d` shifts `z` by `+d` and `c` by `-d`, and they cancel.
 `ground_control/tests/test_ground_control_apply_datum.py` demonstrates this rather than asserting it –
-uncorrected spread 44.60 mm across the six zero lines, corrected spread below 1e-9.
+uncorrected spread 42.40 mm across the six zero lines, corrected spread below 1e-9.
 
 ### The relation that governs it, as a closed level circuit
 
