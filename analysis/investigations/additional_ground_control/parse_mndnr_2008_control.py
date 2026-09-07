@@ -49,6 +49,23 @@ PUBLISHED = {"dodge": (0.129, 121), "fillmore": (0.155, 128), "houston": (0.110,
              "mower": (0.161, 115), "olmsted": (0.117, 125), "steele": (0.125, 137),
              "wabasha": (0.106, 97), "winona": (0.161, 176)}
 
+# WHICH ACQUISITION EACH COUNTY BELONGS TO, and the geoid it was reduced with.
+# gen1 is NOT one statewide 2008 survey: the six pilot sites fall in four different
+# acquisitions, and three of them are on Geoid09 rather than Geoid03. The reports
+# themselves state no datum -- this is a DATASET-level assertion, quoted from each
+# project's MnGeo metadata page, and it must never be defaulted: getting it wrong moves
+# gen1 bodily (measured 2026-09-07: +54.87 mm at Ramsey, +27.75 at Carlton, +26.39 at
+# Cook, against a Battle Creek LoD of 90 mm).
+#   county -> (project_id, geoid_model, collected, metadata page, quote)
+ACQUISITIONS = {c: ("lidar_semn2008", "GEOID03", "2008", "lidar_semn2008.html",
+                    "Vertical datum: NAVD88 (Geoid03)")
+                for c in ("dodge", "fillmore", "houston", "mower", "olmsted", "steele",
+                          "wabasha", "winona")}
+ACQUISITIONS["lesueur"] = ("lidar_swmn2010", "GEOID03", "2010", "lidar_swmn2010.html",
+                           "The NAVD88, Geoid03 vertical datum was used.")
+ACQUISITIONS["ramsey"] = ("lidar_metro2011", "GEOID09", "2011", "lidar_metro2011.html",
+                          "The NAVD88 (Geoid09) vertical datum was used.")
+
 COVER = {"1": "L1O", "2": "L2T", "3": "L3B", "4": "L4F", "5": "L5U"}
 COVER_NAME = {"L1O": "open terrain", "L2T": "tall weeds and crops",
               "L3B": "brush lands and low trees", "L4F": "forested",
@@ -96,12 +113,12 @@ def parse_report(pdf: str, *, all_tables: bool = False):
     return out, printed
 
 
-def find_pdfs(pdf_dir: str) -> dict:
+def find_pdfs(pdf_dir: str, counties=SEMN_COUNTIES) -> dict:
     got = {}
     for f in sorted(os.listdir(pdf_dir)):
         if not f.lower().endswith(".pdf"):
             continue
-        for c in SEMN_COUNTIES:
+        for c in counties:
             if f.lower().startswith(c):
                 got[c] = os.path.join(pdf_dir, f)
     return got
@@ -115,10 +132,23 @@ def main():
                                      "mn_dnr_2008_control_semn.csv")
     ap.add_argument("--check", action="store_true",
                     help="run the sign test and the published-RMSE reproduction")
+    ap.add_argument("--counties", nargs="+", default=list(SEMN_COUNTIES),
+                    help="counties to parse; default is the eight SE-MN 2008 counties, "
+                         "which reproduces the bundled CSV. Each must be in ACQUISITIONS, "
+                         "because its project and GEOID are read from there and are never "
+                         "defaulted.")
     A = ap.parse_args()
 
-    pdfs = find_pdfs(A.pdf_dir)
-    missing = [c for c in SEMN_COUNTIES if c not in pdfs]
+    counties = tuple(A.counties)
+    unknown = [c for c in counties if c not in ACQUISITIONS]
+    if unknown:
+        raise SystemExit(
+            f"no acquisition recorded for {unknown}. Add it to ACQUISITIONS with the "
+            f"project id, the GEOID and the quote from that project's MnGeo metadata "
+            f"page -- gen1 is several acquisitions on two different geoids, and guessing "
+            f"the geoid moves the surface by tens of mm.")
+    pdfs = find_pdfs(A.pdf_dir, counties)
+    missing = [c for c in counties if c not in pdfs]
     if missing:
         raise SystemExit(f"no report found for {missing} in {A.pdf_dir}")
 
@@ -127,7 +157,7 @@ def main():
         print("=== sign test: Error == ControlZ - SurfaceZ ?  (every table, every county)")
         n_tot = n_cs = n_sc = 0
         rcs = rsc = 0.0
-        for c in SEMN_COUNTIES:
+        for c in counties:
             rows, _ = parse_report(pdfs[c], all_tables=True)
             e = np.array([r["err"] for r in rows])
             cz = np.array([r["cz"] for r in rows])
@@ -142,10 +172,13 @@ def main():
         print("\n=== published-RMSE reproduction (overall table of each report)")
         print(f"{'county':10s} {'n':>5s} {'n_pub':>6s} {'RMSE':>7s} {'in-report':>10s} "
               f"{'published':>10s}")
-        for c in SEMN_COUNTIES:
+        for c in counties:
             rows, printed = parse_report(pdfs[c])
             e = np.array([r["err"] for r in rows])
-            pub, npub = PUBLISHED[c]
+            # PUBLISHED is the SE-MN project's own metadata table. Counties outside that
+            # acquisition have no published per-county figure, so they are checked against
+            # the RMSE their OWN report prints and the published columns say so.
+            pub, npub = PUBLISHED.get(c, (float("nan"), 0))
             print(f"{c:10s} {len(rows):5d} {npub:6d} {np.sqrt((e ** 2).mean()):7.4f} "
                   f"{(printed if printed else float('nan')):10.3f} {pub:10.3f}")
         print()
@@ -159,19 +192,20 @@ def main():
     with open(A.out, "w", newline="") as fh:
         w = csv.DictWriter(fh, fields)
         w.writeheader()
-        for c in SEMN_COUNTIES:
+        for c in counties:
+            project, geoid, collected, meta, quote = ACQUISITIONS[c]
             rows, _ = parse_report(pdfs[c])
             for r in rows:
                 w.writerow(dict(
                     point_id=r["name"], point_type=cover_of(r["name"]),
                     easting=r["x"], northing=r["y"], elevation=r["cz"],
                     elevation_units="m", horizontal_crs="EPSG:26915",
-                    vertical_datum="NAVD88", geoid_model="GEOID03",
-                    project_id="lidar_semn2008", collected="2008",
+                    vertical_datum="NAVD88", geoid_model=geoid,
+                    project_id=project, collected=collected,
                     source=f"{os.path.basename(pdfs[c])} table 'Control Z'",
-                    verified="datum is a DATASET-level assertion (lidar_semn2008.html: "
-                             "'Vertical datum: NAVD88 (Geoid03)'); the validation "
-                             "reports themselves state no datum and no geoid",
+                    verified=f"datum is a DATASET-level assertion ({meta}: "
+                             f"'{quote}'); the validation "
+                             f"reports themselves state no datum and no geoid",
                     county=c, dnr_surface_z_m=r["sz"], dnr_error_m=r["err"]))
                 n += 1
     print(f"wrote {n} control points to {A.out}")

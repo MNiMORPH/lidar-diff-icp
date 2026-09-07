@@ -128,3 +128,40 @@ separate columns rather than averaged.
 **What the residuals do not remove.** gen2 carries a vendor vertical **bias adjustment**
 of unpublished magnitude (`MN_SE_Driftless_2_2021_Lidar_Mapping_Report.pdf` p. 15), tuned
 against the LCPs. These checkpoints measure gen2 *after* that adjustment.
+
+## `mn_dnr_control_swmn2010_metro2011.csv`
+
+The **208** MnDNR validation checkpoints for the two acquisitions under `mnrv` and
+`battlecreek`, parsed from the same MnGeo per-county reports by the same parser
+(`--counties lesueur ramsey`):
+
+| county | site | project | geoid | marks |
+|---|---|---|---|---|
+| lesueur | mnrv | `lidar_swmn2010` | **GEOID03** | 100 |
+| ramsey | battlecreek | `lidar_metro2011` | **GEOID09** | 108 |
+
+**gen1 is not one survey.** The six pilot sites fall in four acquisitions on two geoids —
+`lidar_semn2008` (Geoid03) at elba and whitewater, `lidar_swmn2010` (Geoid03) at mnrv,
+`lidar_metro2011` (Geoid09) at battlecreek, `lidar_arrowhead2011` / `lidar_duluth2012`
+(both Geoid09) at cook and carlton. The geoid is a DATASET-level assertion quoted from
+each project's MnGeo metadata page and recorded per row; the validation reports themselves
+state no datum. `ACQUISITIONS` in the parser refuses a county it has no entry for rather
+than defaulting, because guessing this moves gen1 bodily — measured 2026-09-07,
+**+54.87 mm at Ramsey**, +27.75 at Carlton, +26.39 at Cook.
+
+Checks reproduced by `--check`: the sign convention holds on **210/210** rows
+(`Error == Control Z − Surface Z`, max residual 0.000000 m; the other order misses by up
+to 48.246 m), and the parsed RMSE reproduces each report's own printed figure —
+lesueur 0.1398 vs 0.140, ramsey 0.1097 vs 0.110. There is no published per-county RMSE to
+cross-check against for these two, as there is for SE-MN, so `--check` prints `nan` in the
+`published` column rather than inventing one.
+
+Nearest marks: **mnrv 1.59 km** (8 within 10 km, 1 of them open L1O; 51 within 25 km, 11
+open), **battlecreek 1.48 km** (16 within 10 km, 3 open; 104 within 25 km, 31 open). The
+open-ground-only rule cuts these hard — that is the binding constraint on a datum here,
+not the raw count.
+
+**cook and carlton have NO validation report** in the MnGeo tree: their county directories
+carry only `arrowhead_data_delivery_dates.pdf`. Control for those two must come from
+somewhere else (the Woolpert project report the Arrowhead metadata cites, or NGS leveled
+marks).
