@@ -39,6 +39,7 @@ import datum as DAT  # noqa: E402
 import lines as L  # noqa: E402
 import same_line as S  # noqa: E402
 from lidar_diff_icp import references  # noqa: E402
+from lidar_diff_icp import acquisitions
 from lidar_diff_icp.groundtruth import gen1_datum as G  # noqa: E402
 
 
@@ -97,7 +98,8 @@ def measure_site_datum(*, easting, northing, bounds, crs, psids, tile_dirs, trac
     g2 = DAT.datum_at_site("gen2", easting=easting, northing=northing, treatment="open",
                            surface=gen2_surface, max_lags_m=max_lags_m, n_lags=n_lags,
                            n_pairs=n_pairs, estimators=estimators, seed=seed)
-    a0, bx, cy = references.geoid_difference(list(bounds), crs)
+    # elba/elbaext: gen1 is lidar_semn2008, GEOID03. Stated, never defaulted.
+    a0, bx, cy = references.geoid_difference(list(bounds), crs, before_geoid=acquisitions.for_project("lidar_semn2008").geoid_grid)
     cx, cyy = (bounds[0] + bounds[2]) / 2.0, (bounds[1] + bounds[3]) / 2.0
     geoid_mm = (a0 + bx * (easting - cx) / 1000.0
                 + cy * (northing - cyy) / 1000.0) * 1000.0

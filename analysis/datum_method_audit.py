@@ -40,7 +40,7 @@ for p in sorted(glob.glob("data/derived/*/corrections.json")):
     print(f"  {t:<20}{method_of(d):<28}{str(d.get('swath_tie')):<16}{d.get('zero_line')}")
 
 if A.compare:
-    from lidar_diff_icp import references, io
+    from lidar_diff_icp import references, io, acquisitions
     D = f"data/derived/{A.compare}"
     c = json.load(open(f"{D}/corrections.json"))
     if "cross_epoch_tie_order2_coef" not in c:
@@ -56,7 +56,8 @@ if A.compare:
     para = sum(dz[k] * v for k, v in enumerate(
         [np.ones_like(xn), xn, yn, xn * xn, xn * yn, yn * yn])) * 1000.0
 
-    a, tb, tc = references.geoid_difference(tuple(b), io.MN_GEN1_CRS)
+    # elba: gen1 is lidar_semn2008, GEOID03. Stated, never defaulted.
+    a, tb, tc = references.geoid_difference(tuple(b), io.MN_GEN1_CRS, before_geoid=acquisitions.for_project("lidar_semn2008").geoid_grid)
     cx, cy = 0.5 * (b[0] + b[2]), 0.5 * (b[1] + b[3])
     geo = (a + tb * (XX - cx) / 1000.0 + tc * (YY - cy) / 1000.0) * 1000.0
 

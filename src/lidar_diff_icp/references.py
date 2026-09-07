@@ -21,13 +21,23 @@ from __future__ import annotations
 import numpy as np
 
 
-def geoid_difference(bounds, crs, *, before_geoid="us_noaa_geoid03_conus.tif",
-                     after_geoid="us_noaa_g2018u0.tif", n=7,
-                     proj_data="/usr/share/proj"):
+def geoid_difference(bounds, crs, *, before_geoid, after_geoid="us_noaa_g2018u0.tif",
+                     n=7, proj_data="/usr/share/proj"):
     """Geoid-model datum shift ``(const_m, b, c)`` to ADD to the before-epoch (gen1).
 
-    ``before_geoid`` / ``after_geoid`` are PROJ geoid grid names for the two epochs'
-    NAVD88 realizations (defaults: GEOID03 for 2008 gen1, GEOID18 for 2021 gen2). The
+    ``before_geoid`` is REQUIRED and has no default. It used to default to GEOID03, and
+    because ``pipeline.difference_dem`` never overrode it every site was differenced as if
+    gen1 were the 2008 SE-Minnesota survey. It is not: gen1 is four acquisitions on two
+    geoid models across the six pilot sites, and the default silently added +54.87 mm to
+    Battle Creek's gen1, +27.75 to Carlton's and +26.39 to Cook's -- at Battle Creek, 61%
+    of that site's own 90 mm LoD. Resolve it from
+    :func:`lidar_diff_icp.acquisitions.for_project`, never by hand.
+
+    ``after_geoid`` keeps its GEOID18 default because gen2 is USGS 3DEP 2021 at every site
+    we hold and 3DEP publishes on GEOID18 -- the after-epoch does not vary in this project
+    the way gen1 does. That asymmetry is deliberate but is a judgement, not a law; see
+    ``acquisitions.GEN2_3DEP_GEOID``, which names the assumption so it can be changed in
+    one place. Both are PROJ geoid grid names for the two epochs' NAVD88 realizations. The
     shift is ``N_before - N_after`` (geoid-undulation difference), sampled on an ``n x n``
     grid over ``bounds`` and fit as::
 

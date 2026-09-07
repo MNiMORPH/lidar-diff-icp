@@ -46,6 +46,7 @@ sys.path.insert(0, str(_HERE))
 sys.path.insert(0, str(_HERE.parent / "src"))
 
 from lidar_diff_icp import coreg, io, references  # noqa: E402
+from lidar_diff_icp import acquisitions
 from lidar_diff_icp.groundtruth import tie as T  # noqa: E402
 
 CACHE = _HERE / "data" / "swath_constants_cache.json"
@@ -119,7 +120,8 @@ def our_gen1_surface_at(tile_path, easting, northing, *, csf_half_width_m, res,
 
     b = geoid_bounds or (easting - csf_half_width_m, northing - csf_half_width_m,
                          easting + csf_half_width_m, northing + csf_half_width_m)
-    a0, bx, cy = references.geoid_difference(list(b), crs)
+    # elba/elbaext: gen1 is lidar_semn2008, GEOID03. Stated, never defaulted.
+    a0, bx, cy = references.geoid_difference(list(b), crs, before_geoid=acquisitions.for_project("lidar_semn2008").geoid_grid)
     cx, cyy = (b[0] + b[2]) / 2.0, (b[1] + b[3]) / 2.0
     gshift = a0 + bx * (easting - cx) / 1000.0 + cy * (northing - cyy) / 1000.0
 

@@ -9,7 +9,7 @@ the sort of thing that must not come back by accident.
 import numpy as np
 import pytest
 
-from lidar_diff_icp import pipeline, groundest
+from lidar_diff_icp import pipeline, groundest, acquisitions
 
 
 # a corner of the real elba tile, so references.geoid_difference reads real geoid grids
@@ -36,7 +36,14 @@ def _scene(n=120_000, seed=11, gen2_above_m=0.030):
                 stable=np.isfinite(Zref), floodplain=np.zeros((NY, NX), bool))
 
 
+#: BOUNDS is the elba pilot, whose gen1 is lidar_semn2008 -- GEOID03. Stated rather than
+#: defaulted: apply_datum has no default frame since 2026-09-07, because the old GEOID03
+#: default was silently applied to three sites whose gen1 is on GEOID09.
+GEN1_GEOID = acquisitions.for_project("lidar_semn2008").geoid_grid
+
+
 def _run(s, **kw):
+    kw.setdefault("gen1_geoid", GEN1_GEOID)
     return pipeline.apply_datum(s["x"].copy(), s["y"].copy(), s["z"].copy(), s["ground"],
                                 s["Zref"], s["ground_of"], GRID, BOUNDS,
                                 gps_time=s["gps_time"], source_id=s["source_id"],
@@ -62,7 +69,8 @@ def test_the_geoid_term_is_computed_not_assumed():
     t = _run(_scene(n=20_000))["tie_info"]
     assert t["method"] == "geoid_difference"
     # compared against the source itself rather than a window I would have had to invent
-    gc, gb, gcc = references.geoid_difference(BOUNDS, 26915)
+    gc, gb, gcc = references.geoid_difference(BOUNDS, 26915,
+                                              before_geoid=GEN1_GEOID)
     assert (t["const_m"], t["tilt_b_m_per_km"], t["tilt_c_m_per_km"]) == (gc, gb, gcc)
     assert np.isfinite([gc, gb, gcc]).all() and gc != 0.0
 

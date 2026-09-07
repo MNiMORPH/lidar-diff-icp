@@ -108,10 +108,11 @@ def geoid_shift_mm_at(site_dir, easting, northing):
     ``references.geoid_difference`` returns ``(a, b, c)`` to ADD to gen1, as a plane about
     the bounds centroid -- the same centroid the pipeline uses.
     """
-    from lidar_diff_icp import references
+    from lidar_diff_icp import references, acquisitions
     d = json.loads((Path(site_dir) / "corrections.json").read_text())
     b = d["bounds"]
-    a, bx, cy = references.geoid_difference(b, d["crs"])
+    # elba: gen1 is lidar_semn2008, GEOID03. Stated, never defaulted.
+    a, bx, cy = references.geoid_difference(b, d["crs"], before_geoid=acquisitions.for_project("lidar_semn2008").geoid_grid)
     cx, cyy = (b[0] + b[2]) / 2.0, (b[1] + b[3]) / 2.0
     return (a + bx * (easting - cx) / 1000.0 + cy * (northing - cyy) / 1000.0) * 1000.0
 

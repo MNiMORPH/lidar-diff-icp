@@ -557,7 +557,8 @@ def register_gen1(before_laz, bounds, res, *, ground_source="csf", csf_pdal=None
 
 
 def apply_datum(x, y, z, ground, Zref, ground_of, grid, bounds, *, tie="reference",
-                geoid_datum=None, correction_surface=False, floodplain=None,
+                geoid_datum=None, gen1_geoid=None,
+                correction_surface=False, floodplain=None,
                 along_track_drift=False, gps_time=None, source_id=None, stable=None,
                 verbose=True):
     """Put the registered gen1 cloud onto gen2's datum, in the principled order: get x, y
@@ -590,6 +591,18 @@ def apply_datum(x, y, z, ground, Zref, ground_of, grid, bounds, *, tie="referenc
     arrays ARE the arguments -- if a caller needs the registered cloud afterwards, it must
     copy before calling.
     """
+    # FRAME FIRST, before ANY work: this refusal used to be absent, and its absence is
+    # what shipped three sites in the wrong vertical frame. It is the first statement in
+    # the function so that a wrong call costs nothing -- at statewide scale the caller may
+    # have streamed a multi-gigabyte tile to get here.
+    if geoid_datum is None and gen1_geoid is None:
+        raise ValueError(
+            "gen1_geoid is required: the PROJ geoid grid gen1 was reduced in. It used to "
+            "default to GEOID03, and because nothing overrode it every site was "
+            "differenced as if gen1 were the 2008 SE-Minnesota survey -- adding +54.87 mm "
+            "to Battle Creek's gen1, +27.75 to Carlton's and +26.39 to Cook's, unnoticed "
+            "until 2026-09-07. Resolve it from the Site: "
+            "acquisitions.for_project(site.gen1_project).geoid_grid.")
     X0, Y0, res, nx, ny = grid
     xc, yc, zc = x, y, z
     be = ground
@@ -619,7 +632,8 @@ def apply_datum(x, y, z, ground, Zref, ground_of, grid, bounds, *, tie="referenc
     xc += coreg.eval_poly_field(hs["a"], xc, yc, hs["norm"], 0)
     yc += coreg.eval_poly_field(hs["b"], xc, yc, hs["norm"], 0)
     if geoid_datum is None:                          # auto-compute from the geoid grids
-        geoid_datum = references.geoid_difference(bounds, 26915)
+        geoid_datum = references.geoid_difference(bounds, 26915,
+                                                  before_geoid=gen1_geoid)
     gc, gb, gcc = geoid_datum        # (const_m, b East, c North) m,m/km of (N_gen1 - N_gen2), ADD to gen1
     cxg = 0.5*(bounds[0]+bounds[2]); cyg = 0.5*(bounds[1]+bounds[3])
     zc += gc + gb*(xc-cxg)/1000.0 + gcc*(yc-cyg)/1000.0
@@ -851,7 +865,7 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
                    ground="slope_normal", sn_smooth_cells=1.2, stream=False,
                    ground_source="csf", after_ground="class2", csf_pdal=None,
                    csf_cache=None, robust_stable=True, before_crs=io.MN_GEN1_CRS,
-                   geoid_datum=None, correct_boresight=False,
+                   geoid_datum=None, gen1_geoid=None, correct_boresight=False,
                    boresight_roll_mm_per_deg=None, swath_tie="intercept",
                    absolute_datum=None):
     """Corrected bare-earth DEM of Difference (after - before).
@@ -1065,7 +1079,7 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
     # register_gen1 so the gen1 swath network cannot absorb a cross-epoch correction.
     # It mutates xc, yc, zc in place -- see its docstring for why.
     _dat = apply_datum(xc, yc, zc, be, Zref, groundg, _grid, bounds, tie=tie,
-                       geoid_datum=geoid_datum,
+                       geoid_datum=geoid_datum, gen1_geoid=gen1_geoid,
                        correction_surface=correction_surface, floodplain=floodplain,
                        along_track_drift=along_track_drift, gps_time=gt8,
                        source_id=ps8, stable=stable)
@@ -1133,6 +1147,9 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
         "boresight_roll_mm_per_deg": (round(float(boresight_used), 3)
                                       if boresight_used is not None else None),
         "swath_tie": swath_tie,
+        # WHICH geoid gen1 was reduced in. Recorded because it is not inferable from the
+        # product and a wrong one is invisible inside the tile: it looks like erosion.
+        "gen1_geoid_grid": gen1_geoid,
         "zero_line": zero_line,
         "absolute_level_depends_on_zero_line": True,
         "absolute_datum_mm": datum_applied,

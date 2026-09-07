@@ -21,6 +21,7 @@ import laspy
 import matplotlib; matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
+from lidar_diff_icp import acquisitions
 from lidar_diff_icp.pipeline import difference_dem
 from lidar_diff_icp.detect import detect_change_standard
 from lidar_diff_icp import figures
@@ -83,9 +84,17 @@ def run_site(name, figdir=FIGDIR):
     # The valley cut is STATED per site on the Site record, and never chosen by the
     # pipeline: "registry" for a landscape with an established, cited elevation,
     # "histogram" to compute it from the landscape's pooled elevations, or an elevation.
+    # The GEOID gen1 was reduced in comes from the Site's SURVEY, never from a default.
+    # gen1 is four acquisitions on two geoid models across these six sites; the old
+    # blanket GEOID03 cost +54.87 mm at battlecreek, +27.75 at carlton, +26.39 at cook.
+    acq = acquisitions.for_project(S.gen1_project)      # raises if the survey is unknown
+    print(f"[{name}] gen1 survey {acq.project_id} on {acq.geoid_model} "
+          f"({acq.geoid_grid}); metadata {acq.metadata_page}: {acq.datum_quote!r}",
+          flush=True)
     r = difference_dem(before, after, bounds, res=res, ground="slope_normal",
                        ground_source="csf", after_ground="class2", stream=stream,
                        robust_stable=True, csf_cache=S.csf_cache,
+                       gen1_geoid=acq.geoid_grid,
                        valley_top_m=S.valley_top, tile_dir=S.tile_dir)
     dod, lod, Z21, stable = r["dod"], r["lod"], r["z_after"], r["stable"]
     nx, ny = r["nx"], r["ny"]; X0, Y0 = r["bounds"][0], r["bounds"][1]

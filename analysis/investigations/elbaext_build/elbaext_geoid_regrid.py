@@ -11,6 +11,7 @@ reference_plane product (non-destructive); z_after/slope are tie-independent (re
 import json, numpy as np
 from lidar_diff_icp.pipeline import difference_dem
 from lidar_diff_icp import references, io
+from lidar_diff_icp import acquisitions
 BOUNDS = (575600.0, 4882200.0, 580050.0, 4886250.0); RES = 5.0
 BEFORE = "data/before/elbaext_gen1_merged.laz"
 AFTER  = "data/after/elbaext_3dep_fd_class2.laz"     # class2-extracted: loadable non-streaming
@@ -27,7 +28,8 @@ AFTER  = "data/after/elbaext_3dep_fd_class2.laz"     # class2-extracted: loadabl
 # algebraically identical to elba's datum (0.000 mm ptp difference), and the more accurate of
 # the two linearisations against the PROJ field (0.44 vs 0.84 mm RMS over the shared area).
 ELBA_BOUNDS = (577492.8, 4882737.6, 580032.8, 4886237.6)   # analysis/ridgelines/run_elba_dod.py
-_a, _b, _c = references.geoid_difference(ELBA_BOUNDS, io.MN_GEN1_CRS)
+# elba: gen1 is lidar_semn2008, GEOID03. Stated, never defaulted.
+_a, _b, _c = references.geoid_difference(ELBA_BOUNDS, io.MN_GEN1_CRS, before_geoid=acquisitions.for_project("lidar_semn2008").geoid_grid)
 _cx_e, _cy_e = 0.5 * (ELBA_BOUNDS[0] + ELBA_BOUNDS[2]), 0.5 * (ELBA_BOUNDS[1] + ELBA_BOUNDS[3])
 _cx_x, _cy_x = 0.5 * (BOUNDS[0] + BOUNDS[2]), 0.5 * (BOUNDS[1] + BOUNDS[3])
 G = (_a + _b * (_cx_x - _cx_e) / 1000.0 + _c * (_cy_x - _cy_e) / 1000.0, _b, _c)

@@ -23,12 +23,20 @@ class Site:
     number: an elevation in metres, ``"registry"`` (an established, cited value), or
     ``"histogram"`` (computed from the landscape's pooled elevations). It is stated here per
     site so the choice is visible in one table rather than implied by an argument default.
+
+    ``gen1_project`` names the SURVEY the gen1 tile came from, resolved through
+    :mod:`lidar_diff_icp.acquisitions` to the geoid it was reduced in. It is not
+    decoration: gen1 is four acquisitions on two geoid models across these six sites, and
+    one defaulted GEOID03 put +54.87 mm of pure bookkeeping into Battle Creek's DoD until
+    2026-09-07. It defaults to None so a Site can still be built for a tile whose survey
+    has not been established; the pipeline REFUSES such a site rather than guessing.
     """
     name: str
     gen1: str
     gen2: str
     valley_top: object
     bounds: tuple | None = None
+    gen1_project: str | None = None
     stream: bool = True
     derived_root: str = "data/derived"
     csf_root: str = "data/csf_cache"
@@ -54,23 +62,28 @@ SITES: dict[str, Site] = {
     # (run_steady_state_strata.py VALLEY_TOP, ALLFOREST_BLUFFLAND.md).
     "elba": Site("elba", "data/before/4342-29-64.laz",
                  "data/after/3dep2021_fulldensity.laz", "registry",
-                 (577492.8, 4882737.6, 580032.8, 4886237.6)),
+                 (577492.8, 4882737.6, 580032.8, 4886237.6),
+                 gen1_project="lidar_semn2008"),          # Winona county
     # 3dep_4358_fulltile.laz was a TRUNCATED fetch: 5.52 returns/m2 east of easting 586362
     # against 15.45 west, same five flight lines both sides. Replaced 2026-09-04 by an
     # uncapped re-fetch, 148,050,625 points, west/east density ratio 1.06.
     "whitewater": Site("whitewater", "data/before/4358-26-03.laz",
-                       "data/after/3dep_4358_fulldensity.laz", "histogram"),
+                       "data/after/3dep_4358_fulldensity.laz", "histogram",
+                       gen1_project="lidar_semn2008"),    # Wabasha county
     "mnrv": Site("mnrv", "data/before_mnrv/4342-23-01.laz",
-                 "data/after_mnrv/mnrv_3dep2021.laz", "histogram"),
+                 "data/after_mnrv/mnrv_3dep2021.laz", "histogram",
+                 gen1_project="lidar_swmn2010"),          # Le Sueur county
     # cook's pooled histogram has NO minimum above its dominant mode -- a lake-studded
     # plateau, mode 588.4 m of a 447-606 m range -- so "histogram" RAISES here. It needs a
     # stated elevation before it can build. Left as-is rather than guessed.
     "cook": Site("cook", "data/before_ne/1158-31-59.laz",
                  "data/after_ne/ne_3dep_fulldensity.laz", "histogram",
-                 (709531.0, 5323589.0, 711986.0, 5327144.0)),
+                 (709531.0, 5323589.0, 711986.0, 5327144.0),
+                 gen1_project="lidar_arrowhead2011"),     # Cook county -- GEOID09
     "carlton": Site("carlton", "data/before_carlton/2742-12-53.laz",
                     "data/after_carlton/carlton_3dep.laz", "histogram",
-                    (547805.0, 5163676.0, 550225.0, 5167166.0)),
+                    (547805.0, 5163676.0, 550225.0, 5167166.0),
+                    gen1_project="lidar_duluth2012"),     # Carlton county -- GEOID09
     # BATTLECREEK HAS NO RIVER VALLEY (Andy, 2026-09-06), so the valley cut is not a
     # parameter that needs a better value here -- the CONCEPT does not apply. The histogram
     # method finds the first local minimum above the dominant elevation mode and calls the
@@ -97,7 +110,8 @@ SITES: dict[str, Site] = {
     # comparable with the other five, which have always streamed.
     "battlecreek": Site("battlecreek", "data/before_battlecreek/4342-03-32_b_a.laz",
                         "data/after_battlecreek/battlecreek_3dep.laz", "histogram",
-                        (498750.0, 4975136.0, 499365.0, 4976006.0)),
+                        (498750.0, 4975136.0, 499365.0, 4976006.0),
+                        gen1_project="lidar_metro2011"),  # Ramsey county -- GEOID09
 }
 
 
