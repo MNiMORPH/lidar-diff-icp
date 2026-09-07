@@ -108,7 +108,7 @@ so the corrected surface is unchanged (`pipeline.py:1093`). Applied to BOTH epoc
 moves by the *difference* of the two constants and true change on stable ground goes to zero.
 
 Demonstrated rather than asserted, on elbaext's real per-swath dz
-(`ground_control/tests/test_apply_datum.py`, 4 tests passing):
+(`ground_control/tests/test_ground_control_apply_datum.py`, 4 tests passing):
 
     spread across zero-line choices, uncorrected   44.60 mm
     spread across zero-line choices, corrected     < 1e-9 mm

@@ -207,7 +207,7 @@ the 2021 USGS held-out NVA/VVA checkpoints for gen2 – and the correction is ap
 both, so the DoD moves by the difference. Applying it removes the zero-line dependence
 exactly: with `corrected = z + c` and `c` measured against a product on the same zero line,
 re-gauging by `d` shifts `z` by `+d` and `c` by `-d`, and they cancel.
-`ground_control/tests/test_apply_datum.py` demonstrates this rather than asserting it –
+`ground_control/tests/test_ground_control_apply_datum.py` demonstrates this rather than asserting it –
 uncorrected spread 44.60 mm across the six zero lines, corrected spread below 1e-9.
 
 ### The relation that governs it, as a closed level circuit

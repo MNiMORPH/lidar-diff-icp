@@ -281,7 +281,7 @@
   ],
   "SWATH_ALIGNMENT_METHOD.md": [
    "apply_datum.py",
-   "test_apply_datum.py"
+   "test_ground_control_apply_datum.py"
   ],
   "SWATH_DEGENERACY_BREAKING.md": [
    "degeneracy_crossline_geometry.py",

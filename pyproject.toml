@@ -58,4 +58,9 @@ where = ["src"]
 # script matching test_*.py / *_test.py under analysis/ and scratchpad/. Those load derived
 # data at import, so collection took 25 minutes and then aborted on two FileNotFoundErrors
 # before a single test ran. Scoped here, the suite is ~10 s.
-testpaths = ["tests"]
+# ground_control/tests was OUTSIDE this list until 2026-09-07, so its 16 tests over 4342
+# lines of datum code ran only when named explicitly -- five commits landed that day
+# without them. Its test_apply_datum.py was renamed test_ground_control_apply_datum.py to
+# collect alongside the pipeline's own test_apply_datum.py: different subjects, same name,
+# and pytest cannot import both without packages.
+testpaths = ["tests", "ground_control/tests"]
