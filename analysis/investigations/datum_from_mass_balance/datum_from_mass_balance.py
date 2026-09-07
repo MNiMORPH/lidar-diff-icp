@@ -44,6 +44,15 @@ import numpy as np
 
 sys.path.insert(0, os.path.abspath("."))
 sys.path.insert(0, os.path.abspath("src"))
+# THIS INSERT IS LOAD-BEARING -- do not remove it as a path hack, which is what it looks
+# like. catchment-dod-balance IS a declared dependency (pyproject: git+https://github.com/
+# MNiMORPH/catchment-dod-balance) and IS installed, but the INSTALLED package ships only
+# __init__.py and massbalance.py. `catchment_dod_balance.offmap`, imported below, exists
+# only in the local checkout: verified 2026-09-07, that repo has 35 unpushed commits and
+# `git ls-tree origin/main` shows no offmap.py. Removing this line raises
+# ModuleNotFoundError. The real fix is upstream -- push that repo, or pin the dependency to
+# a commit that has offmap -- and until then THIS SCRIPT DOES NOT REPRODUCE on any other
+# machine.
 sys.path.insert(0, os.path.expanduser("~/projects/catchment-dod-balance"))
 
 from trust.provenance import Run                                       # noqa: E402

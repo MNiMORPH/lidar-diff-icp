@@ -1,4 +1,10 @@
-# ★★ ground_control FRAME — 2026-08-27. READ FIRST.
+# ground_control FRAME — the SUBSYSTEM's state. Updated 2026-09-07.
+
+**`analysis/FRAME.md` is the project frame; read that first.** This one is narrower:
+it covers the absolute-datum subsystem only, and it is current, not superseded — the
+six older dated FRAME_*.md files under `analysis/` are the superseded ones. It said
+"READ FIRST" until 2026-09-07, which left two documents claiming to be the entry
+point with nothing saying which.
 
 Verify every structural claim here against git and the files before acting.
 
