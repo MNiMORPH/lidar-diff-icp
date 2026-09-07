@@ -168,6 +168,48 @@ errors purely from the angle between their flight lines and the error's gradient
 artifact across sites, and it breaks the rule that compared results be produced the same
 way.
 
+**Can control marks resolve it? Andy's question, 2026-09-07 — partly, and the part they
+resolve is already in the architecture.** The drift curve splits into a LEVEL (its per-swath
+mean) and a SHAPE (variation about it), and only one of those is degenerate:
+
+    site        swaths   level spread   median shape   max shape
+                         (between,mm)   (sd within)      (p-p)
+    elba             4          14.23           9.46       68.90
+    whitewater       4          40.20          15.20      106.80
+    mnrv             6          34.43          16.01       75.40
+    cook             4          41.16          10.37       62.30
+    carlton          5          21.36           5.55       56.40
+    battlecreek      4          27.94          13.01       70.40
+
+1. **Swath-to-swath differences** are constrained by gen1 overlaps (`align_swaths`). No
+   control needed.
+2. **Within-swath shape** is real and large — up to 106.80 mm peak-to-peak — and it IS
+   identifiable, because nothing else in the pipeline is a function of time. Control marks
+   cannot constrain it: Elba has 8 marks on 5 lines, 1.6 per line, and a spline shape
+   cannot be fitted from 1.6 points.
+3. **The common level** is constrained by none of the above; it is the free-network gauge.
+   **Control fixes exactly this**, and that is the existing ground-control datum step.
+
+So marks resolve the degenerate part and already do. What they cannot do is separate
+`drift(t)` from a datum gradient ALONG-track: within one swath those are collinear
+functions of the same variable. The resolution is that the datum gradient is known
+INDEPENDENTLY from the geoid grid — so there is nothing left to separate, provided the
+geoid is right. What was absorbed was an ERROR in it, now fixed. The residual exposure is
+any UNMODELLED datum gradient (a vendor-introduced tilt, say), which would still be eaten
+along-track and would be invisible.
+
+**NEGATIVE RESULT — the drift is not measurably undoing `align_swaths`.** Both stages carry
+a free per-swath constant, so they are collinear by construction, and the per-site
+correlations looked suggestive (−0.16 to −0.71 at five of six sites). Pooled over 27 swaths
+centred within site: **r = −0.2589, p = 0.192, slope −0.1096 ± 0.0818**. Not significant.
+The degeneracy is real but is not causing measurable harm.
+
+**Revised recommendation on #63.** The urgent part was the geoid and is fixed. Zero-meaning
+the drift is NOT free — that per-swath constant is doing work, and removing it without
+compensation shifts the DoD. What is left is a CLAIM problem rather than an engineering
+one: the pipeline says `register_gen1` is gen1-internal and `apply_datum` is the only
+cross-epoch stage, but the drift fit re-levels each swath against gen2. Say that plainly.
+
 OPEN, Andy's call (task #63): constrain the drift fit so it cannot absorb a datum term —
 zero-mean per swath at minimum, possibly zero-slope, or fit it only after an independent
 datum. Any of these changes what the pipeline measures. Figures:
