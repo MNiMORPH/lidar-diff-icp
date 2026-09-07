@@ -122,9 +122,39 @@ each quoted from that project's MnGeo metadata page:
 an LoD of 90 mm** — 61% of its own detection threshold, and more than that site's entire
 zero-line lever (37.50 mm).
 
-FIX: give `Site` a geoid field with NO default, refuse when absent, thread it through, and
-rebuild the three affected sites. elba, whitewater and mnrv are unaffected and need no
-rebuild. Rebuilding is heavy and is Andy's call — task #62.
+FIXED 2026-09-07 (commits dc20fb3, b239e9c). `acquisitions.py` records the survey, its
+geoid and the sentence from its metadata page that asserts it; `Site.gen1_project` names
+it; `geoid_difference`'s `before_geoid` default is REMOVED so six callers now state their
+frame; `apply_datum` refuses as its first statement. Three regression tests, each shown to
+bite. **battlecreek REBUILT** — elba, whitewater and mnrv are unaffected; cook and carlton
+still hold products in the wrong frame.
+
+## ⚠ The along-track drift fit ABSORBS datum error (found on that rebuild)
+
+The Battle Creek rebuild did NOT move the DoD by the 54.87 mm the datum moved. It moved by
+**median +11.85 mm**, non-uniformly. The reason is in the products:
+
+    swath   mean drift, GEOID03 -> GEOID09      absorbed
+    1012        -52.16 -> -0.71 mm   +51.45       94%
+    1013        -55.36 -> -9.55       +45.81      83%
+    1014        -61.42 -> -18.60      +42.82      78%
+    1101        -64.63 -> -28.65      +35.98      66%
+                                mean +44.02       80%
+
+The per-swath along-track drift is a data-driven `f(gps_time)` fitted against gen2, so it
+absorbs any constant or slowly-varying gen1 datum error. Verified unchanged in the same
+run: the gen1-internal per-swath dz and the Nuth-Kääb horizontal shift, so the absorption
+is specifically the DRIFT stage.
+
+Two consequences. **This is why the geoid bug survived** — the pipeline was 80%
+self-correcting, so a wrong frame did not look like an offset. And it **contaminates the
+project goal**: a reusable statewide per-swath GPS-drift correction. Battle Creek's
+published drift curves carried ~50 mm of geoid bookkeeping rather than instrument drift,
+and curves fitted at sites on different geoids are not comparable.
+
+OPEN, Andy's call (task #63): constrain the drift fit — zero-mean per swath, or fitted only
+after an independent datum — so the term measures what its name says. Figure:
+`figures/battlecreek_geoid_fix.png`.
 
 Found while resolving counties for the control-mark work, not by looking for it.
 
