@@ -100,6 +100,43 @@ All six rebuilt on current code. Five are byte-identical across the reorganizati
     mnrv            0.056        0.103         UNMEASURABLE (bbox spans two 3DEP projects)
     battlecreek     0.044        0.090         0.998
 
+## The ground-control datum — measured 2026-09-07, and it is NOT appliable at four sites
+
+README step 6 and `ground_control/FRAME.md` call the datum a **required** pipeline step,
+because the gauge choice it removes is worth 42.40 mm at elbaext against a +2.12 mm
+correction. Verified on the real product, `gauge_invariance_residual` over all six
+candidate gauges: **uncorrected spread 42.40 mm, corrected 3.553e-15 mm.** The machinery
+works.
+
+But `absolute_datum_mm` is **None at all seven tiles**, and it cannot simply be filled in.
+The bundled 2008 control is eight SE-MN counties (dodge, fillmore, houston, mower, olmsted,
+steele, wabasha, winona; 1004 marks). Nearest mark to each site centre:
+
+    elba          1.5 km    35 within 10 km    CAN measure
+    whitewater    0.7 km    23                 CAN measure
+    mnrv         50.4 km     0                 NO 2008 control bundled
+    battlecreek  70.6 km     0                 NO 2008 control bundled
+    carlton     243.0 km     0                 NO 2008 control bundled
+    cook        430.8 km     0                 NO 2008 control bundled
+
+So "required" is achievable at two sites of six. The other four need control transcribed
+from their own acquisitions' validation reports — task #11, a data problem, not wiring.
+Either do #11 or soften the claim.
+
+And the one constant that exists, `SITE_DATUM_elbaext.json`, is gauged on line **133**,
+which **elba does not carry** (its psids are 135–138). `on_zero_line()` is arithmetic
+WITHIN one product; it does not carry a constant from elbaext's surface onto elba's
+independently-solved one, and ties are known to be extent-dependent. elba and whitewater
+each need their own `run_site_datum.py` run.
+
+**Stale-number warning.** `ground_control/FRAME.md`, `apply_datum.py`'s docstring, README,
+this file and `SWATH_ALIGNMENT_METHOD.md` all quote the dz spread as **44.60 mm** from a
+build older than 2026-09-01. The product now gives **42.40 mm**. The argument is untouched
+— still 20x the correction — but the number a reader is told to verify does not reproduce.
+elbaext was last built 2026-09-01, BEFORE the 1/variance weighting of 09-05; rebuilding it
+will move these again and invalidate its constant, which was measured against the 09-01
+corrections three minutes after they were written.
+
 ## The queue
 
 `analysis/NEXT_SESSION.md` holds the prepared plan: the last 7 moves (ready, needs a
