@@ -126,8 +126,8 @@ FIXED 2026-09-07 (commits dc20fb3, b239e9c). `acquisitions.py` records the surve
 geoid and the sentence from its metadata page that asserts it; `Site.gen1_project` names
 it; `geoid_difference`'s `before_geoid` default is REMOVED so six callers now state their
 frame; `apply_datum` refuses as its first statement. Three regression tests, each shown to
-bite. **battlecreek REBUILT** — elba, whitewater and mnrv are unaffected; cook and carlton
-still hold products in the wrong frame.
+bite. **battlecreek, cook and carlton ALL REBUILT** on the correct frame, pipeline steps
+included; elba, whitewater and mnrv are unaffected and were not touched.
 
 ## ⚠ The along-track drift fit ABSORBS datum error (found on that rebuild)
 
@@ -152,9 +152,26 @@ project goal**: a reusable statewide per-swath GPS-drift correction. Battle Cree
 published drift curves carried ~50 mm of geoid bookkeeping rather than instrument drift,
 and curves fitted at sites on different geoids are not comparable.
 
-OPEN, Andy's call (task #63): constrain the drift fit — zero-mean per swath, or fitted only
-after an independent datum — so the term measures what its name says. Figure:
-`figures/battlecreek_geoid_fix.png`.
+**It also absorbs a GRADIENT — the part parallel to the flight lines.** Predicted from
+flight heading (x,y regressed on gps_time per swath) against the tilt-error direction,
+then observed in the rebuilt DoDs:
+
+    site         datum tilt   along-track   expected surviving   observed
+    cook           12.35 mm          56%            10.23 mm      11.66 mm
+    carlton         7.44             98%             1.65          0.26
+    battlecreek     1.96             70%             1.40      not measured
+
+Carlton's flight lines run 98% parallel to its tilt error, so almost none of it reached the
+DoD; Cook's are 56% parallel, so most of it did. **How much datum error reaches the DoD
+depends on FLIGHT HEADING.** Two sites with identical datum errors give different DoD
+errors purely from the angle between their flight lines and the error's gradient — a method
+artifact across sites, and it breaks the rule that compared results be produced the same
+way.
+
+OPEN, Andy's call (task #63): constrain the drift fit so it cannot absorb a datum term —
+zero-mean per swath at minimum, possibly zero-slope, or fit it only after an independent
+datum. Any of these changes what the pipeline measures. Figures:
+`figures/battlecreek_geoid_fix.png`, `figures/drift_absorbs_alongtrack_tilt.png`.
 
 Found while resolving counties for the control-mark work, not by looking for it.
 
