@@ -100,6 +100,34 @@ All six rebuilt on current code. Five are byte-identical across the reorganizati
     mnrv            0.056        0.103         UNMEASURABLE (bbox spans two 3DEP projects)
     battlecreek     0.044        0.090         0.998
 
+## ⚠ BUG: the wrong geoid model is applied at three sites (2026-09-07)
+
+`references.geoid_difference` defaults to `before_geoid="us_noaa_geoid03_conus.tif"` and
+`pipeline.py:622` calls it as `geoid_difference(bounds, 26915)` with **no per-site
+override**. `Site` has no geoid field. So every site is differenced GEOID03 → GEOID18.
+
+But gen1 is not one survey. The six sites fall in **four acquisitions on two geoids**,
+each quoted from that project's MnGeo metadata page:
+
+    site         county    project              gen1 geoid   applied   correct    ERROR
+    elba         winona    lidar_semn2008       Geoid03      +67.28    +67.28     +0.00
+    whitewater   wabasha   lidar_semn2008       Geoid03      +57.92    +57.92     +0.00
+    mnrv         lesueur   lidar_swmn2010       Geoid03      +67.23    +67.23     +0.00
+    battlecreek  ramsey    lidar_metro2011      Geoid09      +71.85    +16.98    +54.87
+    cook         cook      lidar_arrowhead2011  Geoid09      +51.68    +25.29    +26.39
+    carlton      carlton   lidar_duluth2012     Geoid09      +78.14    +50.39    +27.75
+
+`geoid_datum` is ADDED to gen1, so adding too much makes gen1 read HIGH and the DoD
+(`gen2 − gen1`) read LOW by the error. **Battle Creek's DoD is ~54.87 mm too low against
+an LoD of 90 mm** — 61% of its own detection threshold, and more than that site's entire
+zero-line lever (37.50 mm).
+
+FIX: give `Site` a geoid field with NO default, refuse when absent, thread it through, and
+rebuild the three affected sites. elba, whitewater and mnrv are unaffected and need no
+rebuild. Rebuilding is heavy and is Andy's call — task #62.
+
+Found while resolving counties for the control-mark work, not by looking for it.
+
 ## The ground-control datum — measured 2026-09-07, and it is NOT appliable at four sites
 
 README step 6 and `ground_control/FRAME.md` call the datum a **required** pipeline step,
