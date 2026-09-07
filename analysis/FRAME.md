@@ -158,6 +158,53 @@ after an independent datum — so the term measures what its name says. Figure:
 
 Found while resolving counties for the control-mark work, not by looking for it.
 
+## The geoid and the control are COMPLEMENTARY, not redundant (measured 2026-09-07)
+
+Andy's test: if the geoid difference is only a constant, control marks carry the load and
+the geoid term is redundant; if it has a slope, it does what control cannot. Measured — it
+has a slope, and the slope is the load-bearing part.
+
+    site          const    tilt E    tilt N   tile km   tilt p-p   field p-p   RMS resid
+                     mm     mm/km     mm/km       ExN         mm          mm          mm
+    elba          67.19     0.822    -0.463   2.5x3.5       3.71        4.44       0.404
+    whitewater    57.88    -0.150     1.620   2.5x3.5       6.05        8.12       0.936
+    mnrv          67.25     1.157    -0.151   2.5x3.5       3.46        5.22       0.615
+    cook          25.40    -0.500     6.135   2.5x3.6      23.04       22.91       0.687
+    carlton       50.81     2.871    -0.566   2.4x3.5       8.92       10.70       1.108
+    battlecreek   16.98    -1.750    -1.254   0.6x0.9       2.17        2.23       0.048
+
+**Three scales, and control can only reach one of them.**
+
+*Within a tile.* The tilt is 2.17–23.04 mm peak-to-peak. Elba's control constant — the only
+one we have — is **58.70 ± 25.89 mm from 8 marks on 5 lines**, and Elba's tilt is 3.96 mm,
+**0.153×** that SE. Marks cannot see it. (At cook the tilt is 23.04 mm, comparable to the
+SE — but cook has no marks at all.)
+
+*Between tiles.* elba and whitewater are the SAME survey on the SAME geoid, 12.8 km apart,
+and their geoid differences are **+66.87 and +57.18 mm — a 9.70 mm gap**. A control constant
+measured at one site does not transfer to its neighbour.
+
+*Statewide*, which is the project goal. GEOID03→GEOID18 over Minnesota ranges
+**272.23 mm** (min −79.72, max +192.51, sd 32.25); GEOID09→GEOID18 ranges **139.80 mm**.
+No amount of local control supplies that field.
+
+The planar fit is good locally — RMS residual 0.048–1.108 mm — so a plane per tile is
+adequate; it will not be across the state.
+
+**This also reframes the geoid bug: the wrong grid got the SHAPE wrong too, not just the
+level**, and no control campaign could have caught that:
+
+    site          const err    tilt err, p-p over tile
+    battlecreek     54.87 mm            1.96 mm
+    cook            26.39               12.35
+    carlton         27.75                7.44
+
+**The division of labour.** The geoid supplies the SHAPE — gradient and spatial variation,
+deterministic, everywhere, no marks needed. Control supplies the LEVEL — the one constant
+per site the geoid cannot give, because that constant is the survey's own vendor error, not
+geodesy. Neither substitutes for the other, which is why both are in the pipeline.
+Figure: `figures/geoid_slope_vs_control.png`.
+
 ## The ground-control datum — measured 2026-09-07, and it is NOT appliable at four sites
 
 README step 6 and `ground_control/FRAME.md` call the datum a **required** pipeline step,
