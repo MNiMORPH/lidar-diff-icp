@@ -119,6 +119,22 @@ steele, wabasha, winona; 1004 marks). Nearest mark to each site centre:
     carlton     243.0 km     0                 NO 2008 control bundled
     cook        430.8 km     0                 NO 2008 control bundled
 
+**What the gauge is worth at each site** (spread of per-swath dz: how far the WHOLE DoD
+moves if a different line is pinned. `dod = dod + (g2 - g1)/1000`, a uniform shift):
+
+    cook           24.90 mm   (4 swaths)
+    battlecreek    37.50      (5)
+    elba           38.60      (4)
+    elbaext        42.40      (6)
+    carlton        57.40      (5)
+    whitewater     90.40      (4)
+    mnrv          287.70      (7)   <- 7.5x Elba
+
+**Elba is near the BEST case, not a typical one.** The +2.12 mm correction that made this
+look negligible was measured at the site with almost the smallest lever, and the FRAME
+already called line 133 "a lucky pin". The sites with the largest levers -- mnrv, whitewater,
+carlton -- include two with no control at all. That is the worst pairing available.
+
 So "required" is achievable at two sites of six. The other four need control transcribed
 from their own acquisitions' validation reports — task #11, a data problem, not wiring.
 Either do #11 or soften the claim.
