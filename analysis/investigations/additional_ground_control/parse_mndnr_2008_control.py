@@ -60,10 +60,7 @@ PUBLISHED = {"dodge": (0.129, 121), "fillmore": (0.155, 128), "houston": (0.110,
 # carlton looked as though no validation report existed, because Arrowhead and Duluth file
 # theirs under projects/<name>/ rather than county/<name>/. They have 108 and 508
 # checkpoints respectively.
-import sys as _sys, os as _os
-_sys.path.insert(0, _os.path.join(_os.path.dirname(_os.path.abspath(__file__)),
-                                  "..", "..", "..", "src"))
-from lidar_diff_icp.acquisitions import BY_REPORT_REGION      # noqa: E402
+from lidar_diff_icp.acquisitions import BY_REPORT_REGION
 
 COVER = {"1": "L1O", "2": "L2T", "3": "L3B", "4": "L4F", "5": "L5U"}
 COVER_NAME = {"L1O": "open terrain", "L2T": "tall weeds and crops",

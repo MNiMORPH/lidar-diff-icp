@@ -30,8 +30,6 @@ from pathlib import Path
 
 import numpy as np
 
-_HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(_HERE.parent))
 from trust.provenance import Run  # noqa: E402
 
 

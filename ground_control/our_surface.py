@@ -42,8 +42,6 @@ from pathlib import Path
 import numpy as np
 
 _HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(_HERE))
-sys.path.insert(0, str(_HERE.parent / "src"))
 
 from lidar_diff_icp import coreg, io, references  # noqa: E402
 from lidar_diff_icp import acquisitions

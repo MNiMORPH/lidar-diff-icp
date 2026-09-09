@@ -32,8 +32,6 @@ import warnings
 
 import numpy as np
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
 
 from lidar_diff_icp import localtie as LT          # noqa: E402
 from trust.provenance import Run                    # noqa: E402

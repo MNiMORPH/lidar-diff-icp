@@ -14,7 +14,6 @@ exactly the term the pipeline adds to gen1.
 from __future__ import annotations
 import argparse, json, sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from trust.provenance import Run  # noqa: E402
 
 

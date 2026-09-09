@@ -30,10 +30,6 @@ import sys
 
 import numpy as np
 
-_REPO = os.path.dirname(os.path.abspath(__file__))
-while _REPO != "/" and not os.path.exists(os.path.join(_REPO, "pyproject.toml")):
-    _REPO = os.path.dirname(_REPO)   # depth-independent: find the repo root
-sys.path.insert(0, _REPO)
 from trust.provenance import Run                                    # noqa: E402
 from lidar_diff_icp.groundtruth import chain as K                   # noqa: E402
 from lidar_diff_icp.groundtruth import checkpoints as C             # noqa: E402

@@ -33,7 +33,6 @@ import json
 import os
 import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))
 from lidar_diff_icp import acquisitions, references          # noqa: E402
 from lidar_diff_icp.sites import SITES                       # noqa: E402
 

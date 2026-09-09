@@ -44,7 +44,6 @@ import subprocess
 import sys
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(REPO, "src"))
 from lidar_diff_icp import workflow as W        # noqa: E402
 
 RECENT = "2026-09-01"          # rule 4: "still in use" means touched during the current work

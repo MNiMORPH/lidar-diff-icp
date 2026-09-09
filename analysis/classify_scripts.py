@@ -9,7 +9,6 @@ Classes, in precedence order -- the first that matches wins:
   ORPHAN     none of the above
 """
 import ast, glob, os, re, subprocess, sys, json
-sys.path.insert(0, "src")
 from lidar_diff_icp import workflow as W
 
 ALL = sorted(glob.glob("analysis/**/*.py", recursive=True))

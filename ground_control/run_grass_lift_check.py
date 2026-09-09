@@ -19,8 +19,6 @@ from __future__ import annotations
 import argparse, glob, json, sys
 from pathlib import Path
 import numpy as np
-_HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(_HERE.parent)); sys.path.insert(0, str(_HERE.parent / "src"))
 from lidar_diff_icp.groundtruth import gen1_datum as G, tie as T  # noqa: E402
 from trust.provenance import Run  # noqa: E402
 

@@ -41,7 +41,6 @@ additionally reports every fit with them removed, using coreg.py's own per-swath
 import argparse, json, os, sys
 import numpy as np
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from trust.provenance import Run
 
 # ---------------------------------------------------------------- site inventory

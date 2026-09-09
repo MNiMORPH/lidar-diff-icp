@@ -167,8 +167,6 @@ def load_control(epoch: str, *, surface: str | None = None,
     A mark on a county line is printed in both counties' validation reports and must not
     enter a variogram twice.
     """
-    import sys
-    sys.path.insert(0, str(_PKG.parent.parent))
     from lidar_diff_icp.groundtruth.residual_field import ControlResiduals
 
     if epoch not in EPOCHS:

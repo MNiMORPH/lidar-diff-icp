@@ -22,7 +22,6 @@ import warnings
 
 import numpy as np
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 from trust.provenance import Run                                        # noqa: E402
 from lidar_diff_icp.groundtruth import gen1_datum as G                  # noqa: E402
 

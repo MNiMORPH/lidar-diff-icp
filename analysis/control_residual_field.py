@@ -20,8 +20,6 @@ import sys
 
 import numpy as np
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
 from lidar_diff_icp.groundtruth import residual_field as RF   # noqa: E402
 from trust.provenance import Run                              # noqa: E402

@@ -36,11 +36,6 @@ import numpy as np
 import pandas as pd
 import laspy
 
-_REPO = os.path.dirname(os.path.abspath(__file__))
-while _REPO != "/" and not os.path.exists(os.path.join(_REPO, "pyproject.toml")):
-    _REPO = os.path.dirname(_REPO)   # depth-independent: find the repo root
-sys.path.insert(0, os.path.join(_REPO, "src"))
-sys.path.insert(0, _REPO)
 from trust.provenance import Run
 
 EXCLUDE = (5, 6, 9)
