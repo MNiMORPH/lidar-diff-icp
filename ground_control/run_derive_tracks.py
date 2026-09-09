@@ -25,7 +25,8 @@ sys.path.insert(0, str(_HERE))
 sys.path.insert(0, str(_HERE.parent))
 sys.path.insert(0, str(_HERE.parent / "src"))
 
-import lines as L  # noqa: E402
+from lidar_diff_icp import acquisitions  # noqa: E402
+from lidar_diff_icp.groundtruth import lines as L  # noqa: E402
 from trust.provenance import Run  # noqa: E402
 
 
@@ -33,6 +34,12 @@ def parse_args(argv=None):
     p = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--tiles", required=True, help="glob for gen1 tiles")
+    # REQUIRED, no default: psid is a per-project line number, so a track set that
+    # does not say which acquisition it came from cannot be keyed safely. Must be a
+    # survey in lidar_diff_icp.acquisitions.
+    p.add_argument("--project", required=True,
+                   help="the gen1 acquisition these tiles belong to, "
+                        "e.g. lidar_semn2008")
     p.add_argument("--exclude-substring", default=None)
     p.add_argument("--out", required=True)
     p.add_argument("--chunk-size", type=int, required=True)
@@ -91,7 +98,9 @@ def main(argv=None):
         print(f"  [{i:>2}/{n}] {Path(path).name}  near-nadir kept {kept:,}", flush=True)
 
     P = {k: getattr(a, k) for k in L.INHERITED_PARAMS}
-    ts = L.derive_tracks(tiles, chunk_size=a.chunk_size, progress=progress, **P)
+    acquisitions.for_project(a.project)      # raises on an unrecorded survey
+    ts = L.derive_tracks(tiles, project=a.project, chunk_size=a.chunk_size,
+                         progress=progress, **P)
 
     prev = {}
     rows = []

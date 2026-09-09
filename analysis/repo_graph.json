@@ -340,7 +340,7 @@
   ]
  },
  "n_md": 90,
- "n_py": 296,
+ "n_py": 299,
  "sibling_imports": {
   "calibrate_ground_q.py": [
    "control_lowveg_offset",
@@ -350,7 +350,6 @@
    "provenance"
   ],
   "compare_gen1_routes.py": [
-   "lines",
    "same_line"
   ],
   "control_band_window_sweep.py": [
@@ -394,11 +393,9 @@
    "control_mode_shift"
   ],
   "run_alongtrack_test.py": [
-   "lines",
    "same_line"
   ],
   "run_bridge.py": [
-   "lines",
    "same_line"
   ],
   "run_bridge_gen2.py": [
@@ -409,7 +406,6 @@
    "our_surface"
   ],
   "run_catchment_check.py": [
-   "lines",
    "same_line"
   ],
   "run_datum_at_site.py": [
@@ -417,11 +413,7 @@
    "datum"
   ],
   "run_datum_by_returns.py": [
-   "lines",
    "same_line"
-  ],
-  "run_derive_tracks.py": [
-   "lines"
   ],
   "run_gen2_swath_deviation.py": [
    "gen2_swath_deviation"
@@ -430,7 +422,6 @@
    "control"
   ],
   "run_same_line.py": [
-   "lines",
    "same_line"
   ],
   "run_site_datum.py": [
@@ -439,13 +430,9 @@
   "run_steady_state.py": [
    "steady_state_cells"
   ],
-  "same_line.py": [
-   "lines"
-  ],
   "site_datum.py": [
    "apply_datum",
    "datum",
-   "lines",
    "same_line"
   ],
   "test_graph_end_to_end.py": [

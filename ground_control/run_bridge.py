@@ -54,7 +54,7 @@ sys.path.insert(0, str(_HERE))
 sys.path.insert(0, str(_HERE.parent))
 sys.path.insert(0, str(_HERE.parent / "src"))
 
-import lines as L  # noqa: E402
+from lidar_diff_icp.groundtruth import lines as L  # noqa: E402
 import same_line as S  # noqa: E402
 from lidar_diff_icp.groundtruth import gen1_datum as G  # noqa: E402
 from trust.provenance import Run  # noqa: E402

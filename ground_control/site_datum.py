@@ -36,7 +36,7 @@ sys.path.insert(0, str(_HERE.parent / "src"))
 
 import apply_datum as AD  # noqa: E402
 import datum as DAT  # noqa: E402
-import lines as L  # noqa: E402
+from lidar_diff_icp.groundtruth import lines as L  # noqa: E402
 import same_line as S  # noqa: E402
 from lidar_diff_icp import references  # noqa: E402
 from lidar_diff_icp import acquisitions

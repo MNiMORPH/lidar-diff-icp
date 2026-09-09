@@ -32,7 +32,7 @@ sys.path.insert(0, str(_HERE))
 sys.path.insert(0, str(_HERE.parent))
 sys.path.insert(0, str(_HERE.parent / "src"))
 
-import lines as L  # noqa: E402
+from lidar_diff_icp.groundtruth import lines as L  # noqa: E402
 import same_line as S  # noqa: E402
 from lidar_diff_icp.groundtruth import gen1_datum as G  # noqa: E402
 from trust.provenance import Run  # noqa: E402
@@ -100,7 +100,9 @@ def main(argv=None):
         half_width_m=S.SEAM_HALF_SPACING_M, covers=a.covers, tile_dirs=a.tiles,
         res=a.res, control=control)
     on = S.marks_on_scope_psids(meas, a.psids)
-    tracks = {int(k.split(".")[0]): ts.as_search_tracks()[k] for k in sc.track_keys}
+    # L.Pass.psid_of_key, not k.split("."): the key became project:psid.pass_index on
+    # 2026-09-09, and splitting on "." now yields "lidar_semn2008:135".
+    tracks = {L.Pass.psid_of_key(k): ts.as_search_tracks()[k] for k in sc.track_keys}
 
     rows, rec = [], []
     for m in sorted(on, key=lambda z: (z.line_id, z.point_id)):

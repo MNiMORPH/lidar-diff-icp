@@ -65,6 +65,7 @@ INHERITED_PARAMS = {
 class Pass:
     """One flight-line pass: a psid over one continuous stretch of mission time."""
 
+    project: str              # the ACQUISITION this line belongs to, e.g. lidar_semn2008
     psid: int
     pass_index: int
     t0: float
@@ -78,9 +79,25 @@ class Pass:
     resid_p95_m: float
     resid_max_m: float
 
+    @staticmethod
+    def psid_of_key(key: str) -> int:
+        """The psid back out of a ``project:psid.pass_index`` key.
+
+        Provided because the key format CHANGED on 2026-09-09 and the old
+        ``key.split(".")[0]`` now returns ``project:psid`` -- which parses as neither an
+        int nor an error in every caller. Use this rather than splitting by hand.
+        """
+        return int(str(key).split(":")[-1].split(".")[0])
+
     @property
     def key(self) -> str:
-        return f"{self.psid}.{self.pass_index}"
+        """``project:psid.pass_index``. The PROJECT is part of the key because psid is a
+        PER-PROJECT line number, not a global one: gen1 is four acquisitions across the six
+        pilot sites, and cook uses psids 8-11 while battlecreek uses 1012-1014. Keyed by
+        psid alone, a statewide TrackSet would eventually merge two different flight lines
+        that happen to share a number -- silently, which is how this project's costliest
+        errors have all presented."""
+        return f"{self.project}:{self.psid}.{self.pass_index}"
 
     def endpoints(self):
         """Two endpoints of the fitted straight track, for a segment search."""
@@ -97,18 +114,48 @@ class TrackSet:
     n_tiles_read: int
     n_returns_kept: int
 
-    def by_psid(self, psid):
-        return [p for p in self.passes if p.psid == int(psid)]
+    def by_line(self, project, psid):
+        """Passes of one flight line. BOTH arguments are required: see ``Pass.key``."""
+        return [p for p in self.passes
+                if p.project == str(project) and p.psid == int(psid)]
 
-    def as_search_tracks(self, psids=None) -> dict:
+    @property
+    def projects(self) -> set:
+        return {p.project for p in self.passes}
+
+    @property
+    def the_project(self) -> str:
+        """The single acquisition this set covers, or raise.
+
+        Callers that hold a bare psid need one. Raising when the set spans several is the
+        point: a psid does not identify a flight line across acquisitions, so the caller
+        must say which survey it means rather than get whichever matched first.
+        """
+        ps = self.projects
+        if len(ps) != 1:
+            raise ValueError(
+                f"this TrackSet covers {sorted(ps)}; a bare psid does not identify a line "
+                f"across acquisitions. Name the project explicitly.")
+        return next(iter(ps))
+
+    def as_search_tracks(self, psids=None, *, project=None) -> dict:
         """``{pass_key: [(x, y), ...]}`` in the shape ``discover_near_lines`` wants.
 
-        Keyed by ``psid.pass_index``, never by psid alone, so two passes of the same psid
-        stay separate.
+        Keyed by ``project:psid.pass_index``, never by psid alone, so neither two passes of
+        one psid nor two projects' identically-numbered lines are merged. Filtering by
+        ``psids`` REQUIRES ``project`` when the set spans more than one, because a bare
+        psid does not identify a line across acquisitions.
         """
+        if psids is not None and project is None and len(self.projects) > 1:
+            raise ValueError(
+                f"this TrackSet spans {sorted(self.projects)}, so a psid alone does not "
+                f"identify a flight line. Pass project= as well.")
+        want = None if psids is None else {int(s) for s in psids}
         out = {}
         for p in self.passes:
-            if psids is None or p.psid in {int(s) for s in psids}:
+            if project is not None and p.project != str(project):
+                continue
+            if want is None or p.psid in want:
                 out[p.key] = [tuple(v) for v in p.vertices]
         return out
 
@@ -126,7 +173,21 @@ def save_tracks(ts: TrackSet, path) -> Path:
 
 
 def load_tracks(path) -> TrackSet:
+    """Load a track set. REFUSES a file whose passes do not record their acquisition.
+
+    Files written before 2026-09-09 carry no ``project``. Stamping one on load would be a
+    guess, and guessing which survey a flight line belongs to is exactly the error the key
+    exists to prevent -- so such a file must be migrated explicitly, with the evidence
+    recorded. See scripts/migrate_line_tracks.py.
+    """
     d = json.loads(Path(path).read_text())
+    missing = [q for q in d["passes"] if "project" not in q]
+    if missing:
+        raise ValueError(
+            f"{path}: {len(missing)} of {len(d['passes'])} passes record no `project`. "
+            f"psid is a PER-PROJECT line number, so this file cannot be keyed safely. "
+            f"Migrate it explicitly (scripts/migrate_line_tracks.py) rather than assuming "
+            f"an acquisition.")
     return TrackSet(passes=[Pass(**q) for q in d["passes"]], params=d["params"],
                     tiles=d["tiles"], n_tiles_read=d["n_tiles_read"],
                     n_returns_kept=d["n_returns_kept"])
@@ -164,7 +225,7 @@ def _collect(tile_paths, *, stride, nadir_deg, chunk_size, progress=None):
     return {k: np.vstack(v) for k, v in acc.items()}, n_kept, used
 
 
-def _fit_pass(t, x, y, *, bin_s, min_bin_points, psid, pass_index) -> Pass | None:
+def _fit_pass(t, x, y, *, bin_s, min_bin_points, psid, pass_index, project) -> Pass | None:
     """Bin one pass in gps_time, fit a straight track, return it."""
     k = np.round(t / bin_s).astype(np.int64)
     order = np.argsort(k, kind="stable")
@@ -189,7 +250,7 @@ def _fit_pass(t, x, y, *, bin_s, min_bin_points, psid, pass_index) -> Pass | Non
     span = math.hypot(np.ptp(cx), np.ptp(cy)) / 1000.0
     head = math.degrees(math.atan2(cx[-1] - cx[0], cy[-1] - cy[0])) % 360.0
     o = np.argsort(ct)
-    return Pass(psid=int(psid), pass_index=int(pass_index),
+    return Pass(project=str(project), psid=int(psid), pass_index=int(pass_index),
                 t0=float(ct.min()), t1=float(ct.max()), n_bins=int(ct.size),
                 span_km=float(span), heading_deg=float(head), axis=axis,
                 vertices=[[float(a), float(b)] for a, b in zip(cx[o], cy[o])],
@@ -197,7 +258,7 @@ def _fit_pass(t, x, y, *, bin_s, min_bin_points, psid, pass_index) -> Pass | Non
                 resid_max_m=float(r.max()))
 
 
-def derive_tracks(tile_paths, *, stride, nadir_deg, bin_s, gap_s, min_bin_points,
+def derive_tracks(tile_paths, *, project, stride, nadir_deg, bin_s, gap_s, min_bin_points,
                   chunk_size, progress=None) -> TrackSet:
     """Derive one track per flight-line PASS from the tiles on disk.
 
@@ -216,7 +277,8 @@ def derive_tracks(tile_paths, *, stride, nadir_deg, bin_s, gap_s, min_bin_points
         cut = np.flatnonzero(np.diff(t) > gap_s) + 1
         for j, (lo, hi) in enumerate(zip(np.r_[0, cut], np.r_[cut, t.size])):
             p = _fit_pass(t[lo:hi], x[lo:hi], y[lo:hi], bin_s=bin_s,
-                          min_bin_points=min_bin_points, psid=psid, pass_index=j)
+                          min_bin_points=min_bin_points, psid=psid, pass_index=j,
+                          project=project)
             if p is not None:
                 passes.append(p)
     return TrackSet(passes=passes, tiles=used, n_tiles_read=len(used),

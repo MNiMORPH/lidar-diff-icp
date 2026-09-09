@@ -26,7 +26,7 @@ sys.path.insert(0, str(_HERE))
 sys.path.insert(0, str(_HERE.parent))
 sys.path.insert(0, str(_HERE.parent / "src"))
 
-import lines as L  # noqa: E402
+from lidar_diff_icp.groundtruth import lines as L  # noqa: E402
 import same_line as S  # noqa: E402
 from lidar_diff_icp.groundtruth import gen1_datum as G  # noqa: E402
 from trust.provenance import Run  # noqa: E402
@@ -80,7 +80,7 @@ def main(argv=None):
     # 1. local spacing between adjacent Elba lines, measured from the tracks
     near = {}
     for psid in a.psids:
-        cands = ts.by_psid(psid)
+        cands = ts.by_line(ts.the_project, psid)
         if cands:
             near[psid] = min(cands, key=lambda q: S._track_distance(
                 a.easting, a.northing, q.vertices))

@@ -47,7 +47,7 @@ _HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(_HERE))
 sys.path.insert(0, str(_HERE.parent / "src"))
 
-import lines as L  # noqa: E402
+from lidar_diff_icp.groundtruth import lines as L  # noqa: E402
 from lidar_diff_icp.groundtruth import gen1_datum as G  # noqa: E402
 
 SCOPES = ("pass", "psid", "track")
@@ -94,7 +94,7 @@ def collinear_groups(trackset, psid, *, sigma):
     default -- at Elba's six psids the verdicts run 0.1 to 21.6 sigma, so where the line
     is drawn changes the grouping.
     """
-    ps = list(trackset.by_psid(psid))
+    ps = list(trackset.by_line(trackset.the_project, psid))
     parent = {p.key: p.key for p in ps}
 
     def find(k):
@@ -139,7 +139,7 @@ def site_scope(trackset: L.TrackSet, *, psids, easting, northing, scope: str,
     psids = tuple(int(p) for p in psids)
     keep, dropped = [], []
     for p in psids:
-        cands = trackset.by_psid(p)
+        cands = trackset.by_line(trackset.the_project, p)
         if not cands:
             continue
         if scope == "psid":
@@ -263,7 +263,7 @@ def on_site_line(trackset, mark_easting, mark_northing, psid, *, site_easting,
     different (138.0/138.1: 135 s apart, 21.6 sigma), while one line interrupted by
     missing tiles has a long gap and is the same (133.0/133.1: 682 s apart, 0.2 sigma).
     """
-    cands = trackset.by_psid(int(psid))
+    cands = trackset.by_line(trackset.the_project, int(psid))
     if len(cands) <= 1:
         return True, "single pass: no ambiguity"
     site_pass = min(cands, key=lambda q: _track_distance(site_easting, site_northing,
