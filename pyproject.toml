@@ -51,7 +51,18 @@ lidar-diff-figures = "lidar_diff_icp.figures:main"
 Repository = "https://github.com/MNiMORPH/lidar-diff-icp"
 
 [tool.setuptools.packages.find]
-where = ["src"]
+# TWO top-level packages, deliberately not one. `trust` is the provenance/gate system and
+# is SEPARATE from the science library (Andy, 2026-09-09): it keeps its own namespace, so
+# every existing `import trust.provenance` is unchanged, rather than becoming
+# `lidar_diff_icp.trust` across 43 files. Declaring it here is also what makes it
+# importable at all -- until now `trust` resolved only because everything ran with the
+# repo root as CWD, an undeclared property that nothing tested and 43 files relied on.
+# This does not foreclose splitting `trust` into its own distribution later; it is the
+# step that has to happen first either way.
+# `trust.hooks` is intentionally NOT a package (no __init__.py): its two files are invoked
+# by absolute path from the hook settings, never imported.
+where = ["src", "."]
+include = ["lidar_diff_icp*", "trust*"]
 
 [tool.pytest.ini_options]
 # Without this, a bare `pytest` collects from the repo root and IMPORTS every analysis
