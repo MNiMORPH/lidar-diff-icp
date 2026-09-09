@@ -42,29 +42,28 @@ import subprocess
 # metadata (lidar_semn2008.html) publishes a per-county RMSE and sample count.  Freeborn
 # has a validation report in the same tree but is NOT in that list and is not gen1.
 SEMN_COUNTIES = ("dodge", "fillmore", "houston", "mower", "olmsted", "steele",
-                 "wabasha", "winona")
+                 "wabasha", "winona")   # the DEFAULT region set: reproduces the bundled CSV
 
 # InPort 68818 / lidar_semn2008.html, "MnDNR's Tests": county -> (RMSE m, n).
 PUBLISHED = {"dodge": (0.129, 121), "fillmore": (0.155, 128), "houston": (0.110, 134),
              "mower": (0.161, 115), "olmsted": (0.117, 125), "steele": (0.125, 137),
              "wabasha": (0.106, 97), "winona": (0.161, 176)}
 
-# WHICH ACQUISITION EACH COUNTY BELONGS TO, and the geoid it was reduced with.
-# gen1 is NOT one statewide 2008 survey: the six pilot sites fall in four different
-# acquisitions, and three of them are on Geoid09 rather than Geoid03. The reports
-# themselves state no datum -- this is a DATASET-level assertion, quoted from each
-# project's MnGeo metadata page, and it must never be defaulted: getting it wrong moves
-# gen1 bodily (measured 2026-09-07: +54.87 mm at Ramsey, +27.75 at Carlton, +26.39 at
-# Cook, against a Battle Creek LoD of 90 mm).
-#   county -> (project_id, geoid_model, collected, metadata page, quote)
-ACQUISITIONS = {c: ("lidar_semn2008", "GEOID03", "2008", "lidar_semn2008.html",
-                    "Vertical datum: NAVD88 (Geoid03)")
-                for c in ("dodge", "fillmore", "houston", "mower", "olmsted", "steele",
-                          "wabasha", "winona")}
-ACQUISITIONS["lesueur"] = ("lidar_swmn2010", "GEOID03", "2010", "lidar_swmn2010.html",
-                           "The NAVD88, Geoid03 vertical datum was used.")
-ACQUISITIONS["ramsey"] = ("lidar_metro2011", "GEOID09", "2011", "lidar_metro2011.html",
-                          "The NAVD88 (Geoid09) vertical datum was used.")
+# WHICH ACQUISITION EACH REPORT BELONGS TO, and the geoid it was reduced with, comes from
+# ONE place: lidar_diff_icp.acquisitions. This module used to carry its own copy, which is
+# exactly the kind of second table that drifts -- and the fact it drifts silently is what
+# made the geoid bug cost +54.87 mm at Ramsey. The pipeline and this parser now read the
+# same registry.
+#
+# A "region" is the report STEM, which is a county for the surveys MnGeo files that way and
+# a PROJECT BLOCK for the ones it does not. That distinction is not cosmetic: cook and
+# carlton looked as though no validation report existed, because Arrowhead and Duluth file
+# theirs under projects/<name>/ rather than county/<name>/. They have 108 and 508
+# checkpoints respectively.
+import sys as _sys, os as _os
+_sys.path.insert(0, _os.path.join(_os.path.dirname(_os.path.abspath(__file__)),
+                                  "..", "..", "..", "src"))
+from lidar_diff_icp.acquisitions import BY_REPORT_REGION      # noqa: E402
 
 COVER = {"1": "L1O", "2": "L2T", "3": "L3B", "4": "L4F", "5": "L5U"}
 COVER_NAME = {"L1O": "open terrain", "L2T": "tall weeds and crops",
@@ -127,23 +126,26 @@ def find_pdfs(pdf_dir: str, counties=SEMN_COUNTIES) -> dict:
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--pdf-dir", required=True,
-                    help="directory holding <county>*_validation_report.pdf")
+                    help="directory holding <region>*validation_report.pdf")
     ap.add_argument("--out", default="src/lidar_diff_icp/groundtruth/data/"
                                      "mn_dnr_2008_control_semn.csv")
     ap.add_argument("--check", action="store_true",
                     help="run the sign test and the published-RMSE reproduction")
-    ap.add_argument("--counties", nargs="+", default=list(SEMN_COUNTIES),
-                    help="counties to parse; default is the eight SE-MN 2008 counties, "
-                         "which reproduces the bundled CSV. Each must be in ACQUISITIONS, "
-                         "because its project and GEOID are read from there and are never "
-                         "defaulted.")
+    ap.add_argument("--regions", nargs="+", default=list(SEMN_COUNTIES),
+                    help="report stems to parse; default is the eight SE-MN 2008 counties, "
+                         "which reproduces the bundled CSV. A region is a COUNTY where "
+                         "MnGeo files the report that way and a PROJECT BLOCK where it "
+                         "does not (arrowhead_block3, duluth2012). Each must be in "
+                         "acquisitions.BY_REPORT_REGION: its project and GEOID are read "
+                         "from there and are never defaulted.")
     A = ap.parse_args()
 
-    counties = tuple(A.counties)
-    unknown = [c for c in counties if c not in ACQUISITIONS]
+    counties = tuple(A.regions)
+    unknown = [c for c in counties if c not in BY_REPORT_REGION]
     if unknown:
         raise SystemExit(
-            f"no acquisition recorded for {unknown}. Add it to ACQUISITIONS with the "
+            f"no acquisition recorded for {unknown}. Add its report stem to the "
+            f"covering Acquisition's `report_regions` in lidar_diff_icp.acquisitions, with the "
             f"project id, the GEOID and the quote from that project's MnGeo metadata "
             f"page -- gen1 is several acquisitions on two different geoids, and guessing "
             f"the geoid moves the surface by tens of mm.")
@@ -193,7 +195,10 @@ def main():
         w = csv.DictWriter(fh, fields)
         w.writeheader()
         for c in counties:
-            project, geoid, collected, meta, quote = ACQUISITIONS[c]
+            _a = BY_REPORT_REGION[c]
+            project, geoid, collected, meta, quote = (
+                _a.project_id, _a.geoid_model, _a.collected, _a.metadata_page,
+                _a.datum_quote)
             rows, _ = parse_report(pdfs[c])
             for r in rows:
                 w.writerow(dict(

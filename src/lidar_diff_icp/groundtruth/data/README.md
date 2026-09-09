@@ -165,3 +165,32 @@ not the raw count.
 carry only `arrowhead_data_delivery_dates.pdf`. Control for those two must come from
 somewhere else (the Woolpert project report the Arrowhead metadata cites, or NGS leveled
 marks).
+
+## `mn_dnr_control_arrowhead2011_duluth2012.csv`
+
+The **616** checkpoints for the two surveys under `cook` and `carlton`, both **GEOID09**:
+
+| project | site | report | marks |
+|---|---|---|---|
+| `lidar_arrowhead2011` | cook | `projects/arrowhead/block_3/Arrowhead_block_3_validation_report.pdf` | 108 |
+| `lidar_duluth2012` | carlton | `projects/duluth_fall_2012/duluth_2012_vertical_validation_report.pdf` | 508 |
+
+**These were recorded on 2026-09-07 as having NO validation report. That was wrong** — the
+county directories hold only `arrowhead_data_delivery_dates.pdf`, because Arrowhead and
+Duluth file their reports under `projects/<name>/`, by BLOCK, not under `county/<name>/`.
+The links are in each project's own metadata page. Arrowhead has five blocks; block 3 is
+the one near cook (5.08 km, against 88–161 km for the others), and carlton is covered by
+both duluth2012 (3.10 km) and arrowhead block 4 (3.10 km) — the duluth2012 report is the
+one used, because `carlton`'s gen1 IS `lidar_duluth2012`.
+
+`--check`: the sign convention holds on **616/616** rows (`Error == Control Z − Surface Z`,
+max residual 0.000000 m; the other order misses by up to 1.716 m), and the parsed RMSE
+reproduces each report's printed figure — arrowhead_block3 0.1242 vs 0.124, duluth2012
+0.1250 vs 0.125.
+
+Nearest marks: **cook 5.08 km** (4 within 10 km, 1 open L1O; 13 within 25 km, 5 open),
+**carlton 3.10 km** (36 within 10 km, 11 open; 227 within 25 km, 98 open). Cook is thin
+under the open-ground-only rule; carlton is well covered.
+
+**All six pilot sites now have gen1 control.** The parser takes `--regions`, not
+`--counties`, because a region is a county only where MnGeo files it that way.

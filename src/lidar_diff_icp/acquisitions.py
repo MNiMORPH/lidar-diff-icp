@@ -56,6 +56,11 @@ class Acquisition:
     metadata_page: str
     datum_quote: str
     counties: tuple[str, ...]
+    #: The MnGeo validation reports that carry this survey's checkpoint tables, by the
+    #: stem the parser matches. NOT always per-county: the Arrowhead and Duluth surveys
+    #: file theirs under `projects/<name>/`, by BLOCK, which is why the county
+    #: directories look as though no report exists. Empty means none has been located.
+    report_regions: tuple[str, ...] = ()
 
     @property
     def geoid_grid(self) -> str:
@@ -75,29 +80,40 @@ ACQUISITIONS: dict[str, Acquisition] = {
             "lidar_semn2008", "GEOID03", "2008", "lidar_semn2008.html",
             "Vertical datum: NAVD88 (Geoid03)",
             ("dodge", "fillmore", "houston", "mower", "olmsted", "steele",
-             "wabasha", "winona")),
+             "wabasha", "winona"),
+            report_regions=("dodge", "fillmore", "houston", "mower", "olmsted",
+                            "steele", "wabasha", "winona")),
         Acquisition(
             "lidar_swmn2010", "GEOID03", "2010", "lidar_swmn2010.html",
             "The NAVD88, Geoid03 vertical datum was used.",
-            ("lesueur",)),
+            ("lesueur",), report_regions=("lesueur",)),
         Acquisition(
             "lidar_metro2011", "GEOID09", "2011", "lidar_metro2011.html",
             "The NAVD88 (Geoid09) vertical datum was used.",
-            ("ramsey",)),
+            ("ramsey",), report_regions=("ramsey",)),
         Acquisition(
             "lidar_arrowhead2011", "GEOID09", "2011", "lidar_arrowhead2011.html",
             "The geoid used to reduce satellite derived elevations to orthometric "
             "heights was Geoid09.",
-            ("cook",)),
+            ("cook",),
+            # projects/arrowhead/block_3/Arrowhead_block_3_validation_report.pdf --
+            # nearest mark 5.08 km from the cook tile. Blocks 1,2,4,5 are 88-161 km away.
+            report_regions=("arrowhead_block3",)),
         Acquisition(
             "lidar_duluth2012", "GEOID09", "2012", "lidar_duluth2012.html",
             "Lidar data are in the UTM Zone 15 coordinate system, NAD83 96, NAVD88 "
             "Geoid09 meters tiled by USGS 1/16, 1:24,000 quadrangles.",
-            ("carlton",)),
+            ("carlton",),
+            # projects/duluth_fall_2012/duluth_2012_vertical_validation_report.pdf --
+            # 508 checkpoints, nearest 3.10 km from the carlton tile.
+            report_regions=("duluth2012",)),
     )
 }
 
 _BY_COUNTY = {c: a for a in ACQUISITIONS.values() for c in a.counties}
+#: report-stem -> Acquisition, for the checkpoint parser. A "region" is a county for the
+#: surveys MnGeo files that way and a project block for the ones it does not.
+BY_REPORT_REGION = {r: a for a in ACQUISITIONS.values() for r in a.report_regions}
 
 
 def for_project(project_id: str) -> Acquisition:
