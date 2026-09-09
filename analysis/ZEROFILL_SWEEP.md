@@ -35,7 +35,7 @@ cache and the PF1 source now agree at +-17.00 deg, the scanner's actual half-ang
 
 **Scope, checked, not assumed:** `difference_dem` is NOT affected. It builds its PointCloud
 explicitly from `f.scan_angle * 0.006` (pipeline.py:686, 697, 707) rather than through
-`read_tile`. The live callers were `ground_control/our_surface.py` and
+`read_tile`. The live callers were `src/lidar_diff_icp/groundtruth/reconstruct.py` and
 `scripts/swath_consistency.py`.
 
 Five tests in `tests/test_io_scan_angle.py`, shown to bite: restoring the PF<=5-only lookup

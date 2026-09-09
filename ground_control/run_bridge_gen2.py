@@ -34,7 +34,7 @@ sys.path.insert(0, str(_HERE.parent))
 sys.path.insert(0, str(_HERE.parent / "src"))
 
 import control  # noqa: E402
-import our_surface as OS  # noqa: E402
+from lidar_diff_icp.groundtruth import reconstruct as OS  # noqa: E402
 from trust.provenance import Run  # noqa: E402
 
 
@@ -114,7 +114,7 @@ def main(argv=None):
             if s is None:
                 failed.append(rad); continue
             sp = s; used.append(rad)
-            vals.append((float(zdel) - s.z_geoid18_m) * 1000.0)
+            vals.append((float(zdel) - s.z_after_frame_m) * 1000.0)
         if not vals:
             print(f"  {pid}: no radius could be fitted ({failed} failed)")
             continue
@@ -123,7 +123,7 @@ def main(argv=None):
                          radius_spread_mm=spread, n_radii_used=len(used),
                          radii_failed=failed, n_ground=sp.n_ground_pts))
         table.append([pid, r["point_type"], sp.n_ground_pts, f"{float(zdel):.3f}",
-                      f"{sp.z_geoid18_m:.3f}", f"{br:+.1f}", f"{spread:.1f}",
+                      f"{sp.z_after_frame_m:.3f}", f"{br:+.1f}", f"{spread:.1f}",
                       f"{len(used)}/{len(a.radii_m)}"])
     R.table(["point_id", "type", "n_ground", "delivered_z_m", "ours_z_m", "bridge_mm",
              "radius_spread_mm", "n_radii"], table)

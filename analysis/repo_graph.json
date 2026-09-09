@@ -248,7 +248,8 @@
    "run_grass_lift_check.py"
   ],
   "REPORT.md": [
-   "provenance.py"
+   "provenance.py",
+   "reconstruct.py"
   ],
   "SCRIPT_INVENTORY.md": [
    "classify_scripts.py",
@@ -324,7 +325,7 @@
    "stop_gate.py"
   ],
   "ZEROFILL_SWEEP.md": [
-   "our_surface.py",
+   "reconstruct.py",
    "swath_consistency.py"
   ],
   "banding_source_investigation.md": [
@@ -340,7 +341,7 @@
   ]
  },
  "n_md": 90,
- "n_py": 300,
+ "n_py": 301,
  "sibling_imports": {
   "calibrate_ground_q.py": [
    "control_lowveg_offset",
@@ -399,11 +400,7 @@
    "same_line"
   ],
   "run_bridge_gen2.py": [
-   "control",
-   "our_surface"
-  ],
-  "run_bridge_wide.py": [
-   "our_surface"
+   "control"
   ],
   "run_catchment_check.py": [
    "same_line"

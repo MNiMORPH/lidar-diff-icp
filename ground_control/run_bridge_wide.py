@@ -31,7 +31,7 @@ sys.path.insert(0, str(_HERE))
 sys.path.insert(0, str(_HERE.parent))
 sys.path.insert(0, str(_HERE.parent / "src"))
 
-import our_surface as OS  # noqa: E402
+from lidar_diff_icp.groundtruth import reconstruct as OS  # noqa: E402
 from lidar_diff_icp.groundtruth import gen1_datum as G, tie as T  # noqa: E402
 from trust.provenance import Run  # noqa: E402
 
@@ -135,7 +135,7 @@ def main(argv=None):
         gv = grid_value("data/derived/elbaext", "dod_geoid", E, N, a.radii_m[-1])
         if sp and gv:
             print(f"    {pid:<8s} ({mk.cover_class})  local - grid = "
-                  f"{(sp.z_geoid18_m - gv)*1000:+.1f} mm")
+                  f"{(sp.z_after_frame_m - gv)*1000:+.1f} mm")
 
     keep = set(a.covers)
     marks = [m for m in control if m.cover_class in keep and m.dnr_surface_z_m is not None]
@@ -164,7 +164,7 @@ def main(argv=None):
                 continue                  # fitted is reported, not dropped
             sp = s
             used.append(r)
-            vals.append((mk.dnr_surface_z_m - s.z_geoid03_m) * 1000.0)
+            vals.append((mk.dnr_surface_z_m - s.z_native_frame_m) * 1000.0)
         if not vals:
             print(f"    [{i:>2}/{len(todo)}] {mk.aliases[0]:<24s} -- NO radius could be "
                   f"fitted (all of {a.radii_m} gave <6 cells)")
@@ -182,7 +182,7 @@ def main(argv=None):
                          lines=list(sp.lines_present)))
         rows.append([mk.aliases[0], mk.cover_class, os.path.basename(tp)[:-4],
                      "/".join(map(str, sp.lines_present)), sp.n_ground_pts,
-                     f"{mk.dnr_surface_z_m:.3f}", f"{sp.z_geoid03_m:.3f}",
+                     f"{mk.dnr_surface_z_m:.3f}", f"{sp.z_native_frame_m:.3f}",
                      f"{br:+.1f}", f"{spread:.1f}", f"{len(used)}/{len(a.radii_m)}"])
         print(f"    [{i:>2}/{len(todo)}] {mk.aliases[0]:<24s} bridge {br:+8.1f} mm  "
               f"spread {spread:5.1f}  ({os.popen('free -m').read().splitlines()[1].split()[2]} MB used)")

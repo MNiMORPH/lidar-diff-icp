@@ -1,5 +1,9 @@
 """Reconstruct OUR gen1 surface at a point, anywhere a gen1 tile is on disk.
 
+Promoted from ``ground_control/our_surface.py`` on 2026-09-09 and renamed to say what it
+does. Rebuilding our surface at a point is generally useful -- it is how any bridge is
+measured -- and the statewide datum needs it away from Elba.
+
 Why
 ---
 The bridge -- ``z_delivered - z_ours`` -- can only be measured where our reconstructed
@@ -54,13 +58,21 @@ CACHE = _HERE / "data" / "swath_constants_cache.json"
 class SurfacePoint:
     """Our gen1 surface at one coordinate, and everything that went into it."""
 
-    z_geoid18_m: float          # on gen2's frame, as the product carries it
-    z_geoid03_m: float          # geoid term removed, comparable to the 2008 control
+    # NOT named after a geoid. These were z_geoid18_m / z_geoid03_m until 2026-09-09,
+    # which was already wrong: gen1 is four acquisitions on TWO geoid models, so "geoid03"
+    # is false at cook, carlton and battlecreek (all GEOID09). The frames are named by
+    # ROLE, and which grid realises the native frame comes from the Site's survey via
+    # lidar_diff_icp.acquisitions.
+    z_after_frame_m: float      # on gen2's frame (3DEP GEOID18), as the product carries it
+    z_native_frame_m: float     # geoid term removed: the survey's OWN frame, comparable
+                                # to that survey's own control
     geoid_mm: float
     n_ground_pts: int
     n_cells: int
     radius_m: float
-    csf_half_width_m: float
+    # The WINDOW, not necessarily a CSF window: the gen2 path reuses this field as a
+    # plain half-width, where 'csf' meant nothing.
+    window_half_width_m: float
     swath_source: str
     lines_present: tuple
     note: str = ""
@@ -140,10 +152,11 @@ def our_gen1_surface_at(tile_path, easting, northing, *, csf_half_width_m, res,
                                        surface_order=2, quantile=0.50)
     if not np.isfinite(zhat):
         return None
-    return SurfacePoint(z_geoid18_m=float(zhat + gshift), z_geoid03_m=float(zhat),
+    return SurfacePoint(z_after_frame_m=float(zhat + gshift),
+                        z_native_frame_m=float(zhat),
                         geoid_mm=float(gshift * 1000.0), n_ground_pts=int(x.size),
                         n_cells=int(zc.size), radius_m=float(radius_m),
-                        csf_half_width_m=float(csf_half_width_m), swath_source=src,
+                        window_half_width_m=float(csf_half_width_m), swath_source=src,
                         lines_present=tuple(sorted(int(v) for v in np.unique(ps))))
 
 
@@ -193,8 +206,8 @@ def our_gen2_surface_at(laz_path, easting, northing, *, res, radius_m, ground_cl
                                        surface_order=2, quantile=0.50)
     if not np.isfinite(zhat):
         return None
-    return SurfacePoint(z_geoid18_m=float(zhat), z_geoid03_m=float("nan"),
+    return SurfacePoint(z_after_frame_m=float(zhat), z_native_frame_m=float("nan"),
                         geoid_mm=0.0, n_ground_pts=int(x.size), n_cells=int(s.size),
-                        radius_m=float(radius_m), csf_half_width_m=float(hw),
+                        radius_m=float(radius_m), window_half_width_m=float(hw),
                         swath_source="none (gen2 is the reference epoch)",
                         lines_present=(), note="gen2: no swath alignment, no geoid term")

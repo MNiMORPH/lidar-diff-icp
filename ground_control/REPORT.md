@@ -32,7 +32,9 @@ import control          # epoch-agnostic access to both control tables
 import lines            # gen1 flight-line tracks, one per PASS
 import same_line        # datum from the site's own lines, marks assigned by RETURNS
 import datum            # kriged residual-field datum, cover as a treatment
-import our_surface      # rebuild OUR gen1/gen2 surface anywhere a tile is on disk
+from lidar_diff_icp.groundtruth import reconstruct   # rebuild OUR gen1/gen2
+                                                    # surface anywhere a tile is on disk
+                                                    # (was src/lidar_diff_icp/groundtruth/reconstruct.py)
 import gen2_swath_deviation   # gen2's per-swath vertical deviation
 ```
 
