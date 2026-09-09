@@ -3,6 +3,46 @@
 Deliverable for `HANDOFF.md` §8. The point is to make promotion a **decision** later
 rather than an archaeology exercise.
 
+> **AMENDED 2026-09-09 (Andy agreed 1-3). THE PURPOSE HAS CHANGED.** This was written
+> 2026-08-31 as a tidying document. Two things since have made it something else: every
+> pilot site now has gen1 control, and `absolute_datum_mm` is `None` at 6 of 6 while
+> README step 6 and `FRAME.md` both call it required. So its job is now **to make the
+> datum a routine pipeline step at any Minnesota site**, and the list below should be
+> judged against that. The four promotions and three non-promotions still stand; what
+> follows amends them.
+>
+> **1. Everything promoted must be ACQUISITION-AWARE. This document assumes gen1 is one
+> survey. It is four.** `lines.py` opens "Flight-line ground tracks for the 2008 gen1
+> acquisition", singular, and `data/gen1_line_tracks.json` is keyed by **psid alone**,
+> holding only SE-MN lines (115-156, 1512, 1542, 10008-10012; 67 passes over 41 psids).
+> elba 135-138 and whitewater 143-146 are in it; mnrv 6191-6251, cook 8-11, carlton 86-90
+> and battlecreek 1012-1014/1101-1102 are not. **`psid` is a PER-PROJECT line number**, so
+> extending that file statewide keyed by psid alone will eventually merge two different
+> flight lines that share a number -- silently. `TrackSet` must be keyed by
+> `(project_id, psid)`, mirroring `lidar_diff_icp.acquisitions`. Same for the geoid: gen1
+> is four surveys on two geoid models, and applying one survey's frame to another's data
+> cost +54.87 mm at Ramsey.
+>
+> **2. The `sys.path` item in section 3 is now half-done, and the promotions finish it.**
+> `trust` was declared a package on 2026-09-09 (Andy: it is SEPARATE from the science
+> library, so it keeps its own namespace and no `import trust.provenance` changed); it had
+> been importable only because everything ran with the repo root as CWD. That removes the
+> 34 hacks that existed only to reach `trust` or the installed package. Of the 35 that
+> remain, all sibling imports, these four promotions account for 23: `lines` (9),
+> `same_line` (7), `control` (5), `our_surface` (2). The cleanup is a consequence of the
+> promotion, not a separate task.
+>
+> **3. "Do NOT promote `datum.py`" is now MORE right, not less.** Its stated reason was an
+> unidentified `sd_field` (2.97-37.36 mm across the sweep), and it was kept as the
+> documented fallback for sites whose own lines carry no control. As of 2026-09-09 no site
+> is in that position, so the fallback has no remaining customer.
+>
+> **PROPOSED, not yet agreed -- strike this if unwanted.** Section 4's checklist is five
+> procedural steps and contains no GATE. Add one: *the promoted code must reproduce Elba's
+> adopted constant -- 58.70 +- 25.89 mm from 8 marks on 5 lines -- before it is trusted at
+> a new site.* Reproduce the known case first, then generalise; that is what caught the
+> parser's behaviour when it was extended to new acquisitions on 2026-09-09.
+
 ---
 
 ## 1. How the rest of the project uses it today
