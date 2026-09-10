@@ -14,7 +14,7 @@ later.  It used the only control that existed at the time.
 
 Sign convention throughout: ``tie = surveyed - z_lidar``.  **POSITIVE = the surface reads
 LOW**, so the constant is what you ADD.  Verified per row by
-:func:`control.verify_sign_convention` rather than inherited.
+:func:`residual_field.verify_sign_convention` rather than inherited.
 
 WHAT THE UNCERTAINTY IS THE UNCERTAINTY OF
 ------------------------------------------
@@ -64,7 +64,7 @@ _HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(_HERE))
 sys.path.insert(0, str(_HERE.parent / "src"))
 
-import control  # noqa: E402
+from lidar_diff_icp.groundtruth import residual_field as control  # noqa: E402
 from lidar_diff_icp.groundtruth import residual_field as RF  # noqa: E402
 
 
@@ -161,7 +161,7 @@ def datum_at_site(epoch: str, *, easting: float, northing: float,
             f"known: {tuple(TREATMENTS[epoch])}")
     spec = TREATMENTS[epoch][treatment]
 
-    load = control.load_control(epoch, surface=surface)
+    load = control.load_control_residuals(epoch, surface=surface)
     cr = load.residuals
     keep = np.isin(cr.cover, np.array(spec["marks"]))
     x, y, v = cr.easting[keep], cr.northing[keep], cr.resid_mm[keep]

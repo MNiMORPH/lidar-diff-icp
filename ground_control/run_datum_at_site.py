@@ -25,7 +25,7 @@ _HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(_HERE))
 sys.path.insert(0, str(_HERE.parent / "src"))
 
-import control  # noqa: E402
+from lidar_diff_icp.groundtruth import residual_field as control  # noqa: E402
 import datum  # noqa: E402
 sys.path.insert(0, str(_HERE.parent))
 from trust.provenance import Run  # noqa: E402

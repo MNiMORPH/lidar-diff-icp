@@ -80,7 +80,7 @@ Artifacts other work can use directly, no import needed:
 
 | module | destination | why | on promotion |
 |---|---|---|---|
-| `control.py` | **fold into `groundtruth/residual_field.py`** | it exists only because that module's *edges* are gen1-schema-bound while its estimators are already epoch-agnostic. Promotion means making `load_residuals` take an epoch, then **deleting this module** | `load_control` → `residual_field.load_residuals(epoch, surface=)`; keep `verify_sign_convention` |
+| ~~`control.py`~~ **DONE 2026-09-10, module deleted** | `groundtruth/residual_field.py` | it exists only because that module's *edges* are gen1-schema-bound while its estimators are already epoch-agnostic. Promotion means making `load_residuals` take an epoch, then **deleting this module** | `load_control` → `residual_field.load_residuals(epoch, surface=)`; keep `verify_sign_convention` |
 | ~~`lines.py`~~ **DONE 2026-09-09** | `groundtruth/lines.py` | flight-line tracks are a property of an acquisition, needed at every site | rename `Pass.key` → `pass_id`; keep `INHERITED_PARAMS` and its provenance note |
 | ~~`same_line.py`~~ **DONE 2026-09-09**, returns route only | `groundtruth/same_line.py` | the site-local estimator; the statewide goal needs it everywhere | rename `estimate_by_returns` → `estimate` and drop the old catchment `estimate` (superseded, see §3) |
 | ~~`our_surface.py`~~ **DONE 2026-09-09** | `groundtruth/reconstruct.py` | rebuilding our surface at a point is generally useful — it is how any bridge is measured | rename to say what it does; `SurfacePoint.z_geoid18_m/z_geoid03_m` → `z_after_frame_m` / `z_native_frame_m`, which do not hard-code geoid names |

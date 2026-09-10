@@ -20,7 +20,7 @@ from scipy import stats
 _HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(_HERE)); sys.path.insert(0, str(_HERE.parent))
 sys.path.insert(0, str(_HERE.parent / "src"))
-import control  # noqa: E402
+from lidar_diff_icp.groundtruth import residual_field as control  # noqa: E402
 from lidar_diff_icp.groundtruth import gen1_datum as G  # noqa: E402
 from trust.provenance import Run  # noqa: E402
 
@@ -78,7 +78,7 @@ def main(argv=None):
     for l, v in sorted(within):
         out.append([f"WITHIN line {l}: far minus near over {v[-1][0]-v[0][0]:.1f} km",
                     f"{v[-1][1]-v[0][1]:+.1f}"])
-    L = control.load_control("gen1"); r = L.residuals
+    L = control.load_control_residuals("gen1"); r = L.residuals
     t0, p0 = stats.ttest_1samp(r.resid_mm, 0.0)
     out += [["hold-out check: all 963 published residuals, mean", f"{r.resid_mm.mean():+.2f}"],
             ["hold-out check: t against zero", f"{t0:+.2f}"],

@@ -341,7 +341,7 @@
   ]
  },
  "n_md": 90,
- "n_py": 301,
+ "n_py": 300,
  "sibling_imports": {
   "calibrate_ground_q.py": [
    "control_lowveg_offset",
@@ -378,9 +378,6 @@
   "crossline_fit.py": [
    "swath_across_track_test"
   ],
-  "datum.py": [
-   "control"
-  ],
   "degeneracy_identifiability.py": [
    "swath_across_track_test"
   ],
@@ -399,14 +396,10 @@
   "run_bridge.py": [
    "same_line"
   ],
-  "run_bridge_gen2.py": [
-   "control"
-  ],
   "run_catchment_check.py": [
    "same_line"
   ],
   "run_datum_at_site.py": [
-   "control",
    "datum"
   ],
   "run_datum_by_returns.py": [
@@ -414,9 +407,6 @@
   ],
   "run_gen2_swath_deviation.py": [
    "gen2_swath_deviation"
-  ],
-  "run_nearfar_and_holdout.py": [
-   "control"
   ],
   "run_same_line.py": [
    "same_line"

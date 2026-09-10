@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "ground_control"))
 sys.path.insert(0, str(ROOT / "src"))
 
-import control  # noqa: E402
+from lidar_diff_icp.groundtruth import residual_field as control  # noqa: E402
 
 
 # ------------------------------------------------------------- sign convention
@@ -42,7 +42,7 @@ def test_gen2_every_surface_is_surveyed_minus_lidar(surface, n):
 # ------------------------------------------------------------- de-duplication
 
 def test_gen1_dedup_1004_rows_to_963_marks():
-    L = control.load_control("gen1")
+    L = control.load_control_residuals("gen1")
     assert L.n_rows_in == 1004
     assert L.n_marks_out == 963
     assert L.n_dup_rows == 41
@@ -58,7 +58,7 @@ def test_open_marks_come_from_the_column_not_the_point_id_prefix():
     of the CSV's own 230.  This test fails if load_control is ever changed to parse the
     prefix.  Proven to bite -- see REPORT.md.
     """
-    L = control.load_control("gen1")
+    L = control.load_control_residuals("gen1")
     r = L.residuals
     from_column = int((r.cover == "L1O").sum())
     from_prefix = int(sum(1 for p in r.point_id
@@ -75,17 +75,17 @@ def test_open_marks_come_from_the_column_not_the_point_id_prefix():
 
 def test_gen2_requires_an_explicit_surface():
     with pytest.raises(ValueError, match="requires surface"):
-        control.load_control("gen2")
+        control.load_control_residuals("gen2")
 
 
 def test_gen1_rejects_a_surface_argument():
     with pytest.raises(ValueError, match="ONE surface"):
-        control.load_control("gen1", surface="ql1_dem")
+        control.load_control_residuals("gen1", surface="ql1_dem")
 
 
 def test_the_four_gen2_surfaces_are_not_interchangeable():
     """Different marks, different counts, different answers -- so `surface` is a choice."""
-    got = {s: control.load_control("gen2", surface=s) for s in control.GEN2_SURFACES}
+    got = {s: control.load_control_residuals("gen2", surface=s) for s in control.GEN2_SURFACES}
     assert got["ql1_dem"].n_marks_out == 238
     assert got["ql0_dem"].n_marks_out == 157
     means = {s: float(np.mean(L.residuals.resid_mm)) for s, L in got.items()}
@@ -97,7 +97,7 @@ def test_the_four_gen2_surfaces_are_not_interchangeable():
 def test_lcps_carry_no_residual_and_so_never_enter_a_field():
     """All 143 LCPs are absent from every surface -- a fact of the table, not a filter."""
     for s in control.GEN2_SURFACES:
-        L = control.load_control("gen2", surface=s)
+        L = control.load_control_residuals("gen2", surface=s)
         assert "calibration" not in L.roles_present, s
         assert set(L.roles_present) == {"check"}, s
         assert "LCP" not in L.covers_present, s
@@ -106,7 +106,7 @@ def test_lcps_carry_no_residual_and_so_never_enter_a_field():
 def test_control_residuals_is_the_shape_residual_field_already_consumes():
     """The adapter must hand `residual_field`'s own dataclass to its own estimators."""
     from lidar_diff_icp.groundtruth.residual_field import ControlResiduals, stratify
-    L = control.load_control("gen1")
+    L = control.load_control_residuals("gen1")
     assert isinstance(L.residuals, ControlResiduals)
     m = stratify(L.residuals, ("L1O",))
     assert int(np.asarray(m).sum()) == 230

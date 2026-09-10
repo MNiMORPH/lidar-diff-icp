@@ -33,7 +33,7 @@ sys.path.insert(0, str(_HERE))
 sys.path.insert(0, str(_HERE.parent))
 sys.path.insert(0, str(_HERE.parent / "src"))
 
-import control  # noqa: E402
+from lidar_diff_icp.groundtruth import residual_field as control  # noqa: E402
 from lidar_diff_icp.groundtruth import reconstruct as OS  # noqa: E402
 from trust.provenance import Run  # noqa: E402
 
