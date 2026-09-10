@@ -61,6 +61,12 @@ class Acquisition:
     #: file theirs under `projects/<name>/`, by BLOCK, which is why the county
     #: directories look as though no report exists. Empty means none has been located.
     report_regions: tuple[str, ...] = ()
+    #: The bundled control-set STEM (a CSV in groundtruth/data) carrying this survey's
+    #: marks. NOT one file per survey: two files each hold TWO surveys, so a caller must
+    #: FILTER on the ``project_id`` column rather than take a whole file -- loading
+    #: arrowhead2011_duluth2012 whole for cook would pull in carlton's 508 duluth marks.
+    #: Empty means no control set has been transcribed for this survey.
+    control_set: str = ""
 
     @property
     def geoid_grid(self) -> str:
@@ -82,15 +88,18 @@ ACQUISITIONS: dict[str, Acquisition] = {
             ("dodge", "fillmore", "houston", "mower", "olmsted", "steele",
              "wabasha", "winona"),
             report_regions=("dodge", "fillmore", "houston", "mower", "olmsted",
-                            "steele", "wabasha", "winona")),
+                            "steele", "wabasha", "winona"),
+            control_set="mn_dnr_2008_control_semn"),
         Acquisition(
             "lidar_swmn2010", "GEOID03", "2010", "lidar_swmn2010.html",
             "The NAVD88, Geoid03 vertical datum was used.",
-            ("lesueur",), report_regions=("lesueur",)),
+            ("lesueur",), report_regions=("lesueur",),
+            control_set="mn_dnr_control_swmn2010_metro2011"),
         Acquisition(
             "lidar_metro2011", "GEOID09", "2011", "lidar_metro2011.html",
             "The NAVD88 (Geoid09) vertical datum was used.",
-            ("ramsey",), report_regions=("ramsey",)),
+            ("ramsey",), report_regions=("ramsey",),
+            control_set="mn_dnr_control_swmn2010_metro2011"),
         Acquisition(
             "lidar_arrowhead2011", "GEOID09", "2011", "lidar_arrowhead2011.html",
             "The geoid used to reduce satellite derived elevations to orthometric "
@@ -98,7 +107,8 @@ ACQUISITIONS: dict[str, Acquisition] = {
             ("cook",),
             # projects/arrowhead/block_3/Arrowhead_block_3_validation_report.pdf --
             # nearest mark 5.08 km from the cook tile. Blocks 1,2,4,5 are 88-161 km away.
-            report_regions=("arrowhead_block3",)),
+            report_regions=("arrowhead_block3",),
+            control_set="mn_dnr_control_arrowhead2011_duluth2012"),
         Acquisition(
             "lidar_duluth2012", "GEOID09", "2012", "lidar_duluth2012.html",
             "Lidar data are in the UTM Zone 15 coordinate system, NAD83 96, NAVD88 "
@@ -106,7 +116,8 @@ ACQUISITIONS: dict[str, Acquisition] = {
             ("carlton",),
             # projects/duluth_fall_2012/duluth_2012_vertical_validation_report.pdf --
             # 508 checkpoints, nearest 3.10 km from the carlton tile.
-            report_regions=("duluth2012",)),
+            report_regions=("duluth2012",),
+            control_set="mn_dnr_control_arrowhead2011_duluth2012"),
     )
 }
 

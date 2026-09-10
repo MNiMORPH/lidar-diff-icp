@@ -69,3 +69,49 @@ def test_county_lookup_agrees_with_the_project_lookup():
     reading a stale copy."""
     for county, acq in A._BY_COUNTY.items():
         assert A.for_county(county) is A.for_project(acq.project_id)
+
+
+def test_every_site_resolves_its_own_survey_control():
+    """A Site's marks come from ITS survey, never from a default.
+
+    Both loaders used to mean the SE-Minnesota 2008 table: gen1_datum.load_control()
+    resolves DEFAULT_CONTROL at 18 bare call sites, and residual_field.GEN1_CSV hard-codes
+    the same file. So four of the six sites' marks -- bundled 2026-09-09 -- were reachable
+    but never reached. Same shape as the geoid default that cost +54.87 mm at Ramsey.
+    """
+    from lidar_diff_icp.groundtruth import gen1_datum as G
+    seen = {}
+    for name, s in SITES.items():
+        acq = A.for_project(s.gen1_project)
+        assert acq.control_set, f"{name}: no control set recorded for {s.gen1_project}"
+        cs = G.control_for_survey(s.gen1_project)
+        assert len(cs) > 0
+        assert all(m.checkpoint.project_id == s.gen1_project for m in cs.marks), (
+            f"{name}: control_for_survey returned another survey's marks")
+        seen[name] = len(cs)
+    # the four non-SE-MN sites must NOT be getting the SE-MN table
+    semn = seen["elba"]
+    for name in ("mnrv", "cook", "carlton", "battlecreek"):
+        assert seen[name] != semn, f"{name} is still being handed the SE-MN control"
+
+
+def test_a_point_id_is_unique_only_within_a_survey():
+    """THE REGRESSION. Two bundled files carry TWO surveys each, and a point_id repeats
+    across them: L1O-1108 is a lesueur monument AND a ramsey one, at different positions.
+
+    load_control's uniqueness guard is right to refuse that, so the survey filter must be
+    applied BEFORE it. Filtering afterwards can never run -- the load raises first. This
+    fails if `project` is ever moved to a post-load filter.
+    """
+    from lidar_diff_icp.groundtruth import gen1_datum as G
+    with pytest.raises(ValueError, match="two different positions"):
+        G.load_control("mn_dnr_control_swmn2010_metro2011")          # whole file
+    for proj, n in (("lidar_swmn2010", 100), ("lidar_metro2011", 108)):
+        assert len(G.load_control("mn_dnr_control_swmn2010_metro2011",
+                                  project=proj)) == n
+
+
+def test_an_unrecorded_control_set_refuses_rather_than_substituting():
+    from lidar_diff_icp.groundtruth import gen1_datum as G
+    with pytest.raises(KeyError, match="no acquisition recorded"):
+        G.control_for_survey("lidar_not_a_survey_2099")

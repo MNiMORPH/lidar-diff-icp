@@ -82,7 +82,7 @@ from pathlib import Path
 
 import numpy as np
 
-from .checkpoints import Checkpoint, read_checkpoint_csv
+from .checkpoints import Checkpoint, CheckpointSet, read_checkpoint_csv
 from .provenance import Param
 from .tie import GroundReturns, TieEstimate, estimate_tie, radius_ladder, vendor_ground_near
 
@@ -191,13 +191,46 @@ def _f(v):
         return None
 
 
-def load_control(name: str = DEFAULT_CONTROL) -> ControlSet:
+def control_for_survey(project_id: str) -> ControlSet:
+    """The control marks belonging to ONE gen1 survey.
+
+    Resolves the bundled control set from :mod:`lidar_diff_icp.acquisitions` and then
+    FILTERS to that survey's rows on the ``project_id`` column.
+
+    Both steps are needed. Two bundled files each carry TWO surveys --
+    ``mn_dnr_control_arrowhead2011_duluth2012`` holds 108 arrowhead and 508 duluth marks,
+    ``mn_dnr_control_swmn2010_metro2011`` holds 100 and 108 -- so taking a whole file
+    would hand cook carlton's marks. In the swmn/metro file the two surveys are not even
+    on the same geoid (GEOID03 and GEOID09).
+
+    This exists because ``load_control()`` defaults to the SE-Minnesota 2008 table and was
+    called bare at 18 sites, which silently meant "gen1" = one survey of four. That is the
+    same shape as the geoid default that cost +54.87 mm at Ramsey.
+    """
+    from .. import acquisitions
+    acq = acquisitions.for_project(project_id)          # raises on an unknown survey
+    if not acq.control_set:
+        raise LookupError(
+            f"no control set transcribed for {project_id!r}. Add its stem to that "
+            f"Acquisition's `control_set` once the marks are bundled; do NOT fall back "
+            f"to another survey's control.")
+    return load_control(acq.control_set, project=project_id)
+
+
+def load_control(name: str = DEFAULT_CONTROL, *, project: str | None = None) -> ControlSet:
     """Load a bundled control transcription, merging rows that are the same mark.
 
     Two rows are the same mark when their easting, northing **and** elevation are
     exactly equal as read from the file. That is an identity test, not a tolerance: two
     distinct monuments cannot share a coordinate to the millimetre. Rows that share a
     ``point_id`` but sit at different positions raise, rather than one silently winning.
+
+    ``project`` restricts to one survey's rows, and it is applied BEFORE that uniqueness
+    check because **a point_id is unique only WITHIN a survey**. Two bundled files carry
+    two surveys each, and checking across them is not merely stricter, it is wrong:
+    ``L1O-1108`` exists in both lesueur (455078.129, 4929263.954) and ramsey
+    (500613.369, 4980984.505), two different monuments that share a number. Filtering
+    afterwards would never run, because the load would already have raised.
     """
     path = _DATA / f"{name}.csv"
     if not path.exists():
@@ -207,6 +240,16 @@ def load_control(name: str = DEFAULT_CONTROL) -> ControlSet:
         raw = list(csv.DictReader(fh))
     if len(raw) != len(cset.points):
         raise AssertionError(f"{path}: {len(raw)} raw rows vs {len(cset.points)} parsed")
+    if project is not None:
+        pairs = [(cp, row) for cp, row in zip(cset.points, raw)
+                 if cp.project_id == project]
+        if not pairs:
+            raise LookupError(
+                f"{path}: no rows with project_id=={project!r}. Present: "
+                f"{sorted({cp.project_id for cp in cset.points})}")
+        cset = CheckpointSet(points=[cp for cp, _ in pairs], origin=cset.origin,
+                             fields=cset.fields)
+        raw = [row for _, row in pairs]
 
     seen_id, order, groups = {}, [], {}
     for cp, row in zip(cset.points, raw):
