@@ -311,6 +311,31 @@ each need their own `run_site_datum.py` run.
 
 **Stale-number note.** The dz spread quoted throughout the repo was **44.60 mm**, from an elbaext build older than 2026-09-01. It was corrected to **42.40 mm** on 2026-09-07 in README, this file, `SWATH_ALIGNMENT_METHOD.md`, `apply_datum.py`, `pipeline.py`, `ground_control/FRAME.md` and the handoff, together with the per-swath table each quotes. It will move again: elbaext was last built 2026-09-01, BEFORE the 1/variance weighting of 09-05, and rebuilding it also invalidates `SITE_DATUM_elbaext.json`, measured against those corrections three minutes after they were written.
 
+## THE ORDER (Andy, 2026-09-10) — work down this list
+
+1. **Control set from the Site's SURVEY, not a default.** `gen1_datum.load_control()`
+   resolves `DEFAULT_CONTROL = "mn_dnr_2008_control_semn"` at **18 bare call sites**, and
+   `residual_field.GEN1_CSV` hard-codes the same file. Five control sets sit in
+   `groundtruth/data/`, so the marks added 2026-09-09 for mnrv, battlecreek, cook and
+   carlton are reachable but never reached. Same shape as the geoid default that cost
+   +54.87 mm at Ramsey. Fix with the pattern that worked: the stem goes in
+   `acquisitions`, resolved from `Site.gen1_project`, refusing when absent. **Task #65 —
+   prerequisite for 2.**
+2. **Measure and apply the datum at all six sites (#60, and #11 in practice).**
+   `absolute_datum_mm` is None at 6 of 6 while README step 6 calls it required. Needs
+   Andy's confirmation of `run_site_datum.py`'s eleven parameters. Answers: are the six
+   DoDs mutually comparable once each sits on its own surveyed level?
+3. **Push.**
+4. **#63 as a DOCUMENTATION fix**, not an engineering change: `apply_datum`'s drift stage
+   re-levels each swath against gen2, which contradicts the "gen1-internal" claim.
+5. **Co-locate each findings document with its investigation (#55)** — ~10 moves.
+6. **The 127 unreached scripts (#56)** — Andy's call. By function and by removal-test: a
+   reachability scan pointed at load-bearing code four times in one week.
+7. **Rebuild elbaext** — the only product still on pre-variance-weighting code. Low value
+   until 2, which may supersede `SITE_DATUM_elbaext.json` anyway.
+8. **The vegetation thread (#25, #19, #16)** — parked; the correction measured worse than
+   the median on open ground and nothing since has changed that.
+
 ## The queue
 
 `analysis/NEXT_SESSION.md` holds the prepared plan: the last 7 moves (ready, needs a
