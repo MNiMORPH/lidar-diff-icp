@@ -313,11 +313,21 @@ each need their own `run_site_datum.py` run.
 
 ## ⚠ A CACHE SERVED A SUPERSEDED METHOD (2026-09-10)
 
-The swath-constants cache was keyed `tile|res|tie|exclude` — **nothing about the METHOD**.
-Commit 9e78f4a (09-05) reweighted the swath network by 1/variance instead of cell count, so
-a bridge run served pre-change entries alongside post-change ones and mixed two alignments
-in one answer. 25 of 29 marks reproduced; four moved, one by 45.1 mm; the mean went
-**−4.04 → −5.52 mm** while the median stayed +2.79, because the movers sit in the tails.
+The swath-constants cache was keyed `tile|res|tie|exclude` — **nothing about the METHOD** —
+so it CAN serve constants from a superseded alignment. Commit 9e78f4a (09-05) reweighted
+the swath network by 1/variance instead of cell count.
+
+**CORRECTED 2026-09-10, same day: it did not actually happen.** I first wrote that a run
+"mixed two alignments in one answer". It did not. Promoting `our_surface` had moved the
+cache path into the package, where no cache existed, so that run computed every tile fresh
+and bypassed the stale committed cache entirely — by accident, not design. Proof: a
+deliberate clean re-solve, cache deleted and keyed on the code, reproduces the earlier run
+on **29 of 29 marks** and gives the same mean, −5.5231.
+
+So the mixing was a HAZARD I found, not an event I observed. What the numbers actually
+show is simpler: **−4.04 was computed under the OLD weighting and −5.52 is the same 29
+marks under the current one.** Four marks move, one by 45.1 mm, and the median stays +2.79
+because the movers sit in the tails — which is how a change like this hides.
 
 FIXED (b7bb21c): the key now carries a digest of the whole `coreg` module, and the cache
 moved out of the package's bundled-control-data directory — promoting `our_surface` had
