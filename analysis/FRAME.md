@@ -311,6 +311,40 @@ each need their own `run_site_datum.py` run.
 
 **Stale-number note.** The dz spread quoted throughout the repo was **44.60 mm**, from an elbaext build older than 2026-09-01. It was corrected to **42.40 mm** on 2026-09-07 in README, this file, `SWATH_ALIGNMENT_METHOD.md`, `apply_datum.py`, `pipeline.py`, `ground_control/FRAME.md` and the handoff, together with the per-swath table each quotes. It will move again: elbaext was last built 2026-09-01, BEFORE the 1/variance weighting of 09-05, and rebuilding it also invalidates `SITE_DATUM_elbaext.json`, measured against those corrections three minutes after they were written.
 
+## ⚠ A CACHE SERVED A SUPERSEDED METHOD (2026-09-10)
+
+The swath-constants cache was keyed `tile|res|tie|exclude` — **nothing about the METHOD**.
+Commit 9e78f4a (09-05) reweighted the swath network by 1/variance instead of cell count, so
+a bridge run served pre-change entries alongside post-change ones and mixed two alignments
+in one answer. 25 of 29 marks reproduced; four moved, one by 45.1 mm; the mean went
+**−4.04 → −5.52 mm** while the median stayed +2.79, because the movers sit in the tails.
+
+FIXED (b7bb21c): the key now carries a digest of the whole `coreg` module, and the cache
+moved out of the package's bundled-control-data directory — promoting `our_surface` had
+moved `_HERE`, so a runtime file was being written beside the control CSVs. Two regression
+tests.
+
+**`bridge_mm = −4.04` is the MEAN of 29 marks and rests on the superseded weighting.** It
+feeds elba's adopted +58.70 ± 25.89 and was applied to whitewater on 09-10. Re-measuring
+clean is in flight; nothing is re-adopted until it lands.
+
+## ITEM 2 SO FAR — the datum is thinly sampled at these tile sizes
+
+    site        c1 delivered      marks lines   geoid    DoD shift   zero_line
+    elbaext     +62.74 ± 23.38      8     5    +67.44      +2.18        133
+    elba        +44.41 ± 26.32      4     3    +67.28     +20.35        135
+    whitewater   −6.52 ± 24.26      5     2    +57.92     +61.92        143
+
+RECORDED, NOT ADOPTED. The spread tracks LINE COVERAGE, not geography: 5 lines +2.18,
+3 lines +20.35, 2 lines +61.92 mm. Every run warned — whitewater's says "only 2 flight
+line(s) carry a mark: the SE over lines is barely defined" and names 144 and 146 as
+carrying none. Applying whitewater's +61.92 on two lines would be worse than applying
+nothing.
+
+`control_reach` (new step, 36bff5f) now reports this before anyone runs: it is the gen1
+mirror of `completeness`, and it exists because mnrv passed every other step while reaching
+ZERO marks. mnrv's 19 tiles are now fetched (618 MB, 19/19 reachable).
+
 ## THE ORDER (Andy, 2026-09-10) — work down this list
 
 1. **Control set from the Site's SURVEY, not a default.** `gen1_datum.load_control()`
