@@ -23,6 +23,8 @@ the wrong sign.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 
 from lidar_diff_icp.groundtruth import lines as L      # noqa: F401  (used in type text)
