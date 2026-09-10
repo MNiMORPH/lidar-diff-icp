@@ -51,7 +51,35 @@ from lidar_diff_icp import coreg, io, references  # noqa: E402
 from lidar_diff_icp import acquisitions
 from lidar_diff_icp.groundtruth import tie as T  # noqa: E402
 
-CACHE = _HERE / "data" / "swath_constants_cache.json"
+def _alignment_code_key() -> str:
+    """A short digest of the code that PRODUCES swath constants.
+
+    The cache key must carry it. Without it the key was
+    ``tile|res|tie|exclude`` -- which says nothing about the METHOD -- so on 2026-09-10 a
+    bridge run silently mixed constants from two alignments: entries cached before
+    commit 9e78f4a (swath network weighted by cell count) served alongside entries
+    recomputed after it (weighted by 1/variance). Four of 29 marks moved, one by 45.1 mm,
+    and the bridge mean went -4.04 -> -5.52 mm with nothing announcing a method change.
+    Products get this protection from workflow.code_time; a cache had none.
+
+    The whole of coreg is hashed, not just align_swaths, because the tie estimators it
+    calls are part of the answer. Conservative in the right direction: an unrelated edit
+    to coreg costs a recompute, a missed one costs a wrong number.
+    """
+    import hashlib
+    import inspect
+    return hashlib.sha1(inspect.getsource(coreg).encode()).hexdigest()[:12]
+
+
+#: Runtime cache, under the repo's data/ where csf_cache, ept_index_cache and
+#: tile_index_cache already live. It sat in this package's data/ directory until
+#: 2026-09-10 -- beside the BUNDLED CONTROL CSVs -- because CACHE was _HERE-relative and
+#: _HERE moved when this module was promoted out of ground_control/. A file written at
+#: runtime does not belong in package data.
+_REPO = _HERE
+while _REPO != _REPO.parent and not (_REPO / "pyproject.toml").exists():
+    _REPO = _REPO.parent
+CACHE = _REPO / "data" / "swath_constants_cache.json"
 
 
 @dataclass(frozen=True)
@@ -92,7 +120,8 @@ def swath_constants(tile_path, *, res, exclude, swath_tie, cache_path=CACHE):
     p = Path(cache_path)
     if p.exists():
         cache = json.loads(p.read_text())
-    ck = f"{key}|res={res}|tie={swath_tie}|exclude={','.join(map(str, exclude))}"
+    ck = (f"{key}|res={res}|tie={swath_tie}|exclude={','.join(map(str, exclude))}"
+          f"|coreg={_alignment_code_key()}")
     if ck in cache:
         return {int(k): tuple(v) for k, v in cache[ck].items()}
     pc = io.read_tile(tile_path)

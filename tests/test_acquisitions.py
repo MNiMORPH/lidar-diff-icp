@@ -132,10 +132,16 @@ def test_control_reach_counts_and_names_without_judging():
     assert r.marks_reachable == 29
     assert r.n_marks_considered <= r.n_marks_in_survey
     assert any("excluded by cover" in n for n in r.notes)
-    # mnrv is the case that motivated it
+    # mnrv is the case that motivated it. Assert the INVARIANT, not the count: this test
+    # first asserted marks_reachable == 0, which the very next act -- fetching mnrv's 19
+    # tiles -- made false. A test pinned to how much data happens to be on disk fails for
+    # the wrong reason and teaches nothing.
     m = CR.reach_for_site(SITES["mnrv"])
-    assert m.marks_reachable == 0 and m.missing, "mnrv must report tiles to fetch"
     assert m.project_id == "lidar_swmn2010"
+    assert m.marks_reachable + len(m.missing) >= m.n_marks_in_radius or not m.missing, (
+        "every considered mark is either reachable or accounted for by a missing tile")
+    assert (m.marks_reachable == m.n_marks_in_radius) == (not m.missing), (
+        "nothing missing iff every mark is reachable")
 
 
 def test_control_reach_uses_the_site_s_own_survey():
@@ -145,3 +151,39 @@ def test_control_reach_uses_the_site_s_own_survey():
         r = CR.reach_for_site(SITES[name])
         assert r.project_id == SITES[name].gen1_project
         assert A.for_project(r.project_id).geoid_model == "GEOID09"
+
+
+def test_the_swath_cache_key_tracks_the_alignment_CODE():
+    """THE REGRESSION. The key was tile|res|tie|exclude -- nothing about the METHOD.
+
+    On 2026-09-10 that let a bridge run mix constants from two alignments: entries cached
+    before commit 9e78f4a (swath network weighted by cell count) served alongside entries
+    recomputed after it (1/variance). Four of 29 marks moved, one by 45.1 mm, and the
+    bridge mean went -4.04 -> -5.52 mm with nothing announcing a method change.
+
+    Editing coreg must change the key, or a stale constant is served silently again.
+    """
+    import inspect
+    from lidar_diff_icp import coreg
+    from lidar_diff_icp.groundtruth import reconstruct as R
+
+    k = R._alignment_code_key()
+    assert k and len(k) == 12
+
+    real = inspect.getsource
+    try:                                   # a changed coreg must give a changed key
+        inspect.getsource = lambda o: real(o) + "\n# an edit to the alignment code\n"
+        assert R._alignment_code_key() != k, (
+            "the cache key does not track coreg; a superseded alignment would be served")
+    finally:
+        inspect.getsource = real
+    assert R._alignment_code_key() == k    # and restoring it restores the key
+
+
+def test_the_swath_cache_is_not_inside_package_data():
+    """It is written at RUNTIME. It lived beside the bundled control CSVs until
+    2026-09-10, because CACHE was module-relative and the module was promoted."""
+    from lidar_diff_icp.groundtruth import reconstruct as R
+    from lidar_diff_icp.groundtruth import residual_field as RF
+    assert RF._DATA not in R.CACHE.parents, "runtime cache inside package data"
+    assert R.CACHE.parent.name == "data" and R.CACHE.parent.parent.name != "groundtruth"

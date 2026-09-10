@@ -21,6 +21,7 @@ import argparse
 import glob
 import json
 import os
+from pathlib import Path
 import sys
 from pathlib import Path
 
@@ -68,10 +69,18 @@ def main(argv=None):
     p.add_argument("--align-res", type=float, required=True)
     p.add_argument("--swath-tie", required=True)
     p.add_argument("--csf-cache", required=True)
+    # REQUIRED, no default. gen1 is four acquisitions on two geoid models, and
+    # G.load_control() defaults to the SE-Minnesota 2008 table -- so measuring another
+    # survey's bridge with the default silently searches its tiles for SE-MN marks and
+    # finds none. The bridge is a PER-SURVEY quantity: its 29 SE-MN marks span 27 tiles,
+    # 1.8 km from elba and 0.7 km from whitewater, but 146-177 km from mnrv.
+    p.add_argument("--project", required=True,
+                   help="the gen1 acquisition whose bridge this is, e.g. lidar_swmn2010")
     p.add_argument("--out", required=True)
     a = p.parse_args(argv)
 
-    control = G.load_control()
+    control = G.control_for_survey(a.project)
+    gate_control = G.control_for_survey("lidar_semn2008")   # the known case, always
     tiles = sorted(t for t in glob.glob(f"{a.tiles}/*.laz") if "merged" not in t)
 
     R = Run("What is the bridge -- z_delivered minus OUR reconstructed gen1 surface -- "
@@ -123,11 +132,24 @@ def main(argv=None):
     R.banner()
 
     # gate
-    print("  validation gate (reconstruction vs shipped elbaext grid):")
+    # The gate validates the METHOD against a KNOWN CASE, so it reads that case from where
+    # it lives (elbaext's SE-MN tiles, always data/before) rather than from --tiles. Those
+    # were the same directory until 2026-09-10, when this was first run for another survey
+    # and went looking for an SE-MN tile inside data/before_mnrv. A gate that only works
+    # when you are measuring the site it was built on is not a gate.
+    GATE_TILES = "data/before"
+    print(f"  validation gate (reconstruction vs shipped elbaext grid, from {GATE_TILES}):")
     for pid, tname in (("L1O101", "4342-30-64"), ("L2T51", "4342-29-63")):
-        mk = next(m for m in control if m.aliases[0] == pid)
+        mk = next((m for m in gate_control if m.aliases[0] == pid), None)
+        if mk is None:
+            print(f"    {pid:<8s} not in this survey's control -- gate mark, skipped")
+            continue
+        if not Path(f"{GATE_TILES}/{tname}.laz").exists():
+            raise SystemExit(
+                f"the validation gate needs {GATE_TILES}/{tname}.laz and it is absent. "
+                f"Refusing to print wide numbers with the gate skipped.")
         E, N = mk.checkpoint.easting, mk.checkpoint.northing
-        sp = OS.our_gen1_surface_at(f"{a.tiles}/{tname}.laz", E, N,
+        sp = OS.our_gen1_surface_at(f"{GATE_TILES}/{tname}.laz", E, N,
                                     csf_half_width_m=a.csf_half_width_m, res=a.res,
                                     radius_m=a.radii_m[-1], exclude=(5, 6, 9),
                                     align_res=a.align_res, swath_tie=a.swath_tie,
