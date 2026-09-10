@@ -141,6 +141,22 @@ STEPS: tuple[Step, ...] = (
               "that was 15.45 west and 5.52 east of a seam, and elba's was 10.90x thinner "
               "than every other site's. The ratio is RECORDED, never judged -- no "
               "threshold is applied anywhere."),
+    Step("control_reach",
+         produces=("control_reach.json",),
+         requires=(),
+         command=f"{PY} -m lidar_diff_icp.steps.control_reach --site {{site}} --write",
+         needs=("site",),
+         note="The gen1 mirror of `completeness`: how many of THIS SITE'S OWN SURVEY's "
+              "control marks sit in gen1 tiles on disk, and which tiles are missing, by "
+              "name. It exists because a site can build completely, pass every other "
+              "step, and still be unable to carry a datum with nothing saying why -- mnrv "
+              "reaches ZERO marks of any cover inside its single tile, found only by a "
+              "failed run. REPORTED, NEVER JUDGED: no threshold, and the radius ladder is "
+              "printed so how far to reach is chosen against counts rather than "
+              "inherited. Names TILES, not a region: a tie needs a 50 m window and the "
+              "bridge 300 m, but MnGeo serves whole ~22 MB LAZ with no COPC, so at mnrv "
+              "11 open marks within 25 km cost 11 tiles (~242 MB) where the disc would "
+              "cost ~85 (~1.9 GB). Fetch what it names with scripts/fetch_tile.py."),
     Step("base",
          produces=BASE_INPUTS,
          requires=(),

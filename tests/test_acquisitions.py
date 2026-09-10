@@ -115,3 +115,33 @@ def test_an_unrecorded_control_set_refuses_rather_than_substituting():
     from lidar_diff_icp.groundtruth import gen1_datum as G
     with pytest.raises(KeyError, match="no acquisition recorded"):
         G.control_for_survey("lidar_not_a_survey_2099")
+
+
+def test_control_reach_counts_and_names_without_judging():
+    """The gen1 mirror of `completeness`. It exists because mnrv built completely, passed
+    every other step, and could not carry a datum -- zero marks of any cover inside its
+    single tile -- with nothing in the graph saying so.
+
+    REPORTED, NEVER JUDGED: no threshold anywhere, and marks excluded by the cover rule
+    are COUNTED in a note rather than silently dropped.
+    """
+    from lidar_diff_icp import control_reach as CR
+    r = CR.reach_for_site(SITES["elba"])
+    assert r.project_id == "lidar_semn2008"
+    # independently cross-checked: same_line.marks_in_tiles finds 29 open marks there
+    assert r.marks_reachable == 29
+    assert r.n_marks_considered <= r.n_marks_in_survey
+    assert any("excluded by cover" in n for n in r.notes)
+    # mnrv is the case that motivated it
+    m = CR.reach_for_site(SITES["mnrv"])
+    assert m.marks_reachable == 0 and m.missing, "mnrv must report tiles to fetch"
+    assert m.project_id == "lidar_swmn2010"
+
+
+def test_control_reach_uses_the_site_s_own_survey():
+    """A mark from the wrong survey is not a weaker tie, it is a different datum."""
+    from lidar_diff_icp import control_reach as CR
+    for name in ("cook", "carlton", "battlecreek"):
+        r = CR.reach_for_site(SITES[name])
+        assert r.project_id == SITES[name].gen1_project
+        assert A.for_project(r.project_id).geoid_model == "GEOID09"
