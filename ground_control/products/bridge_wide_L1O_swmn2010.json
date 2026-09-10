@@ -1,0 +1,311 @@
+{
+ "marks": [
+  {
+   "point_id": "L10-1001",
+   "cover": "L1O",
+   "tile": "4342-21-14.laz",
+   "bridge_mm": 108.32037452703958,
+   "radius_spread_mm": 47.9613880519878,
+   "n_csf": 374195,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "lines": [
+    9538,
+    9539,
+    9540
+   ]
+  },
+  {
+   "point_id": "L10-1022",
+   "cover": "L1O",
+   "tile": "4342-24-11.laz",
+   "bridge_mm": -220.17111152982238,
+   "radius_spread_mm": 131.90506824844306,
+   "n_csf": 131188,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "lines": [
+    9558,
+    9559
+   ]
+  },
+  {
+   "point_id": "L1O-1007",
+   "cover": "L1O",
+   "tile": "4342-25-14.laz",
+   "bridge_mm": 50.73764592668795,
+   "radius_spread_mm": 51.16714898360897,
+   "n_csf": 377711,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "lines": [
+    9538,
+    9539,
+    9540
+   ]
+  },
+  {
+   "point_id": "L1O-1014",
+   "cover": "L1O",
+   "tile": "4342-22-12.laz",
+   "bridge_mm": -19.38305157210607,
+   "radius_spread_mm": 311.70182028949966,
+   "n_csf": 449500,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "lines": [
+    9550,
+    9551,
+    9552
+   ]
+  },
+  {
+   "point_id": "L1O-1016",
+   "cover": "L1O",
+   "tile": "4342-22-11.laz",
+   "bridge_mm": 205.0328111669728,
+   "radius_spread_mm": 92.28975096499425,
+   "n_csf": 308677,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "lines": [
+    9553,
+    9554,
+    9557
+   ]
+  },
+  {
+   "point_id": "L1O-1029",
+   "cover": "L1O",
+   "tile": "4342-21-08.laz",
+   "bridge_mm": 27.573016782071136,
+   "radius_spread_mm": 185.23407582108575,
+   "n_csf": 466401,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "lines": [
+    5931,
+    5941,
+    5951
+   ]
+  },
+  {
+   "point_id": "L1O-1033",
+   "cover": "L1O",
+   "tile": "4342-26-08.laz",
+   "bridge_mm": 124.16758921531823,
+   "radius_spread_mm": 51.506786252843995,
+   "n_csf": 818138,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "lines": [
+    81,
+    91
+   ]
+  },
+  {
+   "point_id": "L1O-1035",
+   "cover": "L1O",
+   "tile": "4342-23-07.laz",
+   "bridge_mm": -67.99231985769438,
+   "radius_spread_mm": 71.32456606609594,
+   "n_csf": 272725,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "lines": [
+    5981,
+    5991,
+    6002
+   ]
+  },
+  {
+   "point_id": "L1O-1040",
+   "cover": "L1O",
+   "tile": "4342-21-05.laz",
+   "bridge_mm": 16.29608418357975,
+   "radius_spread_mm": 82.33149998704903,
+   "n_csf": 414298,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "lines": [
+    6061,
+    6071,
+    6081
+   ]
+  },
+  {
+   "point_id": "L1O-1047",
+   "cover": "L1O",
+   "tile": "4342-24-05.laz",
+   "bridge_mm": 5.163677927725985,
+   "radius_spread_mm": 35.89836102486288,
+   "n_csf": 447884,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "lines": [
+    6032,
+    6041,
+    6042,
+    6051,
+    6052
+   ]
+  },
+  {
+   "point_id": "L1O-1051",
+   "cover": "L1O",
+   "tile": "4342-20-02.laz",
+   "bridge_mm": -53.857233277170735,
+   "radius_spread_mm": 192.2306051437488,
+   "n_csf": 268113,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "lines": [
+    6161,
+    6171,
+    6181
+   ]
+  },
+  {
+   "point_id": "L1O-1066",
+   "cover": "L1O",
+   "tile": "4342-16-04.laz",
+   "bridge_mm": 15.304967032108152,
+   "radius_spread_mm": 252.10980984354592,
+   "n_csf": 206096,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "lines": [
+    6071,
+    6081,
+    6091
+   ]
+  },
+  {
+   "point_id": "L1O-1074",
+   "cover": "L1O",
+   "tile": "4342-18-06.laz",
+   "bridge_mm": 12.87871253671824,
+   "radius_spread_mm": 94.01126236195978,
+   "n_csf": 429857,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "lines": [
+    6022,
+    6032,
+    6042
+   ]
+  },
+  {
+   "point_id": "L1O-1079",
+   "cover": "L1O",
+   "tile": "4342-20-07.laz",
+   "bridge_mm": -38.07101268455426,
+   "radius_spread_mm": 15.606697799569247,
+   "n_csf": 222405,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "lines": [
+    5961,
+    5971,
+    5981
+   ]
+  },
+  {
+   "point_id": "L1O-1083",
+   "cover": "L1O",
+   "tile": "4342-16-08.laz",
+   "bridge_mm": -37.10949283538412,
+   "radius_spread_mm": 82.30567958844404,
+   "n_csf": 411257,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "lines": [
+    5931,
+    5941,
+    5951
+   ]
+  },
+  {
+   "point_id": "L1O-1089",
+   "cover": "L1O",
+   "tile": "4342-20-09.laz",
+   "bridge_mm": -250.88526399468947,
+   "radius_spread_mm": 59.47432249706708,
+   "n_csf": 214531,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "lines": [
+    9563,
+    9564,
+    9565
+   ]
+  },
+  {
+   "point_id": "L1O-1094",
+   "cover": "L1O",
+   "tile": "4342-18-11.laz",
+   "bridge_mm": -1261.3796088921845,
+   "radius_spread_mm": 62.614613124196694,
+   "n_csf": 406990,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "lines": [
+    9553,
+    9554,
+    9557
+   ]
+  },
+  {
+   "point_id": "L1O-1102",
+   "cover": "L1O",
+   "tile": "4342-17-12.laz",
+   "bridge_mm": -46.74969730410794,
+   "radius_spread_mm": 149.46675911619423,
+   "n_csf": 258555,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "lines": [
+    9548,
+    9549,
+    9550
+   ]
+  },
+  {
+   "point_id": "L1O-1108",
+   "cover": "L1O",
+   "tile": "4342-16-14.laz",
+   "bridge_mm": -207.1674719183818,
+   "radius_spread_mm": 68.53367914112596,
+   "n_csf": 335292,
+   "n_radii_used": 4,
+   "radii_failed": [],
+   "lines": [
+    9538,
+    9539,
+    9540
+   ]
+  }
+ ],
+ "covers": [
+  "L1O"
+ ],
+ "params": {
+  "covers": [
+   "L1O"
+  ],
+  "tiles": "data/before_mnrv",
+  "csf_half_width_m": 300.0,
+  "res": 5.0,
+  "radii_m": [
+   10.0,
+   12.5,
+   15.0,
+   20.0
+  ],
+  "align_res": 2.0,
+  "swath_tie": "intercept",
+  "csf_cache": "/tmp/claude-1000/-home-awickert-projects-lidar-diff-icp/fcf38646-c462-4fe8-b23f-2d07528a329b/scratchpad/csfcache_mnrv2",
+  "project": "lidar_swmn2010",
+  "out": "ground_control/products/bridge_wide_L1O_swmn2010.json"
+ }
+}
