@@ -1,0 +1,123 @@
+{
+ "question": "What datum constants place BOTH epochs on surveyed NAVD88 at this site, and what does that do to the DoD?",
+ "started": "2026-09-10T22:57:06+02:00",
+ "argv": [
+  "ground_control/run_site_datum.py",
+  "--easting",
+  "578762.8",
+  "--northing",
+  "4884487.6",
+  "--site",
+  "elba",
+  "--corrections",
+  "data/derived/elba/corrections.json",
+  "--tracks",
+  "ground_control/data/gen1_line_tracks.json",
+  "--psids",
+  "135",
+  "136",
+  "137",
+  "138",
+  "--covers",
+  "L1O",
+  "--collinear-sigma",
+  "3",
+  "--tiles",
+  "data/before",
+  "--res",
+  "5.0",
+  "--gen2-surface",
+  "ql1_laz",
+  "--bridge-mm",
+  "-5.52",
+  "--bridge-source",
+  "bridge_wide_L1O.json re-measured clean 2026-09-10: mean of 29 open marks, 1/variance swath weighting (was -4.04 under cell-count weighting)",
+  "--max-lags-m",
+  "20000",
+  "40000",
+  "80000",
+  "160000",
+  "--n-lags",
+  "25",
+  "--n-pairs",
+  "800000",
+  "--estimators",
+  "dowd",
+  "matheron",
+  "--seed",
+  "0",
+  "--out",
+  "ground_control/products/SITE_DATUM_elba.json"
+ ],
+ "seconds": 59.4,
+ "cwd": "/home/awickert/projects/lidar-diff-icp",
+ "inputs": [
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elba/corrections.json",
+   "role": "the site's pipeline corrections; supplies bounds, crs and the swath gauge the gen1 constant must be tied to",
+   "bytes": 15810,
+   "mtime": "2026-09-09T14:36:53",
+   "digest": "0fda851e5766"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/ground_control/data/gen1_line_tracks.json",
+   "role": "gen1 flight-line tracks, for reused-psid disambiguation only",
+   "bytes": 364637,
+   "mtime": "2026-09-09T20:49:51",
+   "digest": "0ce5ac3b9e22"
+  }
+ ],
+ "params": [
+  {
+   "name": "site",
+   "value": "(578762.8, 4884487.6)",
+   "src": "andy",
+   "why": ""
+  },
+  {
+   "name": "psids",
+   "value": "(135, 136, 137, 138)",
+   "src": "repo",
+   "why": "the lines this tile is built from"
+  },
+  {
+   "name": "covers",
+   "value": "('L1O',)",
+   "src": "andy",
+   "why": "OPEN GROUND ONLY -- pooling covers bakes canopy response into the datum"
+  },
+  {
+   "name": "gen2_surface",
+   "value": "'ql1_laz'",
+   "src": "andy",
+   "why": "gen2 publishes four; the choice moved the Elba answer by 12.55 mm"
+  },
+  {
+   "name": "collinear_sigma",
+   "value": "3.0",
+   "src": "andy",
+   "why": ""
+  },
+  {
+   "name": "bridge_mm",
+   "value": "-5.52",
+   "src": "andy",
+   "why": "supplied: bridge_wide_L1O.json re-measured clean 2026-09-10: mean of 29 open marks, 1/variance swath weighting (was -4.04 under cell-count weighting)"
+  },
+  {
+   "name": "zero_line",
+   "value": "135",
+   "src": "repo",
+   "why": "read from the corrections file; the gen1 constant is TIED to it and the pipeline refuses a mismatch"
+  }
+ ],
+ "masks": [],
+ "columns": {
+  "quantity": "what is being reported",
+  "value_mm": "millimetres; positive = the surface reads LOW, so ADD it"
+ },
+ "notes": [],
+ "headline": "gen1 +38.89, gen2 -6.56, DoD shift +21.83 mm",
+ "unasked": [],
+ "session": ""
+}

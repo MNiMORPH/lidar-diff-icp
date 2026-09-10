@@ -7,14 +7,14 @@
  "gen1_delivered_se_mm": 24.257057025838687,
  "gen1_n_marks": 5,
  "gen1_n_lines": 2,
- "bridge_mm": -4.04,
- "bridge_source": "ground_control/products/bridge_wide_L1O.json (29 open marks across 27 tiles, lidar_semn2008; nearest 0.7 km to whitewater)",
- "gen1_our_surface_mm": -10.561237716437866,
+ "bridge_mm": -5.52,
+ "bridge_source": "bridge_wide_L1O.json re-measured clean 2026-09-10: mean of 29 open marks, 1/variance swath weighting; nearest 0.7 km to whitewater, same survey",
+ "gen1_our_surface_mm": -12.041237716437866,
  "gen2_delivered_mm": -6.564701905788852,
  "gen2_surface": "ql1_laz",
  "geoid_mm": 57.92481680415169,
  "zero_line": 143,
- "dod_shift_mm": 61.92135261480071,
+ "dod_shift_mm": 63.4013526148007,
  "params": {
   "covers": [
    "L1O"
@@ -47,7 +47,7 @@
   "lines with NO mark: [144, 146] -- their level is unconstrained and they may carry substantial weight in the tile's ground"
  ],
  "absolute_datum": {
-  "gen1_mm": -68.48605452058956,
+  "gen1_mm": -69.96605452058955,
   "gen2_mm": -6.564701905788852,
   "zero_line": 143,
   "source": "ground_control/run_site_datum.py @ whitewater",
