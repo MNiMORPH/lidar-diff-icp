@@ -105,6 +105,35 @@ class SurfacePoint:
     lines_present: tuple
     note: str = ""
 
+    # PHYSICAL CONSISTENCY, recorded not judged. The order-2 fit can return a value no
+    # cell supports: at L1O-1094 (lidar_swmn2010) it gave 316.767 m where the highest
+    # return within 10 m was 315.700 -- a metre above its own cloud, and a -1261.4 mm
+    # bridge. Nothing else caught it. radius_spread was 62.6 mm, BELOW that survey's
+    # median of 82.3, so the runaway was stable across radii and looked well-behaved.
+    #
+    # These are the cells the fit ACTUALLY used -- those within radius_m -- so the check
+    # introduces no window parameter of its own. `fit_inside_cells` is the caller's to act
+    # on; no threshold lives here, as in SitingScreen.
+    n_cells_in_radius: int = 0
+    z_cell_min_m: float = float("nan")
+    z_cell_max_m: float = float("nan")
+
+    @property
+    def fit_inside_cells(self) -> bool:
+        """Does the fitted surface lie within the range of the cells it was fitted to?"""
+        if not (self.z_cell_min_m == self.z_cell_min_m):        # NaN: unknown, not False
+            return True
+        return self.z_cell_min_m <= self.z_native_frame_m <= self.z_cell_max_m
+
+    @property
+    def fit_outside_by_mm(self) -> float:
+        """How far outside, in mm; 0.0 when inside. Reported so the size is visible."""
+        if self.fit_inside_cells:
+            return 0.0
+        z = self.z_native_frame_m
+        return 1000.0 * (z - self.z_cell_max_m if z > self.z_cell_max_m
+                         else z - self.z_cell_min_m)
+
 
 def swath_constants(tile_path, *, res, exclude, swath_tie, cache_path=CACHE):
     """``{line: (dx, dy, dz)}`` from ``coreg.align_swaths`` on the tile, cached on disk.
@@ -139,10 +168,26 @@ def swath_constants(tile_path, *, res, exclude, swath_tie, cache_path=CACHE):
 def our_gen1_surface_at(tile_path, easting, northing, *, csf_half_width_m, res,
                         radius_m, exclude, align_res, swath_tie, pdal=None,
                         csf_cache=None, apply_swath=True, geoid_bounds=None,
-                        crs="EPSG:26915"):
-    """Our gen1 surface at ``(easting, northing)``, both frames, from the tile on disk."""
-    g = T.csf_ground_near(tile_path, easting, northing, csf_half_width_m,
-                          pdal=pdal, cache_dir=csf_cache)
+                        crs="EPSG:26915", ground_source="csf"):
+    """Our gen1 surface at ``(easting, northing)``, both frames, from the tile on disk.
+
+    ``ground_source`` selects WHICH RETURNS are ground and changes nothing else -- the same
+    delivered elevations, swath constants, grid, geoid and order-2 fit are used either way.
+    That is the point: "our solution" bundles CSF with a swath re-solve, an absent lateral
+    shift, a 5 m grid and a surface fit, so a difference against the vendor cannot be
+    attributed to CSF unless everything else is held fixed.
+
+        "csf"     PDAL CSF on the window, at repo defaults -- the pipeline's own ground
+        "class2"  the vendor's ASPRS class-2 bare earth, as delivered
+    """
+    if ground_source == "csf":
+        g = T.csf_ground_near(tile_path, easting, northing, csf_half_width_m,
+                              pdal=pdal, cache_dir=csf_cache)
+    elif ground_source == "class2":
+        g = T.vendor_ground_near(tile_path, easting, northing, csf_half_width_m,
+                                 ground_class=2)
+    else:
+        raise ValueError(f"ground_source={ground_source!r} must be 'csf' or 'class2'")
     x, y, z = np.asarray(g.x), np.asarray(g.y), np.asarray(g.z)
     ps = np.asarray(g.point_source_id)
     if x.size == 0:
@@ -181,7 +226,13 @@ def our_gen1_surface_at(tile_path, easting, northing, *, csf_half_width_m, res,
                                        surface_order=2, quantile=0.50)
     if not np.isfinite(zhat):
         return None
-    return SurfacePoint(z_after_frame_m=float(zhat + gshift),
+    # the cells the fit used, for the consistency check above
+    inr = ((cx_ - easting) ** 2 + (cy_ - northing) ** 2) <= float(radius_m) ** 2
+    n_in = int(inr.sum())
+    zlo = float(zc[inr].min()) if n_in else float("nan")
+    zhi = float(zc[inr].max()) if n_in else float("nan")
+    return SurfacePoint(n_cells_in_radius=n_in, z_cell_min_m=zlo, z_cell_max_m=zhi,
+                        z_after_frame_m=float(zhat + gshift),
                         z_native_frame_m=float(zhat),
                         geoid_mm=float(gshift * 1000.0), n_ground_pts=int(x.size),
                         n_cells=int(zc.size), radius_m=float(radius_m),

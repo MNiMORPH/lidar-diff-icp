@@ -69,6 +69,9 @@ def main(argv=None):
     p.add_argument("--align-res", type=float, required=True)
     p.add_argument("--swath-tie", required=True)
     p.add_argument("--csf-cache", required=True)
+    p.add_argument("--ground-source", default="csf", choices=("csf", "class2"),
+                   help="WHICH returns count as ground. Everything else is held fixed, so "
+                        "a csf-vs-class2 difference isolates the ground selection.")
     # REQUIRED, no default. gen1 is four acquisitions on two geoid models, and
     # G.load_control() defaults to the SE-Minnesota 2008 table -- so measuring another
     # survey's bridge with the default silently searches its tiles for SE-MN marks and
@@ -120,6 +123,10 @@ def main(argv=None):
     R.column("ours_z_m", "our reconstructed gen1 surface at the mark, on NAVD88(GEOID03), m")
     R.column("bridge_mm", "z_delivered - z_ours, both on NAVD88(GEOID03), mm; ADD to a "
                           "delivered-surface constant to carry it onto our surface")
+    R.column("outside", "radii at which the fitted surface fell OUTSIDE the range of the "
+                        "cells it was fitted to -- physically impossible, and independent "
+                        "of the tie's value, so screening on it cannot select the answer. "
+                        "RECORDED, never cut here")
     R.column("radius_spread_mm", "max - min of bridge_mm across the radii that could be "
                                  "FITTED, mm -- how much the answer depends on an "
                                  "unstated window. Meaningless unless n_radii >= 2")
@@ -150,6 +157,7 @@ def main(argv=None):
                 f"Refusing to print wide numbers with the gate skipped.")
         E, N = mk.checkpoint.easting, mk.checkpoint.northing
         sp = OS.our_gen1_surface_at(f"{GATE_TILES}/{tname}.laz", E, N,
+                                    ground_source=a.ground_source,
                                     csf_half_width_m=a.csf_half_width_m, res=a.res,
                                     radius_m=a.radii_m[-1], exclude=(5, 6, 9),
                                     align_res=a.align_res, swath_tie=a.swath_tie,
@@ -175,17 +183,21 @@ def main(argv=None):
     for i, (mk, tp) in enumerate(todo, 1):
         E, N = mk.checkpoint.easting, mk.checkpoint.northing
         vals, used, failed = [], [], []
+        outside = []          # (radius, mm outside its own cells) -- see SurfacePoint
         sp = None
         for r in a.radii_m:
             s = OS.our_gen1_surface_at(tp, E, N, csf_half_width_m=a.csf_half_width_m,
                                        res=a.res, radius_m=r, exclude=(5, 6, 9),
                                        align_res=a.align_res, swath_tie=a.swath_tie,
-                                       csf_cache=a.csf_cache)
+                                       csf_cache=a.csf_cache,
+                                       ground_source=a.ground_source)
             if s is None:
                 failed.append(r)          # NEVER silent: a radius that could not be
                 continue                  # fitted is reported, not dropped
             sp = s
             used.append(r)
+            if not s.fit_inside_cells:
+                outside.append((r, s.fit_outside_by_mm))
             vals.append((mk.dnr_surface_z_m - s.z_native_frame_m) * 1000.0)
         if not vals:
             print(f"    [{i:>2}/{len(todo)}] {mk.aliases[0]:<24s} -- NO radius could be "
@@ -201,15 +213,28 @@ def main(argv=None):
                          tile=os.path.basename(tp), bridge_mm=br,
                          radius_spread_mm=spread, n_csf=sp.n_ground_pts,
                          n_radii_used=len(used), radii_failed=failed,
+                         n_radii_outside_cells=len(outside),
+                         worst_outside_mm=(max((abs(v) for _, v in outside), default=0.0)),
+                         radii_outside_cells=[r for r, _ in outside],
                          lines=list(sp.lines_present)))
         rows.append([mk.aliases[0], mk.cover_class, os.path.basename(tp)[:-4],
                      "/".join(map(str, sp.lines_present)), sp.n_ground_pts,
                      f"{mk.dnr_surface_z_m:.3f}", f"{sp.z_native_frame_m:.3f}",
-                     f"{br:+.1f}", f"{spread:.1f}", f"{len(used)}/{len(a.radii_m)}"])
+                     f"{br:+.1f}", f"{spread:.1f}", f"{len(used)}/{len(a.radii_m)}",
+                     f"{len(outside)}/{len(used)}"])
         print(f"    [{i:>2}/{len(todo)}] {mk.aliases[0]:<24s} bridge {br:+8.1f} mm  "
               f"spread {spread:5.1f}  ({os.popen('free -m').read().splitlines()[1].split()[2]} MB used)")
     R.table(["point_id", "cover", "tile", "lines", "n_csf", "delivered_z_m", "ours_z_m",
-             "bridge_mm", "radius_spread_mm", "n_radii"], rows)
+             "bridge_mm", "radius_spread_mm", "n_radii", "outside"], rows)
+    n_out = sum(1 for r in recs if r["n_radii_outside_cells"])
+    if n_out:
+        print(f"\n  {n_out} of {len(recs)} marks have a fit OUTSIDE the cells it was "
+              f"fitted to -- physically impossible, recorded not cut:")
+        for r in sorted(recs, key=lambda z: -z["worst_outside_mm"]):
+            if r["n_radii_outside_cells"]:
+                print(f"    {r['point_id']:<26} bridge {r['bridge_mm']:+9.1f} mm  "
+                      f"outside by up to {r['worst_outside_mm']:+8.1f} mm at radii "
+                      f"{r['radii_outside_cells']}")
     v = np.array([r["bridge_mm"] for r in recs])
     sp_ = np.array([r["radius_spread_mm"] for r in recs])
     nr = np.array([r["n_radii_used"] for r in recs])

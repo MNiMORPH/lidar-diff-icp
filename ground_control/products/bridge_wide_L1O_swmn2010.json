@@ -9,6 +9,9 @@
    "n_csf": 374195,
    "n_radii_used": 4,
    "radii_failed": [],
+   "n_radii_outside_cells": 0,
+   "worst_outside_mm": 0.0,
+   "radii_outside_cells": [],
    "lines": [
     9538,
     9539,
@@ -24,6 +27,9 @@
    "n_csf": 131188,
    "n_radii_used": 4,
    "radii_failed": [],
+   "n_radii_outside_cells": 0,
+   "worst_outside_mm": 0.0,
+   "radii_outside_cells": [],
    "lines": [
     9558,
     9559
@@ -38,6 +44,9 @@
    "n_csf": 377711,
    "n_radii_used": 4,
    "radii_failed": [],
+   "n_radii_outside_cells": 0,
+   "worst_outside_mm": 0.0,
+   "radii_outside_cells": [],
    "lines": [
     9538,
     9539,
@@ -53,6 +62,9 @@
    "n_csf": 449500,
    "n_radii_used": 4,
    "radii_failed": [],
+   "n_radii_outside_cells": 0,
+   "worst_outside_mm": 0.0,
+   "radii_outside_cells": [],
    "lines": [
     9550,
     9551,
@@ -68,6 +80,9 @@
    "n_csf": 308677,
    "n_radii_used": 4,
    "radii_failed": [],
+   "n_radii_outside_cells": 0,
+   "worst_outside_mm": 0.0,
+   "radii_outside_cells": [],
    "lines": [
     9553,
     9554,
@@ -83,6 +98,12 @@
    "n_csf": 466401,
    "n_radii_used": 4,
    "radii_failed": [],
+   "n_radii_outside_cells": 2,
+   "worst_outside_mm": 22.172835886749453,
+   "radii_outside_cells": [
+    12.5,
+    15.0
+   ],
    "lines": [
     5931,
     5941,
@@ -98,6 +119,9 @@
    "n_csf": 818138,
    "n_radii_used": 4,
    "radii_failed": [],
+   "n_radii_outside_cells": 0,
+   "worst_outside_mm": 0.0,
+   "radii_outside_cells": [],
    "lines": [
     81,
     91
@@ -112,6 +136,9 @@
    "n_csf": 272725,
    "n_radii_used": 4,
    "radii_failed": [],
+   "n_radii_outside_cells": 0,
+   "worst_outside_mm": 0.0,
+   "radii_outside_cells": [],
    "lines": [
     5981,
     5991,
@@ -127,6 +154,11 @@
    "n_csf": 414298,
    "n_radii_used": 4,
    "radii_failed": [],
+   "n_radii_outside_cells": 1,
+   "worst_outside_mm": 8.869181592160658,
+   "radii_outside_cells": [
+    12.5
+   ],
    "lines": [
     6061,
     6071,
@@ -142,6 +174,9 @@
    "n_csf": 447884,
    "n_radii_used": 4,
    "radii_failed": [],
+   "n_radii_outside_cells": 0,
+   "worst_outside_mm": 0.0,
+   "radii_outside_cells": [],
    "lines": [
     6032,
     6041,
@@ -159,6 +194,12 @@
    "n_csf": 268113,
    "n_radii_used": 4,
    "radii_failed": [],
+   "n_radii_outside_cells": 2,
+   "worst_outside_mm": 42.41201391735672,
+   "radii_outside_cells": [
+    10.0,
+    12.5
+   ],
    "lines": [
     6161,
     6171,
@@ -174,6 +215,9 @@
    "n_csf": 206096,
    "n_radii_used": 4,
    "radii_failed": [],
+   "n_radii_outside_cells": 0,
+   "worst_outside_mm": 0.0,
+   "radii_outside_cells": [],
    "lines": [
     6071,
     6081,
@@ -189,6 +233,9 @@
    "n_csf": 429857,
    "n_radii_used": 4,
    "radii_failed": [],
+   "n_radii_outside_cells": 0,
+   "worst_outside_mm": 0.0,
+   "radii_outside_cells": [],
    "lines": [
     6022,
     6032,
@@ -204,6 +251,9 @@
    "n_csf": 222405,
    "n_radii_used": 4,
    "radii_failed": [],
+   "n_radii_outside_cells": 0,
+   "worst_outside_mm": 0.0,
+   "radii_outside_cells": [],
    "lines": [
     5961,
     5971,
@@ -219,6 +269,9 @@
    "n_csf": 411257,
    "n_radii_used": 4,
    "radii_failed": [],
+   "n_radii_outside_cells": 0,
+   "worst_outside_mm": 0.0,
+   "radii_outside_cells": [],
    "lines": [
     5931,
     5941,
@@ -234,6 +287,12 @@
    "n_csf": 214531,
    "n_radii_used": 4,
    "radii_failed": [],
+   "n_radii_outside_cells": 2,
+   "worst_outside_mm": 23.962944944685205,
+   "radii_outside_cells": [
+    10.0,
+    12.5
+   ],
    "lines": [
     9563,
     9564,
@@ -249,6 +308,9 @@
    "n_csf": 406990,
    "n_radii_used": 4,
    "radii_failed": [],
+   "n_radii_outside_cells": 0,
+   "worst_outside_mm": 0.0,
+   "radii_outside_cells": [],
    "lines": [
     9553,
     9554,
@@ -264,6 +326,13 @@
    "n_csf": 258555,
    "n_radii_used": 4,
    "radii_failed": [],
+   "n_radii_outside_cells": 3,
+   "worst_outside_mm": 42.282464993149915,
+   "radii_outside_cells": [
+    10.0,
+    12.5,
+    15.0
+   ],
    "lines": [
     9548,
     9549,
@@ -279,6 +348,9 @@
    "n_csf": 335292,
    "n_radii_used": 4,
    "radii_failed": [],
+   "n_radii_outside_cells": 0,
+   "worst_outside_mm": 0.0,
+   "radii_outside_cells": [],
    "lines": [
     9538,
     9539,
