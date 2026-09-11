@@ -71,6 +71,36 @@ Lessons baked in
   ``along_track_drift=True``.
 * **ELEVATION, not TPI, cuts the floodplain** out of the stable set
   (flow routing is unreliable on flats).
+ARCHITECTURE -- what is decomposed, what is deliberately not (Andy, 2026-09-11)
+-----------------------------------------------------------------------------
+The CROSS-EPOCH CORRECTION CHAIN is decomposed into classes in :mod:`lidar_diff_icp.chain`
+(``LateralShift``, ``GeoidConversion``, ``CorrectionSurface``, ``AlongTrackDrift``), and
+:func:`apply_datum` is only a driver that assembles a list and runs it. That is where the
+fork between the "independent" and "delong" routes lives, so that is what had to become
+swappable: a new route is a list, not a branch.
+
+:func:`register_gen1` and :func:`difference_dem` are LEFT MONOLITHIC, deliberately --
+Andy: "Let's leave them monolithic but organized, with a note to separate if we need to."
+They are organized internally and each does one job, and neither currently has anything a
+route needs to vary. Decomposing them now would buy structure nobody is using and would
+put a refactor through load-bearing code for no measured gain.
+
+SPLIT THEM WHEN, and not before:
+
+* ``register_gen1`` -- when the GROUND SOURCE or the SWATH SOLVER has to vary by route.
+  The live candidate is real: vendor ``class 2 + 12`` restores the swath overlap CSF is
+  chosen for (0.71% of cells hold two flight lines under class 2 alone, 49.52% with the
+  overlap put back) at none of CSF's ~460 s per tile. If that is ever adopted as a route
+  rather than a flag, the ground step wants to be a class like the others.
+* ``difference_dem`` -- when a route needs a different GRID or LoD, rather than different
+  corrections. Nothing does today: both routes grid identically, which is the point of
+  step 6 (its bias cancels because it is the same on both sides).
+
+The test to apply before splitting either: name the second implementation that would use
+the seam. If there is not one, leave it alone. And whatever is split, hold it against
+``scripts/route_baseline.py`` -- 12 arrays, max|diff| must stay 0.000e+00, as the chain
+extraction did.
+
 * Convention: DoD is always ``after - before`` (positive = deposition); plot red =
   erosion, blue = deposition; standard NW (315/45) hillshade.
 """
