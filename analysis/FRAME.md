@@ -355,7 +355,67 @@ nothing.
 mirror of `completeness`, and it exists because mnrv passed every other step while reaching
 ZERO marks. mnrv's 19 tiles are now fetched (618 MB, 19/19 reachable).
 
-## THE ORDER (Andy, 2026-09-10) — work down this list
+## THE ORDER (Andy, 2026-09-11, DeLong) — work down this list
+
+Supersedes the 2026-09-10 order below, which is kept for the record. What changed: Andy
+adopted DeLong's correction surface as the pipeline default (`correction_surface=True`,
+`along_track_drift=False`, commit 744c9a1) after measurement, and directed that the
+marks/corrections subsystem move out of the main pipeline (#68).
+
+**What DISSOLVED, and why.** Old item 2 — "measure and APPLY the datum at all six sites" —
+is gone as a pipeline requirement. The correction surface is fit on the stable residual, so
+it pulls gen1 onto gen2's frame whatever datum was applied first: a 54.87 mm geoid error
+moves the DoD by −54.870 mm with the surface OFF and by **0.000 mm** with it ON
+(`test_the_correction_surface_absorbs_a_wrong_geoid_and_hides_it`). The product is
+therefore absolute by inheritance, at gen2's level, with no datum step to apply. The marks
+now BOUND that level instead of supplying it: gen2 open-ground at Elba is
+`constant_mm` −6.5647, `sd_field_mm` 31.10, over 139 marks. Old item 7 (rebuild elbaext) is
+subsumed by new item 1.
+
+**The new standing hazard.** The surface absorbs everything smooth — the geoid error above,
+the injected scanner roll, any datum mistake. That is why it wins on skill and why it is
+robust, and it is also why every diagnostic that works by SEEING a smooth error is now
+blind. The battlecreek bug would not have shown up in a product. Items 2, 3 and 6 exist
+because of this.
+
+1. **Rebuild all six sites on the new default.** Every `corrections.json` on disk was
+   written with drift ON and the surface OFF, so no shipped product matches the code that
+   would rebuild it. Largest single consequence of the switch; everything downstream
+   depends on it. One site at a time — shared laptop.
+2. **Report the stable set's COVER COMPOSITION as a pipeline output.** The inherited level
+   is gen2's, and gen2 floats high under canopy: forest stable ground sits −28.61 mm
+   against open at Elba. Elba is safe by terrain luck — the slope ≤ 3° cut leaves 0.1%
+   forest (1,035 of 1,072,025 returns), 69.7% open — but that is not construction. Where
+   flat ground IS forested (cook, arrowhead) the surface would pull gen1 onto a
+   canopy-biased level. Must be reported per site, never assumed. NEW.
+3. **Verify the correction surface at a SECOND tile (elbaext).** Every number behind this
+   decision is one tile and four lines: skill 0.444/0.384/0.283 vs the drift's
+   0.160/0.142/0.087, and the drift's per-line damage 5.07 → 19.91 mm. If those do not
+   reproduce, the decision needs revisiting — so this gates any claim that it generalises.
+4. **Push.** ~107 commits.
+5. **Fix the documentation the switch FALSIFIED.** README step 6 still calls
+   `absolute_datum` required; it is now inherited, not applied. #63's complaint (the drift
+   re-levels each swath against gen2, contradicting "gen1-internal") is moot for the
+   default path but is MORE true of the surface, which re-levels everything against gen2.
+   Re-lead the framing; do not append a note.
+6. **Make the independent checks ROUTINE (#68).** The marks and the geoid are now the only
+   instruments that can see what the pipeline has stopped being sensitive to. They must run
+   as a standing check rather than ad hoc, or a battlecreek-class error ships silently.
+   This is the real content of "placed aside and out of the main pipeline": they stop being
+   stages and become the audit.
+7. **#65 — control set from the Site's own SURVEY, not a default.** Was a prerequisite for
+   applying the datum; now a prerequisite for the CHECK in item 6 being correct. Same fix
+   (stem in `acquisitions`, resolved from `Site.gen1_project`, refusing when absent), lower
+   urgency, still a silent-wrong-answer bug at 18 bare call sites.
+8. **The cleanup queue, unchanged by DeLong:** #55 co-location, #56 the 127 unreached
+   scripts, #50 Battle Creek's unexplained 1-cell instability, and Battle Creek's valley
+   top (Andy must state an elevation or a fraction ceiling).
+
+The vegetation thread (#25, #19, #16) stays parked, but its RATIONALE changed: it is no
+longer about correcting gen1's ground, it is about bounding what canopy costs the inherited
+level. That is item 2's question.
+
+## SUPERSEDED — the order of 2026-09-10 (kept for the record)
 
 1. **Control set from the Site's SURVEY, not a default.** `gen1_datum.load_control()`
    resolves `DEFAULT_CONTROL = "mn_dnr_2008_control_semn"` at **18 bare call sites**, and
