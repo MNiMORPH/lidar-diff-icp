@@ -165,6 +165,21 @@ def _load(tile_dir, key):
     raise FileNotFoundError(f"no {key} in {tile_dir} (looked for {', '.join(_CORRECTION_FILES)})")
 
 
+def _corrections(tile_dir):
+    """The tile's whole corrections block, or {} if it has none.
+
+    Unlike :func:`_load` this does NOT raise on a missing file: it is used to ask whether
+    a product HAS a given correction stage, and "no corrections file" is a legitimate
+    answer to that for a tile built before the routes existed. Such a tile predates the
+    fork, when every product had a drift stage, so the callers default accordingly.
+    """
+    for fn in _CORRECTION_FILES:
+        p = os.path.join(tile_dir, fn)
+        if os.path.exists(p):
+            return json.load(open(p))
+    return {}
+
+
 def read_swath_alignment(tile_dir):
     """``{point_source_id: (dx, dy, dz)}`` -- the internal alignment of each flight line
     to the lowest-numbered one (which is the reference and maps to zeros)."""
@@ -206,14 +221,28 @@ def swath_alignment_term(psid, gx_pt, gy_pt, nnorm_pt, align):
     return 1000.0 * (dz - (gx_pt * dx + gy_pt * dy)) / nnorm_pt
 
 
-def along_track_drift_term(psid, gps_time, nnorm_pt, curves):
+def along_track_drift_term(psid, gps_time, nnorm_pt, curves, *, applied=True):
     """Slope-normal mm to add for the per-swath along-track GNSS drift.
 
     The drift is a vertical, time-varying, per-flight-line term: each return is
     interpolated on its own swath's curve (clamped to the curve ends outside its span).
+
+    ``applied=False`` means the PRODUCT HAS NO DRIFT STAGE -- the DeLong route runs
+    ``along_track_drift=False`` -- and the term is then ZERO for every return. That is a
+    different fact from the NaN below and must not be confused with it:
+
+        NaN   the fitter was RUN and DECLINED this swath. Uncomputable.
+        0.0   the fitter was NEVER RUN. Nothing was applied, so nothing is added back.
+
+    Collapsing the two would either assert "this line drifted by nothing" about a swath
+    nobody modelled, or poison a whole product with NaN because it legitimately has no
+    drift stage -- which is exactly what happened: the first delong beam table came out
+    with dz_drift_mm 0% finite, d_mm_corr 0% finite, and the q2(cover) fit died on it.
     """
     psid = np.asarray(psid); gps_time = np.asarray(gps_time, float)
     nnorm_pt = np.asarray(nnorm_pt, float)
+    if not applied:
+        return np.zeros(psid.shape, float)
     # A swath with no curve gets NaN, not zero and not an exception.
     #
     # Zero would be the old zero-fill in its purest form: "this line drifted by nothing",
@@ -255,6 +284,12 @@ def registration_terms(d_mm, x, y, gps_time, psid, gx_pt, gy_pt, nnorm_pt, tile_
     geoid = geoid_term(x, y, nnorm_pt, datum)
     lateral = lateral_term(gx_pt, gy_pt, nnorm_pt, datum)
     swath = swath_alignment_term(psid, gx_pt, gy_pt, nnorm_pt, read_swath_alignment(tile_dir))
-    drift = along_track_drift_term(psid, gps_time, nnorm_pt, read_drift_curves(tile_dir))
+    # Whether the product HAS a drift stage is read from the product, not guessed from
+    # whether curves happen to be present: an empty curve set could equally mean a failed
+    # fit, and those must not look alike.
+    _c = _corrections(tile_dir)
+    _drift_applied = _c.get("along_track_drift", True)
+    drift = along_track_drift_term(psid, gps_time, nnorm_pt, read_drift_curves(tile_dir),
+                                   applied=bool(_drift_applied))
     return {"geoid": geoid, "lateral": lateral, "swath": swath, "drift": drift,
             "d_corr": np.asarray(d_mm, float) + geoid + lateral + swath + drift}
