@@ -103,6 +103,13 @@ def main():
                          "takes 173009 distinct values, sd 62.1 mm). Its MEAN therefore "
                          "depends on which returns are selected")
     R.column("drift_mm", "mean of the per-swath along-track drift spline, mm")
+    R.column("corr_step_mm", "mean of (line B - line A) over the CELLS BOTH LINES OCCUPY, "
+                             "mm. Paired, so every spatial field common to the two lines -- "
+                             "tilt, warp, geoid gradient, the terrain itself -- cancels. "
+                             "This is the per-line offset with the confound removed")
+    R.column("se_mm", "sd of the per-cell difference / sqrt(shared cells), mm. Cells are "
+                      "still spatially correlated so this is a LOWER bound on the true "
+                      "uncertainty, not a p-value")
     R.column("between_line_sd", "sd over the LINE MEANS, ddof=1, mm. No per-return SE is "
                                 "quoted: returns within a line are strongly spatially "
                                 "correlated, so one would understate by orders of magnitude")
@@ -182,6 +189,52 @@ def main():
           "  separate them. Resolve it in the OVERLAP cells, where two lines measure the\n"
           "  SAME ground -- a step there is per-line; agreement there means it is spatial.")
 
+    # ================= THE DECIDING TEST: PAIRED, IN THE OVERLAP =================
+    # Grouping by line cannot separate "a step between lines" from "a tilt across the tile"
+    # when the lines sit in different places. In a cell where TWO lines both have stable
+    # returns, they measured the SAME GROUND at the SAME PLACE, so any spatial field --
+    # tilt, warp, geoid gradient, real terrain -- is common to both and DIFFERENCES OUT.
+    # What survives the difference is a per-line offset and nothing else.
+    print("\n  ===== PAIRED TEST IN THE OVERLAP (the spatial field cancels) =====")
+    cell = s["cell"].to_numpy()
+    psid = s["point_source_id"].to_numpy()
+    corr = s["d_mm_corr"].to_numpy()
+    raw = s["d_mm"].to_numpy()
+    pair_rows = []
+    print(f"  {'pair':>11}{'cells':>8}{'raw step':>11}{'corr step':>11}{'sd of':>9}"
+          f"{'SE over':>9}")
+    print(f"  {'':>11}{'shared':>8}{'mm':>11}{'mm':>11}{'cells':>9}{'cells':>9}")
+    for lo, hi in zip(order, order[1:]):
+        ma, mb = psid == lo, psid == hi
+        # per-cell mean for each line, then the difference IN CELLS BOTH OCCUPY
+        ca = pd.Series(corr[ma]).groupby(cell[ma]).mean()
+        cb = pd.Series(corr[mb]).groupby(cell[mb]).mean()
+        ra = pd.Series(raw[ma]).groupby(cell[ma]).mean()
+        rb = pd.Series(raw[mb]).groupby(cell[mb]).mean()
+        shared = ca.index.intersection(cb.index)
+        if len(shared) < 2:
+            print(f"  {f'{lo}-{hi}':>11}{len(shared):>8}   (too few shared cells)")
+            continue
+        dc = (cb.loc[shared] - ca.loc[shared]).to_numpy()
+        dr = (rb.loc[shared] - ra.loc[shared]).to_numpy()
+        se = dc.std(ddof=1) / np.sqrt(len(shared))
+        print(f"  {f'{lo}-{hi}':>11}{len(shared):>8,}{dr.mean():>11.2f}{dc.mean():>11.2f}"
+              f"{dc.std(ddof=1):>9.1f}{se:>9.2f}")
+        pair_rows.append(dict(pair=f"{lo}-{hi}", n_cells=int(len(shared)),
+                              raw_step_mm=float(dr.mean()), corr_step_mm=float(dc.mean()),
+                              sd_mm=float(dc.std(ddof=1)), se_mm=float(se)))
+    if pair_rows:
+        unp = np.array([g.loc[int(r["pair"].split("-")[1]), "corr_mm"]
+                        - g.loc[int(r["pair"].split("-")[0]), "corr_mm"]
+                        for r in pair_rows])
+        pr = np.array([r["corr_step_mm"] for r in pair_rows])
+        print(f"\n  UNPAIRED (whole-line means, spatial field INCLUDED): "
+              f"{', '.join(f'{v:+.1f}' for v in unp)} mm")
+        print(f"  PAIRED   (same cells, spatial field CANCELLED):   "
+              f"{', '.join(f'{v:+.1f}' for v in pr)} mm")
+        print(f"  the paired steps are the per-line part; the gap between the two rows is\n"
+              f"  the spatial field that the unpaired grouping was mis-attributing to lines.")
+
     if a.out:
         with open(a.out, "w") as fh:
             json.dump(dict(tile=a.tile, n_all=n_all, n_stable=int(stable.sum()),
@@ -189,7 +242,8 @@ def main():
                            between_line_sd_corr_mm=sd_corr,
                            between_line_range_raw_mm=rng_raw,
                            between_line_range_corr_mm=rng_corr,
-                           by_line=g.reset_index().to_dict("records")), fh, indent=1)
+                           by_line=g.reset_index().to_dict("records"),
+                           paired_overlap=pair_rows), fh, indent=1)
             fh.write("\n")
         print(f"    wrote {a.out}")
 
