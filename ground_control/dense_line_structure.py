@@ -200,30 +200,51 @@ def main():
     psid = s["point_source_id"].to_numpy()
     corr = s["d_mm_corr"].to_numpy()
     raw = s["d_mm"].to_numpy()
+    # DECOMPOSED BY CORRECTION STAGE. The earlier version compared only raw vs fully
+    # corrected, which lumps swath and drift together and cannot say which one moves a
+    # per-line step -- or whether one of them makes it worse. geoid and lateral are
+    # essentially spatial, so they should barely move a PAIRED step; swath and drift are
+    # per-line, so they are the two that can. Any stage whose step grows is overcorrecting.
+    gg = s["dz_geoid_mm"].to_numpy() if "dz_geoid_mm" in s else np.zeros(len(s))
+    gl = s["dz_lateral_mm"].to_numpy() if "dz_lateral_mm" in s else np.zeros(len(s))
+    gs = s["dz_swath_mm"].to_numpy()
+    gd = s["dz_drift_mm"].to_numpy()
+    raw0 = s["d_mm"].to_numpy()
+    STAGES = [("raw", raw0),
+              ("+geoid+lat", raw0 + gg + gl),
+              ("+swath", raw0 + gg + gl + gs),
+              ("+drift", raw0 + gg + gl + gs + gd)]
     pair_rows = []
-    print(f"  {'pair':>11}{'cells':>8}{'raw step':>11}{'corr step':>11}{'sd of':>9}"
-          f"{'SE over':>9}")
-    print(f"  {'':>11}{'shared':>8}{'mm':>11}{'mm':>11}{'cells':>9}{'cells':>9}")
+    print(f"  {'pair':>11}{'cells':>8}" + "".join(f"{nm:>12}" for nm, _ in STAGES))
     for lo, hi in zip(order, order[1:]):
         ma, mb = psid == lo, psid == hi
-        # per-cell mean for each line, then the difference IN CELLS BOTH OCCUPY
-        ca = pd.Series(corr[ma]).groupby(cell[ma]).mean()
-        cb = pd.Series(corr[mb]).groupby(cell[mb]).mean()
-        ra = pd.Series(raw[ma]).groupby(cell[ma]).mean()
-        rb = pd.Series(raw[mb]).groupby(cell[mb]).mean()
-        shared = ca.index.intersection(cb.index)
-        if len(shared) < 2:
-            print(f"  {f'{lo}-{hi}':>11}{len(shared):>8}   (too few shared cells)")
+        steps, se_last, sd_last = {}, np.nan, np.nan
+        shared = None
+        for nm, vals in STAGES:
+            va = pd.Series(vals[ma]).groupby(cell[ma]).mean()
+            vb = pd.Series(vals[mb]).groupby(cell[mb]).mean()
+            if shared is None:
+                shared = va.index.intersection(vb.index)
+            if len(shared) < 2:
+                break
+            dv = (vb.loc[shared] - va.loc[shared]).to_numpy()
+            steps[nm] = float(dv.mean())
+            sd_last, se_last = float(dv.std(ddof=1)), float(dv.std(ddof=1) / np.sqrt(len(shared)))
+        if not steps:
+            print(f"  {f'{lo}-{hi}':>11}{0:>8}   (too few shared cells)")
             continue
-        dc = (cb.loc[shared] - ca.loc[shared]).to_numpy()
-        dr = (rb.loc[shared] - ra.loc[shared]).to_numpy()
-        se = dc.std(ddof=1) / np.sqrt(len(shared))
-        print(f"  {f'{lo}-{hi}':>11}{len(shared):>8,}{dr.mean():>11.2f}{dc.mean():>11.2f}"
-              f"{dc.std(ddof=1):>9.1f}{se:>9.2f}")
+        print(f"  {f'{lo}-{hi}':>11}{len(shared):>8,}"
+              + "".join(f"{steps[nm]:>12.2f}" for nm, _ in STAGES))
         pair_rows.append(dict(pair=f"{lo}-{hi}", n_cells=int(len(shared)),
-                              raw_step_mm=float(dr.mean()), corr_step_mm=float(dc.mean()),
-                              sd_mm=float(dc.std(ddof=1)), se_mm=float(se)))
+                              raw_step_mm=steps["raw"], corr_step_mm=steps["+drift"],
+                              by_stage={k: v for k, v in steps.items()},
+                              sd_mm=sd_last, se_mm=se_last))
     if pair_rows:
+        print(f"\n  {'MEAN |step|':>11}{'':>8}"
+              + "".join(f"{np.mean([abs(r['by_stage'][nm]) for r in pair_rows]):>12.2f}"
+                        for nm, _ in STAGES))
+        print("  ^ the per-line disagreement each stage leaves. A stage that RAISES this "
+              "made\n    the lines agree less, whatever it did to the spatial field.")
         unp = np.array([g.loc[int(r["pair"].split("-")[1]), "corr_mm"]
                         - g.loc[int(r["pair"].split("-")[0]), "corr_mm"]
                         for r in pair_rows])
