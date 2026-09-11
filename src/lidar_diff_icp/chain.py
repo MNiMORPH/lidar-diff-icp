@@ -242,3 +242,137 @@ def run_chain(chain, ctx: Ctx) -> Ctx:
         step.apply(ctx)
     ctx.record["chain"] = names
     return ctx
+
+
+# ============================ THE GEN2 CHAIN =================================
+# Andy, 2026-09-11: "we alter gen2 via the vegetation correction ... before fitting gen1
+# to it. The DeLong step is the same. It is just matching a different gen2."
+#
+# That sentence is the whole design. gen1's chain above is unchanged; what changes is the
+# TARGET it is registered onto. So gen2 needs a chain of its own, run BEFORE the gen1 one.
+#
+# WHY THIS IS A NEW SEAM AND NOT A FLAG. Until now gen2's only correction ran AFTER
+# apply_datum (pipeline.correct_reference, called at the end), so gen1 was always fitted to
+# the UNCORRECTED gen2 and the correction was applied to the finished difference. Reversing
+# that is an ORDER change, which no argument could express. The rule recorded in
+# pipeline's architecture note was: split when you can name the second implementation that
+# would use the seam. Here it is named -- median gen2 against cover-percentile gen2 -- so
+# the seam is earned rather than speculative.
+
+__all__ += ["Gen2Ctx", "Gen2Correction", "CoverPercentile", "run_gen2_chain"]
+
+
+@dataclass
+class Gen2Ctx:
+    """The gen2 grid a step may replace, and what it needs to do so.
+
+    ``Zref`` is the gen2 ground the gen1 chain will be registered onto. A step REPLACES it
+    (rebinds, not in-place) because a percentile change is a new surface, not a nudge.
+    """
+
+    Zref: np.ndarray
+    Z21: np.ndarray                    # the q=0.50 grid; the reference the columns hang off
+    after_laz: str
+    grid: tuple                        # (X0, Y0, res, nx, ny)
+    tile_dir: str | None = None
+    verbose: bool = True
+    record: dict = field(default_factory=dict)
+    grids: dict = field(default_factory=dict)   # per-cell diagnostics, for corrections.json
+
+
+class Gen2Correction:
+    """One gen2-side step. Subclasses set ``name`` and implement ``apply``."""
+
+    name = "gen2_correction"
+
+    def apply(self, ctx: Gen2Ctx) -> None:       # pragma: no cover - interface
+        raise NotImplementedError
+
+    def __repr__(self):
+        return f"{type(self).__name__}()"
+
+
+class CoverPercentile(Gen2Correction):
+    """Read gen2's ground at a CANOPY-COVER-dependent percentile instead of the median.
+
+    ``q2(c) = intercept + slope * c``, clipped to (0, 1). Delivered gen2 ground floats
+    above true ground under vegetation, so a percentile below the median is taken where
+    cover is high.
+
+    THE CURVE IS READ, NEVER ASSUMED. Both coefficients come from a fitted
+    ``q2_cover_fit.json``; there is no default, for the reason
+    ``dod_cover_corrected.py`` already records -- it once defaulted to Elba's -0.1922 and
+    silently applied Elba's correction to every other region.
+
+    FIT IT ON AN INDEPENDENTLY-BUILT gen1. The curve is defined by matching gen2's
+    percentile to gen1's MEDIAN, so a curve fitted on a product whose gen1 was already
+    registered onto gen2 is circular. Measured at elbaext: fitted on the delong product the
+    free intercept came out 0.0546 against the imposed 0.5 -- 65 sigma -- and the
+    largest cover bin (n=60,118, open ground) was unmatchable, gen1 sitting 24.1 mm below
+    gen2's entire near-ground band. Fitted on the independent product the same tile gives a
+    clean monotonic curve, intercept 0.5419, slope -0.2540 +/- 0.0149.
+    """
+
+    name = "cover_percentile"
+
+    def __init__(self, slope, intercept, cover, *, zlo=-1.0, zhi=2.0, dz=0.02,
+                 min_count=20, chunk=8_000_000):
+        self.slope = float(slope)
+        self.intercept = float(intercept)
+        self.cover = cover                       # per-cell canopy cover, grid-shaped
+        self.zlo, self.zhi, self.dz = zlo, zhi, dz
+        self.min_count, self.chunk = min_count, chunk
+
+    def apply(self, ctx):
+        from . import groundq
+        from .q2cover import q2_at
+
+        X0, Y0, res, nx, ny = ctx.grid
+        surf = groundq.surface_from_grid(ctx.Z21, X0, Y0, res)
+        H, n_in = groundq.column_histogram(ctx.after_laz, surf, zlo=self.zlo,
+                                           zhi=self.zhi, dz=self.dz, chunk=self.chunk)
+        sd_mm, count = groundq.spread_from_histogram(H, self.zlo, self.dz,
+                                                     min_count=self.min_count)
+        # q2_at's second argument is the CURVE slope, not terrain slope. It clips to
+        # (1e-4, 1-1e-4): a percentile outside (0,1) is not a percentile, and the relation
+        # is linear so it leaves the range if extrapolated far enough.
+        q = q2_at(np.asarray(self.cover, float).ravel(), self.slope,
+                  q2_zero=self.intercept)
+        # A cell with too few class-2 returns is DECLINED, not corrected at a guessed
+        # percentile: it drops out of the DoD rather than pass through looking corrected.
+        thin = count < self.min_count
+        h2 = groundq.ground_at_q(H, self.zlo, self.dz, q)
+        h2_med = groundq.ground_at_median(H, self.zlo, self.dz)
+        h2[thin] = np.nan
+        nn = surf["nnorm"].reshape(ny, nx)
+        dv = (h2 - h2_med).reshape(ny, nx) / 1000.0 * nn
+        declined = int((np.isfinite(ctx.Zref) & ~np.isfinite(dv)).sum())
+        ctx.Zref = ctx.Zref + dv
+        ctx.grids["gen2_cover_q2"] = q.reshape(ny, nx)
+        ctx.grids["gen2_cover_correction_m"] = dv
+        ctx.record[self.name] = {
+            "relation": f"q2 = {self.intercept} + {self.slope} * cover",
+            "intercept": self.intercept, "slope": self.slope,
+            "median_correction_mm": float(np.nanmedian(dv) * 1000.0),
+            "cells_lowered": int(np.sum(dv < -0.001)), "cells_declined": declined,
+            "class2_returns_in_band": int(n_in), "min_count": self.min_count}
+        if ctx.verbose:
+            print(f"  gen2 cover percentile: q2 = {self.intercept:.4f} "
+                  f"{self.slope:+.4f}*cover; median correction "
+                  f"{np.nanmedian(dv)*1000:+.1f} mm; {int(np.sum(dv < -0.001)):,} cells "
+                  f"lowered; {declined:,} DECLINED (<{self.min_count} class-2 returns)",
+                  flush=True)
+
+
+def run_gen2_chain(chain, ctx: Gen2Ctx) -> Gen2Ctx:
+    """Run gen2 steps in order, then hand ``ctx.Zref`` to the gen1 chain.
+
+    Deliberately plain: there is one gen2 step today and no ordering constraint between
+    two of them to enforce yet. It exists so the ORDER -- gen2 corrected BEFORE gen1 is
+    registered onto it -- is declared in one place instead of implied by where a call sits
+    among three hundred lines, which is how the old post-hoc order went unnoticed.
+    """
+    for step in chain:
+        step.apply(ctx)
+    ctx.record["gen2_chain"] = [s.name for s in chain]
+    return ctx

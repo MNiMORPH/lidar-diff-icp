@@ -962,7 +962,7 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
                    gen2_curve=None, gen2_epoch="gen2_2021_control", valley_top_m=None,
                    tile_dir=None, curv_max=0.005,
                    route="delong", correction_surface=None, along_track_drift=None,
-                   apply_geoid=None, tie="reference",
+                   apply_geoid=None, gen2_cover_curve=None, tie="reference",
                    ground="slope_normal", sn_smooth_cells=1.2, stream=False,
                    ground_source="csf", after_ground="class2", csf_pdal=None,
                    csf_cache=None, robust_stable=True, before_crs=io.MN_GEN1_CRS,
@@ -1162,6 +1162,33 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
     else:
         Zref = Z21
 
+    # --- gen2 chain: correct the TARGET before gen1 is registered onto it ----------
+    # Andy, 2026-09-11: "we alter gen2 via the vegetation correction ... before fitting
+    # gen1 to it. The DeLong step is the same. It is just matching a different gen2."
+    #
+    # ORDER IS THE POINT. correct_reference (below, after apply_datum) applies gen2's
+    # class-2-SPREAD correction to the FINISHED difference -- gen1 has already been
+    # registered onto the uncorrected gen2 by then. That is fine for a post-hoc
+    # adjustment and wrong for this: a cover-corrected gen2 must be the surface the
+    # correction surface FITS TO, which no argument to the old code could express.
+    gen2_rec, gen2_grids = {}, {}
+    if gen2_cover_curve is not None:
+        _cv = json.load(open(gen2_cover_curve)) if isinstance(gen2_cover_curve, str) \
+            else dict(gen2_cover_curve)
+        # Both coefficients are READ. The free-intercept fit is used, not the imposed 0.5:
+        # at elbaext the imposed anchor was rejected at +14.0 sigma even on the
+        # independently-built product, and the curve's meaning is the pair, not the slope.
+        _fi = _cv["free_intercept"]
+        _cov = np.load(os.path.join(tile_dir, "canopy_cover_pfs.npy")) if tile_dir \
+            else None
+        if _cov is None:
+            raise ValueError("gen2_cover_curve needs tile_dir= to find canopy_cover_pfs.npy")
+        _g2 = chain.Gen2Ctx(Zref=Zref, Z21=Z21, after_laz=after_laz, grid=_grid,
+                            tile_dir=tile_dir, verbose=verbose)
+        chain.run_gen2_chain([chain.CoverPercentile(_fi["b"], _fi["a"], _cov)], _g2)
+        Zref = _g2.Zref
+        gen2_rec, gen2_grids = _g2.record, _g2.grids
+
     # --- before (gen1): CSF ground -> boresight -> swath network -------------------
     # register_gen1 is gen1-INTERNAL: it looks at no gen2 data and sets no absolute
     # level, which is what stops the gen1 tie absorbing a cross-epoch correction.
@@ -1248,6 +1275,7 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
                                 n_marks=_GQ_CURVE["n_marks"], **_GQ_CURVE["provenance"])
                            if _GQ_CURVE is not None else None),
         "route": route, "correction_surface": correction_surface,
+        "gen2_chain": gen2_rec,
         "along_track_drift": along_track_drift, "geoid_applied": apply_geoid,
         "ground_estimator": ground, "ground_source": ground_source,
         "bounds": [float(b) for b in bounds], "stable_1sigma_m": round(sigma, 4),
