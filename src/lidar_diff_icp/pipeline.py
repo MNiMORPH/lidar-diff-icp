@@ -594,7 +594,7 @@ def register_gen1(before_laz, bounds, res, *, ground_source="csf", csf_pdal=None
 
 
 def apply_datum(x, y, z, ground, Zref, ground_of, grid, bounds, *, tie="reference",
-                geoid_datum=None, gen1_geoid=None,
+                geoid_datum=None, gen1_geoid=None, apply_geoid=True,
                 correction_surface=False, floodplain=None,
                 along_track_drift=False, gps_time=None, source_id=None, stable=None,
                 verbose=True):
@@ -632,7 +632,20 @@ def apply_datum(x, y, z, ground, Zref, ground_of, grid, bounds, *, tie="referenc
     # what shipped three sites in the wrong vertical frame. It is the first statement in
     # the function so that a wrong call costs nothing -- at statewide scale the caller may
     # have streamed a multi-gigabyte tile to get here.
-    if geoid_datum is None and gen1_geoid is None:
+    # ``apply_geoid`` is an EXPLICIT switch, not inferred from correction_surface. The
+    # DeLong route sets it False; the independent route leaves it True. Andy, 2026-09-11:
+    # "Drop the geoid correction. We need it when trying to independently build our
+    # surface but not when using the DeLong method."
+    # Measured: the correction surface is fit on the stable residual, so it absorbs any
+    # smooth epoch offset. A 54.87 mm geoid ERROR moves the DoD by -54.870 mm with the
+    # surface OFF and by 0.000 mm with it ON, and the held-out stable sd is 59.95 mm with
+    # the geoid and 59.95 mm without. It buys the product nothing while the surface runs.
+    # It is still REQUIRED, and still guarded, whenever it is applied.
+    if not apply_geoid and verbose:
+        print("  geoid: NOT APPLIED -- the correction surface registers gen1 onto gen2 "
+              "directly, and absorbs any smooth epoch offset (measured 0.000 mm effect). "
+              "Pass gen1_geoid= to apply it anyway.", flush=True)
+    if apply_geoid and geoid_datum is None and gen1_geoid is None:
         raise ValueError(
             "gen1_geoid is required: the PROJ geoid grid gen1 was reduced in. It used to "
             "default to GEOID03, and because nothing overrode it every site was "
@@ -668,19 +681,27 @@ def apply_datum(x, y, z, ground, Zref, ground_of, grid, bounds, *, tie="referenc
                               res, X0, Y0, order=0)
     xc += coreg.eval_poly_field(hs["a"], xc, yc, hs["norm"], 0)
     yc += coreg.eval_poly_field(hs["b"], xc, yc, hs["norm"], 0)
-    if geoid_datum is None:                          # auto-compute from the geoid grids
-        geoid_datum = references.geoid_difference(bounds, 26915,
-                                                  before_geoid=gen1_geoid)
-    gc, gb, gcc = geoid_datum        # (const_m, b East, c North) m,m/km of (N_gen1 - N_gen2), ADD to gen1
     cxg = 0.5*(bounds[0]+bounds[2]); cyg = 0.5*(bounds[1]+bounds[3])
-    zc += gc + gb*(xc-cxg)/1000.0 + gcc*(yc-cyg)/1000.0
-    if verbose:
-        print(f"  geoid-difference datum: const {1000*gc:+.1f} mm, tilt "
-              f"({1000*gb:+.3f},{1000*gcc:+.3f}) mm/km; lateral shift "
-              f"({100*hs['a'][0]:+.1f},{100*hs['b'][0]:+.1f}) cm", flush=True)
-    tie_info = {"method": "geoid_difference", "const_m": gc, "tilt_b_m_per_km": gb,
-                "tilt_c_m_per_km": gcc, "centroid": [cxg, cyg],
-                "horizontal_shift_m": [round(float(hs["a"][0]),4), round(float(hs["b"][0]),4)]}
+    if apply_geoid:
+        if geoid_datum is None:                      # auto-compute from the geoid grids
+            geoid_datum = references.geoid_difference(bounds, 26915,
+                                                      before_geoid=gen1_geoid)
+        gc, gb, gcc = geoid_datum    # (const_m, b East, c North) m,m/km of (N_gen1 - N_gen2), ADD to gen1
+        zc += gc + gb*(xc-cxg)/1000.0 + gcc*(yc-cyg)/1000.0
+        if verbose:
+            print(f"  geoid-difference datum: const {1000*gc:+.1f} mm, tilt "
+                  f"({1000*gb:+.3f},{1000*gcc:+.3f}) mm/km; lateral shift "
+                  f"({100*hs['a'][0]:+.1f},{100*hs['b'][0]:+.1f}) cm", flush=True)
+        tie_info = {"method": "geoid_difference", "const_m": gc, "tilt_b_m_per_km": gb,
+                    "tilt_c_m_per_km": gcc, "centroid": [cxg, cyg],
+                    "horizontal_shift_m": [round(float(hs["a"][0]),4), round(float(hs["b"][0]),4)]}
+    else:
+        # Recorded as NOT APPLIED rather than as a zero, so a product can never be read as
+        # having been put on gen2's geoid when it was registered onto gen2 instead.
+        tie_info = {"method": "none (correction surface registers gen1 onto gen2)",
+                    "const_m": None, "tilt_b_m_per_km": None, "tilt_c_m_per_km": None,
+                    "centroid": [cxg, cyg],
+                    "horizontal_shift_m": [round(float(hs["a"][0]),4), round(float(hs["b"][0]),4)]}
 
     if correction_surface:
         C = coreg.correction_surface(Zref, groundg(xc[be], yc[be], zc[be]),
@@ -895,10 +916,52 @@ def estimate_lod(dod, slope_deg, abs_curv, stable, *, rough_gen1, count_gen1,
     return lod, lod_method
 
 
+#: THE TWO ROUTES. A fork, not a replacement -- Andy, 2026-09-11: "Ensure that we keep
+#: our old pipeline intact so we can run it. And: set up the possibility of working
+#: through the DeLong method ... DeLong becomes a replacement for some of our machinery,
+#: if we so choose."
+#:
+#: A route is nothing but a coherent set of defaults for switches that all still work
+#: independently. Any explicit argument to ``difference_dem`` overrides its route, so every
+#: combination remains reachable and neither route is privileged in the code.
+#:
+#:   independent -- build gen1's elevation and shape on its own terms, then difference.
+#:                  Per-swath alignment, a per-swath along-track drift spline f(gps_time),
+#:                  and an explicit GEOID03->GEOID18 conversion. This is the pipeline as it
+#:                  stood before 2026-09-11 and it still runs unchanged.
+#:   delong      -- register gen1 ONTO gen2 with a masked-stable IDW correction surface
+#:                  (DeLong et al. 2022). No drift; no geoid, because the surface absorbs
+#:                  any smooth epoch offset (a 54.87 mm geoid error moves the DoD by
+#:                  0.000 mm with the surface on).
+#:
+#: What they share, and what no route changes: CSF ground (which supplies EVERY gen1 point
+#: in the DoD, not merely the alignment), align_swaths, the Nuth & Kaeaeb lateral shift,
+#: and the slope-normal median grid.
+ROUTES = {
+    "independent": dict(correction_surface=False, along_track_drift=True, apply_geoid=True),
+    "delong": dict(correction_surface=True, along_track_drift=False, apply_geoid=False),
+}
+
+
+def resolve_route(route, **overrides):
+    """A route's defaults, with any explicitly-passed switch winning. Raises on an
+    unknown route rather than silently picking one -- which route built a product is not
+    something a reader should have to infer from its numbers."""
+    try:
+        base = dict(ROUTES[route])
+    except KeyError:
+        raise KeyError(f"unknown route {route!r}; known: {sorted(ROUTES)}") from None
+    for k, v in overrides.items():
+        if v is not None:
+            base[k] = v
+    return base
+
+
 def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
                    gen2_curve=None, gen2_epoch="gen2_2021_control", valley_top_m=None,
                    tile_dir=None, curv_max=0.005,
-                   correction_surface=True, along_track_drift=False, tie="reference",
+                   route="delong", correction_surface=None, along_track_drift=None,
+                   apply_geoid=None, tie="reference",
                    ground="slope_normal", sn_smooth_cells=1.2, stream=False,
                    ground_source="csf", after_ground="class2", csf_pdal=None,
                    csf_cache=None, robust_stable=True, before_crs=io.MN_GEN1_CRS,
@@ -1101,6 +1164,12 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
     # --- before (gen1): CSF ground -> boresight -> swath network -------------------
     # register_gen1 is gen1-INTERNAL: it looks at no gen2 data and sets no absolute
     # level, which is what stops the gen1 tie absorbing a cross-epoch correction.
+    _R = resolve_route(route, correction_surface=correction_surface,
+                       along_track_drift=along_track_drift, apply_geoid=apply_geoid)
+    correction_surface = _R["correction_surface"]
+    along_track_drift = _R["along_track_drift"]
+    apply_geoid = _R["apply_geoid"]
+
     _reg = register_gen1(before_laz, bounds, res, ground_source=ground_source,
                          csf_pdal=csf_pdal, csf_cache=csf_cache, before_crs=before_crs,
                          correct_boresight=correct_boresight,
@@ -1117,6 +1186,7 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
     # It mutates xc, yc, zc in place -- see its docstring for why.
     _dat = apply_datum(xc, yc, zc, be, Zref, groundg, _grid, bounds, tie=tie,
                        geoid_datum=geoid_datum, gen1_geoid=gen1_geoid,
+                       apply_geoid=apply_geoid,
                        correction_surface=correction_surface, floodplain=floodplain,
                        along_track_drift=along_track_drift, gps_time=gt8,
                        source_id=ps8, stable=stable)
@@ -1176,6 +1246,8 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
                                 point_types=_GQ_CURVE["point_types"],
                                 n_marks=_GQ_CURVE["n_marks"], **_GQ_CURVE["provenance"])
                            if _GQ_CURVE is not None else None),
+        "route": route, "correction_surface": correction_surface,
+        "along_track_drift": along_track_drift, "geoid_applied": apply_geoid,
         "ground_estimator": ground, "ground_source": ground_source,
         "bounds": [float(b) for b in bounds], "stable_1sigma_m": round(sigma, 4),
         "robust_stable": robust_stable,

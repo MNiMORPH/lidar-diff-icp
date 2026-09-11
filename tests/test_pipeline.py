@@ -296,8 +296,12 @@ def test_the_correction_surface_absorbs_a_wrong_geoid_and_hides_it(tmp_path):
     GEOID_ERR = 0.05487                       # the measured battlecreek error, in metres
 
     def dod(cs, g):
+        # apply_geoid FORCED ON in both arms. Since 2026-09-11 the delong route defaults it
+        # off, and this test is about whether the surface ABSORBS a geoid that WAS applied
+        # -- not about whether the route applies one. Without the force, both arms would
+        # skip the geoid and the test would pass by measuring nothing.
         return difference_dem(before, after, BOUNDS, correction_surface=cs,
-                              geoid_datum=(g, 0.0, 0.0), **kw)["dod"]
+                              apply_geoid=True, geoid_datum=(g, 0.0, 0.0), **kw)["dod"]
 
     off = dod(False, GEOID_ERR) - dod(False, 0.0)
     on = dod(True, GEOID_ERR) - dod(True, 0.0)
@@ -311,3 +315,75 @@ def test_the_correction_surface_absorbs_a_wrong_geoid_and_hides_it(tmp_path):
     assert 1000 * np.nanmax(np.abs(on[m_on])) < 1.0, (
         f"the correction surface should absorb a wrong geoid completely: "
         f"max {1000 * np.nanmax(np.abs(on[m_on])):.3f} mm survived")
+
+
+def test_both_routes_run_and_stay_distinct(tmp_path):
+    """The fork is real: `independent` and `delong` both run, and differ.
+
+    Andy, 2026-09-11: "Ensure that we keep our old pipeline intact so we can run it.
+    And: set up the possibility of working through the DeLong method."
+
+    A route is only a coherent set of defaults; every switch still works alone, so any
+    combination stays reachable. This pins three things:
+
+      * `independent` reproduces the pre-2026-09-11 pipeline -- drift on, geoid applied,
+        no correction surface -- and still produces a DoD.
+      * `delong` runs with no gen1_geoid at all. Under `independent` that same call is a
+        REFUSAL, because a defaulted geoid silently added +54.87 mm at Battle Creek.
+      * the two give DIFFERENT answers. If they ever agree to the millimetre, the route
+        switch has stopped being wired to anything.
+
+    Bites if a route's defaults are collapsed into one another, if the geoid guard is
+    dropped from the independent route, or if `route=` stops reaching apply_datum.
+    """
+    rng = np.random.default_rng(3)
+    n = int(3.0 * 120 * W)
+    x1 = rng.uniform(X0, X0 + 120, n); y1 = rng.uniform(Y0, Y0 + W, n)
+    x2 = rng.uniform(X0 + 80, X0 + W, n); y2 = rng.uniform(Y0, Y0 + W, n)
+    xb = np.concatenate([x1, x2]); yb = np.concatenate([y1, y2])
+    ps = np.concatenate([np.ones(n), np.full(n, 2)])
+    zb = _ground(xb, yb) + rng.normal(0, 0.02, len(xb))
+    _write_laz14(tmp_path / "before.laz", xb, yb, zb, ps, yb, np.zeros(len(xb)))
+    na = int(4.0 * W * W)
+    xa = rng.uniform(X0, X0 + W, na); ya = rng.uniform(Y0, Y0 + W, na)
+    za = _ground(xa, ya) + _bump(xa, ya) + rng.normal(0, 0.02, na)
+    _write_laz14(tmp_path / "after.laz", xa, ya, za, np.ones(na), ya, np.zeros(na))
+    before = str(tmp_path / "before.laz"); after = str(tmp_path / "after.laz")
+    kw = dict(res=5.0, ground_q=0.10, ground="low_q", ground_source="last_return",
+              after_ground="last_return", valley_top_m=-1e9)
+    ci = int((BUMP_XY[0] - X0) / 5.0); ri = int((BUMP_XY[1] - Y0) / 5.0)
+
+    # the old pipeline, unchanged, still runs -- it just has to be asked for
+    r_ind = difference_dem(before, after, BOUNDS, route="independent",
+                           geoid_datum=(0.0, 0.0, 0.0), **kw)
+    assert r_ind["corrections"]["route"] == "independent"
+    assert r_ind["corrections"]["along_track_drift"] is True
+    assert r_ind["corrections"]["correction_surface"] is False
+    assert r_ind["corrections"]["geoid_applied"] is True
+    assert r_ind["dod"][ri, ci] > 0.7
+
+    # the DeLong route needs no geoid at all
+    r_del = difference_dem(before, after, BOUNDS, route="delong", **kw)
+    assert r_del["corrections"]["route"] == "delong"
+    assert r_del["corrections"]["correction_surface"] is True
+    assert r_del["corrections"]["along_track_drift"] is False
+    assert r_del["corrections"]["geoid_applied"] is False
+    assert r_del["corrections"]["cross_epoch_datum"]["const_m"] is None
+    assert r_del["dod"][ri, ci] > 0.7
+
+    # the geoid GUARD survives on the route that uses it
+    with pytest.raises(ValueError, match="gen1_geoid is required"):
+        difference_dem(before, after, BOUNDS, route="independent", **kw)
+
+    # and the two routes are actually different products
+    d = r_del["dod"] - r_ind["dod"]
+    m = np.isfinite(d)
+    assert np.nanmax(np.abs(d[m])) > 0.001, (
+        "the two routes gave the same DoD to the millimetre -- the route switch is "
+        "no longer wired to anything")
+
+    # an explicit switch still overrides its route, so every combination stays reachable
+    r_mix = difference_dem(before, after, BOUNDS, route="delong", along_track_drift=True,
+                           **kw)
+    assert r_mix["corrections"]["along_track_drift"] is True
+    assert r_mix["corrections"]["correction_surface"] is True
