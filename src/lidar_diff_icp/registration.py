@@ -113,7 +113,21 @@ def read_cross_epoch_datum(tile_dir):
 
 
 def geoid_term(x, y, nnorm_pt, datum):
-    """Slope-normal mm to add for the geoid datum: ``(const + tilt.(r - centroid)) / |n|``."""
+    """Slope-normal mm to add for the geoid datum: ``(const + tilt.(r - centroid)) / |n|``.
+
+    ZERO when the product carries no geoid, which is the DeLong route's normal state: the
+    correction surface registers gen1 onto gen2 directly, so the geoid is not applied and
+    ``cross_epoch_datum`` records ``const_m: None`` -- deliberately None and not 0.0, so a
+    product can never be read as having been PUT on gen2's geoid when it was registered
+    onto gen2 instead. That honesty has to be handled here rather than crashing: this used
+    to do ``float(datum["const_m"])`` and died with "float() argument must be ... not
+    'NoneType'" the first time a delong product reached it.
+
+    A zero term is the truthful value -- no geoid was applied, so none is added back -- and
+    the ``method`` string in the same block says why, for any reader of the column.
+    """
+    if datum.get("const_m") is None:
+        return np.zeros(np.shape(np.asarray(x, float)), float)
     gc = float(datum["const_m"])
     gb = float(datum.get("tilt_b_m_per_km", 0.0)); gcc = float(datum.get("tilt_c_m_per_km", 0.0))
     cx, cy = datum.get("centroid", (0.0, 0.0))
