@@ -259,7 +259,8 @@ def run_chain(chain, ctx: Ctx) -> Ctx:
 # would use the seam. Here it is named -- median gen2 against cover-percentile gen2 -- so
 # the seam is earned rather than speculative.
 
-__all__ += ["Gen2Ctx", "Gen2Correction", "CoverPercentile", "run_gen2_chain"]
+__all__ += ["Gen2Ctx", "Gen2Correction", "SpreadPercentile", "CoverPercentile",
+            "run_gen2_chain"]
 
 
 @dataclass
@@ -292,8 +293,72 @@ class Gen2Correction:
         return f"{type(self).__name__}()"
 
 
+class SpreadPercentile(Gen2Correction):
+    """Read gen2's ground at a percentile set by the cell's own CLASS-2 SPREAD.
+
+    THIS IS THE ADOPTED gen2 MOVER. ``difference_dem`` reaches it as
+    ``ground_q="calibrated"`` with ``gen2_curve=<curve .npz>``; the curve is an isotonic
+    regression fitted from SURVEYED CONTROL MARKS (:mod:`groundq`), so unlike the per-tile
+    cover fit it transfers between tiles.
+
+    NO DEFAULT CURVE, deliberately. Which point types were fitted decides what the curve
+    means, and groundq records the hazard: pooled over all 519 marks the curve looked like
+    a 16% RMS gain, but the falling limb is entirely the 162 VVA marks, which are sited
+    UNDER VEGETATION by design. Applied to ordinary ground it widened the DoD's scatter at
+    both sites tested (Elba NMAD 74.8 -> 79.1 mm, Whitewater 85.0 -> 92.4). On open ground
+    the NVA-only curve measured WORSE than the plain median, RMS 52.5 against 49.1 held
+    out. So naming the curve is a scientific choice and this step will not make it.
+    """
+
+    name = "spread_percentile"
+
+    def __init__(self, curve, *, chunk=8_000_000):
+        self.curve = curve
+        self.chunk = chunk
+
+    def apply(self, ctx):
+        from . import groundq
+        X0, Y0, res, nx, ny = ctx.grid
+        surf = groundq.surface_from_grid(ctx.Z21, X0, Y0, res)
+        gq = groundq.correct_gen2(ctx.after_laz, self.curve, surf=surf, chunk=self.chunk)
+        nn = surf["nnorm"].reshape(ny, nx)
+        dv = (gq["h2_mm"] - gq["h2_median_mm"]).reshape(ny, nx) / 1000.0 * nn
+        declined = int((np.isfinite(ctx.Zref) & ~np.isfinite(dv)).sum())
+        ctx.Zref = ctx.Zref + dv
+        ctx.grids["gen2_ground_q"] = gq["q"].reshape(ny, nx)
+        ctx.grids["gen2_class2_sd_mm"] = gq["sd_mm"].reshape(ny, nx)
+        ctx.grids["gen2_correction_m"] = dv
+        ctx.record[self.name] = {
+            "curve": str(self.curve),
+            "median_correction_mm": float(np.nanmedian(dv) * 1000.0),
+            "cells_lowered": int(np.sum(dv < -0.001)), "cells_declined": declined}
+        if ctx.verbose:
+            print(f"  gen2 spread percentile: median correction "
+                  f"{np.nanmedian(dv)*1000:+.1f} mm; {int(np.sum(dv < -0.001)):,} cells "
+                  f"lowered; {declined:,} DECLINED", flush=True)
+
+
 class CoverPercentile(Gen2Correction):
     """Read gen2's ground at a CANOPY-COVER-dependent percentile instead of the median.
+
+    *** NOT THE ADOPTED ROUTE. DO NOT MAKE THIS A DEFAULT. *** Andy, 2026-09-11: "We use
+    ground-return spread to move gen2." analysis/FRAME.md says of the vegetation_correction
+    group this belongs to: "MEASURED AND NOT ADOPTED ... Its outputs are dod_cover_q2.npy /
+    lod_cover_q2.npy, NEVER dod.npy / lod.npy." Because this step moves ``Zref`` it moves
+    dod.npy, which is exactly what that forbids. I wired it up on 2026-09-11 without
+    checking, and Andy caught it. Use :class:`SpreadPercentile` unless deliberately
+    exploring this relation.
+
+    Kept, not deleted, for two reasons: the relation is real and per-site
+    (Q2_COVER_RELATION.md; elba_fulldensity -0.1247, elbaext -0.1871), and it is the only
+    way to ask what the cover route does to a finished DoD. It measurably works where it
+    was pointed -- forest minus open 65.67 -> 38.29 mm at elbaext, monotonic in cover, open
+    ground untouched -- so its non-adoption is a decision, not a failure.
+
+    ONE DOC PROBLEM FOUND WHILE CHECKING, and not fixed here: FRAME justifies not adopting
+    THIS route by quoting "RMS 52.5 vs 49.1 mm, held out on 227 NVA marks", which is the
+    SPREAD curve's number out of groundq's own header. One route's evidence is being used
+    to condemn the other. Worth resolving before either is trusted further.
 
     ``q2(c) = intercept + slope * c``, clipped to (0, 1). Delivered gen2 ground floats
     above true ground under vegetation, so a percentile below the median is taken where
