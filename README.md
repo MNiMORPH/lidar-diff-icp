@@ -65,29 +65,62 @@ measured at ~6.5 mm median absolute on the pilot.
 2. **Align the swaths to each other** (`coreg.align_swaths`, free network, extent-invariant
    intercept tie). This removes the per-line offsets – about 20 mm between adjacent lines,
    accumulating to a few tens of centimetres across the acquisition.
-3. **Correct along-track drift** per swath as a function of `gps_time`. The dominant
-   residual navigation error follows the flight path.
-4. **Register laterally to gen2** (Nuth & Kääb *x, y*). Get the horizontal right before
+3. **Register laterally to gen2** (Nuth & Kääb *x, y*). Get the horizontal right before
    touching the vertical, or terrain slope leaks into the elevation difference.
-5. **Convert the geoid, GEOID03 → GEOID18.** gen1's orthometric heights were computed with
+4. **Convert the geoid, GEOID03 → GEOID18.** gen1's orthometric heights were computed with
    a different model than gen2's; at Elba that is **+67.38 mm**, the single largest term in
    the comparison. Without it the two epochs sit on different vertical frames.
-6. **Apply the absolute datum to both epochs**, each from its own contemporaneous control
-   (`ground_control/run_site_datum.py` → `difference_dem(absolute_datum=...)`). Until it is
-   applied, the surface's absolute level is whichever flight line `align_swaths` happened
-   to pin, which is worth **42.40 mm** at elbaext (38.60 mm at elba itself).
-   Applying it makes the elevation
-   zero-line-invariant. Three rules govern it: epoch-matched control, open ground only, and the
-   flight line as the unit of replication.
-7. **Grid at the working resolution with the slope-normal estimator**, identically for both
+5. **Remove the residual field with a DeLong (2022) masked-stable correction surface.**
+   Mask the cells that may hold real change – slope > 3°, |dz| > 0.7 m, and the floodplain –
+   then inverse-distance interpolate the remaining stable residual over 400 m and subtract
+   it. It is nonparametric, so it follows a multi-lobe warp that no low-order polynomial can.
+6. **Grid at the working resolution with the slope-normal estimator**, identically for both
    epochs, then difference. This is a reduction, not a correction: it earns its place by
    being the same on both sides, so its bias cancels rather than being removed.
 
-Skipping step 5 leaves a ~67 mm epoch offset. Skipping step 6 leaves an arbitrary,
-site-dependent level that no amount of alignment can detect from the data alone – the
-overlaps are blind to it, because a constant common to every swath cancels in every
-between-swath difference. The same logic applies horizontally to step 4: registering *to*
-a dataset is not the same as registering to the world.
+### What step 5 replaced, and why (2026-09-11)
+
+It replaced two steps at once, and the order above is one shorter for it.
+
+**The along-track drift spline `f(gps_time)`** used to sit between steps 2 and 3, on the
+argument that only acquisition geometry can separate a residual warp from real localized
+change. Measured against the correction surface at `elba_fulldensity`, block
+cross-validated so neither is scored in-sample, it loses twice over. Out-of-sample skill at
+100/200/400 m held-out blocks: drift 0.160/0.142/0.087 against the surface's
+0.444/0.384/0.283. And it *undoes step 2*: `align_swaths` brings the mean per-line step in
+shared overlap cells from 15.15 to **5.07 mm**, and the drift returns it to **13.19 mm**,
+because it is fit per line in time on a residual that is mostly a spatial field, so each
+line absorbs a different slice of that field and converts spatial structure back into
+per-line offsets. A position-only surface cannot do this: applied as `C[iyp, ixp]` it is
+identical for both lines in a shared cell, so it leaves the per-line step at 5.07 to the
+digit. The drift remains available as `along_track_drift=True`; if both are enabled the
+surface must run FIRST, because a spatial surface cannot undo a per-line offset once made.
+
+**The absolute datum** is no longer a step because it is no longer applied – it is
+*inherited*. The surface is fit on the stable residual, so it pulls gen1 onto gen2's frame
+whatever datum preceded it. Measured with the +54.87 mm geoid error that was found at
+Battle Creek: with the surface off the DoD moves by **−54.870 mm**; with it on, by
+**0.000 mm**. The product is therefore absolute to exactly the degree gen2 is, and the
+control marks now BOUND that level rather than supply it — at Elba, gen2's open-ground
+constant is **−6.5647 mm** with a field sd of **31.10 mm** over 139 marks. That number, not
+a datum constant, is what the absolute claim is worth.
+
+The concern that an interpolator would eat real change was tested and did not hold. Against
+a 1.0 m injected bump: surface **0.994**, drift 0.978, neither 0.989 — the surface preserves
+real localized change *better* than the drift, and gives 3× lower stable scatter (0.0098
+against 0.0291). DeLong's |dz| > 0.7 m mask keeps a 1 m bump out of the IDW's own sources.
+
+**The cost, stated plainly: the surface absorbs everything smooth.** The geoid error above,
+an injected scanner roll, any datum mistake — all removed from the product, none visible in
+it. That is why it wins, and why the control marks and the geoid conversion have moved
+*outside* the pipeline to become its independent audit: they are now the only instruments
+that can see what the product has stopped being sensitive to.
+
+One guard travels with step 5. The inherited level is gen2's, and gen2's ground floats high
+under canopy — stable forest sits **−28.61 mm** against stable open at Elba. Elba is safe by
+terrain: the slope ≤ 3° mask leaves its stable set 69.7% open and 0.1% forest, because the
+forest is on the bluffs. Where flat ground *is* forested, that is not true, and the stable
+set's cover composition must be reported before the inherited level is trusted.
 
 ## The workflow, and why each step is what it is
 
