@@ -85,9 +85,16 @@ def test_boresight_correction_recovers_injected_roll(tmp_path):
     before = str(tmp_path / "before.laz"); after = str(tmp_path / "after.laz")
     # A synthetic flat-ish tile has no valley; state the cut rather than let anything
     # compute one. The caller ALWAYS says which (Andy, 2026-09-04).
+    # correction_surface is PINNED OFF here, though it is the default since 2026-09-11.
+    # This test is about the BORESIGHT mechanism, and a scanner roll is a spatially
+    # varying field, so a DeLong IDW absorbs most of it before boresight sees it: with
+    # the surface on, stable_sigma goes 0.0098 -> 0.0087 (ratio 0.88) and the 0.7 ratio
+    # below stops biting, not because the correction stopped working but because there
+    # was little left for it to remove. Isolating the mechanism means pinning the other
+    # one off. The absorption itself is asserted separately below, so it stays visible.
     kw = dict(res=5.0, ground_q=0.10, ground="low_q", ground_source="last_return",
               after_ground="last_return", geoid_datum=(0.0, 0.0, 0.0),
-              valley_top_m=-1e9)
+              valley_top_m=-1e9, correction_surface=False, along_track_drift=True)
     r_off = difference_dem(before, after, BOUNDS, correct_boresight=False, **kw)
     r_on = difference_dem(before, after, BOUNDS, correct_boresight=True, **kw)
     assert r_off["corrections"]["boresight_roll_mm_per_deg"] is None
@@ -98,6 +105,22 @@ def test_boresight_correction_recovers_injected_roll(tmp_path):
         f"correction did not flatten the roll: {r_off['stable_sigma']:.4f} -> {r_on['stable_sigma']:.4f}"
     ci = int((BUMP_XY[0] - X0) / 5.0); ri = int((BUMP_XY[1] - Y0) / 5.0)
     assert r_on["dod"][ri, ci] > 0.7, "boresight correction ate the real bump"
+
+    # The DeLong correction surface ABSORBS this injected roll -- recorded, not hidden.
+    # It is why the ratio assertion above needs the surface pinned off, and it is a real
+    # cost of the 2026-09-11 default: with the surface on, a scanner roll is removed from
+    # the product but is no longer VISIBLE as a roll, so it cannot be diagnosed or
+    # physically modelled. Bites if someone turns the surface on inside this test.
+    cs_kw = dict(kw); cs_kw["correction_surface"] = True; cs_kw["along_track_drift"] = False
+    r_cs = difference_dem(before, after, BOUNDS, correct_boresight=False, **cs_kw)
+    assert r_cs["stable_sigma"] < 0.5 * r_off["stable_sigma"], (
+        f"the correction surface should absorb most of the injected roll: "
+        f"{r_off['stable_sigma']:.4f} -> {r_cs['stable_sigma']:.4f}")
+    # ... and it must NOT eat the real 1 m bump; the |dz| > 0.7 m mask excludes the bump
+    # from the IDW's stable sources. Measured 0.994 of 1.0 m, BETTER than the drift's
+    # 0.978, which is what refuted the concern that an IDW would absorb real change.
+    assert r_cs["dod"][ri, ci] > 0.9, (
+        f"the correction surface ate real localized change: {r_cs['dod'][ri, ci]:.3f} of 1.0 m")
 
 
 def _make_tiles(tmp_path):

@@ -24,14 +24,51 @@ Lessons baked in
   (order-0 tie) + a geoid-model vertical datum -> per-swath along-track GNSS-drift
   spline ``f(gps_time)``. (The earlier spatially-varying quadratic/parabola tie
   and the reference-plane fit were REMOVED -- geoid-only datum now; see git
-  history.) The residual warp and real
-  localized change share the same ~100-400 m scale, so no data-driven interpolator
-  on the elevation residual can separate them; only the acquisition geometry can.
-  The drift uses it (per-swath, time-ordered), is deterministic and reusable, and
-  cannot absorb a localized deposit. A DeLong 400 m correction surface is available
-  (``correction_surface=True``) for legacy data lacking ``gps_time``, but it is a
-  data-driven IDW that absorbs localized flat change up to its dz threshold, adds
-  only ~4 mm here, and is OFF by default.
+  history.) The residual field is then removed by a
+  **DeLong (2022) 400 m masked-stable IDW correction surface**
+  (``correction_surface=True``, the default since 2026-09-11).
+
+  THIS REVERSES THE EARLIER DEFAULT, ON MEASUREMENT. The previous text argued that
+  only acquisition geometry can separate a residual warp from real localized change,
+  so the per-swath along-track drift spline ``f(gps_time)`` should carry the
+  residual; it also asserted the correction surface "adds only ~4 mm here", a number
+  that appears nowhere else in this repository and that no analysis in it supports.
+  Measured at ``elba_fulldensity`` on 1,072,025 DeLong-stable returns, block
+  cross-validated so neither method is scored in-sample
+  (``ground_control/drift_vs_correction_surface.py``):
+
+      out-of-sample skill        100 m    200 m    400 m   held-out blocks
+        drift spline             0.160    0.142    0.087
+        correction surface       0.444    0.384    0.283
+
+      mean |per-line step| in shared overlap cells, mm
+        after align_swaths        5.07   <- what the swath solve achieves
+        + drift                  19.91    16.97    21.46
+        + correction surface      5.07     5.07     5.07
+
+  Two findings drove it. (1) The correction surface has 2-3x the out-of-sample skill
+  at every block size where the drift is fairly testable. (2) The drift MAKES
+  PER-LINE AGREEMENT WORSE: ``align_swaths`` brings the mean per-line step from 15.15
+  to 5.07 mm and the drift returns it to ~13-21 mm, because it is fit per line in
+  time on a residual that is ~73% spatial field, so each line absorbs a different
+  slice of that field and converts spatial structure into per-line offsets. A
+  position-only correction surface provably cannot do this: applied as
+  ``C[iyp, ixp]`` it is identical for both lines in a shared cell, cancels in a
+  paired same-cell difference, and leaves the per-line step at 5.07 to the digit.
+
+  ORDER MATTERS IF BOTH ARE ENABLED. ``drift -> correction surface`` inherits the
+  drift's per-line damage in full, because a spatial surface cannot undo a per-line
+  offset once made. Run the correction surface FIRST. Enabling both buys no
+  measurable spatial skill over the correction surface alone (0.441 vs 0.444 at
+  100 m), so the default is the correction surface ONLY.
+
+  WHAT IS NOT MEASURED, and is the drift's remaining case: ``f(gps_time)`` is
+  deterministic and transferable statewide while an IDW is refit per tile, and the
+  cross-validation scores STABLE ground only -- the cells where an interpolator could
+  absorb real localized change are masked OUT of that test by construction. DeLong's
+  own masks (slope > 3 deg, |dz| > 0.7 m, a stream/floodplain buffer) are the guard
+  and are implemented in ``coreg.correction_surface``. The drift remains available as
+  ``along_track_drift=True``.
 * **ELEVATION, not TPI, cuts the floodplain** out of the stable set
   (flow routing is unreliable on flats).
 * Convention: DoD is always ``after - before`` (positive = deposition); plot red =
@@ -861,7 +898,7 @@ def estimate_lod(dod, slope_deg, abs_curv, stable, *, rough_gen1, count_gen1,
 def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
                    gen2_curve=None, gen2_epoch="gen2_2021_control", valley_top_m=None,
                    tile_dir=None, curv_max=0.005,
-                   correction_surface=False, along_track_drift=True, tie="reference",
+                   correction_surface=True, along_track_drift=False, tie="reference",
                    ground="slope_normal", sn_smooth_cells=1.2, stream=False,
                    ground_source="csf", after_ground="class2", csf_pdal=None,
                    csf_cache=None, robust_stable=True, before_crs=io.MN_GEN1_CRS,
