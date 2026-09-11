@@ -30,8 +30,32 @@ because bridge = z_delivered - z_ours. Positive = the surface reads LOW at the m
 
 WHAT THE COMPARISON TURNS ON -- the SPREAD, not the mean. A constant offset common to all
 marks is a datum constant and is absorbed downstream (that is what the whole gen1 datum
-thread is for). Scatter about it is not absorbable. So the surface that tracks the marks
-better is the one with the smaller sd, even if its mean sits further from zero.
+thread is for). Scatter about it is not absorbable.
+
+*** THE CONTRAST IS CLEAN; THE THREE-SURFACE COLUMNS ARE NOT. *** Andy, 2026-09-11: "We
+know that our pipeline is going to be off of the marks by a constant."
+
+  - `z_class2_minus_z_csf_mm` IS a valid comparison. `swath_constants()` does not take
+    `ground_source` (reconstruct.py:138, and its own docstring at :174), so BOTH arms carry
+    byte-identical per-line swath constants. Every constant -- global, per-line, per-tile --
+    cancels exactly in the difference. Nothing but the ground selection is left.
+
+  - `offset_vendor` vs `offset_csf` vs `offset_class2` is NOT a valid quality comparison,
+    and the sd/NMAD of those three columns MUST NOT be read as "which surface tracks the
+    ground better". gen1's level is PER FLIGHT LINE, and our free-network re-solve
+    deliberately redistributes level BETWEEN lines. Pooling all marks into one sd therefore
+    charges each surface for its between-line level spread -- a DATUM difference scored as
+    a surface-quality difference. Whichever surface redistributes more level looks worse
+    regardless of how well it reads the ground.
+
+    To make it valid, remove a constant PER DOMINANT LINE first and compare the residual
+    within-line scatter. That needs `groundtruth.same_line.assign_line_from_returns` ->
+    `LineAssignment.dominant`, which the bridge records do NOT carry: they record the line
+    SET present in the window (77 of 88 marks see two lines, 2 see one). Keying on the
+    exact line-set gives 33 groups over 88 marks with 12 singletons -- 33 degrees of freedom
+    spent and 12 marks contributing no residual, which is not an estimator worth running.
+    So it is a RE-RUN, not a re-analysis. The three columns are left in because they are
+    the raw material for that re-run; they are not a result.
 
 SPLIT BY COVER, and that is the whole reason this run exists. The earlier comparison was
 L1O-only -- open ground, exactly where a vendor classifier has the easiest job -- so it was
