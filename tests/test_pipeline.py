@@ -252,3 +252,62 @@ def test_classify_ground_csf_optional(tmp_path):
     assert 0 < len(g.x) < n                                       # filtered, not pass-through
     assert float(np.max(g.z)) < 105.0                             # the +8 m cluster is gone
     assert "gps_time" in g.point_format.dimension_names           # attributes preserved
+
+
+def test_the_correction_surface_absorbs_a_wrong_geoid_and_hides_it(tmp_path):
+    """A wrong gen1 geoid is INVISIBLE in the product once correction_surface is on.
+
+    Andy, 2026-09-11: "DeLong's purely relative would become absolute by necessity because
+    gen2 is considered absolute. So it's the same thing." That is right, and this is the
+    mechanism -- and its cost. The surface is fit on the stable residual, so ANY smooth
+    offset between the epochs is interpolated away: gen1 is pulled onto gen2's frame
+    whatever datum was applied first.
+
+    Measured here with the +54.87 mm battlecreek error (GEOID03 applied to a GEOID09
+    survey). Surface OFF: the DoD moves by -54.870 mm, mean and max -- that is the bug, and
+    it was found only because nothing absorbed it. Surface ON: 0.000 mm, mean and max.
+
+    So with the surface on, the geoid term is no longer load-bearing for the product's
+    NUMBERS. It stays as a physically meaningful, transferable decomposition -- but it can
+    no longer be validated from the product, because the product is now insensitive to it.
+    Same pattern as the scanner roll the surface absorbs: better product, blind diagnosis.
+    That is the argument for keeping the geoid and the control marks as INDEPENDENT checks
+    OUTSIDE the pipeline, which is exactly where they are being moved (task #68).
+
+    Bites if someone makes the surface respect the datum, or drops the geoid term believing
+    it was never needed -- it IS needed whenever the surface is off.
+    """
+    rng = np.random.default_rng(0)
+    n = int(3.0 * 120 * W)
+    x1 = rng.uniform(X0, X0 + 120, n); y1 = rng.uniform(Y0, Y0 + W, n)
+    x2 = rng.uniform(X0 + 80, X0 + W, n); y2 = rng.uniform(Y0, Y0 + W, n)
+    xb = np.concatenate([x1, x2]); yb = np.concatenate([y1, y2])
+    ps = np.concatenate([np.ones(n), np.full(n, 2)])
+    zb = _ground(xb, yb) + rng.normal(0, 0.02, len(xb))
+    _write_laz14(tmp_path / "before.laz", xb, yb, zb, ps, yb, np.zeros(len(xb)))
+    na = int(4.0 * W * W)
+    xa = rng.uniform(X0, X0 + W, na); ya = rng.uniform(Y0, Y0 + W, na)
+    za = _ground(xa, ya) + _bump(xa, ya) + rng.normal(0, 0.02, na)
+    _write_laz14(tmp_path / "after.laz", xa, ya, za, np.ones(na), ya, np.zeros(na))
+    before = str(tmp_path / "before.laz"); after = str(tmp_path / "after.laz")
+
+    kw = dict(res=5.0, ground_q=0.10, ground="low_q", ground_source="last_return",
+              after_ground="last_return", valley_top_m=-1e9, along_track_drift=False)
+    GEOID_ERR = 0.05487                       # the measured battlecreek error, in metres
+
+    def dod(cs, g):
+        return difference_dem(before, after, BOUNDS, correction_surface=cs,
+                              geoid_datum=(g, 0.0, 0.0), **kw)["dod"]
+
+    off = dod(False, GEOID_ERR) - dod(False, 0.0)
+    on = dod(True, GEOID_ERR) - dod(True, 0.0)
+    m_off, m_on = np.isfinite(off), np.isfinite(on)
+
+    # OFF: the error passes straight through, to the millimetre
+    assert abs(1000 * np.nanmean(off[m_off]) + 54.87) < 0.5, (
+        f"without the surface a geoid error must pass through: "
+        f"{1000 * np.nanmean(off[m_off]):+.3f} mm")
+    # ON: absorbed entirely -- this is what makes the product insensitive, and blind
+    assert 1000 * np.nanmax(np.abs(on[m_on])) < 1.0, (
+        f"the correction surface should absorb a wrong geoid completely: "
+        f"max {1000 * np.nanmax(np.abs(on[m_on])):.3f} mm survived")
