@@ -341,6 +341,8 @@ TOOLS: dict[str, str] = {
         "The cover calibration, as measured: what the binned medians do, and which candidate",
     "analysis/tools/plot_dod_comparison.py":
         "Corrected vs uncorrected DoD, side by side, on one colour scale.",
+    "analysis/tools/plot_route_comparison.py":
+        "Two routes, side by side, plus the difference between them.",
     "analysis/tools/plot_floodplain_cuts.py":
         "What the floodplain cut actually REMOVES: the TPI mask against the elevation cut.",
     "analysis/tools/plot_ground_q_curve.py":
