@@ -58,10 +58,18 @@ avoid – gen1 needs CSF because its vendor class is seam-cut, while gen2's deli
 is sound – so the ground-source difference is a carried term rather than a cancelled one,
 measured at ~6.5 mm median absolute on the pilot.
 
-1. **Classify ground with CSF, not the vendor class.** gen1's delivered bare earth is cut
-   at the class-12 overlap seam, at half the line spacing (measured 462–506 m), so one
-   line's returns are dropped wherever two swaths see the same ground. CSF recovers them
-   and matches how gen2's ground is built.
+1. **Classify ground with CSF, not the vendor class.** **The CSF ground points ARE the
+   gen1 surface** – every gen1 point in the DoD is one of them, gridded by the per-cell
+   slope-normal median. The vendor's class 2 never enters the product; CSF is not an
+   alignment aid. What CSF does *not* do is change any elevation: it selects which returns
+   are ground, and each keeps the vendor's own z, which our four corrections then move.
+   Why CSF rather than the vendor's class 2, given that the two agree to 8.9 mm NMAD at 88
+   control marks: gen1's delivered bare earth is cut at the class-12 overlap seam, at half
+   the line spacing (measured 462–506 m), so one line's returns are dropped wherever two
+   swaths see the same ground. Under class 2, 2,444 of 346,292 cells (0.71%) hold returns
+   from two flight lines; restore the overlap and it is 171,911 of 347,181 (49.52%). That
+   is what `align_swaths` has to work with, so the seam cut would cripple step 2. CSF
+   recovers those returns and matches how gen2's ground is built.
 2. **Align the swaths to each other** (`coreg.align_swaths`, free network, extent-invariant
    intercept tie). This removes the per-line offsets – about 20 mm between adjacent lines,
    accumulating to a few tens of centimetres across the acquisition.
