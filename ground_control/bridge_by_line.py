@@ -50,6 +50,10 @@ def main():
     ap.add_argument("--assign", required=True,
                     help="JSON with marks[].point_id and marks[].line (a DOMINANT line per "
                          "mark, from assign_line_from_returns)")
+    ap.add_argument("--permutations", type=int, default=200000,
+                    help="permutations for the tightest-group test; 0 to skip")
+    ap.add_argument("--seed", type=int, default=20260911,
+                    help="fixed so the reported p-value reproduces exactly")
     ap.add_argument("--out", default="")
     a = ap.parse_args()
 
@@ -78,6 +82,10 @@ def main():
     R.column("sd_mm", "sd of bridge WITHIN that line, ddof=1, mm; nan for a singleton")
     R.column("F", "one-way ANOVA MS_between / MS_within of bridge_mm by line. Large F = "
                   "lines differ from each other by more than marks differ within a line")
+    R.column("tightest_group_perm_p", "P that ANY line looks as internally consistent as "
+                                     "the tightest one does, under permutation of the line "
+                                     "labels across the same group sizes. Pays for the fact "
+                                     "that the tightest group was picked after looking")
     R.column("ICC1", "(MS_b - MS_w) / (MS_b + (k-1) MS_w), k = mean group size. The "
                      "fraction of bridge variance that is BETWEEN lines. Can go negative, "
                      "which means no between-line structure at all; reported as computed")
@@ -129,9 +137,36 @@ def main():
     print(f"  one-way ANOVA  F({df_b},{df_w}) = {F:.3f}   p = {p:.4f}")
     print(f"  ICC(1) = {icc:+.3f}  (fraction of bridge variance that is BETWEEN lines)")
 
+    # The ANOVA answers "do the lines differ in LEVEL". It says nothing about a line whose
+    # marks are anomalously CONSISTENT -- which is the other way a per-line tie could show.
+    # Tested by permuting the line labels across the same group sizes, so the null keeps the
+    # observed bridge values and the observed design exactly. "any group" is deliberate: the
+    # tightest group is picked AFTER looking, so the test must pay for that choice.
+    tight = [(np.std(v, ddof=1), ln) for ln, v in g.items() if len(v) > 1]
+    perm_p = float("nan")
+    if tight and a.permutations:
+        obs = min(t[0] for t in tight)
+        sizes = [len(v) for v in g.values()]
+        rng = np.random.default_rng(a.seed)
+        hits = 0
+        for _ in range(a.permutations):
+            q = rng.permutation(allv)
+            i, best = 0, np.inf
+            for sz in sizes:
+                if sz > 1:
+                    best = min(best, q[i:i + sz].std(ddof=1))
+                i += sz
+            hits += best <= obs
+        perm_p = hits / a.permutations
+        ln_t = min(tight)[1]
+        print(f"  tightest within-line sd: {obs:.1f} mm (line {ln_t}, n={len(g[ln_t])}); "
+              f"P(any group this tight by chance) = {perm_p:.4f} "
+              f"[{a.permutations} permutations, seed {a.seed}]")
+
     if a.out:
         with open(a.out, "w") as fh:
             json.dump(dict(n=n_tot, k_groups=k_groups, F=F, p=p, icc=icc,
+                           tightest_group_perm_p=perm_p,
                            ms_between=ms_b, ms_within=ms_w, df=(df_b, df_w),
                            by_line={str(k): v for k, v in g.items()}), fh, indent=1)
             fh.write("\n")
