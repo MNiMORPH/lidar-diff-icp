@@ -72,14 +72,9 @@ def _tif(arr, res, x0, y0, ny, out):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--route", required=True, choices=["independent", "delong"])
-    ap.add_argument("--cover-curve", default=None,
-                    help="path to a q2_cover_fit.json. Applies the gen2 CANOPY-COVER "
-                         "correction BEFORE the gen1 chain, so the correction surface "
-                         "fits a corrected gen2. MUST be fitted on an independently-built "
-                         "gen1 or it is circular -- see chain.CoverPercentile.")
     ap.add_argument("--out", default=None)
     a = ap.parse_args()
-    out = a.out or f"data/derived/elbaext_{a.route}" + ("_cover" if a.cover_curve else "")
+    out = a.out or f"data/derived/elbaext_{a.route}"
     os.makedirs(out, exist_ok=True)
 
     kw = dict(SHARED)
@@ -89,14 +84,8 @@ def main():
         kw["gen1_geoid"] = acquisitions.for_project(PROJECT).geoid_grid
 
     t0 = time.time()
-    # canopy_cover_pfs.npy must be in the OUTPUT dir: the gen2 step reads it from tile_dir
-    if a.cover_curve:
-        import shutil
-        for f in ("canopy_cover_pfs.npy",):
-            if not os.path.exists(f"{out}/{f}"):
-                shutil.copy(f"data/derived/elbaext/{f}", f"{out}/{f}")
     r = difference_dem(GEN1, GEN2, BOUNDS, route=a.route, tile_dir=out,
-                       csf_cache=CSF_CACHE, gen2_cover_curve=a.cover_curve, **kw)
+                       csf_cache=CSF_CACHE, **kw)
     c = r["corrections"]
 
     # PERSIST EVERY OUTPUT. difference_dem RETURNS arrays -- its `tile_dir` only feeds the
