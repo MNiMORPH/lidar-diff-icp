@@ -106,6 +106,8 @@ extraction did.
 """
 from __future__ import annotations
 
+import json
+import os
 import warnings
 
 import numpy as np
@@ -1184,7 +1186,7 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
         if _cov is None:
             raise ValueError("gen2_cover_curve needs tile_dir= to find canopy_cover_pfs.npy")
         _g2 = chain.Gen2Ctx(Zref=Zref, Z21=Z21, after_laz=after_laz, grid=_grid,
-                            tile_dir=tile_dir, verbose=verbose)
+                            tile_dir=tile_dir, verbose=True)
         chain.run_gen2_chain([chain.CoverPercentile(_fi["b"], _fi["a"], _cov)], _g2)
         Zref = _g2.Zref
         gen2_rec, gen2_grids = _g2.record, _g2.grids

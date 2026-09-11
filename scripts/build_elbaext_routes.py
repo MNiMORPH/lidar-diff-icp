@@ -33,9 +33,15 @@ from lidar_diff_icp import acquisitions, figures
 from lidar_diff_icp.detect import detect_change_standard
 from lidar_diff_icp.pipeline import difference_dem
 
-BOUNDS = (575600.0, 4882200.0, 580050.0, 4886250.0)
-GEN1 = "data/before/elbaext_gen1_merged.laz"
-GEN2 = "data/after/3dep2021_fulldensity.laz"
+#: INPUTS ARE READ FROM THE TILE'S OWN meta.json, NEVER GUESSED. I first hardcoded
+#: data/after/3dep2021_fulldensity.laz by inference and it was WRONG: elbaext is the
+#: EXTENDED tile and that file under-covers it, giving 355,961 finite gen2 cells against
+#: the 719,226 the real input yields -- roughly half the tile, silently. meta.json records
+#: the actual pair and was there the whole time.
+_META = json.load(open("data/derived/elbaext/meta.json"))
+BOUNDS = tuple(_META["bounds"])
+GEN1 = _META["before"]
+GEN2 = _META["after"]
 CSF_CACHE = "data/csf_cache/elbaext.las"
 PROJECT = "lidar_semn2008"
 
@@ -66,9 +72,14 @@ def _tif(arr, res, x0, y0, ny, out):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--route", required=True, choices=["independent", "delong"])
+    ap.add_argument("--cover-curve", default=None,
+                    help="path to a q2_cover_fit.json. Applies the gen2 CANOPY-COVER "
+                         "correction BEFORE the gen1 chain, so the correction surface "
+                         "fits a corrected gen2. MUST be fitted on an independently-built "
+                         "gen1 or it is circular -- see chain.CoverPercentile.")
     ap.add_argument("--out", default=None)
     a = ap.parse_args()
-    out = a.out or f"data/derived/elbaext_{a.route}"
+    out = a.out or f"data/derived/elbaext_{a.route}" + ("_cover" if a.cover_curve else "")
     os.makedirs(out, exist_ok=True)
 
     kw = dict(SHARED)
@@ -78,8 +89,14 @@ def main():
         kw["gen1_geoid"] = acquisitions.for_project(PROJECT).geoid_grid
 
     t0 = time.time()
+    # canopy_cover_pfs.npy must be in the OUTPUT dir: the gen2 step reads it from tile_dir
+    if a.cover_curve:
+        import shutil
+        for f in ("canopy_cover_pfs.npy",):
+            if not os.path.exists(f"{out}/{f}"):
+                shutil.copy(f"data/derived/elbaext/{f}", f"{out}/{f}")
     r = difference_dem(GEN1, GEN2, BOUNDS, route=a.route, tile_dir=out,
-                       csf_cache=CSF_CACHE, **kw)
+                       csf_cache=CSF_CACHE, gen2_cover_curve=a.cover_curve, **kw)
     c = r["corrections"]
 
     # PERSIST EVERY OUTPUT. difference_dem RETURNS arrays -- its `tile_dir` only feeds the
@@ -127,6 +144,7 @@ def main():
         # which is the guard working: it made me justify the exemption rather than assume
         # it. Anything not listed here still refuses.
         ROUTE_KEYS = {"route", "correction_surface", "along_track_drift", "geoid_applied",
+                      "gen2_chain",
                       "gen1_geoid_grid", "cross_epoch_datum",
                       "along_track_drift_gpsTime_to_m",
                       "stable_1sigma_m", "stable_clip_fraction"}
