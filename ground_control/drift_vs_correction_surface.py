@@ -47,6 +47,31 @@ COLS = ["d_mm", "dz_geoid_mm", "dz_lateral_mm", "dz_swath_mm", "dz_drift_mm",
         "gps_time", "point_source_id", "cell", "slope", "in_grid"]
 
 
+def mean_abs_paired_step(vals, cell, psid):
+    """Mean |per-line step| over adjacent line pairs, in cells BOTH lines occupy.
+
+    The spatial field cancels in a same-cell difference, so this isolates the per-line
+    component -- the one a position-only correction surface provably cannot touch, and the
+    one the drift was found to make WORSE (5.07 -> 13.19 mm at elba_fulldensity).
+    Scored alongside out-of-sample skill because a route can buy spatial skill by
+    converting spatial structure into per-line offsets, and a single criterion hides that.
+    """
+    order = sorted(np.unique(psid))
+    steps = []
+    for lo, hi in zip(order, order[1:]):
+        ma, mb = psid == lo, psid == hi
+        va = pd.Series(vals[ma]).groupby(cell[ma]).mean()
+        vb = pd.Series(vals[mb]).groupby(cell[mb]).mean()
+        sh = va.index.intersection(vb.index)
+        if len(sh) < 2:
+            continue
+        d = (vb.loc[sh] - va.loc[sh]).to_numpy()
+        d = d[np.isfinite(d)]
+        if d.size:
+            steps.append(abs(float(d.mean())))
+    return float(np.mean(steps)) if steps else float("nan")
+
+
 def nmad(v):
     v = v[np.isfinite(v)]
     return float(1.4826 * np.median(np.abs(v - np.median(v)))) if v.size else float("nan")
@@ -104,6 +129,14 @@ def main():
                       "delong = base+IDW correction surface")
     R.column("oos_sd", "sd of the held-out stable cell residual, ddof=1, mm")
     R.column("oos_nmad", "1.4826*MAD of the same, mm -- robust twin of oos_sd")
+    R.column("|line step|", "mean |per-line step| over adjacent pairs in shared cells, mm. "
+                            "The SECOND criterion: a route can buy spatial skill by turning "
+                            "spatial structure into per-line offsets, and skill alone hides "
+                            "that. Lower is better; the base value is what swath alignment "
+                            "already achieved")
+    R.column("drift->CS / CS->drift", "the two ORDERINGS of the combined mode. Order is not "
+                                      "cosmetic: a drift fit on a residual that still holds "
+                                      "a spatial field absorbs that field per-line")
     R.column("extrap%", "percentage of held-out points lying OUTSIDE their own swath's "
                         "training gps_time span. A spline cannot extrapolate, so this "
                         "attributes a large-block blow-up rather than leaving it mysterious")
@@ -153,8 +186,8 @@ def main():
         print(f"    {lab:>8} in-sample skill {1.0 - np.nanvar(vv)/vb0:+.3f}")
 
     rows = []
-    print(f"\n{'block_m':>8}{'route':>9}{'oos_sd':>10}{'oos_nmad':>10}{'skill':>9}"
-          f"{'extrap%':>9}{'cells':>10}")
+    print(f"\n{'block_m':>8}{'route':>11}{'oos_sd':>10}{'oos_nmad':>10}{'skill':>9}"
+          f"{'|line step|':>11}{'cells':>10}")
     for L in a.block_m:
         per = max(1, int(round(L / res)))
         blk = (ciy // per).astype(np.int64) * 100000 + (cix // per)
@@ -166,6 +199,8 @@ def main():
         n_extrap, n_te = [0], [0]
         pred_ours = np.full(len(s), np.nan)
         pred_del = np.full(len(s), np.nan)
+        pred_d1 = np.full(len(s), np.nan)
+        pred_c1 = np.full(len(s), np.nan)
         for k in range(a.folds):
             tr, te = fold != k, fold == k
             if te.sum() == 0 or tr.sum() < 1000:
@@ -197,21 +232,43 @@ def main():
             cpt = C[ciy[te], cix[te]] * 1000.0
             pred_del[te] = base_pt[te] + np.where(np.isfinite(cpt), cpt, 0.0)
 
+            # --- COMBINED, ORDER A: drift first, then a correction surface on ITS residual
+            after_d = base_pt + drift * 1000.0
+            Zd = np.full((ny, nx), np.nan)
+            cmd = pd.Series(after_d[tr]).groupby(cell[tr]).mean()
+            Zd[np.divmod(cmd.index.to_numpy(), nx)] = cmd.to_numpy()
+            Cd = coreg.correction_surface(np.zeros_like(Zd), Zd / 1000.0, res, X0, Y0,
+                                          radius=a.radius_m, slope_thresh_deg=90.0,
+                                          dz_thresh=1e9)["C"]
+            cd_ = Cd[ciy[te], cix[te]] * 1000.0
+            pred_d1[te] = after_d[te] + np.where(np.isfinite(cd_), cd_, 0.0)
+
+            # --- COMBINED, ORDER B: correction surface first, THEN drift on its residual.
+            # This is the order the stage decomposition argues for: the drift converts
+            # spatial structure into per-line offsets, so take the spatial field out first
+            # and leave the drift only the along-track part it is meant to model.
+            call = C[ciy, cix] * 1000.0
+            after_c = base_pt + np.where(np.isfinite(call), call, 0.0)
+            dr2, _ = coreg.fit_along_track_drift(gt, -after_c / 1000.0, tr, ps)
+            pred_c1[te] = after_c[te] + dr2[te] * 1000.0
+
         # aggregate to CELLS before scoring: a per-return score would count the same
         # ground thousands of times and is not an independent sample
-        cb = pd.Series(base_pt).groupby(cell).mean().to_numpy()
-        co = pd.Series(pred_ours).groupby(cell).mean().to_numpy()
-        cd = pd.Series(pred_del).groupby(cell).mean().to_numpy()
-        good = np.isfinite(cb) & np.isfinite(co) & np.isfinite(cd)
-        vb = np.nanvar(cb[good])
-        for lab, v in (("base", cb[good]), ("ours", co[good]), ("delong", cd[good])):
+        ROUTES = [("base", base_pt), ("ours", pred_ours), ("delong", pred_del),
+                  ("drift->CS", pred_d1), ("CS->drift", pred_c1)]
+        cg = {lab: pd.Series(v).groupby(cell).mean().to_numpy() for lab, v in ROUTES}
+        good = np.all([np.isfinite(cg[lab]) for lab, _ in ROUTES], axis=0)
+        vb = np.nanvar(cg["base"][good])
+        steps = {lab: mean_abs_paired_step(v, cell, ps) for lab, v in ROUTES}
+        for lab, _v in ROUTES:
+            v = cg[lab][good]
             sk = float("nan") if lab == "base" else 1.0 - np.nanvar(v) / vb
-            ex = "" if lab != "ours" else f"{100.0*n_extrap[0]/max(n_te[0],1):>9.1f}"
-            print(f"{L:>8.0f}{lab:>9}{np.nanstd(v, ddof=1):>10.2f}{nmad(v):>10.2f}"
-                  f"{'' if lab=='base' else f'{sk:>9.3f}'}{ex if lab=='ours' else '':>9}"
+            print(f"{L:>8.0f}{lab:>11}{np.nanstd(v, ddof=1):>10.2f}{nmad(v):>10.2f}"
+                  f"{'' if lab=='base' else f'{sk:>9.3f}'}{steps[lab]:>11.2f}"
                   f"{good.sum():>10,}")
             rows.append(dict(block_m=L, route=lab, oos_sd=float(np.nanstd(v, ddof=1)),
                              oos_nmad=nmad(v), skill=None if lab == "base" else float(sk),
+                             mean_abs_line_step_mm=steps[lab],
                              extrap_frac=(n_extrap[0]/max(n_te[0],1)) if lab == "ours" else None,
                              n_cells=int(good.sum())))
         print()
