@@ -84,6 +84,7 @@ import pandas as pd
 from scipy.ndimage import gaussian_filter, uniform_filter, distance_transform_edt as edt
 
 from . import groundq, io, coreg, terrain, groundest
+from . import chain
 from .ground import classify_ground_csf
 
 
@@ -628,23 +629,13 @@ def apply_datum(x, y, z, ground, Zref, ground_of, grid, bounds, *, tie="referenc
     arrays ARE the arguments -- if a caller needs the registered cloud afterwards, it must
     copy before calling.
     """
-    # FRAME FIRST, before ANY work: this refusal used to be absent, and its absence is
-    # what shipped three sites in the wrong vertical frame. It is the first statement in
-    # the function so that a wrong call costs nothing -- at statewide scale the caller may
-    # have streamed a multi-gigabyte tile to get here.
-    # ``apply_geoid`` is an EXPLICIT switch, not inferred from correction_surface. The
-    # DeLong route sets it False; the independent route leaves it True. Andy, 2026-09-11:
-    # "Drop the geoid correction. We need it when trying to independently build our
-    # surface but not when using the DeLong method."
-    # Measured: the correction surface is fit on the stable residual, so it absorbs any
-    # smooth epoch offset. A 54.87 mm geoid ERROR moves the DoD by -54.870 mm with the
-    # surface OFF and by 0.000 mm with it ON, and the held-out stable sd is 59.95 mm with
-    # the geoid and 59.95 mm without. It buys the product nothing while the surface runs.
-    # It is still REQUIRED, and still guarded, whenever it is applied.
-    if not apply_geoid and verbose:
-        print("  geoid: NOT APPLIED -- the correction surface registers gen1 onto gen2 "
-              "directly, and absorbs any smooth epoch offset (measured 0.000 mm effect). "
-              "Pass gen1_geoid= to apply it anyway.", flush=True)
+    # FRAME FIRST, BEFORE ANY WORK. The refusal lives in chain.GeoidConversion, but that
+    # step runs after LateralShift, and the whole point of this guard is that a wrong call
+    # costs NOTHING -- at statewide scale the caller may have streamed a multi-gigabyte
+    # tile to get here. So it is asserted here too, before the chain is built. Its absence
+    # is what shipped three sites in the wrong vertical frame (+54.87 mm at Battle Creek).
+    # test_apply_datum_refuses_rather_than_defaulting_the_frame caught exactly this
+    # regression when the body became a chain.
     if apply_geoid and geoid_datum is None and gen1_geoid is None:
         raise ValueError(
             "gen1_geoid is required: the PROJ geoid grid gen1 was reduced in. It used to "
@@ -653,73 +644,53 @@ def apply_datum(x, y, z, ground, Zref, ground_of, grid, bounds, *, tie="referenc
             "to Battle Creek's gen1, +27.75 to Carlton's and +26.39 to Cook's, unnoticed "
             "until 2026-09-07. Resolve it from the Site: "
             "acquisitions.for_project(site.gen1_project).geoid_grid.")
-    X0, Y0, res, nx, ny = grid
-    xc, yc, zc = x, y, z
-    be = ground
-    gt8, ps8 = gps_time, source_id
-    groundg = ground_of
-    # cross-epoch vertical datum, in the principled order: get x,y right, then z.
-    # (1) HORIZONTAL: one constant Nuth & Kaeaeb lateral shift from the full topography
-    #     (order-0 tie) so the two DEMs are registered in x,y before z is touched.
-    #     Drainage divides / ridgelines do not move to first order, so registering the
-    #     whole DEM recovers the lateral shift; the aspect-DIPOLE it fits is EROSION-
-    #     robust (diffuse erosion has no aspect dependence). (2) VERTICAL: the geoid-model
-    #     datum shift N_gen1 - N_gen2 (e.g. GEOID03 - GEOID18) -- a REQUIRED geodetic
-    #     offset, auto-computed from the PROJ geoid grids if not supplied (no hard-coded
-    #     constant, no arbitrary plane fitted to "stable" surfaces). Residual offsets are
-    #     left for later analysis, not baked into the datum.
-    from . import references
+
+    # THE BODY IS NOW A CHAIN. Each correction is a class in lidar_diff_icp.chain and this
+    # function only assembles the list and runs it, so "our" driver and a "DeLong" driver
+    # differ by which steps they include -- not by a branch inside a monolith.
+    # Andy, 2026-09-11: "A driver should then run them in order."
+    # Verified INERT by scripts/route_baseline.py: 12 arrays, max|diff| 0.000e+00.
     if tie != "reference":
         raise ValueError(
             f"tie={tie!r} is not supported. The only cross-epoch datum is the geoid "
             "difference applied after the lateral shift; the reference_plane fit and the "
             "parabola tie were removed (see git history if ever needed).")
-    # ORDER 0 = a single CONSTANT (dx, dy) lateral shift (Nuth & Kaeaeb order-0 tie), NOT the
-    # removed order-2 parabola. tie_polynomial is a general polynomial fit; only order 0 is used
-    # here, and only its horizontal shift (hs["a"][0], hs["b"][0]) is applied to xc, yc.
-    hs = coreg.tie_polynomial(Zref, groundg(xc[be], yc[be], zc[be]),
-                              res, X0, Y0, order=0)
-    xc += coreg.eval_poly_field(hs["a"], xc, yc, hs["norm"], 0)
-    yc += coreg.eval_poly_field(hs["b"], xc, yc, hs["norm"], 0)
-    cxg = 0.5*(bounds[0]+bounds[2]); cyg = 0.5*(bounds[1]+bounds[3])
+
+    ctx = chain.Ctx(x=x, y=y, z=z, ground=ground, Zref=Zref, ground_of=ground_of,
+                    grid=grid, bounds=bounds, gps_time=gps_time, source_id=source_id,
+                    stable=stable, floodplain=floodplain, verbose=verbose)
+
+    # ORDER IS THE METHOD; run_chain refuses the orders the measurements rule out.
+    steps = [chain.LateralShift()]
     if apply_geoid:
-        if geoid_datum is None:                      # auto-compute from the geoid grids
-            geoid_datum = references.geoid_difference(bounds, 26915,
-                                                      before_geoid=gen1_geoid)
-        gc, gb, gcc = geoid_datum    # (const_m, b East, c North) m,m/km of (N_gen1 - N_gen2), ADD to gen1
-        zc += gc + gb*(xc-cxg)/1000.0 + gcc*(yc-cyg)/1000.0
-        if verbose:
-            print(f"  geoid-difference datum: const {1000*gc:+.1f} mm, tilt "
-                  f"({1000*gb:+.3f},{1000*gcc:+.3f}) mm/km; lateral shift "
-                  f"({100*hs['a'][0]:+.1f},{100*hs['b'][0]:+.1f}) cm", flush=True)
-        tie_info = {"method": "geoid_difference", "const_m": gc, "tilt_b_m_per_km": gb,
-                    "tilt_c_m_per_km": gcc, "centroid": [cxg, cyg],
-                    "horizontal_shift_m": [round(float(hs["a"][0]),4), round(float(hs["b"][0]),4)]}
+        steps.append(chain.GeoidConversion(gen1_geoid=gen1_geoid, geoid_datum=geoid_datum))
+    if correction_surface:
+        steps.append(chain.CorrectionSurface())
+    if along_track_drift:
+        steps.append(chain.AlongTrackDrift())
+    chain.run_chain(steps, ctx)
+
+    # tie_info keeps the shape every reader and every shipped corrections.json expects.
+    rec = ctx.record
+    lat = rec["lateral_shift"]["horizontal_shift_m"]
+    cxg = 0.5 * (bounds[0] + bounds[2]); cyg = 0.5 * (bounds[1] + bounds[3])
+    if "geoid" in rec:
+        g = rec["geoid"]
+        tie_info = {"method": "geoid_difference", "const_m": g["const_m"],
+                    "tilt_b_m_per_km": g["tilt_b_m_per_km"],
+                    "tilt_c_m_per_km": g["tilt_c_m_per_km"],
+                    "centroid": g["centroid"], "horizontal_shift_m": lat}
     else:
         # Recorded as NOT APPLIED rather than as a zero, so a product can never be read as
         # having been put on gen2's geoid when it was registered onto gen2 instead.
         tie_info = {"method": "none (correction surface registers gen1 onto gen2)",
                     "const_m": None, "tilt_b_m_per_km": None, "tilt_c_m_per_km": None,
-                    "centroid": [cxg, cyg],
-                    "horizontal_shift_m": [round(float(hs["a"][0]),4), round(float(hs["b"][0]),4)]}
-
-    if correction_surface:
-        C = coreg.correction_surface(Zref, groundg(xc[be], yc[be], zc[be]),
-                                     res, X0, Y0, radius=400.0, exclude=floodplain)["C"]
-        ixp = np.clip(((xc - X0) / res).astype(int), 0, nx - 1)
-        iyp = np.clip(((yc - Y0) / res).astype(int), 0, ny - 1)
-        Cpt = C[iyp, ixp]; zc[np.isfinite(Cpt)] += Cpt[np.isfinite(Cpt)]
-
-    curves = {}
-    if along_track_drift:
-        ixp = np.clip(((xc - X0) / res).astype(int), 0, nx - 1)
-        iyp = np.clip(((yc - Y0) / res).astype(int), 0, ny - 1)
-        resid = Zref - groundg(xc[be], yc[be], zc[be])
-        chg = resid[iyp, ixp]
-        stab_pt = be & stable[iyp, ixp] & np.isfinite(chg) & (np.abs(chg) < 0.15)
-        drift, curves = coreg.fit_along_track_drift(gt8, chg, stab_pt, ps8)
-        zc += drift
-
+                    "centroid": [cxg, cyg], "horizontal_shift_m": lat}
+    if verbose:
+        print(f"  chain: {' -> '.join(rec['chain'])}; lateral shift "
+              f"({100*lat[0]:+.1f},{100*lat[1]:+.1f}) cm", flush=True)
+    curves = rec.get("along_track_drift", {}).get("curves", {})
+    xc, yc, zc = ctx.x, ctx.y, ctx.z
     return dict(x=xc, y=yc, z=zc, tie_info=tie_info, drift_curves=curves)
 
 

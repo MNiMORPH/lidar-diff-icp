@@ -387,3 +387,32 @@ def test_both_routes_run_and_stay_distinct(tmp_path):
                            **kw)
     assert r_mix["corrections"]["along_track_drift"] is True
     assert r_mix["corrections"]["correction_surface"] is True
+
+
+def test_the_chain_refuses_orders_the_measurements_rule_out():
+    """`run_chain` enforces the two orderings that are method, not taste.
+
+    Both are refusals rather than warnings because the wrong order does not raise on its
+    own -- it produces a quietly WORSE product, which is the hardest kind of error to
+    notice later.
+    """
+    from lidar_diff_icp import chain as C
+    ctx = C.Ctx(x=None, y=None, z=None, ground=None, Zref=None, ground_of=None,
+                grid=None, bounds=None)
+
+    # drift before the surface converts a spatial field into per-line offsets, and the
+    # surface cannot undo them: 19.91 mm mean per-line step that way vs 5.49 the other
+    with pytest.raises(ValueError, match="BEFORE CorrectionSurface"):
+        C.run_chain([C.LateralShift(), C.AlongTrackDrift(), C.CorrectionSurface()], ctx)
+
+    # z before x,y lets terrain slope leak into the elevation difference
+    with pytest.raises(ValueError, match="not 'lateral_shift'"):
+        C.run_chain([C.CorrectionSurface(), C.LateralShift()], ctx)
+
+    # the two shipped orders are accepted (they fail later, on the None arrays, not on order)
+    for good in ([C.LateralShift(), C.CorrectionSurface()],
+                 [C.LateralShift(), C.GeoidConversion(gen1_geoid="x"), C.AlongTrackDrift()]):
+        with pytest.raises(Exception) as e:
+            C.run_chain(good, ctx)
+        assert "BEFORE CorrectionSurface" not in str(e.value)
+        assert "not 'lateral_shift'" not in str(e.value)
