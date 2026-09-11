@@ -1099,9 +1099,30 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
                       drift gates on |change|), so this only cleans the reporting
                       layer and never alters the DoD surface.
 
-    Returns dict: dod, lod (ny x nx arrays), z_after (for hillshade), stable (the
+    Returns dict: dod, lod (ny x nx arrays), z_after, z_after_differenced, stable (the
     reporting stable mask), corrections (JSON-serialisable), stable_sigma (empirical
     1-sigma on stable ground, m), and grid meta (bounds, res, nx, ny).
+
+    TWO gen2 GRIDS COME BACK, AND THEY ARE NOT THE SAME SURFACE.
+
+        ``z_after``              the q = 0.50 grid. The hillshade backdrop, and -- this is
+                                 the load-bearing part -- the REFERENCE SURFACE that
+                                 ``groundq.reference_surface`` hangs the near-ground
+                                 columns off. The cover correction measures percentiles
+                                 against it, so it MUST stay the median grid.
+        ``z_after_differenced``  the surface the DoD was actually taken against
+                                 (``Zref``): the median grid PLUS any gen2-chain
+                                 correction. ``dod = z_after_differenced - gen1_ground``.
+
+    They coincide only when no gen2 correction ran. With the cover step they differ by the
+    correction (median -1.06 mm, 360,196 cells lowered at elbaext), and after an absolute
+    datum they differ again -- that shifts ``z_after`` by ``gen2_mm`` while moving the DoD
+    by the DIFFERENCE of the two epoch constants.
+
+    Shipping only ``z_after`` meant a corrected product carried a gen2 raster that was NOT
+    what it differenced, with no way to tell from the outputs. Found 2026-09-11 by
+    comparing the two cover runs' ``z_after`` and finding them byte-identical while the
+    DoD had moved on 696,131 cells.
     """
     X0, Y0, X1, Y1 = bounds
     nx = int(round((X1 - X0) / res)); ny = int(round((Y1 - Y0) / res))
@@ -1314,7 +1335,8 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
     }
     # the per-cell percentile actually applied, and the spread it was read from, so a
     # consumer can see WHICH cells were corrected instead of inferring it
-    return dict(dod=dod, lod=lod, z_after=Z21, stable=stable_rep,
+    return dict(dod=dod, lod=lod, z_after=Z21, z_after_differenced=Zref,
+                stable=stable_rep,
                 ground_q_grids=gq_grids,
                 corrections=corrections, stable_sigma=sigma,
                 bounds=tuple(bounds), res=res, nx=nx, ny=ny)

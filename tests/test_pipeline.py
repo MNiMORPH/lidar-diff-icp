@@ -416,3 +416,70 @@ def test_the_chain_refuses_orders_the_measurements_rule_out():
             C.run_chain(good, ctx)
         assert "BEFORE CorrectionSurface" not in str(e.value)
         assert "not 'lateral_shift'" not in str(e.value)
+
+
+def test_the_differenced_gen2_surface_is_shipped_and_reconstructs_the_dod(tmp_path):
+    """`z_after_differenced` IS the surface the DoD was taken against; `z_after` is not.
+
+    `z_after` is the q = 0.50 grid. It is the hillshade backdrop AND the reference surface
+    groundq.reference_surface hangs the near-ground columns off, so it must stay the median
+    grid -- the cover correction measures percentiles against it. That means it is NOT
+    what gets differenced once any gen2-side step runs, and shipping it alone let a
+    corrected product carry a gen2 raster that was not what it differenced.
+
+    Caught 2026-09-11 by comparing two cover runs' z_after, finding them byte-identical,
+    and nearly concluding the correction had not applied -- when the DoD had in fact moved
+    on 696,131 cells.
+
+    Bites if z_after_differenced stops being returned, or is quietly aliased to z_after.
+    """
+    rng = np.random.default_rng(11)
+    n = int(3.0 * 120 * W)
+    x1 = rng.uniform(X0, X0 + 120, n); y1 = rng.uniform(Y0, Y0 + W, n)
+    x2 = rng.uniform(X0 + 80, X0 + W, n); y2 = rng.uniform(Y0, Y0 + W, n)
+    xb = np.concatenate([x1, x2]); yb = np.concatenate([y1, y2])
+    ps = np.concatenate([np.ones(n), np.full(n, 2)])
+    zb = _ground(xb, yb) + rng.normal(0, 0.02, len(xb))
+    _write_laz14(tmp_path / "before.laz", xb, yb, zb, ps, yb, np.zeros(len(xb)))
+    na = int(4.0 * W * W)
+    xa = rng.uniform(X0, X0 + W, na); ya = rng.uniform(Y0, Y0 + W, na)
+    za = _ground(xa, ya) + _bump(xa, ya) + rng.normal(0, 0.02, na)
+    _write_laz14(tmp_path / "after.laz", xa, ya, za, np.ones(na), ya, np.zeros(na))
+
+    r = difference_dem(str(tmp_path / "before.laz"), str(tmp_path / "after.laz"), BOUNDS,
+                       route="delong", res=5.0, ground_q=0.10, ground="low_q",
+                       ground_source="last_return", after_ground="last_return",
+                       valley_top_m=-1e9)
+    assert "z_after_differenced" in r, "the differenced gen2 surface must be shipped"
+    zd = r["z_after_differenced"]
+    assert zd.shape == r["dod"].shape
+
+    # With no gen2 step the two must coincide numerically, so a reader of an uncorrected
+    # product is not misled by there being two names. (They may even be the SAME object:
+    # with ground="low_q" the pipeline does Zref = Z21 outright. Identity is not the
+    # property under test -- agreement is.)
+    d = zd - r["z_after"]
+    m = np.isfinite(d)
+    assert not m.any() or np.nanmax(np.abs(d[m])) < 1e-9, (
+        f"with no gen2 correction the two grids must coincide; "
+        f"max|diff| {np.nanmax(np.abs(d[m])):.3e} m")
+
+    # And a gen2 step must REBIND Zref, which is what makes the two diverge and is the
+    # whole reason the second grid has to be shipped. Tested on the chain directly rather
+    # than through a pipeline run, which would need a fitted curve and a canopy raster.
+    from lidar_diff_icp import chain as C
+
+    class _Lower(C.Gen2Correction):
+        name = "test_lower"
+
+        def apply(self, ctx):
+            ctx.Zref = ctx.Zref - 0.05          # rebinds, as CoverPercentile does
+
+    g2 = C.Gen2Ctx(Zref=r["z_after"].copy(), Z21=r["z_after"], after_laz="", grid=None)
+    before = g2.Zref
+    C.run_gen2_chain([_Lower()], g2)
+    assert g2.Zref is not before, "a gen2 step must rebind Zref, not mutate it in place"
+    dd = g2.Zref - r["z_after"]
+    mm = np.isfinite(dd)
+    assert abs(np.nanmedian(dd[mm]) + 0.05) < 1e-9
+    assert g2.record["gen2_chain"] == ["test_lower"]
