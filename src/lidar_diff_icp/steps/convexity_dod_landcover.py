@@ -45,7 +45,17 @@ _ap.add_argument("--dod", required=True,
 _ap.add_argument("--without", default="",
                  help="comma-separated optional layers to run without, stated explicitly; "
                       "only 'cover' is optional here (it drives step 4 alone)")
-_ap.add_argument("--valley-top", dest="valley_top", default="histogram",
+# DEFAULT WAS "histogram" UNTIL 2026-09-15, and that is the bug this file shipped.
+# refcells.floodplain_by_elevation's own docstring WITHDRAWS the histogram method (Andy,
+# 2026-09-04): it worked at elba only because that tile is genuinely bimodal, and at
+# whitewater the histogram "simply decays and the procedure returned an arbitrary point in
+# it, cutting 76% of the tile". The withdrawal was recorded in refcells but this default
+# was never changed to match, so every mask built since has used the withdrawn method.
+# Measured cost at elbaext: 260,568 cells of "floodplain" with median elevation 261.5 m
+# against a 230.0 m valley top -- 83% of it upland -- and the rebuild gives 96,716.
+# elba_fulldensity halved, 136,361 -> 67,433. cook's mask came out EMPTY.
+# There is no default now: the caller states the elevation, or says "registry".
+_ap.add_argument("--valley-top", dest="valley_top", required=True,
                  help="valley top for floodplain_mask.npy: an elevation in metres, "
                       "'registry', or 'histogram'. Never chosen for you -- this file is the "
                       "PRODUCER of the mask, so this one flag sets the cut for every "
