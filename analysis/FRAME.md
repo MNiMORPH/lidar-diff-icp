@@ -393,7 +393,22 @@ extrapolated past the data (see above).
 flat floodplain. `m` and `slope_max_deg` and the failure floor all REFUSE without a value.
 Banks keep their LoD, which is the point.
 
-**THE POPULATION FOR `m` IS EVERY MEASURABLE FLAT FLOODPLAIN CELL** -- Andy 2026-09-16, "just
+**⚠️ SUPERSEDED 2026-09-16 -- `m` NO LONGER EXISTS.** The vegetation term is gen1's own
+p90-p10 span, used directly: `lod_veg = hypot(lod, span)`. The fitted slope was the
+CONDITIONAL MEAN of DoD given spread, so half the cells exceeded their own term by
+construction and the vegetated patches kept flagging. A fitted mean is a BIAS estimate; an
+LoD needs an UNCERTAINTY. Thickest-vegetation decile still flagged: 77.8% bare, 50.2% with
+the fitted m, 26.7% half-span, 24.0% p50-min, **4.9% with the full span**. Result: delong
+LoD 50 -> 220 mm (153,232 -> 147,283 detected), independent 78 -> 237 mm (122,935 ->
+117,538). The population discussion below is kept because it explains how the fit went
+wrong, not because the fit is still used.
+
+**⚠️ THE 450 mm FAILURE FLOOR IS ARBITRARY AND FLAGGED FOR REPLACEMENT** (Andy 2026-09-16).
+It is CIRCULAR: the value that silences 90% of detections in the DoD it then judges. The
+span alone cannot replace it -- on failure cells the span is 1.35x the penetrating cells'
+while the error is 3.1x, leaving 38% flagged. Needs an instrument external to the DoD.
+
+**[HISTORICAL] THE POPULATION FOR `m` WAS EVERY MEASURABLE FLAT FLOODPLAIN CELL** -- Andy 2026-09-16, "just
 use the floodplain cells and those with vegetation to decide on the LoD". It is fitted over
 all cells with >=10 gen1 returns, 53,671 of elbaext's 58,767 flat (<=2 deg) floodplain cells.
 The earlier m = -0.294 was the SAME fit restricted to the 16,092 cells (30%) that
