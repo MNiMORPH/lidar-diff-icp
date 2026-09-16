@@ -88,8 +88,35 @@ def penetration_failure(cell, d_mm, shape, *, min_returns=10):
 
 
 def inflate_lod(lod, spread_mm, floodplain, slope_deg, *, slope_max_deg,
-                m_mm_per_mm, failure=None, failure_floor_mm=None, verbose=True):
-    """Add the declined vegetation correction to the LoD, in quadrature, on flat floodplain.
+                failure=None, failure_floor_mm=None, verbose=True):
+    """Widen the LoD by gen1's OWN return spread on flat floodplain, in quadrature.
+
+    The vegetation term IS ``spread_mm`` -- gen1's p90-p10 return span in the cell. It is
+    used directly, with no fitted coefficient. Andy, 2026-09-16: "your LoD could be
+    informed by the gen1 point-cloud scatter, which becomes wider where there is more veg."
+
+    WHY NOT A FITTED SLOPE, which is what this did until 2026-09-16. The old form was
+    ``|m| * spread`` with ``m`` regressed from DoD on spread. That is the CONDITIONAL MEAN
+    -- the average vegetation bias at that scatter -- so by construction about half the
+    cells exceed their own term and the vegetated patches kept flagging. A mean response is
+    a BIAS estimate; an LoD needs an UNCERTAINTY. Measured at elbaext_delong, flat
+    floodplain, fraction of the thickest-vegetation decile still exceeding the LoD:
+
+        base LoD, no vegetation term                       77.8%
+        hypot(LoD, 0.273*spread)   m fitted, penetrating   50.2%
+        hypot(LoD, (p90-p10)/2)    half-span               26.7%
+        hypot(LoD, p50-min)        lift above lowest shot  24.0%
+        hypot(LoD, p90-p10)        THIS                     4.9%
+
+    The regression was also reconstructing the span the long way round: the contaminated
+    m = -0.494 gives a median term of 118 mm against half-span's 119 mm.
+
+    WHY THE FULL SPAN AND NOT A ONE-SIDED LIFT. ``p50 - p10`` is the physically direct
+    quantity -- how far our gridded median sits above the low returns -- but it measures
+    the lift only as far as the lowest return we GOT. Where vegetation is thick enough that
+    no pulse reaches ground, p10 is itself in the canopy, so the lift understates exactly
+    where the error is worst. The full span does not estimate the lift; it measures how
+    much vertical vegetation structure is present, which is what bounds the error.
 
     Returns ``(lod_new, applied, info)``. Cells outside the mask are untouched, so bank
     erosion keeps the LoD it had.
@@ -102,19 +129,10 @@ def inflate_lod(lod, spread_mm, floodplain, slope_deg, *, slope_max_deg,
             "slope_max_deg has no default: it decides how much of the valley stops being "
             "measurable, and the floodplain mask is an elevation cut that includes the "
             "banks. At elbaext 1 deg inflates 7.3% of the valley, 5 deg inflates 26.9%.")
-    if m_mm_per_mm is None:
-        raise ValueError(
-            "m_mm_per_mm has no default: it is the FITTED slope of DoD against gen1 spread "
-            "on THIS site's flat floodplain, fitted over EVERY cell there with enough "
-            "gen1 returns to measure spread. At elbaext (<=2 deg): -0.483, n=53,671 of "
-            "58,767. It is a per-site measurement, not a constant. NOTE -0.294, used "
-            "until 2026-09-16, was this fit restricted to the 16,092 cells (30%) that the "
-            "near-ground cube built for the return-structure work happens to cover -- a "
-            "file footprint, not a chosen population, and it undersized the LoD by ~60%.")
     fp = np.asarray(floodplain, bool)
     flat = fp & (np.asarray(slope_deg, float) <= float(slope_max_deg))
     sp = np.asarray(spread_mm, float)
-    add = np.abs(float(m_mm_per_mm)) * sp / 1000.0          # metres
+    add = sp / 1000.0                                       # metres; the span ITSELF
 
     if failure is not None:
         fail = flat & np.asarray(failure, bool)
@@ -122,7 +140,9 @@ def inflate_lod(lod, spread_mm, floodplain, slope_deg, *, slope_max_deg,
             raise ValueError(
                 f"{int(fail.sum()):,} flat-floodplain cells have NO gen1 return reaching "
                 f"gen2, so gen1 never measured that ground and its spread does not bound "
-                f"the error -- the correction recovers only 35% of their offset. "
+                f"the error. Their span is only 1.35x the penetrating cells' (278 vs "
+                f"206 mm) while their error is 3.1x (249 vs 81 mm), so the span term "
+                f"leaves 38% of them flagged on its own. "
                 f"failure_floor_mm has no default and must be stated. Evidence, not a "
                 f"recommendation: they need ~450 mm to silence 90% of their detections, "
                 f"against ~154 mm for cells that do penetrate; that number comes from the "
@@ -134,7 +154,8 @@ def inflate_lod(lod, spread_mm, floodplain, slope_deg, *, slope_max_deg,
     have = flat & np.isfinite(add) & np.isfinite(lod)
     out = np.array(lod, float, copy=True)
     out[have] = np.hypot(out[have], add[have])
-    info = {"slope_max_deg": float(slope_max_deg), "m_mm_per_mm": float(m_mm_per_mm),
+    info = {"slope_max_deg": float(slope_max_deg),
+            "vegetation_term": "gen1 p90-p10 return span, used directly (no coefficient)",
             "failure_floor_mm": failure_floor_mm,
             "cells_flat_floodplain": int(flat.sum()), "cells_inflated": int(have.sum()),
             "cells_penetration_failure": int((fail & have).sum()),
@@ -144,7 +165,7 @@ def inflate_lod(lod, spread_mm, floodplain, slope_deg, *, slope_max_deg,
     if verbose and have.any():
         print(f"  vegetation LoD: {info['cells_inflated']:,} flat-floodplain cells "
               f"(slope <= {slope_max_deg:g} deg) {info['median_lod_before_mm']:.0f} -> "
-              f"{info['median_lod_after_mm']:.0f} mm via |m|={abs(m_mm_per_mm):.3f} x spread; "
+              f"{info['median_lod_after_mm']:.0f} mm via gen1's own p90-p10 span; "
               f"{info['cells_penetration_failure']:,} penetration-failure cells floored at "
               f"{failure_floor_mm} mm; {info['cells_flat_without_spread']:,} left alone "
               f"(too few gen1 returns)", flush=True)

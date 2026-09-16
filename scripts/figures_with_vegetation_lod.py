@@ -33,17 +33,15 @@ from lidar_diff_icp.viz import hillshade
 ap = argparse.ArgumentParser(description=__doc__,
                              formatter_class=argparse.RawDescriptionHelpFormatter)
 ap.add_argument("--tile", required=True)
-ap.add_argument("--m", type=float, required=True,
-                help="FITTED slope of DoD vs gen1 spread on THIS site's flat floodplain, "
-                     "over EVERY cell with enough gen1 returns to measure spread -- not a "
-                     "subset left over from another artifact. At elbaext (<=2 deg): -0.483 "
-                     "over all 53,671 measurable cells. The earlier -0.294 was this same "
-                     "fit restricted to the 16,092 cells the 2026-08-26 near-ground cube "
-                     "happens to cover (30%), which is a file footprint, not a population.")
 ap.add_argument("--failure-floor-mm", type=float, required=True,
                 help="LoD floor for cells where NO gen1 return reaches gen2. No default: "
-                     "gen1 never measured that ground and its spread does not bound the "
-                     "error. Evidence: ~450 mm silences 90% of their detections.")
+                     "gen1 never measured that ground and its span does not bound the "
+                     "error there (span 1.35x the penetrating cells', error 3.1x). "
+                     "ARBITRARY AND FLAGGED FOR REPLACEMENT -- Andy, 2026-09-16: 'the 450 "
+                     "mm floor is sort of arbitrary'. The 450 figure is CIRCULAR: it is "
+                     "the value that silences 90% of the detections in the very DoD it "
+                     "then judges. It needs an instrument that does not come from the "
+                     "measurement being judged.")
 ap.add_argument("--slope-max-deg", type=float, required=True,
                 help="MINE, and stated: where the inflation applies. It decides how much "
                      "flat floodplain stops being measurable. No default.")
@@ -77,7 +75,7 @@ np.save(f"{D}/penetration_failure.npy", fail)
 res = float(json.load(open(f"{D}/corrections.json"))["res_m"])
 
 lod_v, applied, info = V.inflate_lod(lod, spread, fp, sl, slope_max_deg=A.slope_max_deg,
-                                     m_mm_per_mm=A.m, failure=fail,
+                                     failure=fail,
                                      failure_floor_mm=A.failure_floor_mm)
 np.save(f"{D}/lod_veg.npy", lod_v)
 
@@ -108,10 +106,10 @@ ext = (X0, X0 + nx * r, Y0, Y0 + ny * r)
 fig, ax = plt.subplots(1, 2, figsize=(19, 8.5))
 ax[0].imshow(hs, extent=ext, origin="lower", cmap="gray")
 im = ax[0].imshow(np.where(applied, 1000 * (lod_v - lod), np.nan), extent=ext,
-                  origin="lower", cmap="magma", vmin=0, vmax=250)
+                  origin="lower", cmap="magma", vmin=0, vmax=600)   # span-scale, not the old |m|*spread scale
 ax[0].set_title(f"{name}: vegetation LoD inflation (mm)\n"
                 f"flat floodplain, slope <= {A.slope_max_deg:g} deg; "
-                f"{info['cells_inflated']:,} cells, |m|={abs(A.m):.3f} x spread; "
+                f"{info['cells_inflated']:,} cells, gen1 p90-p10 span; "
                 f"{info['cells_penetration_failure']:,} floored at {A.failure_floor_mm:.0f} mm")
 fig.colorbar(im, ax=ax[0], shrink=0.6, extend="max", label="LoD added (mm)")
 ax[1].imshow(hs, extent=ext, origin="lower", cmap="gray")
