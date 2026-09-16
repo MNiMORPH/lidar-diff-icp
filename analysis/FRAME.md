@@ -393,6 +393,31 @@ extrapolated past the data (see above).
 flat floodplain. `m` and `slope_max_deg` and the failure floor all REFUSE without a value.
 Banks keep their LoD, which is the point.
 
+**★★ THE FLOODPLAIN "EROSION" AT ELBA IS THE DELONG CORRECTION SURFACE (2026-09-17).**
+Andy: "the floodplain upstream of the pointed meander bend is still showing significant
+erosion." It is an artifact of the ADOPTED route. The 5 largest patches that survive the
+vegetation LoD (1,850 cells, 44.098 N -92.009 W):
+
+    applied DeLong correction surface   +261 mm   (rest of floodplain +84, whole grid +94)
+    DoD, delong route                   -181 mm
+    DoD, INDEPENDENT route                -0 mm   <-- no erosion there at all
+
+Regressing (DoD_delong - DoD_independent) on the applied surface over 35,753 flat floodplain
+cells: slope -1.0143, r -0.9932. The route difference IS the surface.
+
+MECHANISM: the IDW surface is fitted on STABLE cells and the valley cut removes 95,506
+floodplain cells from that set, so over the valley floor it EXTRAPOLATES. Fraction of flat
+floodplain still flagged, by distance to the nearest stable cell: 0.9% (0-25 m), 2.5%
+(25-50), 5.3% (50-100), 5.6% (100-200), 17.4% (200+, median DoD -102 mm).
+
+It was invisible because the step applied the grid and discarded it, and the beam table
+carries every dz_* term EXCEPT this one. Fixed in 985a24d -- saved as
+applied_correction_surface.npy.
+
+⚠️ DeLong was adopted on STABLE-UPLAND skill, all measured where the surface is constrained.
+Nothing in that comparison tested the floodplain. DO NOT read floodplain change off the
+DeLong route until this is resolved.
+
 **⚠️ SUPERSEDED 2026-09-16 -- `m` NO LONGER EXISTS.** The vegetation term is gen1's own
 p90-p10 span, used directly: `lod_veg = hypot(lod, span)`. The fitted slope was the
 CONDITIONAL MEAN of DoD given spread, so half the cells exceeded their own term by
