@@ -355,6 +355,53 @@ nothing.
 mirror of `completeness`, and it exists because mnrv passed every other step while reaching
 ZERO marks. mnrv's 19 tiles are now fetched (618 MB, 19/19 reachable).
 
+## FLOODPLAIN VEGETATION — settled 2026-09-16, LoD not correction
+
+**The primary signal in this DoD is a VEGETATION-STATE DIFFERENCE BETWEEN EPOCHS**, on
+hillslopes and floodplain alike (Andy, 2026-09-16). gen1 flew **November 2008** with
+floodplain sedge standing as tall dead biomass; gen2 flew **May 2021** with that flattened
+by winter and regrowth short. Not a sensor difference — a season difference, and the dates
+are fixed for the whole 2008 MN program against 3DEP, so the sign is predictable statewide.
+
+**THE CONTROL, and the result worth keeping.** On flat floodplain (slope ≤ 2°, 15,961 cells
+of 5 m), DoD against each epoch's own near-ground spread `p90 − p10`:
+
+    spread source                 ret/cell  spread p50      m    b (mm)      r
+    gen1 CSF ground                     17      220 mm  -0.294     +55.0  -0.353
+    gen2 class-2 GROUND only           158       80 mm  -0.101      +1.7  +0.012
+    gen2 ALL near-ground (Hg+Hn)       251      120 mm  +0.006     -11.4  +0.070
+
+gen2 shows **nothing**, even with vegetation included and 15× the returns. Terrain
+roughness or gridding would appear in both epochs; this appears only in gen1. Andy caught
+the first version of this test, which compared gen1's imperfectly-classified ground against
+gen2's successfully-classified ground — not like-for-like. The null survives the fix.
+
+**WHY LoD AND NOT A CORRECTION.** `DoD + 0.294 × spread` is fitted and available, but:
+
+    penetration OK    48,574 cells  spread 207 mm  DoD p50   +1.3 -> +62.0
+    penetration FAILS  5,097 cells  spread 259 mm  DoD p50 -216.2 -> -140.2
+
+It works where the bias is small and fails where it is large — 35% recovery on the failure
+cells, because when no pulse reaches ground the distribution NARROWS onto the vegetation
+top and the covariate stops responding. And on the 90% that do penetrate, applying it turns
+"no detectable change" into "60 mm of deposition", resting wholly on `b = +55.0` which
+cannot be separated from a residual level offset.
+
+**SHIPPED:** `vegetation_lod.inflate_lod` adds the *un-applied* correction in quadrature on
+flat floodplain. `m` and `slope_max_deg` and the failure floor all REFUSE without a value.
+At elbaext (m −0.294, floor 450 mm): 53,607 cells 78 → 105 mm, 5,050 floored, detections
+122,935 → 120,933. Banks keep their LoD, which is the point.
+
+**IDENTIFYING THE UNRECOVERABLE CELLS** is a yes/no physical test with no threshold: does
+any gen1 return reach gen2 (`min(d_mm) > 0`)? 9,460 floodplain cells fail it, in 55 coherent
+clusters ≥20 cells holding 57% of them. Pooling proves they are unrecoverable — 0.0% of
+11,091 shots reached ground in the largest cluster.
+
+**STILL OPEN:** `b` is confounded with level error (the leveled benchmark is the only
+independent handle); the slope cut is a patch over an elevation-cut floodplain that includes
+banks; and metre-scale outliers (1.3% of cells, p10 −2010 mm in the top spread bin) are
+structures, not vegetation, and hijack any mean-based statistic.
+
 ## THE ORDER (Andy, 2026-09-11, DeLong) — work down this list
 
 Supersedes the 2026-09-10 order below, which is kept for the record. What changed: Andy
