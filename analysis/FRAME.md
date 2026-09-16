@@ -391,8 +391,27 @@ extrapolated past the data (see above).
 
 **SHIPPED:** `vegetation_lod.inflate_lod` adds the *un-applied* correction in quadrature on
 flat floodplain. `m` and `slope_max_deg` and the failure floor all REFUSE without a value.
-At elbaext (m −0.294, floor 450 mm): 53,607 cells 78 → 105 mm, 5,050 floored, detections
-122,935 → 120,933. Banks keep their LoD, which is the point.
+Banks keep their LoD, which is the point.
+
+**THE POPULATION FOR `m` IS EVERY MEASURABLE FLAT FLOODPLAIN CELL** -- Andy 2026-09-16, "just
+use the floodplain cells and those with vegetation to decide on the LoD". It is fitted over
+all cells with >=10 gen1 returns, 53,671 of elbaext's 58,767 flat (<=2 deg) floodplain cells.
+The earlier m = -0.294 was the SAME fit restricted to the 16,092 cells (30%) that
+`nearground_cells_sn.npz` happens to cover -- an artifact built 2026-08-26 for the
+return-structure work. A file footprint, not a population, and it undersized the LoD by ~60%.
+The difference is WHICH CELLS, not the estimator: on the 16,050 cells both artifacts cover,
+raw-quantile and 2 cm-binned spread correlate +0.942 and give m = -0.297 vs -0.251.
+
+    tile                  m (all)   m (cube 30%)   LoD med.   detections
+    elbaext_independent   -0.475    -0.325         78->134 mm 122,935 -> 119,885
+    elbaext_delong        -0.494    -0.329         NOT RUN -- no stable.npy
+
+**elbaext_delong CANNOT BE EVALUATED YET.** The adopted route's tile was built 2026-09-11 and
+the `stable.npy` save was only added 2026-09-16 (c87c069), so `detect_change_standard` had no
+stable set. It needs a route rebuild. Until then every detection count on the DeLong route is
+from the independent tile, not the adopted one.
+(`figures_with_vegetation_lod.py` now REFUSES a missing stable.npy rather than substituting
+an empty mask -- the tell was 3,020 cells GAINED after the LoD was WIDENED.)
 
 **IDENTIFYING THE UNRECOVERABLE CELLS** is a yes/no physical test with no threshold: does
 any gen1 return reach gen2 (`min(d_mm) > 0`)? 9,460 floodplain cells fail it, in 55 coherent
