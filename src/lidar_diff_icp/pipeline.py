@@ -723,7 +723,8 @@ def apply_datum(x, y, z, ground, Zref, ground_of, grid, bounds, *, tie="referenc
               f"({100*lat[0]:+.1f},{100*lat[1]:+.1f}) cm", flush=True)
     curves = rec.get("along_track_drift", {}).get("curves", {})
     xc, yc, zc = ctx.x, ctx.y, ctx.z
-    return dict(x=xc, y=yc, z=zc, tie_info=tie_info, drift_curves=curves)
+    return dict(x=xc, y=yc, z=zc, tie_info=tie_info, drift_curves=curves,
+                grids=ctx.grids)
 
 
 def correct_reference(Zref, Z21, after_laz, curve, grid, *, verbose=True):
@@ -1332,6 +1333,11 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
     # consumer can see WHICH cells were corrected instead of inferring it
     return dict(dod=dod, lod=lod, z_after=Z21, z_after_differenced=Zref,
                 stable=stable_rep,
+                # Grid-shaped correction terms that were APPLIED to gen1. On the DeLong
+                # route this carries "correction_surface", the term that stands in for
+                # BOTH the geoid and the drift; without it the product cannot be audited,
+                # because the beam table records only the dz_* columns.
+                correction_grids=_dat.get("grids", {}),
                 ground_q_grids=gq_grids,
                 corrections=corrections, stable_sigma=sigma,
                 bounds=tuple(bounds), res=res, nx=nx, ny=ny)

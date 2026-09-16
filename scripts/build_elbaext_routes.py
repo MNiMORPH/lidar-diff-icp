@@ -110,6 +110,14 @@ def main():
     # builds its noise model from nothing and returns MORE detections after a LoD was
     # inflated, which is impossible and is how this omission was found.
     np.save(f"{out}/stable.npy", stable)
+    # The applied gen1 correction GRIDS. On the DeLong route this is the correction
+    # surface -- the term standing in for both the geoid and the drift. It was applied
+    # and discarded until 2026-09-17, which made the product unauditable: the beam table
+    # carries only the dz_* columns, so the surface is precisely what is missing from it.
+    for _k, _g in (r.get("correction_grids") or {}).items():
+        np.save(f"{out}/applied_{_k}.npy", _g)
+        print(f"  applied {_k}: median {1000*np.nanmedian(_g):+.1f} mm, "
+              f"p05 {1000*np.nanpercentile(_g,5):+.0f}, p95 {1000*np.nanpercentile(_g,95):+.0f}")
     with open(f"{out}/corrections.json", "w") as fh:
         json.dump(c, fh, indent=2)
     with open(f"{out}/regions.json", "w") as fh:

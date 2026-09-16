@@ -64,6 +64,13 @@ class Ctx:
     floodplain: np.ndarray | None = None
     verbose: bool = True
     record: dict = field(default_factory=dict)
+    #: Grid-shaped arrays a step APPLIED, kept so the product can be audited. ``record``
+    #: goes to corrections.json and cannot hold an array, so a correction that is applied
+    #: and then discarded is invisible: on the DeLong route the correction surface is the
+    #: term that replaces BOTH the geoid and the drift, and until 2026-09-17 nothing
+    #: downstream could see it. Reconstructing it from the beam table does not work -- that
+    #: table carries only the dz_* columns, so the surface is exactly what is missing.
+    grids: dict = field(default_factory=dict)
 
     def cell_index(self):
         """Point -> cell indices, clipped to the grid. Several steps need this and it
@@ -183,6 +190,7 @@ class CorrectionSurface(Correction):
         Cpt = C[iy, ix]
         good = np.isfinite(Cpt)
         ctx.z[good] += Cpt[good]
+        ctx.grids[self.name] = C
         ctx.record[self.name] = {"radius_m": self.radius_m,
                                  "points_corrected": int(good.sum()),
                                  "points_total": int(good.size)}
