@@ -53,7 +53,16 @@ A = ap.parse_args()
 D = A.tile.rstrip("/")
 name = os.path.basename(D)
 dod = np.load(f"{D}/dod.npy"); lod = np.load(f"{D}/lod.npy")
-stable = np.load(f"{D}/stable.npy") if os.path.exists(f"{D}/stable.npy") else None
+if not os.path.exists(f"{D}/stable.npy"):
+    raise SystemExit(
+        f"{D}/stable.npy is missing. It is NOT optional and must not be substituted with an\n"
+        f"empty mask: detect_change_standard normalises its coherence statistics over the\n"
+        f"stable set, so an all-False array makes them degenerate (mean of empty slice) and\n"
+        f"the detection count becomes meaningless -- on elbaext_delong it reported 3,020\n"
+        f"cells GAINED after the LoD was WIDENED, which a threshold test cannot do.\n"
+        f"Build it with scripts/build_elbaext_routes.py, or copy it from the route tile the\n"
+        f"DoD came from.")
+stable = np.load(f"{D}/stable.npy")
 fp = np.load(f"{D}/floodplain_mask.npy").astype(bool)
 sl = np.load(f"{D}/slope.npy") if os.path.exists(f"{D}/slope.npy") else \
      np.load("data/derived/elbaext/slope.npy")
@@ -72,7 +81,7 @@ lod_v, applied, info = V.inflate_lod(lod, spread, fp, sl, slope_max_deg=A.slope_
                                      failure_floor_mm=A.failure_floor_mm)
 np.save(f"{D}/lod_veg.npy", lod_v)
 
-det = detect_change_standard(dod, lod_v, stable if stable is not None else np.zeros_like(dod, bool), res)
+det = detect_change_standard(dod, lod_v, stable, res)
 change_v = det["change"]
 np.save(f"{D}/change_veg.npy", change_v)
 base = np.load(f"{D}/change.npy").astype(bool)
