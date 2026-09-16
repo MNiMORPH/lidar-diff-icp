@@ -368,6 +368,11 @@ of 5 m), DoD against each epoch's own near-ground spread `p90 − p10`:
 
     spread source                 ret/cell  spread p50      m    b (mm)      r
     gen1 CSF ground                     17      220 mm  -0.294     +55.0  -0.353
+      ^^ b = +55.0 is an EXTRAPOLATION and must not be quoted as measured. Observed spread
+      never reaches 0 (min 24 mm, p01 59, p05 83), and the relation FLATTENS at the low end,
+      so a straight line overstates the intercept ~2x. The MEASURABLE low-vegetation offset
+      is the lowest-5%-spread median: +27.6 mm (2,649 cells). b also moves with the cell
+      population: +36.0 whole floodplain, +55.0 flat/cube cells, +67.6 flat/beam-table.
     gen2 class-2 GROUND only           158       80 mm  -0.101      +1.7  +0.012
     gen2 ALL near-ground (Hg+Hn)       251      120 mm  +0.006     -11.4  +0.070
 
@@ -384,8 +389,10 @@ gen2's successfully-classified ground — not like-for-like. The null survives t
 It works where the bias is small and fails where it is large — 35% recovery on the failure
 cells, because when no pulse reaches ground the distribution NARROWS onto the vegetation
 top and the covariate stops responding. And on the 90% that do penetrate, applying it turns
-"no detectable change" into "60 mm of deposition", resting wholly on `b = +55.0` which
-cannot be separated from a residual level offset.
+"no detectable change" into "60 mm of deposition", resting wholly on an intercept that is
+extrapolated past the data (see above) and, at its measurable value of ~+28 mm, sits INSIDE
+gen2's own datum uncertainty (-6.6 +/- 31.1 mm) and so cannot be separated from a level
+offset at all.
 
 **SHIPPED:** `vegetation_lod.inflate_lod` adds the *un-applied* correction in quadrature on
 flat floodplain. `m` and `slope_max_deg` and the failure floor all REFUSE without a value.
@@ -397,8 +404,13 @@ any gen1 return reach gen2 (`min(d_mm) > 0`)? 9,460 floodplain cells fail it, in
 clusters ≥20 cells holding 57% of them. Pooling proves they are unrecoverable — 0.0% of
 11,091 shots reached ground in the largest cluster.
 
-**STILL OPEN:** `b` is confounded with level error (the leveled benchmark is the only
-independent handle); the slope cut is a patch over an elevation-cut floodplain that includes
+**STILL OPEN:** the low-vegetation offset (~+28 mm measured) is confounded with level
+error and the leveled benchmark is the only independent handle. It is ROUTE-INVARIANT --
+67.6 vs 66.5 mm between independent and delong, m identical to three decimals -- which
+rules out gen1-side registration including the whole geoid treatment (independent applies
+~+67 mm, delong applies none), but NOT a gen2-side floodplain-vs-upland effect, since both
+routes register to the same gen2. `m` itself is population-sensitive: -0.294 on cube cells,
+-0.378 on beam-table cells, so the SHIPPED inflation is probably too small; the slope cut is a patch over an elevation-cut floodplain that includes
 banks; and metre-scale outliers (1.3% of cells, p10 −2010 mm in the top spread bin) are
 structures, not vegetation, and hijack any mean-based statistic.
 
