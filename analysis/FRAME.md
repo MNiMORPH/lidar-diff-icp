@@ -368,11 +368,8 @@ of 5 m), DoD against each epoch's own near-ground spread `p90 − p10`:
 
     spread source                 ret/cell  spread p50      m    b (mm)      r
     gen1 CSF ground                     17      220 mm  -0.294     +55.0  -0.353
-      ^^ b = +55.0 is an EXTRAPOLATION and must not be quoted as measured. Observed spread
-      never reaches 0 (min 24 mm, p01 59, p05 83), and the relation FLATTENS at the low end,
-      so a straight line overstates the intercept ~2x. The MEASURABLE low-vegetation offset
-      is the lowest-5%-spread median: +27.6 mm (2,649 cells). b also moves with the cell
-      population: +36.0 whole floodplain, +55.0 flat/cube cells, +67.6 flat/beam-table.
+      ^^ the intercept is extrapolated (spread never reaches 0) and not a measured quantity.
+      Do not quote it. Only the SLOPE is used.
     gen2 class-2 GROUND only           158       80 mm  -0.101      +1.7  +0.012
     gen2 ALL near-ground (Hg+Hn)       251      120 mm  +0.006     -11.4  +0.070
 
