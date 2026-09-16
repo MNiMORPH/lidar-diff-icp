@@ -387,9 +387,7 @@ It works where the bias is small and fails where it is large — 35% recovery on
 cells, because when no pulse reaches ground the distribution NARROWS onto the vegetation
 top and the covariate stops responding. And on the 90% that do penetrate, applying it turns
 "no detectable change" into "60 mm of deposition", resting wholly on an intercept that is
-extrapolated past the data (see above) and, at its measurable value of ~+28 mm, sits INSIDE
-gen2's own datum uncertainty (-6.6 +/- 31.1 mm) and so cannot be separated from a level
-offset at all.
+extrapolated past the data (see above).
 
 **SHIPPED:** `vegetation_lod.inflate_lod` adds the *un-applied* correction in quadrature on
 flat floodplain. `m` and `slope_max_deg` and the failure floor all REFUSE without a value.
@@ -401,12 +399,14 @@ any gen1 return reach gen2 (`min(d_mm) > 0`)? 9,460 floodplain cells fail it, in
 clusters ≥20 cells holding 57% of them. Pooling proves they are unrecoverable — 0.0% of
 11,091 shots reached ground in the largest cluster.
 
-**STILL OPEN:** the low-vegetation offset (~+28 mm measured) is confounded with level
-error and the leveled benchmark is the only independent handle. It is ROUTE-INVARIANT --
-67.6 vs 66.5 mm between independent and delong, m identical to three decimals -- which
-rules out gen1-side registration including the whole geoid treatment (independent applies
-~+67 mm, delong applies none), but NOT a gen2-side floodplain-vs-upland effect, since both
-routes register to the same gen2. `m` itself is population-sensitive: -0.294 on cube cells,
+**NOT A QUANTITY WE HAVE.** At low gen1 spread the DoD sits a few tens of mm above zero
+(binned medians +32.2 / +25.6 / +23.4). That residual is UNEXPLAINED -- deposition, residual
+level error, and something else are all consistent with it, and nothing here separates them.
+It is also INSIDE the flat floodplain, which the inflated LoD masks, so no product reads it.
+Do not name it, do not correct for it, do not quote a value. (Andy, 2026-09-16: "we do not
+know if it is deposition or datum or something else. And it will be masked in any case.")
+
+**STILL OPEN:** `m` is population-sensitive: -0.294 on cube cells,
 -0.378 on beam-table cells, so the SHIPPED inflation is probably too small; the slope cut is a patch over an elevation-cut floodplain that includes
 banks; and metre-scale outliers (1.3% of cells, p10 −2010 mm in the top spread bin) are
 structures, not vegetation, and hijack any mean-based statistic.
