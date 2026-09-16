@@ -106,6 +106,10 @@ def main():
     # correction ran; different when one did, and then z_after alone would misrepresent
     # the product. Saved always, so a reader never has to know which case they are in.
     np.save(f"{out}/z_after_differenced.npy", r["z_after_differenced"])
+    # The reporting stable mask. detect_change_standard NEEDS it -- given an empty one it
+    # builds its noise model from nothing and returns MORE detections after a LoD was
+    # inflated, which is impossible and is how this omission was found.
+    np.save(f"{out}/stable.npy", stable)
     with open(f"{out}/corrections.json", "w") as fh:
         json.dump(c, fh, indent=2)
     with open(f"{out}/regions.json", "w") as fh:
