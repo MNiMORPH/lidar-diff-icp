@@ -33,7 +33,13 @@ from lidar_diff_icp.viz import hillshade
 ap = argparse.ArgumentParser(description=__doc__,
                              formatter_class=argparse.RawDescriptionHelpFormatter)
 ap.add_argument("--tile", required=True)
-ap.add_argument("--lift", required=True, help="per-cell gen1 lift raster, mm")
+ap.add_argument("--m", type=float, required=True,
+                help="FITTED slope of DoD vs gen1 spread on THIS site's flat floodplain. "
+                     "Per-site: -0.294 at elbaext (<=2 deg), -0.176 with banks included.")
+ap.add_argument("--failure-floor-mm", type=float, required=True,
+                help="LoD floor for cells where NO gen1 return reaches gen2. No default: "
+                     "gen1 never measured that ground and its spread does not bound the "
+                     "error. Evidence: ~450 mm silences 90% of their detections.")
 ap.add_argument("--slope-max-deg", type=float, required=True,
                 help="MINE, and stated: where the inflation applies. It decides how much "
                      "flat floodplain stops being measurable. No default.")
@@ -47,10 +53,19 @@ stable = np.load(f"{D}/stable.npy") if os.path.exists(f"{D}/stable.npy") else No
 fp = np.load(f"{D}/floodplain_mask.npy").astype(bool)
 sl = np.load(f"{D}/slope.npy") if os.path.exists(f"{D}/slope.npy") else \
      np.load("data/derived/elbaext/slope.npy")
-lift = np.load(A.lift)
+import pyarrow.parquet as pq
+_t = pq.read_table(f"{D}/beam_offset_table.parquet", columns=["cell","d_mm_corr","in_grid"])
+_g = _t["in_grid"].to_numpy().astype(bool)
+_c = _t["cell"].to_numpy()[_g]; _d = _t["d_mm_corr"].to_numpy()[_g].astype(float)
+spread = V.gen1_spread(_c, _d, dod.shape)
+fail = V.penetration_failure(_c, _d, dod.shape)
+np.save(f"{D}/gen1_spread_mm.npy", spread)
+np.save(f"{D}/penetration_failure.npy", fail)
 res = float(json.load(open(f"{D}/corrections.json"))["res_m"])
 
-lod_v, applied, info = V.inflate_lod(lod, lift, fp, sl, slope_max_deg=A.slope_max_deg)
+lod_v, applied, info = V.inflate_lod(lod, spread, fp, sl, slope_max_deg=A.slope_max_deg,
+                                     m_mm_per_mm=A.m, failure=fail,
+                                     failure_floor_mm=A.failure_floor_mm)
 np.save(f"{D}/lod_veg.npy", lod_v)
 
 det = detect_change_standard(dod, lod_v, stable if stable is not None else np.zeros_like(dod, bool), res)
@@ -64,7 +79,7 @@ with open(f"{D}/lod_veg.json", "w") as fh:
                "cells_detected_before": int(base.sum()),
                "cells_detected_after": int(change_v.sum()),
                "cells_silenced": int(silenced.sum()), "cells_gained": int(gained.sum()),
-               "lift_raster": A.lift,
+               "spread_raster": f"{D}/gen1_spread_mm.npy",
                "note": "an ERROR statement, not a correction: dod.npy is unchanged"},
               fh, indent=1)
     fh.write("\n")
@@ -83,7 +98,8 @@ im = ax[0].imshow(np.where(applied, 1000 * (lod_v - lod), np.nan), extent=ext,
                   origin="lower", cmap="magma", vmin=0, vmax=250)
 ax[0].set_title(f"{name}: vegetation LoD inflation (mm)\n"
                 f"flat floodplain, slope <= {A.slope_max_deg:g} deg; "
-                f"{info['cells_inflated']:,} cells, median lift {info['median_lift_mm']:.0f} mm")
+                f"{info['cells_inflated']:,} cells, |m|={abs(A.m):.3f} x spread; "
+                f"{info['cells_penetration_failure']:,} floored at {A.failure_floor_mm:.0f} mm")
 fig.colorbar(im, ax=ax[0], shrink=0.6, extend="max", label="LoD added (mm)")
 ax[1].imshow(hs, extent=ext, origin="lower", cmap="gray")
 ax[1].imshow(np.where(silenced, 1.0, np.nan), extent=ext, origin="lower",
