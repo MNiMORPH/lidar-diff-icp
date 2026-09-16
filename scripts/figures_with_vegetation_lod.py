@@ -34,8 +34,12 @@ ap = argparse.ArgumentParser(description=__doc__,
                              formatter_class=argparse.RawDescriptionHelpFormatter)
 ap.add_argument("--tile", required=True)
 ap.add_argument("--m", type=float, required=True,
-                help="FITTED slope of DoD vs gen1 spread on THIS site's flat floodplain. "
-                     "Per-site: -0.294 at elbaext (<=2 deg), -0.176 with banks included.")
+                help="FITTED slope of DoD vs gen1 spread on THIS site's flat floodplain, "
+                     "over EVERY cell with enough gen1 returns to measure spread -- not a "
+                     "subset left over from another artifact. At elbaext (<=2 deg): -0.483 "
+                     "over all 53,671 measurable cells. The earlier -0.294 was this same "
+                     "fit restricted to the 16,092 cells the 2026-08-26 near-ground cube "
+                     "happens to cover (30%), which is a file footprint, not a population.")
 ap.add_argument("--failure-floor-mm", type=float, required=True,
                 help="LoD floor for cells where NO gen1 return reaches gen2. No default: "
                      "gen1 never measured that ground and its spread does not bound the "

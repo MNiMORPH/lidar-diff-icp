@@ -105,8 +105,12 @@ def inflate_lod(lod, spread_mm, floodplain, slope_deg, *, slope_max_deg,
     if m_mm_per_mm is None:
         raise ValueError(
             "m_mm_per_mm has no default: it is the FITTED slope of DoD against gen1 spread "
-            "on THIS site's flat floodplain (-0.294 at elbaext, -0.176 if banks are "
-            "included). It is a per-site measurement, not a constant.")
+            "on THIS site's flat floodplain, fitted over EVERY cell there with enough "
+            "gen1 returns to measure spread. At elbaext (<=2 deg): -0.483, n=53,671 of "
+            "58,767. It is a per-site measurement, not a constant. NOTE -0.294, used "
+            "until 2026-09-16, was this fit restricted to the 16,092 cells (30%) that the "
+            "near-ground cube built for the return-structure work happens to cover -- a "
+            "file footprint, not a chosen population, and it undersized the LoD by ~60%.")
     fp = np.asarray(floodplain, bool)
     flat = fp & (np.asarray(slope_deg, float) <= float(slope_max_deg))
     sp = np.asarray(spread_mm, float)
