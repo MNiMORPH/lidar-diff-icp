@@ -57,10 +57,15 @@ ap.add_argument("--cube", default="nearground_cells_sn.npz")
 # DEFINITION -- it must travel with any coefficient fitted from it": (0.15, 2.00] m.
 ap.add_argument("--lo", type=float, default=0.15, help="band lower edge, m (doc: 0.15)")
 ap.add_argument("--hi", type=float, default=2.00, help="band upper edge, m (doc: 2.00)")
-ap.add_argument("--gen2", default=None,
-                help="gen2 cloud. With it, lowveg is built for EVERY cell by streaming, and "
-                     "written to lowveg_grid.npy. Without it, only the cube's cells are "
-                     "covered and the output is lowveg.npy.")
+ap.add_argument("--gen2", "--cloud", dest="gen2", default=None,
+                help="a point cloud. With it, lowveg is built for EVERY cell by streaming. "
+                     "Without it, only the cube's cells are covered (lowveg.npy). The "
+                     "metric is epoch-agnostic -- nearground_cells.py builds H1 and H2 with "
+                     "the SAME function -- so pass gen1 here with --epoch gen1.")
+ap.add_argument("--epoch", choices=("gen1", "gen2"), default="gen2",
+                help="which epoch the streamed cloud is. gen2 -> lowveg_grid.npy, "
+                     "gen1 -> lowveg_grid_gen1.npy. It ONLY names the output and the "
+                     "provenance note; the computation is identical, which is the point.")
 ap.add_argument("--chunk", type=int, default=3_000_000)
 ap.add_argument("--out", default=None)
 ap.add_argument("--check", action="store_true",
@@ -68,7 +73,8 @@ ap.add_argument("--check", action="store_true",
 A = ap.parse_args()
 
 D = A.tile if os.path.sep in A.tile else os.path.join("data", "derived", A.tile)
-OUT = A.out or ("lowveg_grid.npy" if A.gen2 else "lowveg.npy")
+OUT = A.out or (("lowveg_grid_gen1.npy" if A.epoch == "gen1" else "lowveg_grid.npy")
+                if A.gen2 else "lowveg.npy")
 
 if A.gen2:
     # Grid-wide: the same definition, evaluated on every cell instead of the cube's.
@@ -89,7 +95,8 @@ if A.gen2:
     H = np.zeros((NC, NZ), np.int32); n_in = 0
     with laspy.open(A.gen2) as f:
         for pts in f.chunk_iterator(A.chunk):
-            x = np.asarray(pts.x); y = np.asarray(pts.y); z = np.asarray(pts.z)
+            _ok = np.asarray(pts.classification) != 7      # as nearground_cells.cube does
+            x = np.asarray(pts.x)[_ok]; y = np.asarray(pts.y)[_ok]; z = np.asarray(pts.z)[_ok]
             ix = ((x - X0) / RES).astype(np.int64); iy = ((y - Y0) / RES).astype(np.int64)
             ing = (ix >= 0) & (ix < NX) & (iy >= 0) & (iy < NY)
             cc = iy[ing] * NX + ix[ing]
@@ -106,7 +113,13 @@ if A.gen2:
         out = np.where(tot > 0, H[:, band].sum(1) / tot, np.nan).reshape(NY, NX)
     print(f"lowveg = (returns with {A.lo:g} < h <= {A.hi:g} m) / (returns in "
           f"{ZLO:+.2f}..{ZHI:+.2f} m), bin-centre test on {DZ:.3f} m bins")
-    print(f"  population: ALL gen2 returns in the window (not class-2)")
+    print(f"  population: ALL {A.epoch} returns in the window, class 7 dropped (not class-2)")
+    if A.epoch == "gen1":
+        print("  CAVEAT, and it travels with the file: heights are measured above GEN2's")
+        print("  z_after, and the gen1 cloud is streamed RAW -- its registration (lateral")
+        print("  shift, correction surface) is NOT applied. Andy 2026-09-17: 'that will")
+        print("  just be a caveat that lives with the files.' Fine for RANKING cells by")
+        print("  vegetation; do not read the band edge as an absolute height.")
     print(f"  {n_in:,} returns placed; cells with a value: {int(np.isfinite(out).sum()):,} "
           f"of {out.size:,}")
     q = np.nanpercentile(out, [10, 50, 90])
