@@ -73,8 +73,16 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--route", required=True, choices=["independent", "delong"])
     ap.add_argument("--out", default=None)
+    ap.add_argument("--boresight", action="store_true",
+                    help="remove a COMMON scanner roll, self-calibrated from gen1's own "
+                         "flight-line self-overlap (gen2-free). Measured at elbaext: "
+                         "2.22 +/- 0.05 mm/deg by coreg.estimate_boresight_roll, and an "
+                         "independent scan of the per-line step metric bottoms out at "
+                         "2.0-3.0. It is NOT in the shipped default, so this writes to a "
+                         "separate directory and leaves the comparison products intact.")
     a = ap.parse_args()
-    out = a.out or f"data/derived/elbaext_{a.route}"
+    out = a.out or (f"data/derived/elbaext_{a.route}"
+                    + ("_boresight" if a.boresight else ""))
     os.makedirs(out, exist_ok=True)
 
     kw = dict(SHARED)
@@ -82,6 +90,8 @@ def main():
     # the acquisition, never defaulted -- defaulting it is what cost +54.87 mm at Ramsey.
     if a.route == "independent":
         kw["gen1_geoid"] = acquisitions.for_project(PROJECT).geoid_grid
+    if a.boresight:
+        kw["correct_boresight"] = True
 
     t0 = time.time()
     r = difference_dem(GEN1, GEN2, BOUNDS, route=a.route, tile_dir=out,
