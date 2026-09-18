@@ -629,7 +629,7 @@ def register_gen1(before_laz, bounds, res, *, ground_source="csf", csf_pdal=None
 
 def apply_datum(x, y, z, ground, Zref, ground_of, grid, bounds, *, tie="reference",
                 geoid_datum=None, gen1_geoid=None, apply_geoid=True,
-                correction_surface=False, floodplain=None,
+                correction_surface=False, floodplain=None, surface_keep=None,
                 along_track_drift=False, gps_time=None, source_id=None, stable=None,
                 verbose=True):
     """Put the registered gen1 cloud onto gen2's datum, in the principled order: get x, y
@@ -691,7 +691,8 @@ def apply_datum(x, y, z, ground, Zref, ground_of, grid, bounds, *, tie="referenc
 
     ctx = chain.Ctx(x=x, y=y, z=z, ground=ground, Zref=Zref, ground_of=ground_of,
                     grid=grid, bounds=bounds, gps_time=gps_time, source_id=source_id,
-                    stable=stable, floodplain=floodplain, verbose=verbose)
+                    stable=stable, floodplain=floodplain, surface_keep=surface_keep,
+                    verbose=verbose)
 
     # ORDER IS THE METHOD; run_chain refuses the orders the measurements rule out.
     steps = [chain.LateralShift()]
@@ -972,7 +973,7 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
                    csf_cache=None, robust_stable=True, before_crs=io.MN_GEN1_CRS,
                    geoid_datum=None, gen1_geoid=None, correct_boresight=False,
                    boresight_roll_mm_per_deg=None, swath_tie="intercept",
-                   absolute_datum=None):
+                   correction_surface_keep=None, absolute_datum=None):
     """Corrected bare-earth DEM of Difference (after - before).
 
     ``before_laz``  : first-generation (gen1) MN lidar tile (retains point_source_id + gps_time).
@@ -1232,6 +1233,7 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
                        geoid_datum=geoid_datum, gen1_geoid=gen1_geoid,
                        apply_geoid=apply_geoid,
                        correction_surface=correction_surface, floodplain=floodplain,
+                       surface_keep=correction_surface_keep,
                        along_track_drift=along_track_drift, gps_time=gt8,
                        source_id=ps8, stable=stable)
     xc = _dat["x"]; yc = _dat["y"]; zc = _dat["z"]

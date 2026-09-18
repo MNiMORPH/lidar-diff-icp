@@ -62,6 +62,12 @@ class Ctx:
     source_id: np.ndarray | None = None
     stable: np.ndarray | None = None   # geometric stable mask, grid-shaped
     floodplain: np.ndarray | None = None
+    #: Floodplain cells to KEEP in the correction surface's stable set, grid-shaped bool.
+    #: The valley cut removes the whole floodplain, which leaves the DeLong surface
+    #: EXTRAPOLATING over the valley floor -- measured at elbaext as -201 mm of apparent
+    #: erosion that is absent on the independent route (route difference regressed on the
+    #: applied surface: slope -1.0143, r -0.9932). None = keep nothing, the old behaviour.
+    surface_keep: np.ndarray | None = None
     verbose: bool = True
     record: dict = field(default_factory=dict)
     #: Grid-shaped arrays a step APPLIED, kept so the product can be audited. ``record``
@@ -184,14 +190,21 @@ class CorrectionSurface(Correction):
 
     def apply(self, ctx):
         X0, Y0, res, nx, ny = ctx.grid
+        exclude = ctx.floodplain
+        if exclude is not None and ctx.surface_keep is not None:
+            exclude = exclude & ~np.asarray(ctx.surface_keep, bool)
         C = coreg.correction_surface(ctx.Zref, ctx.gen1_grid(), res, X0, Y0,
-                                     radius=self.radius_m, exclude=ctx.floodplain)["C"]
+                                     radius=self.radius_m, exclude=exclude)["C"]
         iy, ix = ctx.cell_index()
         Cpt = C[iy, ix]
         good = np.isfinite(Cpt)
         ctx.z[good] += Cpt[good]
         ctx.grids[self.name] = C
+        _fp = 0 if ctx.floodplain is None else int(np.asarray(ctx.floodplain, bool).sum())
+        _kp = 0 if ctx.surface_keep is None else int(np.asarray(ctx.surface_keep, bool).sum())
         ctx.record[self.name] = {"radius_m": self.radius_m,
+                                 "floodplain_cells_excluded": _fp - _kp,
+                                 "floodplain_cells_kept_as_support": _kp,
                                  "points_corrected": int(good.sum()),
                                  "points_total": int(good.size)}
 

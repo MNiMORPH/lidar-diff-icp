@@ -73,6 +73,14 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--route", required=True, choices=["independent", "delong"])
     ap.add_argument("--out", default=None)
+    ap.add_argument("--floodplain-support", metavar="TILE", default=None,
+                    help="keep the well-measured floodplain cells in the DeLong surface's "
+                         "stable set instead of excluding the whole valley. The cells are "
+                         "read from TILE: |laplacian| <= curv_max, gen1 reaches the gen2 "
+                         "surface (not penetration_failure), and NO gen1 return in the "
+                         "0.15-2.00 m band (lowveg_grid_gen1 == 0). Measured at elbaext: "
+                         "30,845 cells, which close the surface's support gap from 578 m "
+                         "to 61 m, at NMAD 51 mm against the uplands' 54.")
     ap.add_argument("--boresight", action="store_true",
                     help="remove a COMMON scanner roll, self-calibrated from gen1's own "
                          "flight-line self-overlap (gen2-free). Measured at elbaext: "
@@ -82,7 +90,8 @@ def main():
                          "separate directory and leaves the comparison products intact.")
     a = ap.parse_args()
     out = a.out or (f"data/derived/elbaext_{a.route}"
-                    + ("_boresight" if a.boresight else ""))
+                    + ("_boresight" if a.boresight else "")
+                    + ("_fpsupport" if a.floodplain_support else ""))
     os.makedirs(out, exist_ok=True)
 
     kw = dict(SHARED)
@@ -92,6 +101,21 @@ def main():
         kw["gen1_geoid"] = acquisitions.for_project(PROJECT).geoid_grid
     if a.boresight:
         kw["correct_boresight"] = True
+    if a.floodplain_support:
+        T = a.floodplain_support
+        if os.path.sep not in T:
+            T = os.path.join("data", "derived", T)
+        lap = np.load(f"{T}/curv_laplacian.npy")
+        fp = np.load(f"{T}/floodplain_mask.npy").astype(bool)
+        fail = np.load(f"{T}/penetration_failure.npy").astype(bool)
+        lv = np.load(f"{T}/lowveg_grid_gen1.npy")
+        keep = (fp & (np.abs(lap) <= SHARED["curv_max"] if "curv_max" in SHARED
+                      else np.abs(lap) <= 0.005)
+                & ~fail & np.isfinite(lv) & (lv <= 0))
+        kw["correction_surface_keep"] = keep
+        print(f"  floodplain support: keeping {int(keep.sum()):,} of "
+              f"{int(fp.sum()):,} floodplain cells in the surface's stable set "
+              f"(source {T})")
 
     t0 = time.time()
     r = difference_dem(GEN1, GEN2, BOUNDS, route=a.route, tile_dir=out,
