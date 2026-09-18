@@ -117,3 +117,80 @@ print(f"  dy spread: star {max(sy)-min(sy):.4f} m   chain {max(cy)-min(cy):.4f} 
 print("\nREPORTED, NOT ADOPTED. Neither solution is checked against truth here, and the")
 print("two disagree by up to ~1.5 m in dx. The star's value is that its lines CAN")
 print("disagree; the chain's misclosure is 0.0000 mm by construction and cannot.")
+
+# ---------------------------------------------------------------------------
+# STAGE 2. Andy, 2026-09-18: "I was thinking of the entire set of swaths being
+# horizontally co-registered but vertically mis-registered. But this was an assumption.
+# It seems more principled to run Nuth & Kaeaeb by swath (against gen2), and then to see
+# vertical misalignment afterwards. Indeed, some vertical misalignment could actually just
+# be the result of horizontal misalignment."
+#
+# THE TEST. Correct each line HORIZONTALLY ONLY (three ways), then measure what vertical
+# offset each line still has against gen2 on STABLE cells. If a horizontal fix shrinks the
+# per-line vertical spread, then part of what align_swaths calls vertical misregistration
+# was horizontal misregistration read through the surface gradient.
+# ---------------------------------------------------------------------------
+stable = np.load(f"{D}/stable.npy").astype(bool)
+
+
+def vertical_by_line(dxdy):
+    """Per-line median (gen1 - gen2) on stable cells, after a horizontal-only shift."""
+    out = {}
+    for p in sorted(set(ps.tolist())):
+        m = ps == p
+        ddx, ddy = dxdy(p)
+        G = ground_of(x[m] + ddx, y[m] + ddy, z[m])
+        ok = stable & np.isfinite(G) & np.isfinite(Zref)
+        out[p] = float(np.median((G[ok] - Zref[ok]))) * 1000.0 if ok.sum() else float("nan")
+    return out
+
+
+print("\nSTAGE 2 -- per-line VERTICAL offset (mm, gen1 - gen2, median on stable cells)")
+print("           after a HORIZONTAL-ONLY correction. No vertical term is applied.")
+cases = [("no horizontal correction", lambda p: (0.0, 0.0)),
+         ("align_swaths horizontal", lambda p: (SW[str(p)][0], SW[str(p)][1])),
+         ("per-line star NK horizontal", lambda p: (star[p][0], star[p][1]))]
+res_rows = {}
+for lab, fn in cases:
+    v = vertical_by_line(fn)
+    res_rows[lab] = v
+    vals = [v[p] for p in sorted(v)]
+    print(f"\n  {lab}")
+    print("   " + "".join(f"{p:>10}" for p in sorted(v)))
+    print("   " + "".join(f"{v[p]:>10.1f}" for p in sorted(v)))
+    print(f"    spread {max(vals)-min(vals):>8.1f} mm     sd {np.std(vals):>7.1f} mm")
+print("\n  If the star row is TIGHTER, some 'vertical' misregistration was horizontal.")
+
+# The FAIR method-vs-method comparison: each method's FULL solution (dx, dy AND dz), which
+# is what the pipeline actually applies. The horizontal-only rows above isolate one
+# component; no product is ever in that state.
+print("\nSTAGE 3 -- each method's FULL per-line solution applied (dx, dy AND dz)")
+
+
+def vertical_full(dxdydz):
+    out = {}
+    for p in sorted(set(ps.tolist())):
+        m = ps == p
+        ddx, ddy, ddz = dxdydz(p)
+        G = ground_of(x[m] + ddx, y[m] + ddy, z[m] + ddz)
+        ok = stable & np.isfinite(G) & np.isfinite(Zref)
+        out[p] = float(np.median(G[ok] - Zref[ok])) * 1000.0 if ok.sum() else float("nan")
+    return out
+
+
+for lab, fn in (("align_swaths full (shipped)",
+                 lambda p: (SW[str(p)][0], SW[str(p)][1], SW[str(p)][2])),
+                ("per-line star NK full",
+                 lambda p: (star[p][0], star[p][1], star[p][2]))):
+    v = vertical_full(fn); vals = [v[p] for p in sorted(v)]
+    print(f"\n  {lab}")
+    print("   " + "".join(f"{p:>10}" for p in sorted(v)))
+    print("   " + "".join(f"{v[p]:>10.1f}" for p in sorted(v)))
+    print(f"    spread {max(vals)-min(vals):>8.1f} mm     sd {np.std(vals):>7.1f} mm")
+print("\n  This is the comparison that decides which method registers better VERTICALLY.")
+print("\n  ⚠️ CONFOUND, and it bounds what these spreads mean: each line covers a DIFFERENT")
+print("  part of the tile, so its median offset against gen2 carries real spatial variation")
+print("  in gen1-gen2 (terrain, vegetation, the correction surface) and not registration")
+print("  alone. align_swaths ties lines on SHARED cells, which is apples-to-apples; this")
+print("  metric is not. Footprints are identical across the cases above, so COMPARING the")
+print("  cases is fair -- but the residual spread must NOT be read as pure misregistration.")
