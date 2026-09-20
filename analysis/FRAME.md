@@ -393,6 +393,23 @@ extrapolated past the data (see above).
 flat floodplain. `m` and `slope_max_deg` and the failure floor all REFUSE without a value.
 Banks keep their LoD, which is the point.
 
+**★★ FIXED 2026-09-20 -- floodplain support cells.** The surface now keeps the
+well-measured floodplain cells in its stable set (`correction_surface_keep`; builder flag
+`--floodplain-support`): |laplacian| <= curv_max, gen1 reaches gen2, and NO gen1 return in
+the 0.15-2.00 m tussock band. 30,845 cells at elbaext, closing the support gap 578 -> 61 m.
+
+COMPARED STRUCTURALLY ONLY -- every field de-gauged by one constant on stable uplands,
+because a vertical offset is GAUGE, not error (Andy 2026-09-20):
+
+    five patches vs the surface-free route   delong 70.0 NMAD / 257.3 RMS
+                                        +fp support 24.4 /  31.4     (8.2x)
+    whole flat floodplain                    delong 66.2 /  93.7
+                                        +fp support 32.7 /  50.1     (2.0x)
+    floodplain own spread     delong 127.4 | +fp support 69.5 | independent 87.2
+    uplands vs independent    delong  37.2 | +fp support 38.2  (unchanged)
+
+Two-fold structural improvement, uplands untouched, 75.9% of upland cells bit-identical.
+
 **★★ THE FLOODPLAIN "EROSION" AT ELBA IS THE DELONG CORRECTION SURFACE (2026-09-17).**
 Andy: "the floodplain upstream of the pointed meander bend is still showing significant
 erosion." It is an artifact of the ADOPTED route. The 5 largest patches that survive the
