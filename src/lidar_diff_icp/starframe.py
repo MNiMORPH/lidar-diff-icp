@@ -99,7 +99,8 @@ def fit_star_shifts(x, y, z, source_id, ground, Zref, ground_of, grid, stable,
             continue
         cx = cy = cz = 0.0
         info = None
-        for _ in range(max(int(iterations), 1)):
+        r2_first = float("nan")
+        for _it in range(max(int(iterations), 1)):
             G = ground_of(x[m] + cx, y[m] + cy, z[m] + cz)   # SAME estimator that made Zref
             use = st & np.isfinite(G)
             n = int(use.sum())
@@ -116,11 +117,18 @@ def fit_star_shifts(x, y, z, source_id, ground, Zref, ground_of, grid, stable,
             # z:    fitted = +applied, so it must be NEGATED to become a correction.
             # Verified by scripts/test_starframe.py; do not "simplify" this asymmetry away.
             cx += float(coef[0]); cy += float(coef[1]); cz += -float(coef[2])
+            r2 = float(1.0 - r.var() / d.var()) if d.var() > 0 else float("nan")
+            if _it == 0:
+                r2_first = r2            # the FIT's quality, on the uncorrected difference
+            # The LAST iteration's r2 is near zero when the solve has CONVERGED -- there is
+            # nothing left to fit -- so reporting it as "fit quality" reads as a failure
+            # when it is the opposite. Report the first pass, and the last STEP as the
+            # convergence measure.
             info = dict(swath=int(s), n=n, dx=cx, dy=cy, dz=cz,
                         se_dx=float(se[0]), se_dy=float(se[1]), se_dz=float(se[2]),
-                        r2=float(1.0 - r.var() / d.var()) if d.var() > 0 else float("nan"),
-                        last_step_mm=(1000*float(coef[0]), 1000*float(coef[1]),
-                                      -1000*float(coef[2])))
+                        r2=r2_first, r2_last=r2,
+                        step_mm=(1000*float(coef[0]), 1000*float(coef[1]),
+                                 -1000*float(coef[2])))
         if info is not None and "dx" not in info:
             corrections[int(s)] = (0.0, 0.0, 0.0)
         else:
@@ -129,12 +137,14 @@ def fit_star_shifts(x, y, z, source_id, ground, Zref, ground_of, grid, stable,
     if verbose:
         print("  star frame: per-swath 3-D fit against the gen2 reference, stable cells")
         print(f"    {'swath':>7}{'cells':>9}{'dx (mm)':>10}{'SE':>7}{'dy (mm)':>10}"
-              f"{'SE':>7}{'dz (mm)':>10}{'SE':>7}{'R2':>8}")
+              f"{'SE':>7}{'dz (mm)':>10}{'SE':>7}{'R2':>8}{'last step (mm)':>22}")
         for r_ in rows:
             if "dx" not in r_:
                 print(f"    {r_['swath']:>7}{r_['n']:>9,}   NOT MOVED: {r_['reason']}")
                 continue
+            st_ = r_.get("step_mm", (float('nan'),)*3)
             print(f"    {r_['swath']:>7}{r_['n']:>9,}{1000*r_['dx']:>10.0f}"
                   f"{1000*r_['se_dx']:>7.0f}{1000*r_['dy']:>10.0f}{1000*r_['se_dy']:>7.0f}"
-                  f"{1000*r_['dz']:>10.1f}{1000*r_['se_dz']:>7.1f}{r_['r2']:>8.3f}", flush=True)
+                  f"{1000*r_['dz']:>10.1f}{1000*r_['se_dz']:>7.1f}{r_['r2']:>8.3f}"
+                  f"{f'({st_[0]:+.0f},{st_[1]:+.0f},{st_[2]:+.1f})':>22}", flush=True)
     return corrections, rows
