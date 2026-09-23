@@ -641,6 +641,7 @@ def register_gen1(before_laz, bounds, res, *, ground_source="csf", csf_pdal=None
 def apply_datum(x, y, z, ground, Zref, ground_of, grid, bounds, *, tie="reference",
                 geoid_datum=None, gen1_geoid=None, apply_geoid=True,
                 correction_surface=False, floodplain=None, surface_keep=None,
+                swath_frame="chain",
                 along_track_drift=False, gps_time=None, source_id=None, stable=None,
                 verbose=True):
     """Put the registered gen1 cloud onto gen2's datum, in the principled order: get x, y
@@ -1248,6 +1249,7 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
     # register_gen1 so the gen1 swath network cannot absorb a cross-epoch correction.
     # It mutates xc, yc, zc in place -- see its docstring for why.
     _dat = apply_datum(xc, yc, zc, be, Zref, groundg, _grid, bounds, tie=tie,
+                       swath_frame=swath_frame,
                        geoid_datum=geoid_datum, gen1_geoid=gen1_geoid,
                        apply_geoid=apply_geoid,
                        correction_surface=correction_surface, floodplain=floodplain,
