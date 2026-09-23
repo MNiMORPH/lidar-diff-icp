@@ -81,6 +81,15 @@ def main():
                          "0.15-2.00 m band (lowveg_grid_gen1 == 0). Measured at elbaext: "
                          "30,845 cells, which close the surface's support gap from 578 m "
                          "to 61 m, at NMAD 51 mm against the uplands' 54.")
+    ap.add_argument("--swath-frame", choices=["chain", "star"], default="chain",
+                    help="how each gen1 flight line is placed. 'chain' (default, shipped) "
+                         "applies coreg.align_swaths' per-swath 3-D shift, solved from "
+                         "swath-PAIR overlaps and chained through a 6-node/5-edge tree "
+                         "with no redundancy. 'star' fits each swath INDEPENDENTLY against "
+                         "gen2 on stable cells and applies that instead; align_swaths is "
+                         "still solved and recorded as the pipeline's only gen2-free "
+                         "check. Measured per-swath spread at elbaext: star 412 mm, chain "
+                         "1389 mm, with the two VERTICAL solutions at corr +0.986.")
     ap.add_argument("--boresight", action="store_true",
                     help="remove a COMMON scanner roll, self-calibrated from gen1's own "
                          "flight-line self-overlap (gen2-free). Measured at elbaext: "
@@ -91,7 +100,8 @@ def main():
     a = ap.parse_args()
     out = a.out or (f"data/derived/elbaext_{a.route}"
                     + ("_boresight" if a.boresight else "")
-                    + ("_fpsupport" if a.floodplain_support else ""))
+                    + ("_fpsupport" if a.floodplain_support else "")
+                    + ("_star" if a.swath_frame == "star" else ""))
     os.makedirs(out, exist_ok=True)
 
     kw = dict(SHARED)
@@ -99,6 +109,7 @@ def main():
     # the acquisition, never defaulted -- defaulting it is what cost +54.87 mm at Ramsey.
     if a.route == "independent":
         kw["gen1_geoid"] = acquisitions.for_project(PROJECT).geoid_grid
+    kw["swath_frame"] = a.swath_frame
     if a.boresight:
         kw["correct_boresight"] = True
     if a.floodplain_support:

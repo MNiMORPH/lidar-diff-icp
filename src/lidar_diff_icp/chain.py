@@ -38,7 +38,7 @@ import numpy as np
 from . import coreg
 
 __all__ = ["Ctx", "Correction", "LateralShift", "GeoidConversion", "CorrectionSurface",
-           "AlongTrackDrift", "run_chain"]
+           "AlongTrackDrift", "StarFrame", "run_chain"]
 
 
 @dataclass
@@ -209,6 +209,58 @@ class CorrectionSurface(Correction):
                                  "points_total": int(good.size)}
 
 
+class StarFrame(Correction):
+    """Per-swath 3-D shift fitted INDEPENDENTLY against gen2 -- a star, not a chain.
+
+    Replaces the APPLICATION of ``coreg.align_swaths``, whose horizontal half is solved
+    from swath-PAIR overlaps and chained through a network that is a bare 6-node/5-edge
+    tree at elbaext: no loops, no redundancy, ``max |misclosure|`` 0.0000 mm by
+    construction. Three independent measurements say that half is wrong -- the global
+    Nuth & Kaeaeb removes -0.618 m of what it applies; its horizontal alone makes per-line
+    VERTICAL agreement 70% worse (63.9 -> 108.1 mm); and regressing the residual on the
+    gen2 gradient says 74% of its 1389 mm cross-track ramp should be undone (corr -0.969).
+
+    Measured at elbaext the star's per-swath spread is 412 mm against the chain's 1389,
+    while the two VERTICAL solutions agree at corr +0.986 -- so this keeps the part of
+    align_swaths that was measurably good (5.07 mm per-line step) and drops the part that
+    was not.
+
+    RUNS FIRST, because it is the swath-frame step align_swaths used to be, and that ran
+    before every chain step. ``align_swaths`` is still SOLVED upstream and recorded as a
+    diagnostic: it is the only gen2-free consistency check in the pipeline and losing it
+    would leave no way to detect a gen2-side defect. It is simply not applied.
+
+    KNOWN LIMIT, measured and not hidden: one constant per swath is an incomplete model.
+    Split-half on stable cells gives 0.6-4.7 mm of sampling noise but 10-50 mm of SPATIAL
+    variation (dy worst, 50.6 mm RMS), so the shift is not actually constant along a pass.
+    This step is better posed than what it replaces, not correct.
+    """
+
+    name = "star_frame"
+
+    def __init__(self, min_cells=500, iterations=2):
+        self.min_cells = min_cells
+        self.iterations = iterations
+
+    def apply(self, ctx):
+        from . import starframe
+        if ctx.source_id is None or ctx.stable is None:
+            raise ValueError("StarFrame needs source_id and stable; one is None. It is a "
+                             "per-swath fit on stable ground against gen2 and cannot run "
+                             "without both.")
+        corr, rows = starframe.fit_star_shifts(
+            ctx.x, ctx.y, ctx.z, ctx.source_id, ctx.ground, ctx.Zref, ctx.ground_of,
+            ctx.grid, ctx.stable, min_cells=self.min_cells,
+            iterations=self.iterations, verbose=ctx.verbose)
+        for s_, (dx, dy, dz) in corr.items():
+            m = ctx.source_id == s_
+            ctx.x[m] += dx; ctx.y[m] += dy; ctx.z[m] += dz
+        ctx.record[self.name] = {
+            "per_swath_dxdydz_m": {str(k): [round(float(v), 4) for v in val]
+                                   for k, val in corr.items()},
+            "min_cells": self.min_cells, "iterations": self.iterations}
+
+
 class AlongTrackDrift(Correction):
     """Per-swath vertical drift as a smooth function of ``gps_time``.
 
@@ -254,9 +306,16 @@ def run_chain(chain, ctx: Ctx) -> Ctx:
                 "and a spatial surface cannot undo a per-line offset once made: measured "
                 "mean per-line step 19.91 mm that way against 5.49 mm the other, on a "
                 "5.07 mm baseline from align_swaths. Put CorrectionSurface first.")
-    if names and names[0] != "lateral_shift":
+    if "star_frame" in names and names.index("star_frame") != 0:
         raise ValueError(
-            f"the chain starts with {names[0]!r}, not 'lateral_shift'. Get x, y right "
+            f"StarFrame is at position {names.index('star_frame')}, not first. It "
+            f"is the swath-frame step that replaces align_swaths, which ran BEFORE "
+            f"every chain step; running it later would fit per-swath constants to a "
+            f"residual those steps have already reshaped.")
+    _head = [n for n in names if n != "star_frame"]
+    if _head and _head[0] != "lateral_shift":
+        raise ValueError(
+            f"the chain starts with {_head[0]!r}, not 'lateral_shift'. Get x, y right "
             f"before z is touched, or terrain slope leaks into the elevation difference "
             f"(the lateral term is 212.60 mm mean on the steepest ground).")
     for step in chain:

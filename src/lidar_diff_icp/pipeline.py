@@ -512,7 +512,8 @@ def grid_reference(after_laz, bounds, grid, q, *, stream=True, after_ground="cla
 
 def register_gen1(before_laz, bounds, res, *, ground_source="csf", csf_pdal=None,
                   csf_cache=None, before_crs=None, correct_boresight=False,
-                  boresight_roll_mm_per_deg=None, swath_tie="intercept", verbose=True):
+                  boresight_roll_mm_per_deg=None, swath_tie="intercept",
+                  apply_swath_corr=True, verbose=True):
     """Get the BEFORE (gen1) cloud into its own internally-consistent frame: classify the
     ground, remove any instrumental boresight roll, and solve the swath network so the
     flight lines agree with each other.
@@ -619,11 +620,21 @@ def register_gen1(before_laz, bounds, res, *, ground_source="csf", csf_pdal=None
               + " -- their alignment constants are recorded but cannot be checked against "
                 "any cell they alone determine", flush=True)
     xc, yc, zc = x8.copy(), y8.copy(), z8.copy()
-    for s, (dx, dy, dz) in corr.items():
-        m = ps8 == s; xc[m] += dx; yc[m] += dy; zc[m] += dz
+    # align_swaths is ALWAYS SOLVED and always recorded -- it is the pipeline's only
+    # gen2-free consistency check, and dropping it would leave no way to detect a
+    # gen2-side defect. `apply_swath_corr=False` keeps the diagnostic and withholds the
+    # correction, for the star frame (chain.StarFrame) to supply instead.
+    if apply_swath_corr:
+        for s, (dx, dy, dz) in corr.items():
+            m = ps8 == s; xc[m] += dx; yc[m] += dy; zc[m] += dz
+    elif verbose:
+        print(f"  align_swaths: SOLVED and recorded, NOT applied "
+              f"({len(corr)} swaths) -- the star frame supplies the swath frame",
+              flush=True)
 
     return dict(x=xc, y=yc, z=zc, ground=be, source_id=ps8, gps_time=gt8,
                 swath_corr=corr, swath_cov=swath_cov, zero_line=zero_line,
+                swath_corr_applied=bool(apply_swath_corr),
                 boresight=boresight_used)
 
 
@@ -695,7 +706,7 @@ def apply_datum(x, y, z, ground, Zref, ground_of, grid, bounds, *, tie="referenc
                     verbose=verbose)
 
     # ORDER IS THE METHOD; run_chain refuses the orders the measurements rule out.
-    steps = [chain.LateralShift()]
+    steps = ([chain.StarFrame()] if swath_frame == "star" else []) + [chain.LateralShift()]
     if apply_geoid:
         steps.append(chain.GeoidConversion(gen1_geoid=gen1_geoid, geoid_datum=geoid_datum))
     if correction_surface:
@@ -973,7 +984,8 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
                    csf_cache=None, robust_stable=True, before_crs=io.MN_GEN1_CRS,
                    geoid_datum=None, gen1_geoid=None, correct_boresight=False,
                    boresight_roll_mm_per_deg=None, swath_tie="intercept",
-                   correction_surface_keep=None, absolute_datum=None):
+                   correction_surface_keep=None, swath_frame="chain",
+                   absolute_datum=None):
     """Corrected bare-earth DEM of Difference (after - before).
 
     ``before_laz``  : first-generation (gen1) MN lidar tile (retains point_source_id + gps_time).
@@ -1215,7 +1227,13 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
     along_track_drift = _R["along_track_drift"]
     apply_geoid = _R["apply_geoid"]
 
+    if swath_frame not in ("chain", "star"):
+        raise ValueError(f"swath_frame={swath_frame!r}; expected 'chain' (the shipped "
+                         f"default: apply coreg.align_swaths' per-swath 3-D shift) or "
+                         f"'star' (fit each swath independently against gen2 and apply "
+                         f"that instead; align_swaths is still solved and recorded).")
     _reg = register_gen1(before_laz, bounds, res, ground_source=ground_source,
+                         apply_swath_corr=(swath_frame == "chain"),
                          csf_pdal=csf_pdal, csf_cache=csf_cache, before_crs=before_crs,
                          correct_boresight=correct_boresight,
                          boresight_roll_mm_per_deg=boresight_roll_mm_per_deg,
@@ -1297,6 +1315,7 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
                                 n_marks=_GQ_CURVE["n_marks"], **_GQ_CURVE["provenance"])
                            if _GQ_CURVE is not None else None),
         "route": route, "correction_surface": correction_surface,
+        "swath_frame": swath_frame,
         "gen2_chain": gen2_rec,
         "along_track_drift": along_track_drift, "geoid_applied": apply_geoid,
         "ground_estimator": ground, "ground_source": ground_source,
