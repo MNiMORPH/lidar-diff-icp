@@ -738,7 +738,7 @@ def apply_datum(x, y, z, ground, Zref, ground_of, grid, bounds, *, tie="referenc
     curves = rec.get("along_track_drift", {}).get("curves", {})
     xc, yc, zc = ctx.x, ctx.y, ctx.z
     return dict(x=xc, y=yc, z=zc, tie_info=tie_info, drift_curves=curves,
-                grids=ctx.grids)
+                grids=ctx.grids, chain_record=ctx.record)
 
 
 def correct_reference(Zref, Z21, after_laz, curve, grid, *, verbose=True):
@@ -1318,6 +1318,13 @@ def difference_dem(before_laz, after_laz, bounds, *, res=5.0, ground_q=0.50,
                            if _GQ_CURVE is not None else None),
         "route": route, "correction_surface": correction_surface,
         "swath_frame": swath_frame,
+        # The shifts the STAR frame actually applied. Recorded separately from
+        # per_swath_internal_alignment_dxdydz_m, which under swath_frame="star"
+        # holds align_swaths' SOLVED-BUT-NOT-APPLIED diagnostic. Anything
+        # reconstructing a per-return residual must read the one that was applied.
+        "per_swath_star_frame_dxdydz_m": (
+            (_dat.get("chain_record") or {}).get("star_frame", {})
+            .get("per_swath_dxdydz_m") if swath_frame == "star" else None),
         "gen2_chain": gen2_rec,
         "along_track_drift": along_track_drift, "geoid_applied": apply_geoid,
         "ground_estimator": ground, "ground_source": ground_source,

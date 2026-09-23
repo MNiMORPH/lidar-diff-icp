@@ -181,8 +181,35 @@ def _corrections(tile_dir):
 
 
 def read_swath_alignment(tile_dir):
-    """``{point_source_id: (dx, dy, dz)}`` -- the internal alignment of each flight line
-    to the lowest-numbered one (which is the reference and maps to zeros)."""
+    """``{point_source_id: (dx, dy, dz)}`` -- the per-swath shift the product APPLIED.
+
+    WHICH KEY IS RIGHT DEPENDS ON THE SWATH FRAME, and reading the wrong one is silent:
+    the per-return residual still looks plausible, it is just corrected by a shift the
+    product never received.
+
+      swath_frame "chain" (default)  ``per_swath_internal_alignment_dxdydz_m`` --
+                                     coreg.align_swaths' solution, applied.
+      swath_frame "star"             ``per_swath_star_frame_dxdydz_m`` -- chain.StarFrame's
+                                     per-swath fit against gen2, applied. align_swaths is
+                                     still SOLVED and still written to the other key as the
+                                     pipeline's only gen2-free check, but NOT applied.
+
+    Refuses rather than falling back: a star product whose star shifts were not recorded
+    cannot have its residuals reconstructed, and quietly substituting the diagnostic would
+    produce exactly the wrong answer.
+    """
+    frame = (_corrections(tile_dir) or {}).get("swath_frame", "chain")
+    if frame == "star":
+        star = _corrections(tile_dir).get("per_swath_star_frame_dxdydz_m")
+        if not star:
+            raise KeyError(
+                f"{tile_dir} records swath_frame='star' but no "
+                f"'per_swath_star_frame_dxdydz_m'. The star's shifts are what was APPLIED; "
+                f"'per_swath_internal_alignment_dxdydz_m' holds align_swaths' "
+                f"SOLVED-BUT-NOT-APPLIED diagnostic and using it would correct every return "
+                f"by a shift the product never received. Rebuild the tile with a pipeline "
+                f"that records the star shifts.")
+        return {int(k): tuple(float(c) for c in v) for k, v in star.items()}
     return {int(k): tuple(float(c) for c in v)
             for k, v in _load(tile_dir, "per_swath_internal_alignment_dxdydz_m").items()}
 
