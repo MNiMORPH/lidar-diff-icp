@@ -1,3 +1,7 @@
+> **★★ SUPERSEDED FOR CURRENT STATE — read `analysis/FRAME_2026-09-23.md` FIRST.**
+> It carries the adopted product (star-only), Andy's standing decisions, the negative
+> results not to re-walk, and the next action (mixture separation on the floodplain).
+
 # FRAME — the current state. Read this first; the dated FRAME_*.md files are superseded.
 
 Written 2026-09-06. Verify every structural claim against git and the files before relying
