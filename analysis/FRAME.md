@@ -393,6 +393,26 @@ extrapolated past the data (see above).
 flat floodplain. `m` and `slope_max_deg` and the failure floor all REFUSE without a value.
 Banks keep their LoD, which is the point.
 
+**★★ DECIDED 2026-09-23 (Andy): STAR-ONLY IS THE PRODUCT, AND THE FLOODPLAIN EROSION IS
+VEGETATION.** The DoD is the per-swath star fit against gen2 plus a lateral shift, and
+nothing else -- no correction surface, no geoid, no drift.
+
+WHY NOT THE SURFACE: it IMPRINTS. At 400 m, its own IDW radius, the DoD correlates with the
+applied surface at r -0.48, slope -0.64, i.e. ~2/3 of the surface's amplitude appears in
+the difference with opposite sign, and 23% of the DoD's variance at that scale is the
+surface's own shape -- at hillslope scale. The 5 m correlation of -0.13 hides it (DoD sd
+210 mm vs surface 48 mm). Cost of dropping it: NMAD 49.3 -> 55.5 stable, 69.6 -> 89.4 flat
+floodplain -- but those are the populations the surface is FITTED to, so the comparison is
+close to circular.
+
+FLOODPLAIN, on star-only so no surface can be blamed, by gen1's own return spread:
++9.9 / -6.1 / -46.3 / -120.7 mm across the spread quartiles, slope -0.487, r -0.338. The
+least-vegetated quartile shows NO erosion. gen2's spread shows no such relation (+0.006).
+
+STILL OPEN: the star-only tile has no beam table, so gen1_spread_mm and penetration_failure
+cannot be produced there and the span LoD cannot yet be applied; the numbers above borrow
+the spread from elbaext_delong, which is approximately right but not exact.
+
 **★★ FIXED 2026-09-20 -- floodplain support cells.** The surface now keeps the
 well-measured floodplain cells in its stable set (`correction_surface_keep`; builder flag
 `--floodplain-support`): |laplacian| <= curv_max, gen1 reaches gen2, and NO gen1 return in
