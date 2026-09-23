@@ -90,6 +90,14 @@ def main():
                          "still solved and recorded as the pipeline's only gen2-free "
                          "check. Measured per-swath spread at elbaext: star 412 mm, chain "
                          "1389 mm, with the two VERTICAL solutions at corr +0.986.")
+    ap.add_argument("--no-correction-surface", action="store_true",
+                    help="build with NO DeLong correction surface, so the only registration "
+                         "is the swath frame plus the lateral shift. Measured reason to "
+                         "want this: at 400 m -- the surface's own IDW radius -- the DoD "
+                         "correlates with the applied surface at r -0.48, slope -0.64, so "
+                         "roughly two thirds of the surface's amplitude appears in the DoD "
+                         "with opposite sign. A field fitted on stable cells and "
+                         "interpolated elsewhere imprints where it is unconstrained.")
     ap.add_argument("--boresight", action="store_true",
                     help="remove a COMMON scanner roll, self-calibrated from gen1's own "
                          "flight-line self-overlap (gen2-free). Measured at elbaext: "
@@ -101,7 +109,8 @@ def main():
     out = a.out or (f"data/derived/elbaext_{a.route}"
                     + ("_boresight" if a.boresight else "")
                     + ("_fpsupport" if a.floodplain_support else "")
-                    + ("_star" if a.swath_frame == "star" else ""))
+                    + ("_star" if a.swath_frame == "star" else "")
+                    + ("_nosurf" if a.no_correction_surface else ""))
     os.makedirs(out, exist_ok=True)
 
     kw = dict(SHARED)
@@ -110,6 +119,8 @@ def main():
     if a.route == "independent":
         kw["gen1_geoid"] = acquisitions.for_project(PROJECT).geoid_grid
     kw["swath_frame"] = a.swath_frame
+    if a.no_correction_surface:
+        kw["correction_surface"] = False
     if a.boresight:
         kw["correct_boresight"] = True
     if a.floodplain_support:
