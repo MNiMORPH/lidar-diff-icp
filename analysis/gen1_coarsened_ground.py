@@ -21,8 +21,18 @@ WHAT IT COSTS: the ground estimate's effective resolution drops to 15 m while th
 at 5 m. Acceptable on a flat floodplain, NOT on a bank -- so this is reported for the flat
 floodplain only and must not be applied where slope is steep.
 
-    ./lidar-icp/bin/python analysis/gen1_coarsened_ground.py
+    ./lidar-icp/bin/python analysis/gen1_coarsened_ground.py            # 3x3, the recorded result
+    ./lidar-icp/bin/python analysis/gen1_coarsened_ground.py --pool 5   # 5x5: does it keep shrinking?
+
+2026-10-16 ADDITION -- SPARSITY OR NON-PENETRATION? Two measurements split the structure
+that remains after pooling. (a) Pool WIDER: if the spread-quartile structure keeps
+shrinking from 3x3 to 5x5 the limit is sparsity; if it plateaus, what remains is not a
+count problem. (b) A THRESHOLD-FREE penetration test on the pooled returns: does ANY
+pooled gen1 return sit at or below the gen2 surface (d <= 0)? Zero is the reference
+surface itself, not a chosen level. Cells with none have no observed ground to recover at
+any estimator; the DoD structure is reported separately for the two populations.
 """
+import argparse
 import os
 import sys
 
@@ -33,6 +43,10 @@ from scipy.ndimage import uniform_filter
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from hsm import hsm_from_hist as _hsm   # noqa: E402  tie-symmetric half-sample mode
 
+ap = argparse.ArgumentParser()
+ap.add_argument("--pool", type=int, default=3, help="pooling window, cells on a side (odd)")
+A = ap.parse_args()
+P = A.pool
 S = "data/derived/elbaext_delong_star_nosurf"
 LO, HI, DZ = -1500.0, 1500.0, 20.0            # mm; the d range to histogram, and bin width
 edges = np.arange(LO, HI + DZ, DZ)
@@ -61,8 +75,10 @@ H = H.reshape(ny, nx, NB)
 n_own = H.sum(2)
 # 3x3 SUM of histograms = pooling the neighbourhood's returns. uniform_filter gives the
 # mean, so multiply by 9; only the shape matters for quantiles, but keep counts honest.
-Hp = (uniform_filter(H.astype(np.float32), size=(3, 3, 1), mode="nearest") * 9.0)
+Hp = np.rint(uniform_filter(H.astype(np.float32), size=(P, P, 1), mode="nearest") * P * P)
 n_pool = Hp.sum(2)
+# any pooled return at or below the gen2 surface? (threshold-free penetration test)
+reach = Hp[..., ctr <= 0.0].sum(2) > 0
 
 
 def qtl(Hx, q):
@@ -88,18 +104,18 @@ def hsm_from_hist(Hx):
 flat = fp & (sl <= 2.0) & np.isfinite(dod) & np.isfinite(sp) & (n_own >= 3)
 print(f"flat floodplain cells: {flat.sum():,}")
 print(f"  gen1 returns per cell  own {np.median(n_own[flat]):.0f}   "
-      f"pooled 3x3 {np.median(n_pool[flat]):.0f}")
+      f"pooled {P}x{P} {np.median(n_pool[flat]):.0f}")
 
 est_own_med = qtl(H, 0.50)
 est_pool_med = qtl(Hp, 0.50)
 est_pool_hsm = hsm_from_hist(np.where(flat[..., None], Hp, 0))
 
-print("\nDoD-vs-gen1-SPREAD SLOPE -- the prediction is that pooling CUTS it")
-print(f"  {'gen1 ground estimator':<34}{'n':>8}{'slope':>9}{'r':>8}{'medianDoD':>11}")
+print("\nDoD-vs-gen1-SPREAD COEFFICIENT (mm/mm) -- the prediction is that pooling CUTS it")
+print(f"  {'gen1 ground estimator':<34}{'n':>8}{'coeff':>9}{'r':>8}{'medianDoD':>11}")
 base = dod - np.median(dod[st & np.isfinite(dod)])
 for lab, est in (("current: median of own cell", est_own_med),
-                 ("pooled 3x3: median", est_pool_med),
-                 ("pooled 3x3: half-sample mode", est_pool_hsm)):
+                 (f"pooled {P}x{P}: median", est_pool_med),
+                 (f"pooled {P}x{P}: half-sample mode", est_pool_hsm)):
     k = flat & np.isfinite(est)
     # DoD = gen2 - gen1. Lowering gen1's ground by delta RAISES the DoD by delta.
     newdod = base[k] + (est_own_med[k] - est[k])
@@ -112,10 +128,27 @@ k = flat & np.isfinite(est_pool_hsm)
 qs = np.percentile(sp[k], [25, 50, 75])
 print(f"  {'estimator':<34}" + "".join(f"{f'Q{i+1}':>10}" for i in range(4)))
 for lab, est in (("current: median of own cell", est_own_med),
-                 ("pooled 3x3: median", est_pool_med),
-                 ("pooled 3x3: half-sample mode", est_pool_hsm)):
+                 (f"pooled {P}x{P}: median", est_pool_med),
+                 (f"pooled {P}x{P}: half-sample mode", est_pool_hsm)):
     row = []
     for lo, hi in zip([0] + list(qs), list(qs) + [1e9]):
         m = k & (sp >= lo) & (sp < hi)
         row.append(np.median(base[m] + (est_own_med[m] - est[m])))
     print(f"  {lab:<34}" + "".join(f"{v:>10.1f}" for v in row))
+
+print(f"\nPENETRATION SPLIT -- cells with ANY pooled {P}x{P} gen1 return at or below the gen2 surface (d <= 0)")
+print(f"  {'':<34}" + "".join(f"{f'Q{i+1}':>10}" for i in range(4)))
+row = []
+for lo, hi in zip([0] + list(qs), list(qs) + [1e9]):
+    m = k & (sp >= lo) & (sp < hi)
+    row.append(100.0 * reach[m].mean())
+print(f"  {'% cells reaching the surface':<34}" + "".join(f"{v:>10.1f}" for v in row))
+for lab, est in ((f"pooled {P}x{P}: median", est_pool_med),
+                 (f"pooled {P}x{P}: half-sample mode", est_pool_hsm)):
+    for nm, sub in (("REACHING", reach), ("NOT reaching", ~reach)):
+        row = []
+        for lo, hi in zip([0] + list(qs), list(qs) + [1e9]):
+            m = k & sub & (sp >= lo) & (sp < hi)
+            row.append(np.median(base[m] + (est_own_med[m] - est[m])) if m.sum() >= 50 else np.nan)
+        print(f"  {lab + ', ' + nm:<34}" + "".join(f"{v:>10.1f}" for v in row)
+              + f"   n {int((k & sub).sum()):,}")
