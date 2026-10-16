@@ -43,8 +43,13 @@ vegetation is visible rather than assumed, and so the choice of population is ch
     ./lidar-icp/bin/python analysis/gen2_density_experiment.py --population all
 """
 import argparse
+import os
+import sys
 
 import numpy as np
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from hsm import half_sample_mode as _hsm   # noqa: E402
 
 ap = argparse.ArgumentParser(description=__doc__,
                              formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -94,14 +99,10 @@ def shorth(d, frac):
 
 
 def half_sample_mode(d):
-    """Bickel-Fruehwirth half-sample mode: recurse on the densest half until <= 3 remain."""
-    while d.size > 3:
-        n = d.size
-        k = n // 2
-        w = d[k:] - d[:n - k]
-        i = int(np.argmin(w))
-        d = d[i:i + k + 1]
-    return float(np.median(d))
+    """Bickel-Fruehwirth half-sample mode, tie-SYMMETRIC (analysis/hsm.py). The cube values
+    are 20 mm bin centres, so ties are the rule; the first-of-ties form used before
+    2026-10-16 was biased low in proportion to spread."""
+    return _hsm(d)
 
 
 def stats_of_sorted(d):

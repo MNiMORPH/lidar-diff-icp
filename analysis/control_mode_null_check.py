@@ -49,6 +49,7 @@ os.chdir(_REPO)
 sys.path.insert(0, os.path.join(_REPO, "src"))
 from lidar_diff_icp.groundtruth.tie import _design          # noqa: E402
 from lidar_diff_icp.tiles import find_tile                  # noqa: E402
+sys.path.insert(0, os.path.join(_REPO, "analysis"))
 
 STRUCT = "data/derived/control_structure"
 CONTROL = {"gen1_2008_control": "src/lidar_diff_icp/groundtruth/data/mn_dnr_2008_control_semn.csv",
@@ -70,24 +71,7 @@ print("COLUMNS (mm unless stated): n = returns in window; med = median; hsm = hi
 print("  hsm_raw = half-sample mode on the unbinned returns (gen1 only); *_surv = estimator minus surveyed ground")
 
 
-def hsm_from_hist(counts, ctr):
-    v = np.repeat(ctr, counts.astype(int))
-    if v.size == 0:
-        return np.nan
-    while v.size > 3:
-        k = v.size // 2
-        w = v[k:] - v[:v.size - k]
-        a = int(np.argmin(w)); v = v[a:a + k + 1]
-    return float(np.median(v))
-
-
-def hsm_raw(d):
-    d = np.sort(d)
-    while d.size > 3:
-        n = d.size; k = n // 2
-        w = d[k:] - d[:n - k]
-        i = int(np.argmin(w)); d = d[i:i + k + 1]
-    return float(np.median(d)) if d.size else np.nan
+from hsm import half_sample_mode as hsm_raw, hsm_from_hist   # noqa: E402  tie-symmetric
 
 
 def med_from_hist(counts, ctr):

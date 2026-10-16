@@ -23,9 +23,15 @@ floodplain only and must not be applied where slope is steep.
 
     ./lidar-icp/bin/python analysis/gen1_coarsened_ground.py
 """
+import os
+import sys
+
 import numpy as np
 import pyarrow.parquet as pq
 from scipy.ndimage import uniform_filter
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from hsm import hsm_from_hist as _hsm   # noqa: E402  tie-symmetric half-sample mode
 
 S = "data/derived/elbaext_delong_star_nosurf"
 LO, HI, DZ = -1500.0, 1500.0, 20.0            # mm; the d range to histogram, and bin width
@@ -68,21 +74,14 @@ def qtl(Hx, q):
 
 
 def hsm_from_hist(Hx):
-    """Half-sample mode read off a histogram: recurse on the densest half."""
-    c = np.cumsum(Hx, -1); tot = c[..., -1]
+    """Half-sample mode per cell, read off the histogram. Tie-SYMMETRIC (analysis/hsm.py):
+    the first-of-ties form used before 2026-10-16 was biased low in proportion to spread."""
+    tot = Hx.sum(-1)
     out = np.full(tot.shape, np.nan)
-    m = tot > 0
-    idx = np.flatnonzero(m.ravel())
+    idx = np.flatnonzero((tot > 0).ravel())
     flat = Hx.reshape(-1, NB)
-    res = np.empty(idx.size)
-    for j, i in enumerate(idx):
-        v = np.repeat(ctr, flat[i].astype(int))
-        while v.size > 3:
-            k = v.size // 2
-            w = v[k:] - v[:v.size - k]
-            a = int(np.argmin(w)); v = v[a:a + k + 1]
-        res[j] = np.median(v)
-    out.ravel()[idx] = res
+    for i in idx:
+        out.ravel()[i] = _hsm(flat[i], ctr)
     return out
 
 
