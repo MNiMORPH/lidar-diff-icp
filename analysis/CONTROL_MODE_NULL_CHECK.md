@@ -156,3 +156,57 @@ per-cell scatter 56.8 and 29.1 mm (unchanged).
   ground at 7.5 m; the adopted delivered-surface offset at Elba's open marks is +62.7 mm
   reads-LOW from 8 marks assigned by flight line. Different population, different
   estimator, both within their scatter; noted, not chased.
+
+## Steps 3 and 4 (2026-10-16, same session): is the remaining structure count, absence, or something else?
+
+**Step 3 -- the mode's count bias at 144 returns, on gen2** (`gen2_density_experiment.py
+--population highveg --min-returns 160 --ladder 16,32,64,128,144`; 4,202 flat floodplain
+cells in the top near-ground-vegetation quartile; bias against full density, mm, and
+per-cell scatter across 40 draws, mm sd):
+
+    n       q50 bias   hsm bias   hsm scatter
+    16        15.9       11.3        56.6
+    32         6.7        6.4        39.7
+    64         2.8        3.4        29.1
+    128        1.2        1.4        19.8
+    144        0.9        1.2        18.3
+
+At the count a 3x3-pooled gen1 cell holds, the mode's count bias is 1.2 mm. The structure
+that remains after pooling is not the estimator running short of returns.
+
+**Step 4 -- pool wider, and split by penetration** (`gen1_coarsened_ground.py`, 53,436
+flat floodplain cells; DoD by gen1-spread quartile, mm; counts rounded, which moves the
+recorded 3x3 mode result by 0.1 mm):
+
+    pooling   returns   estimator     Q1      Q2      Q3      Q4    Q1-Q4   coefficient
+    1x1          17     median      10.2    -6.0   -45.8  -119.2   129.4     -0.360
+    3x3         144     median       5.7   -13.3   -49.3  -101.1   106.8     -0.277
+    3x3         144     mode         7.2    -6.4   -30.2   -58.6    65.8     -0.229
+    5x5         400     median       3.7   -15.1   -48.9   -93.1    96.8     -0.246
+    5x5         400     mode         7.3    -4.9   -24.8   -48.8    56.1     -0.188
+
+Widening from 3x3 to 5x5 shrinks the structure 65.8 -> 56.1 mm: still falling, but slowly,
+and 5x5 is 25 m of smoothing on a 5 m grid.
+
+Threshold-free penetration: does ANY pooled gen1 return sit at or below the gen2 surface?
+
+    pooling   % cells reaching, by quartile Q1..Q4     mode DoD, REACHING cells, Q1..Q4         NOT reaching
+    3x3       98.4  98.4  98.3  97.9                    7.9  -5.3  -28.6  -56.2  (n 52,505)   -140 .. -346 (n 931)
+    5x5       99.4  99.7  99.7  99.6                    7.5  -4.7  -24.5  -48.2  (n 53,225)   -141 .. -369 (n 211)
+
+The split does not carry the structure. In every spread quartile about 98% of cells have
+at least one pooled gen1 return at or below the gen2 surface, and those cells still read
+-56 mm at Q4. The 2% with no such return are far more negative (-140 to -370 mm) but are
+too few to matter, and they are the only cells where "no observed ground" applies.
+
+**Measurement, stated bare:** after 3x3 pooling with the fixed mode, 65.8 mm of
+spread-quartile structure remains on the flat floodplain. It is not the estimator's count
+bias (1.2 mm at 144), and it is not the absence of gen1 returns at the gen2 surface (98% of
+cells have one). Pooling wider removes it slowly.
+
+**Hypothesis, not measured:** gen1's returns in high-spread cells DO reach the surface
+but are not the DENSEST cluster, so the mode locks onto the mat above them -- the same
+"correct identification of the wrong peak" that `control_mode_shift.py` found on gen2's
+heavy-cover marks. If so, the estimator that is needed targets the LOWEST coherent cluster
+rather than the densest, and the test is whether such an estimator holds the open-ground
+null the way the mode now does. That is a design choice for Andy, not a parameter to set.
