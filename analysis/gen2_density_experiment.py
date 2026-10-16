@@ -69,10 +69,18 @@ ap.add_argument("--min-returns", type=int, default=64,
                      "from every cell. MINE, and it selects on density, which is stated "
                      "in the output as the population's own density distribution.")
 ap.add_argument("--seed", type=int, default=0)
+ap.add_argument("--ladder", default="2,4,8,16,32,64",
+                help="return counts to draw, comma separated. Every value must be <= "
+                     "--min-returns so each draw is WITHOUT replacement from every cell. "
+                     "2026-10-16: extended to 128,144 to measure the mode's residual bias at "
+                     "the count a 3x3-pooled gen1 cell actually holds (144).")
 A = ap.parse_args()
 
 RNG = np.random.default_rng(A.seed)
-LADDER = [2, 4, 8, 16, 32, 64]
+LADDER = [int(v) for v in A.ladder.split(",")]
+if max(LADDER) > A.min_returns:
+    raise SystemExit(f"ladder max {max(LADDER)} exceeds --min-returns {A.min_returns}: "
+                     "draws would need replacement")
 
 
 def shorth(d, frac):
