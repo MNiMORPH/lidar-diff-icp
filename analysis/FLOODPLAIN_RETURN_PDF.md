@@ -122,3 +122,70 @@ sees in Q1 relative to the gen2 surface. That is consistent with gen1 returning 
 dense litter or sedge mat flush with the ground (a surface, not a tail), and partly with
 gen2's own reference surface reading high in those same cells (its median sits 23 mm above
 its mode in the most-vegetated band). Neither is separable from this data alone.
+
+## D. Shape vs pooling width: skew, half-widths, tail form, and where gen2 sits (2026-10-17)
+
+Andy: "How skewed is the PDF at each pooling width? Do we see differences in its shape? Can
+we characterize its tail? At what percentile would the gen2 surface land within the gen1
+cloud at each size of cell?" Script: `analysis/floodplain_return_shape.py`; figure
+`figures/floodplain_return_shape_logpdf.png` (log axis). Pasted from stdout.
+
+**Per cell (median over cells).** Bowley skewness is quartile-based and holds at 17 returns;
+moment skewness needs the tails, which 17 returns cannot sample, so it climbs with pooling
+for count reasons alone (Q1: 0.07 -> 1.37) and is not a shape statement at small n.
+
+    quartile    scale   n/cell   bowley   pct0   p10   p50   p90    sd
+    Q1 <140       1x1      15     0.00     63    -70   -10    50    44
+    Q1          15x15    3417     0.00     54   -110   -10   130   125
+    Q2 140-209    1x1      22     0.00     50    -90   -10   110    73
+    Q2          15x15    4837     0.11     47   -110    10   210   151
+    Q3 209-307    1x1      19     0.11     33    -70    30   190   104
+    Q3          15x15    4347     0.11     40   -110    30   270   170
+    Q4 >307       1x1      18     0.14     21    -50   110   390   166
+    Q4            3x3     147     0.12     25    -70    90   370   178
+    Q4            5x5     404     0.13     27    -70    90   350   180
+    Q4          15x15    3854     0.14     30    -90    70   350   191
+
+**Quartile-average PDF** (cells weighted equally; half-widths at 40 mm smoothing; upper
+tail fitted over mode+60..mode+1000 mm as exponential, e-folding length L, and as power
+law, exponent a; R^2 in log-density space):
+
+    quartile    scale   mode   bowley   pct0   hw-   hw+   L exp   R2     a pow   R2
+    Q1 <140       3x3    -10    0.00     56    100   100    139   0.953   -2.86  0.980
+    Q1          15x15    -10    0.33     52    100   100    171   0.955   -2.31  0.978
+    Q2 140-209    3x3    -10    0.14     46    120   140    133   0.987   -2.85  0.932
+    Q2          15x15    -10    0.25     44    120   160    161   0.990   -2.36  0.931
+    Q3 209-307    3x3     10    0.00     37    140   200    140   0.996   -2.63  0.878
+    Q3          15x15     10    0.20     39    140   180    165   0.996   -2.24  0.895
+    Q4 >307       1x1     50    0.20     27    180   300    196   0.983   -1.82  0.821
+    Q4            3x3     30    0.14     30    160   240    189   0.991   -1.92  0.851
+    Q4            5x5     30    0.08     31    160   220    186   0.993   -1.95  0.861
+    Q4          15x15     10    0.17     34    140   220    183   0.995   -1.99  0.866
+
+**Skew.** Modest and set by vegetation, not by width: Bowley 0.00 in Q1 and Q2, 0.11-0.14 in
+Q3 and Q4, the same at every pooling width per cell. The distribution is right-skewed only
+through its tail; its central quartiles are nearly symmetric.
+
+**Shape vs width.** The core does not change with pooling: mode, Bowley skew and both
+half-widths are the same from 3x3 to 15x15 in every quartile (Q4 half-widths 160/240 ->
+140/220 mm). What pooling does is fill in the tails that 17 returns cannot sample -- on the
+log axis the 1x1 curve drops away early on both sides and each wider pool lifts both limbs.
+In Q4 even that is small: its curves nearly coincide at all widths, because 18 returns per
+cell already reach a tail that extends 400 mm. The shape difference that matters is ACROSS
+quartiles: the peak widens on both sides with vegetation (hw- 100 -> 160, hw+ 100 -> 240 mm
+at 3x3) and shifts up ~40 mm; the lower side widening says the sub-surface part of gen1's
+cloud is broader in vegetated cells too.
+
+**Tail.** EXPONENTIAL, in every quartile, at every width from 3x3 up: the upper limb is a
+straight line on the log axis, R^2 0.95-0.996 against 0.85-0.98 for a power law (the power
+law competes only in Q1, whose tail is short). The e-folding length is ~140 mm in Q1-Q3 and
+~185 mm in Q4, and in Q4 it is stable across widths (196 / 189 / 186 / 183). This is the
+canopy-type tail the forest work found (an exponential, Beer-Lambert-like attenuation
+through scatterers), not the power-law tail of bare and cropped ground: standing sedge
+behaves like a low canopy.
+
+**Where gen2 sits in the gen1 cloud.** Per cell, the gen2 surface is at the 63rd percentile
+of gen1's returns in the least-vegetated quartile and the 21st in the most-vegetated at
+5 m, converging to the 54th and 30th as pooling widens (the small-n percentiles are biased
+toward the extremes by unsampled tails). In Q1 gen1's median sits 10 mm BELOW gen2; in Q4
+seven of ten gen1 returns sit ABOVE the gen2 surface.
