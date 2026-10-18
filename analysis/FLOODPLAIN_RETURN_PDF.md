@@ -257,3 +257,43 @@ per cell at 3x3, p50-p10 runs 60 -> 180 mm from the least- to the most-vegetated
 family through (span, pct0) can follow that, which is also why span explains only ~14% of
 per-cell variance under any form. The logistic's four parameters remain the appropriate
 description of the median tendency.
+
+## G. Is the plateau real? Three tests; no global-parameter, no-plateau form survives (2026-10-18)
+
+Andy doubted the logistic's floor: denser vegetation should keep blocking the beam, so pct0
+should keep falling, and a form with global parameters only should follow. Script
+`analysis/floodplain_transfer_plateau.py` (three sections). All 3x3, block CV as before.
+
+**1. Not the window.** Widening the histogram window from +/-1.5 to +/-5 m recovers 0.74% of
+returns and changes nothing; fewer than 0.3% of cells below the top bin have p90 > 1.5 m.
+
+**2. No-plateau forms in span lose.**
+
+    form                          CV R2   NMAD   behaviour at span 600 / 900
+    logistic (4)                  0.153   24.5   24.0 / 23.9
+    exp-to-floor (4)              0.153   24.5   23.2 / 22.3
+    power law (3)                 0.135   24.8   21.3 / 13.7
+    stretched exponential (3)     0.126   24.8   19.8 / 10.8
+    threshold exponential (3)     0.115   24.4   16.2 /  6.6
+
+Between spans of 440 and 580 mm the binned pct0 is flat at 20-23; above 600 mm (4.3% of
+cells) it RISES to 30-42, a different population, not denser sedge. Span cannot register
+density past ~570 mm for an algebraic reason: for a core plus exponential tail, p90 - p10
+saturates near core + L ln(10) as the tail fraction approaches 1. The proxy plateaus; the
+physics need not.
+
+**3. A proxy that keeps registering, and the null that kills it.** Beer-Lambert
+p_hi exp(-x/h0) in the p90 HEIGHT scores CV R2 0.656 with two global parameters and keeps
+falling at the top (12.9 -> 8.1). But under the algebraic null, every cell given the same
+bare-floodplain shape and shifted only to reproduce its own pct0, p90 height gives R2 1.000
+and the tail integral from gen2 gives 0.99. Both are measured relative to the gen2 surface,
+so they read gen2's LEVEL in gen1's cloud: they are pct0 restated. The translation-invariant
+candidates (p90 - mode; tail length as mean excess above the mode; tail mass above the mode;
+their product) score 0.05-0.13, below span, and none keeps falling in its top decile.
+
+**What this means.** gen1's own cloud contains no vegetation-density measure that is both
+independent of the gen2 level and able to register past span's saturation. Beer-Lambert
+P = exp(-k tau) is the right physics, but tau must come from outside gen1's returns, and
+the cloud's own P is what pct0 already measures (pct0 ~ 0.63 P, from the bare-ground 0.63).
+The logistic in span stays, read correctly: its floor is the floor of the observed range,
+not a statement that denser vegetation would stop blocking the beam.
