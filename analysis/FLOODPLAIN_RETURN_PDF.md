@@ -378,3 +378,47 @@ Partial success, measured.
    walls and banks inside the elevation cut) are untouched and are most of the dark red in
    the corrected map: 19.9% of them sit below -LoD. Tapering the correction in slope, or
    extending the population, is a decision.
+
+## J. The patches that survive the correction: the NE patch is not vegetation (2026-10-18)
+
+Andy: "The correction is in the right direction. There are still significant 'erosional'
+patches, especially in the NE corner." Script `analysis/floodplain_ne_patch.py` (every number
+below is its stdout); figures `floodplain_ne_patches.png`, `floodplain_ne_intensity.png`.
+
+**The remaining patches are flat, so the slope cut is not the reason.** The eight largest
+are 64-99% flat cells (two exceptions are the channel itself, at -0.9 to -1.7 m). What they
+share is penetration failure: 44-87% of their cells have NO gen1 return at the gen2 surface
+(own cell), so the logistic's 25th percentile still sits above gen2 and the correction is
+bounded by what the cloud holds (delta 0-80 mm against raw DoD -130 to -260).
+
+**The largest, patch 1 (NE corner; 2,355 cells = 5.9 ha; E 579925 N 4885765; 72% flat,
+median slope 0.9 deg; raw DoD -246, corrected -179 mm):**
+
+    gen1 return heights above gen2 (mm)     p5    p25    p50    p75    p95   share <= 0   intensity
+      patch 1                                 8    136    245    368    568        4%          27
+      rest of flat floodplain               -156    -49     20    121    390       43%          19
+
+gen1's ENTIRE cloud sits ~25 cm above gen2's surface -- not a tail above a core but the whole
+distribution shifted, with the same 99% single-return, 81% vendor class-2 character as the
+floodplain. Same flight line (138), same pass, same near-nadir scan angle as the ring of
+cells around it: not a flight artifact. gen1's intensity is 27 inside against 19-21 outside,
+and the boundary is SHARP: across 20 m the raw DoD goes -216 -> -56 and intensity 27 -> 19.
+
+gen2 (May 2021) sees clean, open ground there: near-ground vegetation share 0.030 against a
+floodplain median of 0.18, class-2 share 0.81, p10/p50/p90 of -50/+10/+50 mm. No water
+class in either epoch. NAIP 2010 NDVI 0.23 (sparse) against 0.19 for the rest of the
+floodplain; the patch sits in the LOWEST zone of the floodplain (gen2 ground 217.9 m against
+~223) at the tile's east edge beside the channel.
+
+**Reading, as hypothesis.** This is not the sedge-mat signature: the vegetated-floodplain
+signature is a tail above a core with gen2 also vegetated, and this is a whole-cloud offset
+with a sharp edge, brighter in 2008, and open ground in 2021. In November 2008 gen1 returned
+from a surface 25 cm above the 2021 ground over a sharply bounded, low-lying, bright area:
+a frozen or snow-covered backwater/pond, or a bright sand sheet (the Whitewater's August
+2007 flood deposited sand on these floodplains) that was gone by 2021. Which of these cannot
+be settled from this data. Either way it is a SURFACE CHANGE of a different kind from the
+vegetation artifact, and the vegetation correction is right to leave it: these patches are
+the thing to FLAG for interpretation, not to correct away.
+
+The deposition patch 1 (870 cells, +158 mm, E 579478 N 4885998) lies just NW of it along
+the channel; a channel-migration pairing is possible and untested.
