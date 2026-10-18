@@ -297,3 +297,33 @@ P = exp(-k tau) is the right physics, but tau must come from outside gen1's retu
 the cloud's own P is what pct0 already measures (pct0 ~ 0.63 P, from the bare-ground 0.63).
 The logistic in span stays, read correctly: its floor is the floor of the observed range,
 not a statement that denser vegetation would stop blocking the beam.
+
+## H. Is the plateau a mat height? The core does not decompose (2026-10-18)
+
+Andy: is the floor telling us the height of a low vegetation component, so that gen1 is
+hitting a mat rather than bare earth? Script `analysis/floodplain_mat_decomposition.py`.
+
+Test: fix a ground component's shape from the barest span decile (Gaussian, centre -17.6,
+width 49.5 mm against gen2) and, per span decile, fit ground (free weight) + a free mat
+Gaussian + an exponential tail above the mat.
+
+    span decile   span   obs pct0   w_ground   core width (1-comp)   R2 2-comp   R2 1-comp
+    0 (barest)     120     62.5       0.72          50                1.000       1.000
+    2              200     56.9       0.11          82                1.000       0.999
+    5              300     38.8       0.07         105                1.000       0.999
+    8              460     21.8       0.07         134                0.997       0.994
+
+Not identifiable. From the second decile up the ground weight falls to 0.07-0.09 and is
+unconstrained, and a single broad core plus tail fits as well. The dense-cell core is ONE
+hump, ~130 mm wide against 50 on bare ground, with no resolvable narrow ground peak under
+it. A sharp ground surface carrying 20% of returns beneath a mat would show as a shoulder;
+none does.
+
+**Consistent with the hypothesis, not a confirmation of it (hypothesis, not measured):** the
+surface gen1 sees in dense sedge is a single broad one whose peak sits ~30-50 mm above the
+gen2 surface (section A), and gen2's own surface there sits ~20 mm above its mode (gen2
+density experiment), so that surface is of order 50-70 mm above where gen2's mode puts
+the ground, with a 130 mm spread -- a mat or litter layer with no sharp base, inside which
+the gen2 surface lies. The floor of ~25% is then the lower flank of that hump below gen2's
+level, not a count of bare-earth hits. The data cannot separate "few ground hits under a
+mat" from "a mat with no base", and no independent ground truth exists on this floodplain.
