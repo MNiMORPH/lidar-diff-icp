@@ -476,3 +476,53 @@ terrain-following offset, bright, zero penetration at gen1's density) and a plan
 hayed field by 2021 (cut-hay tan in the 2015/2019/2021 photos; clean ground in gen2's May
 2021 cloud). The land-use change between the epochs is why the two surveys read different
 surfaces here, and why no estimator on gen1's returns can recover the 2008 ground.
+
+## L. With reed canary grass present, can a floodplain offset be determined at all? (2026-10-18)
+
+Andy's question. Three routes tested or sourced; numbers from an inline run on the NE patch
+(gen1 vendor class-2 returns, 27,928 inside the patch; to be folded into
+`floodplain_ne_patch.py`).
+
+**Route 1 -- a ground cluster among the low returns: NO.** Inside the patch 11% of class-2
+returns sit at or below the gen2 surface, but the histogram of d is one broad hump from
++10 to +330 mm with a thin tail down to -300 and no secondary peak near zero (smoothed
+maxima at +90, +150, +190, +290 only). The returns that reach gen2's level are the tail
+of the canopy's own distribution, not a ground population. Nothing to lock onto.
+
+**Route 2 -- the stand-edge step, gen1-INTERNAL: a LOWER BOUND, ~100-150 mm.** Fit a plane
+to gen1's class-2 returns outside the patch within 40 m of each inside return and measure
+the inside return's height above it; do the same with gen2 to check ground continuity.
+
+    distance inside the edge   gen1 step vs outside plane   gen2 step   gen1 - gen2
+      0-5 m                            79 mm                   7 mm        73 mm
+      5-10 m                          120 mm                   7 mm       113 mm
+     10-15 m                          124 mm                   7 mm       117 mm
+     15-30 m                          136 mm                 -13 mm       150 mm
+    DoD-based offset (median d inside the patch)                          190 mm
+
+gen2 is continuous across the edge (7 mm), so the edge IS a vegetation boundary and gen1's
+own step is a canopy-offset measurement that uses no cross-epoch information. It reads
+100-150 mm against the DoD's 190 because the reference outside the stand is itself
+vegetated floodplain where gen1 reads ~50-100 mm high (the ring's raw DoD was -48 to -115).
+So the edge method measures the offset RELATIVE TO THE NEIGHBOURS' OWN BIAS: a floor, exact
+only where a stand abuts bare ground. It also needs a stand edge; it cannot do the interior
+of a large uniform field.
+
+**Route 3 -- external truth, species-specific: the literature's answer, and it is survey.**
+Dense herbaceous canopies give lidar DEMs a positive bias of 10-40 cm; the established
+remedy is a per-vegetation-class correction calibrated by RTK-GNSS survey. Hladik & Alber
+(2012, Remote Sensing of Environment 121) reduced a Georgia salt-marsh DEM's mean error from
++0.10 +/- 0.12 m to -0.01 +/- 0.09 m with species-specific factors; biomass- and
+imagery-based variants exist (Medeiros et al. 2015; Buffington et al. 2016). Hopkinson et
+al. (ISPRS) report wetland ground over-estimation of 10-30 cm in tall grasses. None of
+these derive the offset from the lidar alone; all calibrate it against surveyed ground.
+
+**The honest answer.** From the two lidar epochs alone: no, not for the interior of a
+closed sward -- the offset there is unobservable, and the DoD-based 190 mm is the quantity
+being explained, not an independent measurement. What CAN be had without a survey is a
+lower bound from stand edges (gen1-internal, ~100-150 mm here). What would settle it is one
+of: (a) an RTK survey of ground under present-day reed canary grass thatch in late autumn at
+this or an analogous site, giving a species-and-season offset with a spread, as the marsh
+literature does; (b) a landowner or 2008 observation of the field's state; (c) a third lidar
+epoch over the same field under known cover. Absent those, the penetration-failure flag
+remains the treatment, and the DoD there is reported as unobserved, not as erosion.
