@@ -327,3 +327,54 @@ the ground, with a 130 mm spread -- a mat or litter layer with no sharp base, in
 the gen2 surface lies. The floor of ~25% is then the lower flank of that hump below gen2's
 level, not a count of bare-earth hits. The data cannot separate "few ground hits under a
 mat" from "a mat with no base", and no independent ground truth exists on this floodplain.
+
+## I. The correction, applied (2026-10-18)
+
+Andy accepted the mat hypothesis as likely correct and asked for the 3x3 logistic to be
+applied: erosion side only, tapered, with success judged by whether the vegetation
+"erosion" patches fade into the DoD's background. Script
+`analysis/floodplain_vegcorr_apply.py`; outputs next to the product:
+`dod_floodplain_vegcorr.npy`, `floodplain_vegcorr_delta.npy`, `floodplain_vegcorr.json`;
+figures `floodplain_vegcorr_maps.png`, `floodplain_vegcorr_vs_span.png`.
+
+Stated once: this is a cross-epoch calibration. The mean floodplain DoD at a given span goes
+to ~0 by construction and real erosion in vegetated cells would be absorbed. Numbers are
+site-fitted; the method travels, the numbers do not.
+
+**Mechanics.** Flat floodplain (mask AND slope <= 2 deg), 54,372 cells. gen1's ground becomes
+the logistic-predicted percentile (refitted on these histograms: 63.1 / 24.5 / 268 / 50) of
+the 3x3 pooled cloud; delta = own-cell median minus that percentile. Only delta > 0 is
+applied, weighted by clip(-DoD_raw / T, 0, 1) with T = 55.5 mm, the NMAD of the DoD on
+stable ground (measured). 42% of flat cells receive a correction; median 60 mm, p90 220.
+
+**Before / after, flat floodplain (mm):**
+
+    DoD by pooled-span quartile       Q1      Q2      Q3       Q4    coeff   NMAD   median
+    raw                             14.3    -0.6   -45.1   -111.6   -0.353   89.3    -18.8
+    corrected (tapered)             14.4     2.5    -5.5    -13.4   -0.134   55.7      0.7
+    full correction, no taper       16.5    10.5     0.5    -11.7   -0.108   64.9      6.8
+    stable ground (background)                                               55.5      5.0
+
+    cells beyond the LoD            below -LoD          largest patch   above +LoD
+    stable ground (background)       2.8%                   359 cells     4.5%
+    floodplain raw                  28.6%                 3,405           7.3%
+    floodplain corrected            13.1%                 1,027           8.0%
+
+The span signature is gone: quartile medians flatten to within +/-14 mm. The tapered
+floodplain NMAD (55.7) matching the background (55.5) is PARTLY mechanical -- T sets the
+scale of what stays negative -- so the taper-free row (64.9 vs 55.5) is the honest
+measure: close to background, not at it. Erosion patches halve in count and in largest
+size but remain ~5x the background rate (13.1% vs 2.8%; largest 1,027 vs 359 cells).
+Partial success, measured.
+
+**Two defects, not fixed, for Andy:**
+1. **Overshoot.** The taper is not capped: 382 cells (0.7%) are lifted from erosion to above
+   +LoD, so "above +LoD" rose 3,998 -> 4,380. They sit where the pooled cloud is
+   multi-surface (823 cells get delta > 300 mm; their own-cell span median is 567 mm against
+   209): the logistic's percentile jumps across a bimodal cloud. A cap at zero, or at the
+   LoD, is one line -- but it is a parameter.
+2. **The slope cut is a hard cutoff**, which Andy asked to avoid. The floodplain mask holds
+   96,716 cells; only the 61% at <= 2 deg were corrected. The 36,254 steeper cells (valley
+   walls and banks inside the elevation cut) are untouched and are most of the dark red in
+   the corrected map: 19.9% of them sit below -LoD. Tapering the correction in slope, or
+   extending the population, is a decision.
