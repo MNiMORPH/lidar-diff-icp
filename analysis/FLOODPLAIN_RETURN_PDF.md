@@ -422,3 +422,46 @@ the thing to FLAG for interpretation, not to correct away.
 
 The deposition patch 1 (870 cells, +158 mm, E 579478 N 4885998) lies just NW of it along
 the channel; a channel-migration pairing is possible and untested.
+
+## K. The NE patch, resolved as far as the data allow: a closed grass canopy gen1 could not penetrate (2026-10-18)
+
+Andy rejected both candidates in J (a sand sheet does not vanish; snow or a frozen
+backwater is against spec) and asked for imagery and other ideas. Scripts
+`analysis/floodplain_ne_patch.py` (geometry tests, appended to its stdout below) and
+`analysis/floodplain_ne_imagery.py` (MnGeo WMS, figure `floodplain_ne_imagery.png`).
+
+**Water is excluded by geometry.** A water surface is a horizontal plane. Inside the patch
+gen1's absolute elevation is NOT constant: sd 309 mm, correlation with gen2's bed +0.83,
+and corr(d, z2) = -0.02 -- the 25 cm offset is UNIFORM and follows the ground, which a pond
+cannot do. The patch level (218.10 m) is 63 cm above the river's 2008 water surface from
+gen1's class-9 returns in the channel (217.47 m), so it is not a connected backwater either.
+The patch edge does not follow a gen2 contour (43% of nearby cells below the patch's 95th
+percentile elevation lie inside it).
+
+**One inference of mine is withdrawn.** The patch's returns are 87% within 2 deg of nadir
+against 61% for the ring around it, which I read as specular drop-out. Scan angle along a
+line is across-track position (corr(scan angle, easting) = +0.995 on line 138 here); the
+patch simply lies under the nadir track. Geometry, not surface.
+
+**Imagery, 2008-2023 (MnGeo; 2008 CIR, NAIP 2008/09/10, FSA 2013-2023).** The patch is an
+open herbaceous meadow in every year: no water body, no bare sand, no crop rows, a farmstead
+and road to its west, scattered shrubs increasing over time, tan (cut hay) in 2015, 2019
+and 2021 and green in other years. gen2's May 2021 cloud there is clean open ground
+(near-ground vegetation share 0.03, class-2 share 0.81).
+
+**What it is, then (hypothesis, consistent with everything measured).** A dense, closed,
+short grass canopy -- a floodplain hay meadow, reed canary grass being the likely species --
+that in November 2008 stood about 25 cm tall with no gaps: gen1, at ~1 return/m^2 and 99%
+single-return, read its top as the ground over the whole patch (uniform offset that follows
+the terrain; dry grass is bright at 1064 nm, intensity 27 against 19-21). By May 2021 the
+sward was short or flattened and gen2 at ~200 returns per cell read the ground. So it IS
+vegetation -- my "not vegetation" in J was wrong in substance -- but it is a different
+signature from the sedge: a closed canopy with ZERO penetration, where the sedge lets ~25%
+of beams through. That is why the logistic correction cannot reach it: 70% of its cells
+already carry the product's own penetration-failure flag (no gen1 return at the gen2
+surface) against 9% elsewhere on the flat floodplain.
+
+**Consequence.** The surviving patches are the UNOBSERVED-GROUND case the strategy note
+anticipated. The right treatment is the flag the product already has, `penetration_failure`,
+not a correction: there is nothing in gen1's cloud for any estimator to reach. The
+deposition patch NW of it (870 cells, +158 mm) is in the forest and remains untested.
