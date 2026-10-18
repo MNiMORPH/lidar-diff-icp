@@ -235,3 +235,25 @@ quantile per cell, it would set gen1's ground to gen2's surface at every span, a
 floodplain DoD would be zero by construction -- the cross-epoch calibration that
 STRATEGY_2026-09-23.md argues against, and the forest-vs-open degeneracy again. Its use is a
 decision for Andy.
+
+## F. A more appropriate form? Tried, and the logistic stays (2026-10-18)
+
+Andy asked for a more appropriate, perhaps elegant, fitting function. The physically
+motivated candidate: since the PDF is a symmetric core plus an exponential tail (section
+D), let span and pct0 both be readouts of one latent tail fraction f in the mixture
+(1-f) Normal(mu, sigma) + f ExpNormal(mu, sigma, L) -- three physical parameters against
+the logistic's four. Script `analysis/floodplain_transfer_mixture.py`, same block CV.
+
+    window   mixture CV R2   logistic CV R2
+    1x1          0.114           0.130
+    3x3          0.105           0.147
+    5x5          0.063           0.124
+
+It loses, and the reason is the useful result: a fixed core width cannot reach the data.
+The fitted core (sigma ~70 mm) alone spans 180 mm, but bare cells span 100; the mixture
+saturates at span 436, but vegetated cells reach 660. The core widens with vegetation --
+per cell at 3x3, p50-p10 runs 60 -> 180 mm from the least- to the most-vegetated quartile
+-- so span is set by two latent quantities, core width and tail fraction. No one-parameter
+family through (span, pct0) can follow that, which is also why span explains only ~14% of
+per-cell variance under any form. The logistic's four parameters remain the appropriate
+description of the median tendency.
