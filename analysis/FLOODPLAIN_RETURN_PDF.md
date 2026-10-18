@@ -189,3 +189,49 @@ of gen1's returns in the least-vegetated quartile and the 21st in the most-veget
 5 m, converging to the 54th and 30th as pooling widens (the small-n percentiles are biased
 toward the extremes by unsampled tails). In Q1 gen1's median sits 10 mm BELOW gen2; in Q4
 seven of ten gen1 returns sit ABOVE the gen2 surface.
+
+## E. The transfer function pct0(span), by pooling window (2026-10-18)
+
+Andy: "What I really want is a continuous function representing that transfer. Please
+generate that relationship at a range of different spatial window sizes and see which one
+is the best." Scripts: `analysis/floodplain_gen2_percentile.py` (binned curve, figure
+`figures/floodplain_gen2_percentile_vs_span.png`) and
+`analysis/floodplain_transfer_function.py` (fit; `figures/floodplain_transfer_function.png`;
+parameters in `data/derived/floodplain_transfer_function.json`).
+
+**Form.** pct0(span) = p_lo + (p_hi - p_lo) / (1 + exp((span - s0)/w)): p_hi the percentile
+at zero vegetation, p_lo under the densest sedge, s0 the span at the midpoint of the fall,
+w the transition width. Robust least squares on all 53,590 cells; span and pct0 both read
+from the same k x k pooled cloud.
+
+**Criterion for "best" (mine, a proposal):** out-of-sample skill under 5-fold CV with folds
+by 500 m block, so no held-out cell shares pooled returns with a training cell.
+
+    window   returns   CV R2   NMAD (pct pts)   p_hi   p_lo    s0     w
+    1x1         17     0.130       31.5         78.7   21.1   182    74
+    3x3        143     0.147       24.5         63.0   24.8   267    49
+    5x5        399     0.124       22.8         60.0   27.7   284    43
+    7x7        788     0.108       21.9         58.4   29.8   290    38
+    9x9       1331     0.098       21.3         57.2   31.4   294    34
+    15x15     3916     0.079       20.7         54.5   34.2   308    23
+
+(Own-cell span as x gives the same ranking; s0 then sits at ~175 mm at every window because
+the x axis no longer pools.)
+
+**Best window: 3x3**, by the criterion -- the only window whose CV R^2 beats 1x1, with the
+per-cell sampling noise of 17 returns removed (NMAD 31.5 -> 24.5) before spatial smoothing
+starts blurring the response (R^2 falls from 5x5 on as pooling drives every cell's pct0
+toward the neighbourhood mean). Its function: 63.0 at zero span, 24.8 at high span, midpoint
+267 mm, width 49 mm.
+
+**The honest number is the R^2.** The binned median curve is clean, but span explains only
+13-15% of cell-to-cell variance in where gen2 sits; the 25-75% band is +/-25 percentile
+points at every span. At the same vegetation span, cells differ widely in where the gen2
+surface falls in gen1's cloud. The function is a statement about the MEDIAN cell, not a
+per-cell predictor, and any per-cell use of it carries that scatter.
+
+**What it is not (stated once, in the script too).** Applied to choose gen1's ground
+quantile per cell, it would set gen1's ground to gen2's surface at every span, and the
+floodplain DoD would be zero by construction -- the cross-epoch calibration that
+STRATEGY_2026-09-23.md argues against, and the forest-vs-open degeneracy again. Its use is a
+decision for Andy.
