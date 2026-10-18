@@ -466,9 +466,12 @@ anticipated. The right treatment is the flag the product already has, `penetrati
 not a correction: there is nothing in gen1's cloud for any estimator to reach. The
 deposition patch NW of it (870 cells, +158 mm) is in the forest and remains untested.
 
-**Attribution (Andy, 2026-10-18, local knowledge):** "There is commonly reed canary grass.
-These fields were since planted and used for hay. This might be our culprit." That matches
-the measurements: a closed reed canary grass sward in November 2008 (uniform 25 cm
+**Attribution (Andy, 2026-10-18), an INFERENCE and not an observation:** "There is commonly
+reed canary grass. These fields were since planted and used for hay. This might be our
+culprit." And his correction: "I presume that they used to be reed canary grass because it
+is so common and because of the elevation change. But I was not there in 2008." So the
+species is inferred from its regional commonness and from the very signal being explained;
+the hay use since is what the imagery shows. It matches the measurements: a closed reed canary grass sward in November 2008 (uniform 25 cm
 terrain-following offset, bright, zero penetration at gen1's density) and a planted,
 hayed field by 2021 (cut-hay tan in the 2015/2019/2021 photos; clean ground in gen2's May
 2021 cloud). The land-use change between the epochs is why the two surveys read different
