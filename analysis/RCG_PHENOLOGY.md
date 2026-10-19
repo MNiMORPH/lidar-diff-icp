@@ -827,3 +827,42 @@ calibration and must be labelled as such. What it cannot do is set the LEVEL of 
 epoch's ground under vegetation: every imagery-derived relation here is anchored to the
 other lidar epoch, and the only surfaces bare in both epochs are too few and too noisy
 (NMAD 50-65 mm over gravel) to anchor a 50-100 mm effect to better than a few cm.
+
+## Z. Two more tests (Andy, 2026-10-20): unfarmed bare surfaces, and interpolation across RCG islands
+
+Script `analysis/rcg/unfarmed_and_islands.py` (numbers pasted).
+
+**1. Unfarmed surfaces, bare in both epochs.** Defined by time series, not land cover: max
+NDVI < 0.30 in a clear July/August Sentinel-2 scene of every year 2017-2025 (no clear 2016
+scene) AND < 0.30 in Landsat August 2008, not water, slope <= 5 deg. Crops fail this every
+year. Result: 88 cells on the whole tile, 35 on the floodplain mask, ALL of the floodplain
+ones in one 35-cell patch at E 579675 N 4885755 -- the farmstead yard beside the NE patch
+(WorldCover 'built'). DoD there +9.1 mm, NMAD 16.4. With the WMA gravel lots (+2.6, n 143)
+and roads (+6.8, n 684) from section Y, every unfarmed bare surface on this floodplain says
+the two epochs agree on true bare ground to within ~10 mm, from ~900 cells. That is the
+null, and it is the only absolute statement the two surveys can make unaided. There is no
+unfarmed bare surface large enough to do more.
+
+**2. Interpolating across RCG islands.** 2008-class patches on open flat floodplain, NE
+patch excluded, ringed by non-class open floodplain; gen1's own surface (z2 - DoD) fitted
+as a plane on the ring and predicted inside; residual against gen2 inside, beside the raw
+gen1 reading and the section-R percentile (p12). The strict version (2-cell ring, >= 80%
+non-class) admits ONE island; relaxing to a 1-cell ring at >= 60% / 40% purity admits 3 / 6:
+
+    ring purity   size (cells)   n   ring DoD   RAW gen1-gen2   INTERP-gen2   p12-gen2   plane rms
+    >= 80%        60-149         1     -18          -8             +73          -90          96
+    >= 60%        25-59          1    -110        +115             +77          +50          44
+    >= 60%        60-149         2     -19         +21             +93          -50         107
+    >= 40%        4-9            2    -254        +259            +263         +110          44
+    >= 40%        25-59          2     -60         +52             +16           +0          32
+
+Not a reasonable ground estimate, for two reasons the table shows. (a) The ring is not
+bare: its own DoD runs -18 to -254 mm, so the interpolated surface inherits the ring's
+vegetation bias (interpolation residual +73 to +263, tracking the ring's bias rather
+than zero). On this floodplain the class sits inside sedge meadow, not inside bare ground.
+(b) Isolated islands barely exist: at the resolution of the 2008 class (30 m) the smallest
+'islands' (4-9 cells) are pixel-edge fragments with 92% penetration failure, and the real
+stands cluster into fields with no bare ring. Interpolation across vegetation needs a bare
+surround, and here there is none; where a cell's surround IS bare (the farmstead, the
+lots), the DoD is already ~0 and nothing needs interpolating. The percentile estimator
+(p12) does better than interpolation in every bin with a usable ring, as section R found.
