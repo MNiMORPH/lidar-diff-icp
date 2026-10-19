@@ -52,6 +52,13 @@ span quartiles, the vegetation-corrected DoD, WMA boundaries, field-site table.
 * Do not train a classifier on the lidar's own patches and then "test" the lidar with it.
   Training truth comes from outside the lidar (Phase 3).
 
+## STATUS 2026-10-19 (see RCG_PHENOLOGY.md): Phases 0, 1, 2, 4 RUN. Phase 4 is NEGATIVE --
+October-2008 Landsat greenness does not predict the floodplain DoD (r within +/-0.1), and in
+2008 the closed-canopy cells were ordinary floodplain by phenology. 4(a) and 4(c) are closed.
+Live: Phase 3 as a species question with truth from outside the lidar, and Phase 4b (valley-
+wide survey sites from the 2024 early-green + never-senescing signature). Phase 5 is moot
+for the DoD unless a structure-sensitive (not greenness) 2008 layer is found.
+
 ## Phases, in order, each with the result that would stop the next
 
 ### Phase 0 -- environment and scene access (half a session)
