@@ -348,3 +348,64 @@ measured number with a spread -- but it would be a class-mean correction with NM
 shares in some years. The field-day ground truth decides whether the class is reed canary
 grass and what the true ground under it is; the fingerprint says what to expect in the
 returns when it is.
+
+## R. Mode shift or fixed percentile? Head to head on the class cells (2026-10-19)
+
+Andy: does reed canary grass create a MODE ~100 mm above the ground, or is there a FIXED
+PERCENTILE between the returns and the real ground, with real ground returns present --
+and which recovers a bare-ground surface? Script `analysis/rcg/mode_vs_percentile.py`.
+Returns pooled 3x3 (~150 per cell); residual = estimate minus the gen2 surface (mm), gen2
+being the ground reference (it reads a clean cut sward in this class, section Q). Model
+constants (c for the mode shift, q for the percentile) are fitted on training blocks and
+scored on held-out blocks, 5-fold by 500 m block.
+
+**Diagnostic first.** A rigid shift keeps the distribution's widths; a mat over ground
+widens the lower side.
+
+    population                              cells   median  mode   p10   med-p10  p90-med  share<=0
+    open floodplain outside both classes   10,651     10     10   -70      80       80      0.48
+    NE-like 2008, open, no NE patch           932    130     70   -30     160      220      0.16
+    both years, open, no NE patch             251    150     90   -10     160      240      0.14
+    NE patch itself (closed canopy)         1,690    250    230    70     180      200      0.02
+
+The lower width DOUBLES in the class (160 vs 80 mm): the distribution does not translate,
+it stretches, with the mode at +70 and a tail that still reaches the surface (16% of
+returns at or below it). In the closed NE patch nothing reaches the surface (2%).
+
+**Head to head, held-out (bias = median residual; NMAD = per-cell error; slope = residual
+on gen1 span, mm/mm -- the vegetation dependence left behind):**
+
+    NE-like 2008, open, no NE patch (932 cells)     bias   NMAD   slope
+      raw median (no correction)                     130    119   0.344
+      raw mode                                        70     89   0.348
+      MODEL 1  median - c  (c ~ 90-130 fitted)        20    119   0.368
+      MODEL 1  mode - c    (c ~ 70 fitted)             0     89   0.369
+      MODEL 2  fixed p10   (no fit)                  -30     59   0.072
+      MODEL 2  fixed p15   (no fit)                  -10     59   0.112
+      MODEL 2  q fitted per fold (0.11-0.14)         -10     59   0.109
+      minimum                                       -130     59  -0.043
+    both years, open, no NE patch (251 cells)
+      MODEL 1  mode - c                                0     89   0.119
+      MODEL 2  fixed p15 / p20                     10/30     59  -0.07/0.01
+    NE patch itself (closed canopy)
+      MODEL 1  mode - c (c ~ 250)                      0     89   0.180
+      MODEL 2  fixed p10                              70     59   0.024
+      MODEL 2  q fitted per fold                     -10     59   -- but q = 0.02-0.03
+
+**Answer.** The FIXED PERCENTILE is the effective one. A low percentile of the pooled
+returns, about the 10th to 15th, recovers the gen2 surface with held-out bias within
++/-10 mm, HALF the per-cell error of the mode shift (59 against 89-119 mm), and -- the
+decisive part -- it removes the dependence on sward density (slope 0.07-0.11 against
+0.37): denser sward lifts the mode further, but the ground returns stay where the ground
+is. The mode shift corrects only the class MEAN; every cell keeps its own error and the
+densest cells stay the most wrong. Both agree the mode sits ~70-90 mm above the ground in
+open sward, so the "mode ~100 mm up" picture is right as a description and wrong as a
+correction.
+
+Two limits. (1) The fixed percentile works because ground returns EXIST: in the closed NE
+patch the fitted q collapses to 0.02-0.03, which is the minimum by another name, has no
+population target, and reads +70 at p10 -- there the answer stays the mask. (2) The
+percentile is CLASS-conditional: ~0.12 inside the class against ~0.48 on the open
+floodplain outside it (the share at or below the surface), so applying it needs the
+imagery class or an equivalent lidar fingerprint to say where. The 59 mm NMAD is a floor
+shared by every low-quantile estimator here (20 mm histogram bins, gen2's own noise).
