@@ -535,3 +535,54 @@ largely a resolution effect -- the class needs most of a pixel to be sward -- an
 at 5 m sees the clumps. Whether those pixels were FLAGGED in 2021 because the sward had
 grown to fill them or because the cut-hay state is uniform across a field is not separable
 here; both are consistent with the 2025 change map.
+
+## U. The Sentinel-2 timeline, 2016-2025: when the field changed (2026-10-19)
+
+Andy: the land was likely converted at one time; use the earliest Sentinel-2 imagery to
+see whether the sward was still in the field then. Script `analysis/rcg/s2_timeline.py`;
+figure `figures/rcg_s2_timeline.png`; table `rcg/s2_timeline.csv`. One clear late-October
+Sentinel-2 scene per year, each normalised to its own open flat floodplain; two states
+read by two fixed classifiers -- BRIGHT (senesced sward; trained on the NE patch in the
+2021 scene) and GREEN-DENSE (trained on the NE patch in the 2016 scene) -- applied
+unchanged to every year. 2018 has only a 26%-clear scene from 18 November that reads as
+snow or cloud over the field; it is in the table and excluded from conclusions.
+
+**The NE field, relative to the floodplain (red B04, NIR B08) and state membership:**
+
+    year  date         B04   B08   NDVI   bright%  green%   state read
+    2008  (Landsat 10-29) 1.60 1.58  0.41   --       --      BRIGHT senesced (section O)
+    2016  09-29        0.43  2.37  0.86     0       98      GREEN dense canopy
+    2016  11-08        0.63  1.84  0.72    (date-matched check: still green in November)
+    2017  10-09        0.79  2.60  0.76     0       18      GREEN dense canopy (NIR 2.6x)
+    2018  11-18        --    --    --      unreliable scene
+    2019  10-14/10-29  1.19/1.43 1.89/1.72 0.58/0.43  24   0   turning BRIGHT through October
+    2020  10-13        1.02  1.51  0.58    92        0      BRIGHT
+    2021  10-18        1.26  1.87  0.52    95        0      BRIGHT
+    2022  10-18        0.98  1.13  0.36     7        0      DULL -- indistinguishable from floodplain: cut
+    2023  10-23        0.96  1.56  0.43    27        0      regrowth, mixed
+    2024  10-17        0.97  0.90  0.16     3        0      DULL / bare: cut
+    2025  10-27        0.68  1.48  0.61     1        0      green regrowth
+
+Date-matched pairs rule out within-season phenology as the explanation: 2017-10-09 (green,
+NIR 2.6x) against 2020-10-13 (bright, NIR 1.5x), and 2021-10-18 (bright, 95%) against
+2022-10-18 (dull, 7%). The 2021-only and both-years cells follow the field at lower
+amplitude (48% green in 2016; 47-76% bright in 2020-21; near 0 after), as sub-pixel
+members of the same stands.
+
+**Reading.** The field was an UNCUT standing sward in every year observed before 2022:
+green and dense into November in 2016-2017 (the late-senescing habit the Wisconsin reports
+mapped), senesced and bright by late October in 2008 and 2019-2021. The one-time conversion
+to cut hay management falls between October 2021 and October 2022. The 2023/2025 green
+and 2022/2024 dull alternation is the hay cycle.
+
+**Consequence for gen2, a revision of section Q.** gen2 flew in May 2021, BEFORE the
+conversion. Its "exceptionally clean" surface in the class (class-2 share 0.89, no
+near-ground vegetation) was therefore not a cut hay field but a winter-flattened
+standing-dead sward: a thick thatch pressed flat by snow reads to a lidar as a smooth
+surface, and the vendor classified it as ground. That is the "mat with no sharp base" of
+section H seen from the other epoch, and it means gen2's ground in those cells is the
+thatch top, biased high by the thatch thickness -- an amount the 2021-flagged cells would
+show as a gen2 offset against surveyed ground, which the field day can measure. The DoD
+there (-124 mm) is then gen1's standing-dead canopy (Nov 2008) minus gen2's flattened
+thatch (May 2021), both above the ground, so the sward's true 2008 offset is LARGER than
+the DoD by the 2021 thatch thickness.
