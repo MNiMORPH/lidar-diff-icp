@@ -608,7 +608,8 @@ relative to the floodplain:
 
 The field changed between 5 and 25 July 2022 -- from a dense green canopy that greened up
 a month ahead of the floodplain (the reed-canary-grass habit) to a cut, bright, low-NIR
-surface. Andy's seismic surveys in that area were in summer 2022 and the field was
-converted to hay afterwards: the imagery puts the conversion in mid-July 2022, so a survey
-in early summer 2022 would have crossed standing sward and one in late summer the cut
-field. The sequence is consistent.
+surface. (Andy first recalled seismic surveys in summer 2022 near here, then corrected
+himself: the field work was AUGUST 2021 at 44.1453790 N, -92.0020860 W -- UTM 15N E 579 811,
+N 4 888 504 -- 2.25 km north of the tile's edge and 2.74 km from the NE patch. That site is
+not this field; the two are unrelated, and the conversion date stands on the imagery
+alone.)
