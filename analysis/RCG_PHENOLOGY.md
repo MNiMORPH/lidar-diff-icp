@@ -112,3 +112,70 @@ I of FLOODPLAIN_RETURN_PDF.md is the price of the only instrument that sees the 
   lidar; the field day), and Phase 4b, finding reed-canary-grass stands to survey from the
   2024 Sentinel-2 signature across the whole valley -- that uses the early-green-up +
   never-senescing curve, which the tile does show, and needs no lidar.
+
+## N. The approach WAS wrong: what the Wisconsin method actually did, and the test redone (2026-10-19)
+
+Andy: "Could it be that your approach was not right? Do we need not just greenness, but the
+type of green? How do prior studies differentiate reed canary grass?" Both reports read in
+full this time (Bernthal & Willis 2004, pilot; Hatch & Bernthal 2008, statewide):
+
+* **No NDVI, no multi-date.** "They concluded that multiple dates and use of NDVI are not
+  needed." One scene from Oct 9-31, <= 10% cloud, ALL reflective bands (Landsat 1,2,3,4,5,7;
+  thermal dropped).
+* **Wetland mask first** (Wisconsin Wetlands Inventory removes uplands), then ISODATA with 75
+  clusters, each cluster assigned to >= 50% / < 50% reed canary grass by field truth, then
+  maximum likelihood. 269 sites, 1,388 polygons; overall 61-83%, user's 72-92%.
+* **"Band 5, the midIR band (1.55-1.75 um), showed the greatest spectral separation."**
+* Confusions: heavily grazed pasture classified as RCG (short-cropped, geometric fields);
+  cranberry bogs; a single shrub or standing water in a pixel breaks it (NIR-driven); only
+  open-canopy wetlands; minimum mapping unit 0.5 acre (two pixels).
+
+So "the type of green" is the right phrase: the signature is the whole reflectance vector,
+and NDVI -- a ratio of two of six bands -- throws away the level and the SWIR. Redone
+(`fetch_bands.py`, `band_separability.py`, `dod_vs_bands.py`; figure
+`figures/rcg_spectra_october.png`):
+
+**Landsat-5 2008-10-29, median surface reflectance (NMAD):**
+
+    population               blue     green     red      nir08    swir16   swir22   NDVI
+    all flat floodplain      0.039    0.064    0.067    0.161    0.203    0.130    0.398
+    F1 sedge                 0.042    0.064    0.080    0.193    0.227    0.133    0.411
+    NE patch                 0.052    0.090    0.108    0.254    0.271    0.159    0.405
+    KNOWN grassland          0.045    0.071    0.082    0.202    0.239    0.147    0.396
+    KNOWN cropland           0.064    0.096    0.123    0.225    0.275    0.194    0.256
+
+**Separability d' (difference of medians over pooled NMAD), with KNOWN pairs as the null:**
+
+    pair                                  blue  green   red   nir08  swir16  swir22  NDVI  NDMI
+    NULL cropland vs grassland            1.06   1.06  1.14   0.41    0.74    1.00   1.39  0.11
+    NULL tree vs grassland                1.35   1.02  1.32   1.22    1.23    1.14   0.16  0.39
+    NE patch vs all flat floodplain       1.70   1.71  2.12   2.62    2.25    1.52   0.15  1.61
+    NE patch vs F1 sedge                  2.04   2.70  2.10   2.37    1.98    2.39   0.26  2.21
+    F2 closed canopy vs flat floodplain   0.67   0.38  1.31   0.67    0.78    0.45   0.20  0.63
+
+In October 2008 the NE patch IS spectrally distinct: brighter in every band at the same
+NDVI, d' 2.1-2.6 in red, NIR and SWIR1 against the floodplain -- more separable than
+cropland is from grassland in the same scene -- and invisible in NDVI (0.15). Wisconsin-
+style k-means (k = 30, six bands, floodplain mask only) puts 87% of the patch in two
+clusters of purity 40% and 22% against a 2.2% base rate. Sentinel-2 confirms it both years
+(2023: d' 2.6-3.0 in NIR / red-edge, late-green; 2024: d' 2.2-3.7 in visible / SWIR, cut).
+The wider F2 class is heterogeneous and only weakly distinct (d' 0.4-1.3).
+
+**What it is, spectrally (hypothesis).** High NIR AND high SWIR at an ordinary NDVI: a dense,
+bright, dryish herbaceous canopy -- the standing-structure signal that NDVI cancels. That is
+the quantity the lidar bias follows, and it was in the bands all along.
+
+**But the floodplain-wide DoD is still not predicted** (`dod_vs_bands.py`, 1,466 pixels):
+
+    x (2008-10-29)   r with raw DoD   DoD by x-quartile
+    swir16              -0.147         -3  -37  -74  -20
+    NBR                 -0.154         -3  -24  -60  -60
+    nir08               -0.113         -3  -45  -48  -29
+    NDVI                -0.013        -12  -82  -60   -2
+    six bands, OLS, CV by 500 m block:  CV R2 0.090 (raw DoD), 0.066 (corrected), 0.088 (gen1 span)
+
+The bands do better than NDVI (0.09 against 0.00) but the NE patch is one spectral object,
+and across the floodplain the sedge-type bias is not tracked by October reflectance at
+30 m. Phase 4(c) stays closed. What reopens: Phase 3 and 4b -- a Wisconsin-style
+classification (wetland mask, all bands, clusters, outside truth) is feasible on this
+tile and the valley, and it finds the NE-type stands.

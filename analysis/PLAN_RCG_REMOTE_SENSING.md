@@ -59,6 +59,14 @@ Live: Phase 3 as a species question with truth from outside the lidar, and Phase
 wide survey sites from the 2024 early-green + never-senescing signature). Phase 5 is moot
 for the DoD unless a structure-sensitive (not greenness) 2008 layer is found.
 
+## CORRECTION 2026-10-19 (Andy's challenge; RCG_PHENOLOGY.md section N): the Wisconsin method
+uses ALL bands on one mid-October scene, SWIR first, no NDVI. Redone that way, the NE patch IS
+spectrally distinct in Oct 2008 (d' 2.1-2.6 in red/NIR/SWIR1 vs the floodplain; NDVI 0.15),
+brighter in every band at the same NDVI, and k-means isolates it at 10-20x the base rate.
+The floodplain-wide DoD is still not predicted (six-band CV R2 0.09): 4(c) stays closed;
+Phase 3 (classification with outside truth) and 4b (valley sites) are back on, done the
+Wisconsin way: wetland/floodplain mask, all bands, clustering, field truth.
+
 ## Phases, in order, each with the result that would stop the next
 
 ### Phase 0 -- environment and scene access (half a session)
