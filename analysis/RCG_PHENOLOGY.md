@@ -591,3 +591,24 @@ show as a gen2 offset against surveyed ground, which the field day can measure. 
 there (-124 mm) is then gen1's standing-dead canopy (Nov 2008) minus gen2's flattened
 thatch (May 2021), both above the ground, so the sward's true 2008 offset is LARGER than
 the DoD by the 2021 thatch thickness.
+
+**The conversion month (inline run, 2026-10-19; every 2022 Sentinel-2 date with the field
+>= 90% clear).** NE field NDVI against the open floodplain's, and the field's red and NIR
+relative to the floodplain:
+
+    date         NDVI field  NDVI floodplain  red rel  NIR rel
+    2022-04-21      0.21        0.13           0.99     1.14
+    2022-05-31      0.64        0.21           0.53     1.46     early vigorous green-up, well ahead of the floodplain
+    2022-06-20      0.63        0.34           0.67     1.40
+    2022-07-05      0.65        0.47           0.82     1.33     still a green dense canopy
+    2022-07-25      0.43        0.49           1.21     1.00     CUT: red up, NIR to floodplain level
+    2022-08-09      0.51        0.65           1.40     0.91     brighter and lower-NIR than the floodplain: stubble / bare
+    2022-09-13      0.55        0.51           1.00     1.12     regrowth
+    2022-10-18      0.36        0.19           0.98     1.13     the "dull" October state of the timeline
+
+The field changed between 5 and 25 July 2022 -- from a dense green canopy that greened up
+a month ahead of the floodplain (the reed-canary-grass habit) to a cut, bright, low-NIR
+surface. Andy's seismic surveys in that area were in summer 2022 and the field was
+converted to hay afterwards: the imagery puts the conversion in mid-July 2022, so a survey
+in early summer 2022 would have crossed standing sward and one in late summer the cut
+field. The sequence is consistent.
