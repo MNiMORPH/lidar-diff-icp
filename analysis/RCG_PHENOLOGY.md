@@ -269,3 +269,82 @@ The NE patch is "kept" by construction -- it is the training reference in both y
 and is the only place where the two different states are known to be the same ground.
 The field day can turn these from spectral classes into species: the gained WMA patches
 north of the NE patch are 250-450 m from the parking lot at E 579979 N 4885340.
+
+## Q. The lidar fingerprint of the class, per survey (2026-10-19)
+
+Andy: find the patches with and without in each time, then the characteristic lidar
+signature from each time -- "a fingerprint of reed canary grass in each LiDAR survey
+return set", valuable on its own, then possibly a coarse correction. Scripts
+`analysis/rcg/map_ne_like_2021.py`, `analysis/rcg/lidar_fingerprint.py`; table
+`rcg/lidar_fingerprint.csv`; gen2 per-cell statistics cached in `rcg/gen2_cellstats.npz`.
+
+**Matching each survey to its own year (Andy's correction, caught in passing):** gen1 (Nov
+2008) to the NE-like class on Landsat-5 2008-10-29; gen2 (May 2021) to the class on
+Sentinel-2 2021-10-18 (0.1% cloud). In October 2021 the NE patch was in the SAME bright
+senesced state as 2008 (1.5-2.0x the floodplain in every band), not the green 2025 state.
+NE-like on the floodplain mask: 17.1 ha (2021 S2), 19.2 ha (2021 L8).
+
+**Design.** The class is defined by imagery alone; the lidar is read inside and outside it.
+Two passes: (A) all flat floodplain with the NE patch included -- inflated, because the
+patch was found by the lidar and trains the class; (B) the independent test: OPEN flat
+floodplain only (no gen2 return above 2 m, so sward against sward, not sward against
+trees), NE patch EXCLUDED, 12,215 cells, 937 class members for 2008 and 854 for 2021.
+Null for scale: F3 cropped cells against the rest. d' = difference of medians over pooled
+NMAD. Then a lidar-only LDA predicting the imagery class, 5-fold CV by 500 m block.
+
+**gen1 (Nov 2008), pass B -- the fingerprint of the standing-dead sward:**
+
+    feature (per 5 m cell)              in class        out of class     d'    null d' (F3)
+    CSF ground median above gen2 (mm)   +106 (124)      +6 (60)         1.03     0.46
+    share of returns at/below gen2      0.13 (0.20)     0.46 (0.39)     1.06     0.53
+    p90 of all returns above gen2 (mm)  220 (199)       24 (83)         1.29     0.76
+    CSF p90 (mm)                        267 (202)       72 (82)         1.27     0.74
+    return intensity (median)           26 (4)          21 (6)          0.95     0.36
+    vendor class-2 share                0.64 (0.32)     0.86 (0.21)     0.79     0.60
+    gen1 p90-p10 span (mm)              251 (159)       137 (67)        0.93     1.22
+    lidar-only LDA, block CV:  AUC 0.64   (pass A, patch included: 0.77)
+
+The sward lifts gen1's ground reading by ~100 mm, lets only 13% of returns reach the gen2
+surface, returns brighter, and is classified ground less often by the vendor. Every one of
+those separates the class better than cropped fields separate from the rest, except span.
+The lidar alone recovers the imagery class only weakly (AUC 0.64): at 16 returns per cell
+the per-cell statistics are noisy, which is the same sparsity that limits the correction.
+
+**gen2 (May 2021, full density), pass B -- the fingerprint of the cut sward:**
+
+    feature (per 5 m cell)              in class        out of class     d'    null d' (F3)
+    vendor class-2 share                0.89 (0.06)     0.52 (0.11)     4.10     0.10
+    height median above gen2 (mm)       0 (0)           10 (15)         0.95     0.00
+    share at/below gen2                 0.47 (0.09)     0.40 (0.13)     0.70     0.13
+    returns per cell                    227 (7)         218 (19)        0.62     0.35
+    near-ground 0.15-2 m share          0.00            0.00            0.00     0.00
+    lidar-only LDA, block CV:  AUC 0.68
+
+In May 2021 the class is an exceptionally CLEAN surface: 89% of returns classified ground
+against 52% on the rest of the open floodplain and 54% on cropped fields, no near-ground
+vegetation at all, every return within a few cm of the surface. That is a short, cut or
+flattened sward -- a hay field in spring -- not standing grass. gen2's fingerprint of this
+class is therefore "too clean", and gen2's own vegetation offset there is ~0.
+
+**Offsets by class, flat floodplain, NE patch excluded (mm, median (NMAD)):**
+
+    class                      n       raw DoD        corrected DoD   gen1 span   penfail
+    NE-like 2008            2,828   -120 (124)        -51 (64)         298        25%
+    NE-like 2021            2,604    -81 (114)        -34 (60)         244        22%
+    both years                570   -104 (99)         -47 (42)         299        21%
+    neither, open          10,703     -3 (57)          +1 (48)         133        12%
+
+Outside the class the open floodplain reads zero. Inside, gen1 reads ~100-120 mm high in
+2008, and the logistic correction removes about half of that; the NE patch itself, where
+the sward was closed, reads -246 raw and is mostly unreachable (penetration failure).
+
+**What this gives, and what it does not.** There IS a fingerprint in each survey, and
+they are different because the sward was in different states: in gen1 a standing-dead
+canopy ~100 mm up that few beams penetrate; in gen2 a flattened surface so clean that
+near-ground vegetation vanishes. A coarse correction built on the imagery class is now
+possible in principle -- the class-level offset (-120 raw, -51 after the logistic) is a
+measured number with a spread -- but it would be a class-mean correction with NMAD
+~120 mm per cell, and the class itself is a spectral state that a quarter of grassland
+shares in some years. The field-day ground truth decides whether the class is reed canary
+grass and what the true ground under it is; the fingerprint says what to expect in the
+returns when it is.
