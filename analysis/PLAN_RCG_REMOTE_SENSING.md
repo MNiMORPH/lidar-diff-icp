@@ -23,6 +23,10 @@ cannot measure its vegetation without reading the answer. A Landsat index from 2
       2008-10-29  Landsat 5   0%     <- two weeks before the gen1 flight; THE scene
       2008-04-04  Landsat 5  10%     2008-05-06  Landsat 5  15%
       2008-05-14  Landsat 7   0%     2008-05-22  Landsat 5   9%
+    PHASE 0 DONE 2026-10-19: 23 scenes fetched as NDVI GeoTIFFs + clear masks into
+    data/derived/elbaext_delong_star_nosurf/rcg/ (index scenes.json). 2008-10-29 L5: clear
+    1.000 over tile and floodplain, snow 0.0000. Summer added: S2 2024-08-03 (0%), 2024-08-08;
+    Landsat 2008-08-02/08-10/08-18. 2024-10-27 and 11-01 are partly clouded (clear 0.71, 0.29).
     Sentinel-2 L2A, tile 15TWJ, present day:
       2024-09-27 0%, 2024-10-02 0%, 2024-10-17 1%, 2024-10-22 17%, 2024-10-27 19%, 2024-11-01 23%
       2024-04-05 3%, 2024-04-15 7%, 2024-05-05 1%, 2024-05-10 6%
@@ -94,6 +98,14 @@ safety: (a) a 2008 RCG-likelihood MASK class for the penetration-failure cells, 
 "unobserved" with "unobserved, closed canopy, RCG-likely"; (b) a per-class LoD; (c) only if
 the regression is clean and Andy chooses it, a per-pixel offset model with an independent
 x. The circularity warning of section I does not apply to (c): x is not the DoD.
+
+### Phase 4b -- survey sites from imagery alone, throughout the valley (additional goal, Andy 2026-10-19)
+Once the present-day signature is validated (Phase 1) and, if it survives, classified
+(Phase 3), run it over the WHOLE Whitewater valley at 10 m -- not only the tile -- and
+intersect with the WMA / state-park boundaries and the WMA parking and road layers, to
+rank reed-canary-grass stands by size, access and public status as places to survey
+through the grass. This needs no lidar at all; it is the imagery product the field class
+uses. Output: `rcg_survey_sites_valley.csv` and a map, same form as FIELD_SITES_RTK.md.
 
 ### Phase 5 -- what travels (later)
 The Wisconsin method ran statewide. A 2008-season Landsat retained-greenness layer over
