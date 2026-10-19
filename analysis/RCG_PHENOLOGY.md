@@ -468,3 +468,56 @@ an AUC of 0.71-0.82 on the imagery's own definition of it. In the May-2021 surve
 same ground was a cut sward with no return-structure signature; only the vendor's
 classifier noticed something. So a lidar-only detector is a 2008 (standing, senesced
 sward) capability, not a 2021 one -- and it gives presence, not cover.
+
+## T. The conjugate test: class in 2021 but not 2008 (2026-10-19)
+
+Andy: look for areas with the class in 2021 but not in 2008 and try the conjugate test.
+Script `analysis/rcg/conjugate_test.py` (`CONJ_2021=l8` for the 30 m 2021 class);
+figure `figures/rcg_conjugate_groups.png`.
+
+**The prediction.** If gen1's fingerprint and offset belong to the sward's 2008 STATE, the
+cells flagged only in 2021 must look like ordinary floodplain in gen1 (Nov 2008), and the
+cells flagged only in 2008 must carry the fingerprint anyway.
+
+**The result: the prediction FAILS on the 2021-only side.** Open flat floodplain, NE patch
+excluded, 2021 class from Sentinel-2 (10 m) and, like-with-like, from Landsat-8 (30 m):
+
+    group (30 m both years)     n      peak   hi_w   tail_mass   gen1 median vs gen2   share<=0   raw DoD    gen2 class-2
+    neither                 10,521    0.57    80     0.06            +10 mm             0.48       -2         0.52
+    2008 only                  680    0.34   180     0.23            +90                0.18      -95         0.50
+    2021 only                  705    0.35   160     0.20           +130                0.12     -124         0.88
+    both years                 252    0.27   260     0.35           +150                0.13     -134         0.87
+    d' vs neither, 2021-only:        1.43   1.71     1.26            1.59               1.54      1.28        3.64
+
+The 2021-only cells carry the FULL gen1 fingerprint in November 2008 -- as strong as the
+2008-only cells, nearly as strong as 'both' -- and the full offset (-124 mm). The gen1
+shape-only LDA trained on 2008-class-vs-neither scores them apart from 'neither' at AUC
+0.80 (Sentinel-2 version 0.81). The 2008-only side behaves as predicted (fingerprint
+present, AUC 0.78-0.79), so the 2008 class is not spurious; the 2021-only side says it is
+INCOMPLETE.
+
+**Why, checked.** Not resolution: the result is the same with both classes at 30 m. Not a
+boundary effect: the 2021-only cells' 2008 class probability has median 0.002, 75th
+percentile 0.03, and their October-2008 reflectance is ordinary floodplain in every band
+(relative NIR 1.00, SWIR1 1.04, red 0.89). In October 2008 they were spectrally NOT the
+bright senesced sward -- yet in November 2008 gen1 read a standing canopy ~130 mm up
+with one return in eight reaching the surface. And in May 2021 they were as clean-cut as
+the NE patch (gen2 class-2 share 0.88).
+
+**Reading (hypothesis).** gen1's fingerprint marks STANDING HERBACEOUS STRUCTURE in
+November; the 2008 imagery class marks one spectral state of it -- the bright, senesced,
+high-albedo sward -- and misses stands that were still green or otherwise unremarkable on
+29 October (the Wisconsin reports' own caveat: "errors of omission were not discovered.
+They would be a lot more difficult to identify"). The 2021 imagery flags these cells
+because by October 2021 they had been brought into the same hay management as the NE
+patch and were in its bright state. So the imagery class is phenology-state-dependent and
+under-detects; the lidar fingerprint is more inclusive, and it is a signature of standing
+canopy rather than of a species.
+
+**Consequences.** (1) For the lidar: the 2008 fingerprint-and-percentile route (sections
+R, S) reaches more sward than the 2008 imagery class does -- the lidar-only detector finds
+705 cells (0.4% of the tile, 1.8 ha) the 2008 imagery missed, with the same offset. (2) For
+the imagery: a single late-October scene under-detects; the 2021 and 2025 maps show that
+the same ground flips state with management. (3) For the field day: whether these cells
+are reed canary grass or another standing herb (sedge meadow is the alternative on this
+floodplain) is exactly the species question only the ground can answer.
