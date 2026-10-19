@@ -521,3 +521,17 @@ the imagery: a single late-October scene under-detects; the 2021 and 2025 maps s
 the same ground flips state with management. (3) For the field day: whether these cells
 are reed canary grass or another standing herb (sedge meadow is the alternative on this
 floodplain) is exactly the species question only the ground can answer.
+
+**Scale check (Andy, 2026-10-19; inline run, numbers pasted).** Could the 2021-only result be
+the 30 m pixel against 5 m cells? Partly, and measurably. (1) The 2021-only cells are not
+mainly fringe: median distance to the nearest 2008-class pixel 55 m; 29% within one pixel
+(against 16% for 'neither' cells). (2) The 2008 classifier DOES respond to sub-pixel cover:
+among 258 pixels at least half on open floodplain, those with >= 80% of their 5 m cells
+carrying the gen1 fingerprint are classified 2008 in 100% of cases, 60-80% in 50%, 20-40% in
+22%, < 20% in 4%. The 2021-only cells sit in pixels whose fingerprint fraction has median
+0.18 against 0.00 elsewhere: sub-pixel clumps of sward inside pixels that were mostly not
+sward in 2008, below what a 30 m mixed pixel can register. So the imagery's omission is
+largely a resolution effect -- the class needs most of a pixel to be sward -- and the lidar
+at 5 m sees the clumps. Whether those pixels were FLAGGED in 2021 because the sward had
+grown to fill them or because the cut-hay state is uniform across a field is not separable
+here; both are consistent with the 2025 change map.
