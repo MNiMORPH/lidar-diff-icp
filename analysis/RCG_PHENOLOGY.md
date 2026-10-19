@@ -579,13 +579,12 @@ and 2022/2024 dull alternation is the hay cycle.
 or inferred?" INFERRED, in three steps: KNOWN -- uncut sward in Oct 2021, cut by Oct 2022, gen2
 flown May 2021 between them, and gen2's returns there tight and near-wholly classified
 ground; INFERRED -- that a standing-dead sward lies flat by May (the lidar geometry favours
-it; a partly upright stand would not give that distribution), that snow rather than wind,
-ice or a late mowing was the agent, and that gen2's ground is the thatch top rather than
-the soil. The last is the hypothesis that matters and is unmeasured.) gen2 flew in May
+it; a partly upright stand would not give that distribution), that some winter agent (snow, ice,
+wind, or a late mowing -- NO snow record was consulted, so none is claimed) laid it flat,
+and that gen2's ground is the thatch top rather than the soil. The last is the hypothesis that matters and is unmeasured.) gen2 flew in May
 2021, BEFORE the conversion. Its "exceptionally clean" surface in the class (class-2 share 0.89, no
 near-ground vegetation) was therefore not a cut hay field but a winter-flattened
-standing-dead sward: a thick thatch pressed flat by snow reads to a lidar as a smooth
-surface, and the vendor classified it as ground. That is the "mat with no sharp base" of
+standing-dead sward: a thick thatch lying flat reads to a lidar as a smooth surface, and the vendor classified it as ground. That is the "mat with no sharp base" of
 section H seen from the other epoch, and it means gen2's ground in those cells is the
 thatch top, biased high by the thatch thickness -- an amount the 2021-flagged cells would
 show as a gen2 offset against surveyed ground, which the field day can measure. The DoD
