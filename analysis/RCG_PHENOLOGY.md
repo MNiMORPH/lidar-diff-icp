@@ -712,3 +712,66 @@ October question and density is an April-May one; a map of both needs two scenes
 The correlation is moderate (rho ~0.5-0.6 at 30 m), untested for block structure, and
 calibrated only against the lidar's own canopy signal, not against measured biomass or
 height -- which is a field-day quantity (stand height and stem density at the RTK points).
+
+## X. The two flight days on one annual cycle: day-of-year expectations (2026-10-19)
+
+Andy: how do we handle the difference in time of year between the surveys; can we
+generate day-of-year expectations? Script `analysis/rcg/phenology_climatology.py`; figure
+`figures/rcg_phenology_climatology.png`; per-scene table
+`rcg/phenology_climatology_scenes.csv`. 272 Sentinel-2 scenes 2016-2025 (catalogue cloud
+< 40%), per-class median NDVI from each scene's clear pixels (class used only if >= 70%
+clear), 15-day day-of-year bins. Flight days: gen1 2008-11-25 (DOY 330; Elba's lines, per
+LIDAR_DOCUMENTATION_MINE.md; block 18-24 Nov); gen2 2021-05-01 (DOY 121).
+
+**The cycle (NDVI medians across years; 25-75% band in the figure):** dormant 0.12-0.20
+through DOY 105; green-up steepest DOY 106-165 (NE patch 0.27 -> 0.51 -> 0.82); summer
+plateau 0.6-0.85 to DOY ~255 with cut-and-regrowth dips in the hay classes; senescence
+DOY 270-315 (0.59 -> 0.41); late-autumn standing state DOY 316-345 at 0.27-0.35 for the
+sward classes against 0.15-0.21 for cropped and bare cells -- the senesced sward is still
+distinguishable from bare ground in late November. Winter forest values are snow-affected
+and not used.
+
+**The two flight days, read across years:**
+
+    window                       NE patch       2008 class     sedge F1      cropped F3    spread across years
+    DOY 115-130 (gen2, 1 May)    0.30           0.24           0.29          0.16          NE 0.14-0.73: WIDE
+    DOY 320-340 (gen1, 25 Nov)   0.35           0.31           0.40          0.21          NE 0.13-0.51: narrow core 0.3-0.4
+
+2021 itself: the NE patch read NDVI 0.73 on 2021-05-01 and 0.83 on 2021-05-11 -- the top
+of the ten-year range for that date. gen2 flew over an ADVANCED green-up, not a dormant
+field: a dense young sward already in full leaf.
+
+**What this does to the readings.** (1) The May flight day sits on the steepest part of
+the curve, where the state varies most between years; the November flight day sits on a
+plateau of senesced standing cover that varies little. A May survey is therefore the one
+whose vegetation state must be checked year by year (the audit repo's purpose); a late-
+November survey's state is predictable. (2) gen2's "clean" surface in the class (section
+Q) is now read a third way: not a cut field (V), not only flattened thatch (U), but a
+SHORT DENSE GREEN SWARD, in full leaf by 1 May 2021, whose returns all lie within the
+first 15 cm -- too low for the 0.15-2 m band, dense enough that the vendor classed them
+ground. gen2's ground there is the top of that sward plus any thatch under it. The
+literature's only spring anchor, 0.04 m under flattened senescent marsh in May (Rogers et
+al. 2016), is a floor for this, not an estimate; a green sward in leaf is more. (3) The
+DoD on the class (-124 mm) is therefore gen1's standing senesced canopy minus gen2's
+young green sward, and the true 2008 canopy offset exceeds the DoD by whatever gen2's
+sward height was -- a May 2021 field quantity nobody measured. The RTK survey measures
+the present-day analogue (sward height and thatch at the points) on whatever day it runs,
+and the climatology says what that day corresponds to.
+
+**Day-of-year expectations, anchored where they can be:**
+
+    DOY       state of the sward classes           lidar reading of "ground"                    anchor
+    1-90      dormant, snow-flattened              thatch top; ~0.04 m in flattened marsh         Rogers 2016 (May, senescent)
+    91-120    green-up starting, thatch beneath    thatch + first leaves; UNMEASURED              --
+    121       (gen2)  advanced green-up in 2021    sward top, all returns < 15 cm; offset > 0.04  section Q + this
+    135-165   steep green-up, 0.3-1 m              ~1/3 of canopy height (0.1-0.3 m), rising      Rogers 2016, Hopkinson 2005
+    166-255   peak canopy 1-2 m                    0.3-0.6 m if the 34% ratio holds; WORST        Rogers 2016 (34%), Ewald 2013
+    256-315   senescing, cuts in hay fields        falling; cut fields near 0                     section V (cut 14-18 Aug -> NDVI 0.38)
+    316-345   (gen1 at 330) standing senesced      +100 to +250 mm in dense sward, 13% penetrate  sections Q, R
+    346-366   first snow                           excluded by specification                      USGS LBS
+
+The only rows with site measurements are DOY 121 and 330; the rest are literature ratios
+or unmeasured, and the table says so. The one general rule it supports: for differencing,
+two surveys at DOY 316-345 would have shared the stable senesced state and the SAME bias
+sign and size, which would cancel in the DoD; a May-November pair, as here, has the bias in
+one epoch only.
