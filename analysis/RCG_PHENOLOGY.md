@@ -409,3 +409,62 @@ percentile is CLASS-conditional: ~0.12 inside the class against ~0.48 on the ope
 floodplain outside it (the share at or below the surface), so applying it needs the
 imagery class or an equivalent lidar fingerprint to say where. The 59 mm NMAD is a floor
 shared by every low-quantile estimator here (20 mm histogram bins, gen2's own noise).
+
+## S. Is there a characteristic return SHAPE -- detectable without imagery? (2026-10-19)
+
+Andy: is there a characteristic shape in the spreading that corresponds to presence /
+absence, or to cover intensity, so the grass could be detected from return structure alone
+in 2008 and/or 2021, with the imagery maps as the independent truth for learning it?
+Scripts `analysis/rcg/return_shape.py`, `analysis/rcg/return_shape_fine.py`; figure
+`figures/rcg_return_shape.png`; table `rcg/return_shape.csv`.
+
+**Design.** Shape features measured about the cell's OWN mode, so nothing cross-epoch
+enters: lower width (median - p10), upper width (p90 - median), mode - median, Bowley
+skew, peak share within +/-50 mm of the mode, upper-tail e-folding length and mass beyond
++100 mm, lower mass beyond -100 mm. gen1: 3x3-pooled CSF returns, 20 mm bins. gen2: the
+full-density cloud streamed into per-cell histograms, first at 20 mm then at 5 mm bins
+(windows scaled to +/-20 and 50 mm). Truth: the imagery class of the survey's own year
+(presence) and two intensity proxies (logit of the class probability; NIR reflectance
+relative to the floodplain). Domain: open flat floodplain, NE patch excluded (and
+included, for reference). Scoring by 5-fold CV on 500 m blocks.
+
+**gen1 (Nov 2008): YES for presence, as a class; NO for a cover gradient.**
+
+    shape feature (about own mode)     in class        out of class    d'
+    upper width p90 - median           220 (89)        80 (30)        2.11
+    peak share within +/-50 mm         0.30 (0.12)     0.56 (0.20)    1.52
+    upper-tail mass beyond +100 mm     0.26 (0.18)     0.07 (0.09)    1.38
+    lower width median - p10           140 (59)        80 (30)        1.28
+    upper-tail e-folding length (mm)   126 (75)        53 (49)        1.14
+    mode - median                      -20 (30)        0 (0)          0.95
+    lower mass beyond -100 mm          0.08 (0.09)     0.03 (0.04)    0.69
+    Bowley skew                        0.09            0.00           0.38
+    lidar-only LDA, shape features alone:  AUC 0.71 (patch excluded), 0.82 (patch included)
+
+The characteristic shape: the peak collapses to half its share, the distribution widens on
+BOTH sides, an exponential upper tail of ~125 mm e-folding carries a quarter of the
+returns, and the mode slips 20 mm below the median. Adding intensity and return count
+changes the AUC by < 0.01: the shape IS the signal. The mode-centred mean PDFs
+(figure) show it as one coherent form, and the in-class PDF deepens monotonically from
+p 0.5-0.95 to p > 0.95.
+
+Cover INTENSITY is not recoverable from the shape: block-CV R^2 of logit(p) on the shape
+features is 0.03 (patch excluded; 0.25 with it, which is presence again); R^2 of the NIR
+index is negative; within the 932 class cells the rank correlations of every shape feature
+with NIR, SWIR1 or logit(p) are |rho| <= 0.18. The sward reads as present or absent, not
+graded -- or the imagery's gradient is not a cover gradient either.
+
+**gen2 (May 2021): NO shape signal at all.** At 20 mm and at 5 mm bins every shape
+feature is identical inside and outside the class (widths 40 mm, peak share 0.54 vs 0.55,
+tail mass 0.03 vs 0.03; d' <= 0.35; shape-only AUC 0.18-0.20, i.e. nothing). The
+May-2021 return GEOMETRY of a cut sward is the same as the rest of the open floodplain.
+What differs is the vendor's classification: class-2 share 0.89 vs 0.52 (d' 4.1), which
+is a product of their classifier, not of the return heights, and carries the whole of
+gen2's AUC (0.67 with it).
+
+**What this means.** In the leaf-off 2008 survey the standing sward leaves a coherent,
+translation-invariant shape in the returns that detects the class without imagery, with
+an AUC of 0.71-0.82 on the imagery's own definition of it. In the May-2021 survey the
+same ground was a cut sward with no return-structure signature; only the vendor's
+classifier noticed something. So a lidar-only detector is a 2008 (standing, senesced
+sward) capability, not a 2021 one -- and it gives presence, not cover.

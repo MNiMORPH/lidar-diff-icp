@@ -118,12 +118,14 @@ def run(name, Hall, cls, score, extra, domain, pdf_ax):
     print("   weights (shape only): " + ", ".join(f"{c} {w:+.2f}" for c, w in sorted(zip(shape_cols, w1), key=lambda t: -abs(t[1]))))
     print(f"  INTENSITY, OLS of imagery class score logit(p) on features, block-CV R2:  shape only {cv_r2(Xs, s_, fold):.3f};  all {cv_r2(Xa, s_, fold):.3f}")
     # characteristic shape: mode-centred mean PDF by quartile of class score (cells weighted equally)
-    qs = np.percentile(s_, [25, 50, 75]); cmap = plt.get_cmap("Reds")
-    for qi, (lo, hi) in enumerate(zip([-1e9] + list(qs), list(qs) + [1e9])):
-        m = (s_ >= lo) & (s_ < hi); grid = np.arange(-400, 801, DZ); acc = np.zeros(grid.size)
+    # groups by imagery class probability (logit(p) is too skewed for quartiles: most cells sit at p ~ 0)
+    pp = 1 / (1 + np.exp(-s_)); groups = [("outside class, p < 0.5", pp < 0.5, "#9e9e9e"), ("in class, 0.5 <= p < 0.95", (pp >= 0.5) & (pp < 0.95), "#eb6834"), ("in class, p >= 0.95", pp >= 0.95, "#8b0000")]
+    for lab_, m, col in groups:
+        if m.sum() == 0: continue
+        grid = np.arange(-400, 801, DZ); acc = np.zeros(grid.size)
         for i in np.flatnonzero(m):
             P = F[i] / F[i].sum(); acc += np.interp(grid, ctr - mode[i], P, left=0, right=0)
-        pdf_ax.plot(grid, acc / m.sum() / DZ, color=cmap(0.3 + 0.7 * qi / 3), lw=1.8, label=f"class-score quartile {qi+1} (n={m.sum():,})")
+        pdf_ax.plot(grid, acc / m.sum() / DZ, color=col, lw=1.8, label=f"{lab_} (n={m.sum():,})")
     pdf_ax.axvline(0, color="#52514e", lw=0.8, ls=":"); pdf_ax.set_xlabel("height relative to the cell's own mode (mm)"); pdf_ax.set_ylabel("density per mm"); pdf_ax.set_title(name, fontsize=10); pdf_ax.legend(fontsize=8, frameon=False)
     for sp_ in ("top", "right"): pdf_ax.spines[sp_].set_visible(False)
     return pd.DataFrame(rows)
@@ -136,5 +138,5 @@ out.append(run("gen2 (May 2021), open floodplain, NE patch EXCLUDED vs 2021 imag
 out.append(run("gen1, open floodplain, NE patch INCLUDED", H1p, (p08 > 0.5), logit(p08), {"intensity": int1}, dom_a, axes[0, 1]))
 out.append(run("gen2, open floodplain, NE patch INCLUDED", H2full, (p21 > 0.5), logit(p21), {"c2_share": G2s.c2_share}, dom_a, axes[1, 1]))
 pd.concat(out).to_csv(f"{R}/return_shape.csv", index=False)
-fig.suptitle("Mode-centred return-height distributions by quartile of the imagery class score (light = least RCG-like, dark = most)", fontsize=11)
+fig.suptitle("Mode-centred return-height distributions, cells weighted equally, grouped by the imagery class probability", fontsize=11)
 fig.tight_layout(); fig.savefig(f"{FIG}/rcg_return_shape.png", dpi=110); print(f"\nfigure: {FIG}/rcg_return_shape.png; table: {R}/return_shape.csv")
