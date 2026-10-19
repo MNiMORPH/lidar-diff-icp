@@ -775,3 +775,55 @@ or unmeasured, and the table says so. The one general rule it supports: for diff
 two surveys at DOY 316-345 would have shared the stable senesced state and the SAME bias
 sign and size, which would cancel in the DoD; a May-November pair, as here, has the bias in
 one epoch only.
+
+## Y. Can the two epochs be compared from imagery alone? The complementary-state test (2026-10-20)
+
+Andy: given different seasons and instruments, can imagery of reed-canary-grass density /
+height / phenology let us compare the epochs, and estimate TRUE ground in each? (RTK as a
+backup, not first.) Inline runs; numbers pasted.
+
+**The idea.** Imagery on each flight day can find cells where ONE epoch was bare and the
+other vegetated. There the bare epoch is the ground truth for the other, which is the
+calibration an RTK survey would otherwise supply, and the bias-vs-imagery relation learned
+there is not circular because the application population (both vegetated) differs from
+the calibration population. Sentinel-2 has a scene on gen2's own flight day (2021-05-01,
+clear 1.000 over the tile); Landsat-5 2008-10-29 stands for gen1's.
+
+**The quadrants** (open flat floodplain, NE patch excluded; thresholds swept, all MINE:
+bare 2021 = 1 May NDVI < 0.20 / 0.25, green 2021 >= 0.50 / 0.60, bare 2008 = 29 Oct NDVI
+< 0.30 / 0.33 and not in the 2008 class; sward 2008 = the class):
+
+    quadrant                                    n           raw DoD (mm)    NMAD   gen2 class-2 share
+    bare 2008 & bare 2021   (null)           2,912-5,453    +9 to +20       37-42      0.50
+    sward 2008 & bare 2021  (gen2 = truth)     119-230      -11 to -40      62-92      0.77-0.81
+    bare 2008 & green 2021  (gen1 = truth)     573-836      -51 to -58      42-59      0.51-0.53
+    sward 2008 & green 2021 (both biased)      331-365      -93 to -96      95-98      0.75-0.81
+
+**Why it does not deliver true ground.** The 'bare 2008 & green 2021' cells read -55 mm:
+gen2 BELOW gen1 by 55 mm where gen1 was supposedly the truth. A lidar cannot read a green
+sward below the ground, so gen1 was not bare there: in late November a harvested field
+carries stubble and residue, and gen1 at 1 return/m^2 reads their top (the bare-ground
+residue skew already in the memory notes). The 'bare 2021' cells are tilled fields, whose
+spring surface is loosened by several cm. Agricultural surfaces change by the same few cm
+to dm as the vegetation bias, with management, so a cropped field is not a ground
+reference in either epoch, and the quadrant differences are mixtures of residue, tillage,
+and vegetation that the imagery cannot separate. The bare-bare null's +9 to +20 mm is
+itself that mixture.
+
+**A surface that is bare in both epochs and not farmed:** the WMA gravel parking lots and
+roads. DoD on 143 lot cells: median +2.6 mm (NMAD 65; per lot -30 to +71, n 6-30); on 684
+road cells: +6.8 mm (NMAD 51). Noisy, but centred on zero: the two epochs agree on true
+bare ground to within ~10 mm, which is the absolute null the whole comparison hangs on.
+
+**What the imagery CAN do, measured in this record:** (1) say where the sward was on each
+flight day and in what state (presence in October, density from spring green-up, the
+within-season cut history), so each epoch gets its own class-conditional treatment; (2)
+supply, for gen1, the class where the fixed low percentile applies (section R: bias within
+10 mm of the gen2 surface, NMAD 59, where 13% of beams reach the ground) and the closed
+cells to mask; (3) place both flight days on the climatology (section X) and say that the
+May epoch's state must be audited per year while the November state is stable; (4)
+identify the cells vegetated in both epochs where any correction is a cross-epoch
+calibration and must be labelled as such. What it cannot do is set the LEVEL of either
+epoch's ground under vegetation: every imagery-derived relation here is anchored to the
+other lidar epoch, and the only surfaces bare in both epochs are too few and too noisy
+(NMAD 50-65 mm over gravel) to anchor a 50-100 mm effect to better than a few cm.
