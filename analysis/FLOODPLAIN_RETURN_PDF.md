@@ -526,3 +526,26 @@ this or an analogous site, giving a species-and-season offset with a spread, as 
 literature does; (b) a landowner or 2008 observation of the field's state; (c) a third lidar
 epoch over the same field under known cover. Absent those, the penetration-failure flag
 remains the treatment, and the DoD there is reported as unobserved, not as erosion.
+
+## M. Could reed canary grass be identified from imagery? Literature and an option (2026-10-19)
+
+Andy's question. Sources retrieved 2026-10-19 (web search; not read in full):
+* Wisconsin DNR, "Using Landsat 7 imagery to map invasive reed canary grass" (pilot, 2004)
+  and "Mapping Wisconsin Wetlands Dominated by Reed Canary Grass" (final report, 2008):
+  the species senesces much later than natives, so MID-OCTOBER imagery separates it
+  spectrally; 30 m Landsat, 0.5-acre minimum mapping unit, statewide.
+* Yoshitoshi et al. 2024, Grassland Science: RCG patches in a timothy meadow from a UAV
+  digital surface model by edge detection (recall 0.90) -- it is TALLER and forms sharp-edged
+  monotypic patches, which is the lidar signature we saw.
+* Spaceborne imaging-spectroscopy peatland work: Phalaris fraction had the LOWEST accuracy of
+  the species mapped (MAE 22-42%) -- spectrally it is just a grass; phenology is the lever.
+* USGS, predicted Phalaris occurrence in Upper Mississippi floodplain-forest understories.
+
+What this means here: in a single summer NAIP frame RCG is not separable from other grass,
+which is why the 2008-2023 panel only says "meadow". Phenology would separate it:
+Sentinel-2 (10 m, 2015+) gives per-cell October greenness and April green-up; the F2
+patches are 0.8-1.7 ha = 80-170 Sentinel-2 pixels, resolvable. And the 2008 state itself is
+testable the Wisconsin way: a cloud-free Landsat-5 TM scene from October 2008 over Elba (1-2
+ha patches = 11-19 pixels, marginal but usable). OFFERED, not run: the mn-3dep-audit repo
+already computes Sentinel-2 NDVI for this tile, so an October-greenness map against the
+penetration-failure patches is a short job.
