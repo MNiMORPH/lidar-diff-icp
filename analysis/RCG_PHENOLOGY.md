@@ -613,3 +613,14 @@ himself: the field work was AUGUST 2021 at 44.1453790 N, -92.0020860 W -- UTM 15
 N 4 888 504 -- 2.25 km north of the tile's edge and 2.74 km from the NE patch. That site is
 not this field; the two are unrelated, and the conversion date stands on the imagery
 alone.)
+
+**Andy's August 2021 site, from the imagery (inline run, 2026-10-19).** 44.1453790 N,
+-92.0020860 W (UTM 15N E 579 811, N 4 888 504; photo 2021-08-18 13:34, not shared). Outside
+the tile; read from the same Sentinel-2 scenes, relative to the tile's open floodplain
+where the scene is shared. 2021-09-28: NDVI 0.81 at the site, NIR 1.17x its 400 m
+surroundings -- a lush green stand five weeks after the photo. 2021-10-18: relative red
+1.41, NIR 1.54, SWIR1 1.33, NDVI 0.40 -- the bright senesced spectrum of the NE field in
+the same scene (1.26 / 1.87 / 1.32), though the 2021-trained classifier gives the 50 m
+window only 20% bright-state membership and the 400 m box 4%: a small or mixed stand.
+Green-late-then-bright is the sequence the NE field showed. What the stand WAS is in the
+photo, which is the species truth for this spectral class if Andy reads it.
