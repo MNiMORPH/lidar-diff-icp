@@ -866,3 +866,25 @@ stands cluster into fields with no bare ring. Interpolation across vegetation ne
 surround, and here there is none; where a cell's surround IS bare (the farmstead, the
 lots), the DoD is already ~0 and nothing needs interpolating. The percentile estimator
 (p12) does better than interpolation in every bin with a usable ring, as section R found.
+
+## AA. Is there an independent reed-canary-grass classification? (2026-10-20)
+
+Andy: "Do you have an independent RCG classification?" No. Nothing in the project
+identifies the species independently of the spectral class and Andy's presumption about
+the NE field. Checked the two open occurrence databases for Phalaris arundinacea in the
+Whitewater valley box (lat 44.00-44.25, lon -92.15 to -91.85), inline, 2026-10-20:
+
+* GBIF: 33 records. 31 are the USGS Nonindigenous Aquatic Species database, mostly a June
+  2010 campaign (locality "Richard J. Dorer", Wabasha County: the state forest units of
+  the lower valley), clustered at E 581-592 km, N 4893-4900 km -- 8-15 km downstream of
+  the tile; plus single records 2012-06-18 at E 580636 N 4887984 (1.7 km north-east of
+  the tile, ~1 km from Andy's August 2021 site), 2005-07-28 at E 581484 N 4880745,
+  1995-09-12 at E 574630 N 4882591 (1 km west of the tile), and a 1982 MIN herbarium
+  specimen with 969 m uncertainty. The NAS records carry no coordinate uncertainty field.
+* iNaturalist research-grade: 1 record, 2025-06-02 at E 576210 N 4878870 (3 km south).
+* NONE on the tile.
+
+So there is no independent species truth for any cell analysed here. What exists is
+presence (not absence, not a map) at ~33 points in the valley, most of them in the lower
+valley the valley-wide plan will cover, where they can serve as the outside truth for
+Phase 3 that the tile lacks. The field day remains the only route to species on this tile.
