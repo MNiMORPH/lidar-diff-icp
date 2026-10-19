@@ -27,6 +27,7 @@ Fetched into data/derived/valley/:
 import json
 import os
 import subprocess
+import urllib.parse
 
 import numpy as np
 import odc.stac
@@ -55,7 +56,7 @@ for name, url in (("wma_units.geojson", f"{BASE}/bdry_dnr_wildlife_mgmt_areas_pu
                   ("state_parks.geojson", f"{BASE}/bdry_dnr_lrs_prk/FeatureServer/2/query?where=1%3D1&{Q}"),
                   ("wma_parking.geojson", f"{BASE}/struc_dnr_wld_mgmt_areas_pub/FeatureServer/0/query?where=1%3D1&{Q}"),
                   ("wma_roads.geojson", f"{BASE}/struc_dnr_wld_mgmt_areas_pub/FeatureServer/1/query?where=1%3D1&{Q}"),
-                  ("rivers_whitewater.geojson", f"{BASE}/water_dnr_hydrography/FeatureServer/0/query?where=kittle_name%20LIKE%20%27%25WHITEWATER%25%27&{Q}")):
+                  ("rivers_whitewater.geojson", f"{BASE}/water_dnr_hydrography/FeatureServer/0/query?" + urllib.parse.urlencode({"where": "UPPER(kittle_name) LIKE '%WHITEWATER%'"}) + f"&{Q}")):
     out = f"{PL}/{name}"
     if os.path.exists(out): continue
     subprocess.run(["curl", "-s", "-m", "300", url, "-o", out + ".tmp"], check=True)
@@ -118,5 +119,14 @@ if not os.path.exists(out):
     arr = xr.concat([(ds[b].squeeze(drop=True).astype("float32") * 0.0000275 - 0.2).where(clear) for b in LSB], dim="band").assign_coords(band=LSB)
     atomic_raster(arr, out); cov = float((ds["red"].squeeze(drop=True) > 0).mean()); cf = float(clear.mean())
     index["ls_2008-10-29"] = {"id": it.id, "box_covered_frac": cov, "clear_frac": cf}; save_index(); print(f"  Landsat 2008-10-29: box covered {cov:.3f}, clear {cf:.3f}")
-missing = [f for f in ([f"{V}/s2_{d.replace('-', '')}_bands.tif" for d in ("2026-10-17", "2025-10-27", "2021-10-18")] + [f"{V}/s2_{d.replace('-', '')}_ndvi.tif" for d in ("2026-04-10", "2026-04-15", "2026-05-15")] + [out]) if not os.path.exists(f)]
+# ---- 4. ESA WorldCover (latest release on the catalogue) on the 10 m box grid: the open /
+# tree / built / water mask for stage 2 and its confusion check
+out_wc = f"{V}/worldcover.tif"
+if not os.path.exists(out_wc):
+    its = sorted(cat.search(collections=["esa-worldcover"], bbox=BBOX).items(), key=lambda i: i.properties.get("start_datetime", ""))
+    latest = [i for i in its if i.properties.get("start_datetime", "") == its[-1].properties.get("start_datetime", "")]
+    wc = odc.stac.load(latest, bands=["map"], bbox=BBOX, crs="EPSG:26915", resolution=10, chunks={})["map"].max("time")
+    tmp = out_wc + ".tmp.tif"; wc.astype("uint8").rio.write_crs("EPSG:26915").rio.to_raster(tmp, compress="deflate"); os.replace(tmp, out_wc)
+    index["worldcover"] = {"ids": [i.id for i in latest]}; save_index(); print(f"  WorldCover: {[i.id for i in latest]}")
+missing = [f for f in ([f"{V}/s2_{d.replace('-', '')}_bands.tif" for d in ("2026-10-17", "2025-10-27", "2021-10-18")] + [f"{V}/s2_{d.replace('-', '')}_ndvi.tif" for d in ("2026-04-10", "2026-04-15", "2026-05-15")] + [out, out_wc, f"{PL}/rivers_whitewater.geojson"]) if not os.path.exists(f)]
 print("all present" if not missing else f"MISSING (re-run when online): {missing}")
