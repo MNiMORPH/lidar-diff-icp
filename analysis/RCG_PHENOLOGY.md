@@ -624,3 +624,32 @@ the same scene (1.26 / 1.87 / 1.32), though the 2021-trained classifier gives th
 window only 20% bright-state membership and the 400 m box 4%: a small or mixed stand.
 Green-late-then-bright is the sequence the NE field showed. What the stand WAS is in the
 photo, which is the species truth for this spectral class if Andy reads it.
+
+## V. Andy's photo, 18 August 2021 13:34, 44.1453790 N -92.0020860 W (2026-10-19)
+
+Copied to `data/derived/ne_patch_imagery/andy_20210818_1334_site_44.14538N_92.00209W.jpg`.
+It shows a freshly mown hay field with round bales on the valley floor, bluffs behind,
+trees along the river. Not a standing sward: a hayed field, cut days before.
+
+**What that does to the imagery reading.** The same site read green on 28 September 2021
+(NDVI 0.81, five weeks of aftermath regrowth) and BRIGHT on 18 October 2021 (relative red
+1.41, NIR 1.54, SWIR1 1.33 -- the NE field's bright-state spectrum in the same scene). So a
+HAYED field, cut in August and regrown, produces the bright late-October spectrum. The
+bright state is therefore "senesced dense herbaceous canopy", whatever the management --
+the Wisconsin pasture/hay confusion seen from the ground -- and it does NOT by itself say
+"uncut".
+
+**Revision of section U.** The claim that the NE field was an UNCUT standing sward in
+every year before 2022 is withdrawn. What the imagery supports is weaker: a dense
+herbaceous field whose October state varied (green-late in 2016-17; bright in 2008 and
+2019-21; dull after the July 2022 cut); whether the bright years were uncut or hayed in
+August cannot be told from the autumn spectrum. The mid-July 2022 event stands as a
+dated CUT / change of management, not as a first conversion. The lidar facts are
+untouched: a standing canopy ~25 cm up in November 2008 (gen1), and a smooth near-opaque
+surface in May 2021 (gen2) that a hayed-and-regrown field lying flat after winter would
+also give. One oddity, unresolved: the NE field after its July 2022 cut read DULL in
+October (NIR 1.13), while this site after an August cut read BRIGHT (NIR 1.54); more time
+since cutting gave less October signal, which is the reverse of simple regrowth.
+
+**Species.** Bales do not identify a grass. The photo is truth for the spectral class's
+land use (hay), not for the species.
