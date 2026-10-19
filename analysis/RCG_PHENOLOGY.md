@@ -225,3 +225,47 @@ floodplain in both years.
 For the lidar this is the mechanism in one picture: the 2008 surface gen1 read 25 cm up
 was a dense standing-dead canopy (bright, dry, closed); the 2021 surface gen2 read as
 ground was under short green regrowth.
+
+## P. Mapping the NE-like class in 2008 and 2025, and the change (2026-10-19)
+
+Andy: identify the regions with reed canary grass at each time, and the difference. I had
+NOT mapped it before this; what existed was the NE patch's separability. Script
+`analysis/rcg/map_ne_like.py`; layers `rcg/nelike_p_{ls_20081029,ls_20251004,s2_20251002}.tif`,
+`rcg/nelike_change_2008_2025_30m.tif`; table `rcg/nelike_change_patches.csv`; figure
+`figures/rcg_nelike_change.png`.
+
+**What is mapped, stated once.** "NE-like" = spectrally like the NE patch in THAT year's
+October scene: two-class maximum likelihood on all bands (Wisconsin's classifier shape),
+class 1 = the patch's pixels, class 0 = the rest of the flat floodplain, equal priors, p >
+0.5. In 2008 that class is a bright senesced dense sward; in 2025 a green high-NIR late
+sward (section O). Both are states reed canary grass takes; neither is a species label,
+and there is no field truth. Domain: the floodplain mask.
+
+**Confusion check** (share of each WorldCover class over the whole tile classified
+NE-like): 2008 -- tree 1.6%, grassland 9.6%, cropland 4.9%; 2025 Landsat -- tree 0.9%,
+grassland 21.1%, cropland 10.3%; 2025 Sentinel-2 -- grassland 26.0%, cropland 10.7%. The
+2025 class is a quarter of all grassland: a green dense sward is not rare in October, which
+is the Wisconsin confusion (pasture, hay). The 2008 class is more specific.
+
+**Areas on the floodplain mask (241.9 ha), 30 m:**
+
+    NE-like 2008            17.8 ha  (198 px)
+    NE-like 2025            20.6 ha  (229 px)     [Sentinel-2 10 m: 22.2 ha]
+    kept (both)              8.9 ha  -- essentially the NE patch itself (8.3 ha, p 0.98 / 1.00)
+    gained (2025 not 2008)  11.7 ha
+    lost (2008 not 2025)     8.9 ha
+
+**Largest gained** (NE-like now, not in 2008): 2.7 ha at E 578812 N 4882388 near Elba
+(private, grassland); 2.2 ha at E 579764 N 4885865 and 1.8 ha at E 579866 N 4886054, both
+WMA, immediately north of the NE patch; 1.5 ha at E 578824 N 4882649 (private).
+**Largest lost** (NE-like in 2008, not now): 1.8 ha at E 579548 N 4883110 and 1.2 ha at
+E 579730 N 4883491, both WMA, both WorldCover "tree" in 2021 -- open bright swards in 2008
+that are woody now; 0.6 ha at E 579649 N 4883329 (cropland now).
+
+**Reading, as hypothesis.** The 2008 class outside the NE patch sat on the WMA floodplain
+south of it and has since gone to trees and shrubs (succession or planting); the 2025
+class has spread north of the NE patch along the river on WMA land and appears near Elba.
+The NE patch is "kept" by construction -- it is the training reference in both years --
+and is the only place where the two different states are known to be the same ground.
+The field day can turn these from spectral classes into species: the gained WMA patches
+north of the NE patch are 250-450 m from the parking lot at E 579979 N 4885340.
