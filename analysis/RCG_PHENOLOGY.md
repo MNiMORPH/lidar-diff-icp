@@ -179,3 +179,49 @@ and across the floodplain the sedge-type bias is not tracked by October reflecta
 30 m. Phase 4(c) stays closed. What reopens: Phase 3 and 4b -- a Wisconsin-style
 classification (wetland mask, all bands, clusters, outside truth) is feasible on this
 tile and the valley, and it finds the NE-type stands.
+
+## O. 2025 vs 2008: the grass DID change (2026-10-19)
+
+Andy: "Can you check 2025 vs. 2008 reflectance and if the grass changed?" Script
+`analysis/rcg/compare_2008_2025.py`; figure `figures/rcg_relative_spectra_2008_2025.png`;
+table `rcg/relative_spectra_2008_2025.csv`. Scenes added: Landsat-8/9 2025-09-26 (clear
+1.000), 2025-10-04 (0.992), 2025-11-05 (1.000); Sentinel-2 2025-10-02 and 10-27 (clear).
+
+Gauge-free comparison: each population's median reflectance divided by the flat
+floodplain's median in the same scene and band (sensors and years are not comparable in
+level). The known classes are the null: their relative spectra barely move between years.
+
+    NE patch / flat floodplain     blue   green    red   nir08  swir16  swir22   NDVI (patch / floodplain)
+    Landsat-5  2008-10-29          1.32   1.40    1.60   1.58    1.34    1.22    0.41 / 0.40
+    Landsat-8  2025-09-26          1.12   1.56    1.22   1.84    1.20    1.07    0.82 / 0.73
+    Landsat-9  2025-10-04          1.04   1.40    1.01   2.05    1.15    0.99    0.81 / 0.66
+    Landsat-9  2025-11-05          1.12   1.36    1.18   2.03    1.10    0.94    0.69 / 0.56
+    null: grassland, 2008 / 2025   1.16-1.25 in every band, both years (stable)
+
+Per pixel, log(2025/2008) minus the floodplain's own log-ratio (0 = changed like its
+surroundings), 2008-10-29 -> 2025-10-04, median (NMAD):
+
+    population        blue          green         red           nir08         swir16        swir22
+    KNOWN grassland   -0.04(0.25)   -0.04(0.17)   -0.03(0.30)   -0.05(0.21)   -0.02(0.14)   -0.04(0.22)
+    KNOWN tree        -0.05(0.20)   +0.01(0.16)   -0.07(0.23)   +0.06(0.19)   -0.04(0.18)   -0.10(0.22)
+    F1 sedge          -0.11(0.16)   -0.16(0.15)   -0.28(0.21)   -0.10(0.09)   -0.14(0.07)   -0.11(0.11)
+    NE patch          -0.25(0.17)   -0.05(0.09)   -0.46(0.23)   +0.21(0.14)   -0.13(0.11)   -0.23(0.13)
+
+The null classes sit at 0 within +/-0.1. The NE patch does not: red fell by 0.46 in the
+log (a factor of 0.63), SWIR2 by 0.23, while NIR ROSE by 0.21 -- the same sign and size on
+all three 2025 dates. Sentinel-2 agrees: in October 2023 and 2025 the patch's NIR is 1.5-1.8x
+the floodplain's with NDVI 0.42-0.58 against 0.27-0.36; only 2024 (the cut year) differs.
+
+**What changed (measurement, then reading).** In October 2008 the patch was brighter than
+its surroundings in EVERY band with the floodplain's own NDVI: the spectrum of a dense,
+senesced, high-albedo canopy -- standing dead material and litter. In October 2025 it is
+dark in red and bright in NIR with an NDVI well above the floodplain's: a live, green,
+dense sward in autumn. The grass changed from a standing-dead sward to a green one, which
+is what a field "since planted and used for hay" looks like from above: cut in summer,
+regrowing green into October. The sedge cells (F1) moved a little in the same direction
+(red -0.28) but far less and from a relative spectrum near 1.0, so they remain ordinary
+floodplain in both years.
+
+For the lidar this is the mechanism in one picture: the 2008 surface gen1 read 25 cm up
+was a dense standing-dead canopy (bright, dry, closed); the 2021 surface gen2 read as
+ground was under short green regrowth.
