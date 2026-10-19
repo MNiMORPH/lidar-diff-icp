@@ -575,8 +575,14 @@ mapped), senesced and bright by late October in 2008 and 2019-2021. The one-time
 to cut hay management falls between October 2021 and October 2022. The 2023/2025 green
 and 2022/2024 dull alternation is the hay cycle.
 
-**Consequence for gen2, a revision of section Q.** gen2 flew in May 2021, BEFORE the
-conversion. Its "exceptionally clean" surface in the class (class-2 share 0.89, no
+**Consequence for gen2, a revision of section Q.** (Andy, 2026-10-19: "Snow-flattened: known
+or inferred?" INFERRED, in three steps: KNOWN -- uncut sward in Oct 2021, cut by Oct 2022, gen2
+flown May 2021 between them, and gen2's returns there tight and near-wholly classified
+ground; INFERRED -- that a standing-dead sward lies flat by May (the lidar geometry favours
+it; a partly upright stand would not give that distribution), that snow rather than wind,
+ice or a late mowing was the agent, and that gen2's ground is the thatch top rather than
+the soil. The last is the hypothesis that matters and is unmeasured.) gen2 flew in May
+2021, BEFORE the conversion. Its "exceptionally clean" surface in the class (class-2 share 0.89, no
 near-ground vegetation) was therefore not a cut hay field but a winter-flattened
 standing-dead sward: a thick thatch pressed flat by snow reads to a lidar as a smooth
 surface, and the vendor classified it as ground. That is the "mat with no sharp base" of
