@@ -20,6 +20,6 @@ BASE = "https://enterprise.gisdata.mn.gov/aghost/rest/services/us_mn_state_dnr"
 for name, url in (("whitewater_wma_units.geojson", f"{BASE}/bdry_dnr_wildlife_mgmt_areas_pub/FeatureServer/0/query"),
                   ("wma_fac_0.geojson", f"{BASE}/struc_dnr_wld_mgmt_areas_pub/FeatureServer/0/query"),
                   ("wma_fac_1.geojson", f"{BASE}/struc_dnr_wld_mgmt_areas_pub/FeatureServer/1/query"),
-                  ("state_parks.geojson", f"{BASE}/bdry_dnr_lrs_prk/FeatureServer/2/query")   # layer 2 = management-unit POLYGONS; layer 0 is reference points, layer 1 statutory boundaries):
+                  ("state_parks.geojson", f"{BASE}/bdry_dnr_lrs_prk/FeatureServer/2/query")):   # parks: layer 2 = management-unit POLYGONS; layer 0 reference points, layer 1 statutory boundaries
     subprocess.run(["curl", "-s", "-m", "180", f"{url}?{Q}", "-o", f"{OUT}/{name}"], check=True)
     print(name, os.path.getsize(f"{OUT}/{name}"), "bytes")
