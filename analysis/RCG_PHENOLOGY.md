@@ -653,3 +653,24 @@ since cutting gave less October signal, which is the reverse of simple regrowth.
 
 **Species.** Bales do not identify a grass. The photo is truth for the spectral class's
 land use (hay), not for the species.
+
+**Imagery around the photo date (inline run, 2026-10-19; every Sentinel-2 and Landsat scene
+2021-07-25..09-30 with the site clear; NDVI at the site over a 100 m window / over the
+600 m box):**
+
+    2021-08-04  S2    0.88 / 0.85   lush, uncut
+    2021-08-14  S2    0.73 / 0.85   site already below its surroundings: mowing or wilting under way
+    2021-08-14  L8    0.79 / 0.86
+    2021-08-15  L7    0.69 / 0.85
+    2021-08-18        PHOTO 13:34 -- freshly mown, round bales on the field
+    2021-08-19  S2    0.38 / 0.74   ONE DAY AFTER the photo: cut, half the surroundings' NDVI
+    2021-08-22  L7    0.53 / 0.76
+    2021-08-30  L8    0.72 / 0.77   regrowing
+    2021-09-08  S2    0.77 / 0.73
+    2021-09-18  S2    0.87 / 0.82   fully regrown within a month
+    2021-09-28  S2    0.81 / 0.78
+    2021-10-18  S2    bright senesced state (relative red 1.41, NIR 1.54)
+
+The satellite record and the photo agree to the day: cut between 14 and 18 August 2021,
+NDVI halved by the 19th, regrown to its pre-cut greenness by 18 September, senesced and
+bright by 18 October. A hay field's full cycle, seen from both sides.
