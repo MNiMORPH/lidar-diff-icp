@@ -674,3 +674,41 @@ land use (hay), not for the species.
 The satellite record and the photo agree to the day: cut between 14 and 18 August 2021,
 NDVI halved by the 19th, regrown to its pre-cut greenness by 18 September, senesced and
 bright by 18 October. A hay field's full cycle, seen from both sides.
+
+## W. A density measure from imagery, and the season it needs (2026-10-19)
+
+Andy: is there an imagery measure of reed-canary-grass DENSITY, and must it be autumn?
+Inline run (numbers pasted): Spearman rank correlation of gen1's November-2008 canopy
+signal per 3x3-pooled cell (median height above gen2; upper-tail mass; peak share) with
+every 2008 Landsat quantity in hand, within the 2008 class (open floodplain, NE patch
+excluded, 932 cells) and across all open flat floodplain (12,158 cells). Caveat: cells
+within one 30 m pixel share the imagery value, so the effective n is lower than the cell
+count; the rank correlations are indicative, not tested.
+
+    2008 imagery quantity          within the class: rho with median ht / tail mass / peak share     all open floodplain
+    SPRING NDVI (Apr 4-May 22 mean)      +0.49        +0.55        -0.60                             +0.22  +0.44  -0.48
+    summer NDVI (Aug max)                +0.25        +0.10        -0.16                             -0.15  -0.42  +0.49
+    Aug-10 NIR                           +0.42        +0.22        -0.37                             -0.12  -0.42  +0.47
+    Aug-10 NDMI (NIR-SWIR1)              +0.40        +0.25        -0.30                             +0.13  -0.28  +0.36
+    Oct-29 NDVI                          +0.04        -0.04        +0.05                             +0.39  +0.47  -0.51
+    Oct-29 SWIR2                         -0.17        -0.20        +0.14                             -0.53  -0.40  +0.37
+    Oct-29 NDMI                          +0.20        +0.21        -0.14                             +0.32  +0.40  -0.40
+    Oct-29 brightness                    +0.03        -0.02        -0.05                             -0.39  -0.24  +0.21
+
+**Within the class, the autumn scene carries almost no density information** (rho 0.0-0.2
+for every October quantity), which is section S's result again from the imagery side.
+**The SPRING scene does**: early-season NDVI ranks the November canopy offset at rho ~0.5
+and the tail mass at 0.55 within the class -- the stands that greened up earliest and
+strongest in April-May 2008 were the ones with the most standing structure in November
+2008. Summer NIR and the NIR-SWIR water index are second (rho ~0.4). Across the whole
+floodplain the October quantities regain moderate correlations (0.3-0.5), but that is the
+class-vs-non-class contrast (presence), not density.
+
+**Answer.** A density proxy exists and it is the SPRING green-up vigour -- the April-May
+NDVI composite -- not an autumn quantity. That matches the species' biology (reed canary
+grass is among the first floodplain plants to green up, and a denser stand greens harder)
+and it is the opposite season from the Wisconsin detection window. So presence is an
+October question and density is an April-May one; a map of both needs two scenes a year.
+The correlation is moderate (rho ~0.5-0.6 at 30 m), untested for block structure, and
+calibrated only against the lidar's own canopy signal, not against measured biomass or
+height -- which is a field-day quantity (stand height and stem density at the RTK points).
