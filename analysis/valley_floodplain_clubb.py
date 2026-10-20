@@ -39,6 +39,7 @@ ap.add_argument("--bounds", type=float, nargs=4, default=BOX, metavar=("X0", "Y0
 ap.add_argument("--res", type=float, default=5.0, help="grid spacing in m for the lsdtt run (PROPOSAL: 5)")
 ap.add_argument("--threshold-SO", type=int, default=3, help="Clubb 2017 used 3 at every site")
 ap.add_argument("--skip-lsdtt", action="store_true")
+ap.add_argument("--corridor", type=float, default=None, help="if set, NoData outside this buffer (m) of the DNR Whitewater centrelines, so the quantile-quantile thresholds describe the VALLEY (hillslope vs floor), not the plateau. PROPOSAL (mine); Clubb 2017 assumes a dissected landscape")
 A = ap.parse_args()
 X0, Y0, X1, Y1 = A.bounds; D = f"{OUT}/{A.name}"; os.makedirs(D, exist_ok=True)
 
@@ -63,6 +64,13 @@ if not os.path.exists(bil):
             reproject(a, part, src_transform=r.transform, src_crs=r.crs, dst_transform=dtr, dst_crs=r.crs, src_nodata=np.nan, dst_nodata=np.nan, resampling=Resampling.average)
             dst = np.where(np.isfinite(part), part, dst); del a, part
         print(f"  resampled {os.path.basename(t)}; filled {np.isfinite(dst).mean():.4f} of the grid so far")
+    if A.corridor:
+        import json, shapely
+        from shapely.geometry import shape
+        riv = shapely.union_all([shape(f["geometry"]) for f in json.load(open("data/derived/valley/public_land/rivers_whitewater.geojson"))["features"]])
+        jy, jx = np.mgrid[0:ny, 0:nx]; cx, cy = rasterio.transform.xy(dtr, jy.ravel(), jx.ravel())
+        inside = shapely.contains_xy(riv.buffer(A.corridor), np.asarray(cx), np.asarray(cy)).reshape(ny, nx)
+        dst[~inside] = np.nan; print(f"corridor: kept {inside.mean():.3f} of the grid within {A.corridor:.0f} m of the Whitewater centrelines")
     nod_out = -9999.0; out = np.where(np.isfinite(dst), dst, nod_out).astype("float32")
     with rasterio.open(bil, "w", driver="ENVI", height=ny, width=nx, count=1, dtype="float32", crs=crs, transform=dtr, nodata=nod_out) as w: w.write(out, 1)
     print(f"wrote {bil}: {ny} x {nx} at {A.res} m, nodata {np.mean(out == nod_out):.4f}, z {np.nanmin(dst):.1f}-{np.nanmax(dst):.1f} m")
