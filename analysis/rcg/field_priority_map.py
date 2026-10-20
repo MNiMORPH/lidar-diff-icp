@@ -32,9 +32,10 @@ R = {k.replace("region_", ""): v for k, v in gpx_polys(f"{V}/field_day_waypoints
 B = {k: v for k, v in gpx_polys(f"{V}/best_places.gpx").items() if k.startswith("1_")}; north = shapely.union_all(list(B.values()))
 tx = np.array([from_ll.transform(float(p.get("lon")), float(p.get("lat"))) for p in ET.parse(f"{V}/field_day_waypoints.gpx").getroot().iter("{http://www.topografix.com/GPX/1/1}trkpt")][:61])
 def rp(k): g = next(v for kk, v in R.items() if kk.startswith(k)); return g.representative_point()
-ITEMS = [(1, "Base + mark", (579637.0, 4885872.1)), (2, "Uncut sward", rp("R1-v140")), (3, "Bare control", rp("C-v52")), (4, "North sward", north.representative_point()),
-         (5, "Transect", shapely.Point(tx[len(tx) // 2])), (6, "Cut sward", rp("R2-v237")), (7, "Meadow", rp("S-v324")), (8, "Zero penetration", rp("F2-1")), (8, "Zero penetration", rp("F2-3")),
-         (9, "Slope patches", rp("gen2-high")), (9, "Slope control", rp("hillslope control")), (10, "Bluff stand", rp("bluff stand"))]
+# PRIORITY = one measurement in EACH type of ground first (Andy, 2026-10-21), then seconds
+ITEMS = [(1, "Base + benchmark", (579637.0, 4885872.1)), (2, "Uncut sward", rp("R1-v140")), (3, "Bare control", rp("C-v52")), (4, "Meadow", rp("S-v324")),
+         (5, "Cut sward", rp("R2-v237")), (6, "Transect", shapely.Point(tx[len(tx) // 2])), (7, "Slope patches", rp("gen2-high")), (8, "Bluff stand", rp("bluff stand")),
+         (9, "North sward", north.representative_point()), (10, "Zero penetration", rp("F2-1")), (10, "Zero penetration", rp("F2-3")), (11, "Slope control", rp("hillslope control"))]
 bb = (578700, 4884500, 580900, 4887900); X0, Y0, X1, Y1 = bb
 url = f"https://imageserver.gisdata.mn.gov/cgi-bin/wms?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=fsa2025&STYLES=&SRS=EPSG:26915&BBOX={X0},{Y0},{X1},{Y1}&WIDTH=1400&HEIGHT={int(1400 * (Y1 - Y0) / (X1 - X0))}&FORMAT=image/jpeg"
 try: img = np.asarray(Image.open(io.BytesIO(urllib.request.urlopen(url, timeout=120).read())))

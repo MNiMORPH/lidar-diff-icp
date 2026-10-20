@@ -93,7 +93,7 @@ Produced by `analysis/rcg/field_day_plan.py` (log `data/derived/valley/field_day
 table `data/derived/valley/field_day_sites.csv`, map `figures/field_day.png`). Every WMA
 parking lot (53) was scored by the cover types reachable within a straight-line walking
 radius (600 and 1000 m; the radius is mine), using the valley imagery clusters (post-hoc
-view, D4), the 20 Elba lidar sites above, and the five 2021 control marks on public land.
+view, D4), the 20 Elba lidar sites above, and the five 2021 control benchmarks on public land.
 
 **The minimal set: two lots 1.1 km apart on the WMA road north of Elba, both on the Elba
 tile.** Lot 502 (E 579942.8 N 4884848.7; 44.112459 N 92.000998 W, pyproj EPSG:26915 -> 4326)
@@ -136,7 +136,7 @@ was NE-like in 2008, 2021, 2025 and 2026 (R1-v140, 11.5 ha, uncut in 2026: large
 drop 0.08), a sward that stood in 2008 and 2021 but was cut in 2026 (R2-v237, drop 0.11 is
 small too), a late-green non-NE-like meadow (S), bare and cropped controls (C, F3), the
 Elba sedge and zero-penetration lidar sites (F1, F2), a steep gen1-low slope and an open
-hillslope (H2, H3), a forest edge (E), and the mark. Species, stand height and thatch
+hillslope (H2, H3), a forest edge (E), and the benchmark. Species, stand height and thatch
 thickness at each point are the quantities nobody has (sections R, S, T, W).
 
 **Road-first (Andy, 2026-10-20: "Walks over open land can take a long time and include
@@ -148,7 +148,7 @@ table's `dist_parking_m` was a raster artefact and is being fixed in `valley_ran
 |---|---|---|---|---|
 | C-v52 | C bare / cropped | 1 | 501 (40) | |
 | S-v324 | S late-green meadow | 43 | 501 (52) | |
-| mark 1079_2021_MN | datum tie | 41 | 501 (321) | |
+| benchmark 1079_2021_MN | datum tie | 41 | 501 (321) | |
 | R2-v237 | R2, sward 2008 + 2021, not 2026 | 62 | 501 (355) | both epochs |
 | R1-v140 | R1, sward 2008/2021/2025/2026, uncut 2026, 11.5 ha | 154 | 204 (69 from the field edge) | both epochs; the NE training field |
 | F2-3 | F2 zero penetration | 246 | 501 (547) | Elba lidar |
@@ -156,7 +156,7 @@ table's `dist_parking_m` was a raster artefact and is being fixed in `valley_ran
 | H2-2 | H2 steep gen1-low slope | 456 | 501 (455) | Elba lidar |
 | E-v131 | E forest edge | 501 | 501 (648) | the only type > 400 m off the road |
 
-So the day is one road: park at lot 501 for C, S, the mark and R2-v237 (all within ~60 m of
+So the day is one road: park at lot 501 for C, S, the benchmark and R2-v237 (all within ~60 m of
 the road), drive 500 m south to lot 204 for the big R1 field (its edge is 69 m from that
 lot), and take F2-3 and H3-2 as 250-300 m walks off the road. Everything else is optional.
 
@@ -229,7 +229,7 @@ vegetation top where there is one, gives both epochs' offsets as a function of p
 `analysis/rcg/field_day_maps.py` -> `figures/field_day_lot204.png` (stop 1: the RCG field
 R1-v140 and R1-v149, F2-1, the bluff lowveg stand coloured by slope, its least-steep entry
 route, the gen2-high patches, the hillslope control) and `figures/field_day_lot501.png`
-(stop 2: C-v52, S-v324, mark 1079, R2-v237, F2-3, the class transect with 25 m dots), both
+(stop 2: C-v52, S-v324, benchmark 1079, R2-v237, F2-3, the class transect with 25 m dots), both
 on 2025 FSA imagery with the WMA road and a 200 m bar; and
 `data/derived/valley/field_day_waypoints.gpx` (27 waypoints, the transect and the bluff
 route as tracks) for a handheld GPS. Seen on the imagery: the bluff lowveg stand lies
@@ -245,7 +245,7 @@ a WMS layer, need the paid Survey plan. So:
 
 1. `analysis/rcg/field_day_emlid_export.py` turns every region outline into a ring of named
    points every ~20 m plus a CENTRE point (`R1v140-01..`, `R1v140-CENTRE`, ...), with the
-   lots, the mark and the transect's 25 m points: `data/derived/valley/field_day_points_emlid.csv`
+   lots, the benchmark and the transect's 25 m points: `data/derived/valley/field_day_points_emlid.csv`
    (Name, Longitude, Latitude, WGS84), the same as `.kml` and as a point Shapefile. Import
    one of these into the Flow project; the rover's position then sits among the region's
    outline points on the map screen, and "Stake out" to a CENTRE or an outline point gives
@@ -263,7 +263,7 @@ any project CRS.
 **The day (Andy, 2026-10-20):** a meander bend in the morning, the GNSS mapping in the
 afternoon, then home. Afternoon order, by what the lidar question needs most: lot 204
 first (R1-v140 ground + sward top, F2-1 inside it, R1-v149 by the lot; the bluff stand
-only if the slope looks right from the field edge), then lot 501 (mark 1079 first for the
+only if the slope looks right from the field edge), then lot 501 (benchmark 1079 first for the
 tie, then C-v52 and S-v324 beside the lot, R2-v237, and the transect as the closing walk).
 
 **Monuments for a base station (Andy, 2026-10-20).** Sources: NGS datasheet API
@@ -321,7 +321,7 @@ of each region.
 | stop | lot | what | walk (m) |
 |---|---|---|---|
 | 1 | 204 (44.116878 N 92.000473 W) | R1-v140 RCG-type field (sward every year, uncut 2026) 62; R1-v149 21; F2-1 zero penetration 90; gen2-high patches 154; bluff stand 240; hillslope control 291 | |
-| 2 | 501 (44.120576 N 92.008148 W) | BASE on DR9925 306; mark 1079 321; DG8385 check 371; C-v52 bare control 32; S-v324 meadow 44; transect 141; R2-v237 cut sward 347; F2-3 zero penetration 435 | |
+| 2 | 501 (44.120576 N 92.008148 W) | BASE on DR9925 306; benchmark 1079 321; DG8385 check 371; C-v52 bare control 32; S-v324 meadow 44; transect 141; R2-v237 cut sward 347; F2-3 zero penetration 435 | |
 | 3 | 2597 (44.137534 N 92.005149 W) | best place 1, the 14 ha zero-penetration field, sward in every year | 283 |
 
 **Order, revised 2026-10-20 (Andy: the base must be up before surveying; LoRa?):** lot 501
@@ -366,7 +366,18 @@ published NGS values (datasheet read 2026-10-20):
 plus the measured antenna height. Then every rover point is in NAD 83(2011) directly; set
 the project's vertical to NAVD 88 via GEOID18, which is gen2's frame. Reference checks:
 DG8385 "9 DRL" (leveled NAVD 88 223.352 m, second order; 3 m horizontal, so vertical only)
-and lidar control mark 1079. If the base cannot sit on the rod (cover not found, traffic),
+and lidar control benchmark 1079. If the base cannot sit on the rod (cover not found, traffic),
 set it anywhere with sky view and REFERENCE it to DR9925 by occupying the rod with the rover
 first; and if MnCORS network RTK is available on the day, DR9925 becomes the first check
 shot instead of the base.
+
+**Vocabulary (Andy, 2026-10-21):** the surveyed monuments and control points are BENCHMARKS to
+the reader: DR9925, DG8385 and lidar control benchmark 1079_2021_MN. "Mark" is not used.
+
+**Priority (Andy, 2026-10-21: "at least one measurement in each type of ground"):** one of
+each ground type first, then seconds. 1 base + benchmark; 2 uncut sward (R1-v140); 3 bare
+control (C-v52); 4 meadow (S-v324); 5 cut sward (R2-v237); 6 transect (bare bench and
+vegetated slope in one walk); 7 slope patches (vegetated hillslope, gen2-high); 8 bluff stand
+(wooded slope); then 9 north sward (second uncut sward); 10 the zero-penetration cores
+F2-1 / F2-3 (inside types 2 and 5); 11 slope control (second hillslope). Map
+`figures/field_priority.png` (`analysis/rcg/field_priority_map.py`).

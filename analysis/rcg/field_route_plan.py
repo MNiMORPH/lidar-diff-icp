@@ -8,7 +8,7 @@ Elba, within 2.6 km: three parking lots, the base monument at the DNR headquarte
 between them, and the survey regions. Stops, south to north:
   lot 204   R1-v140 the 11.5 ha RCG-type field (sward every year, uncut 2026), F2-1 inside
             it, R1-v149 beside the lot, the bluff lowveg stand and its gen2-high patches
-  lot 501   base on DR9925 (310 m), mark 1079, C-v52 bare control, S-v324 meadow, R2-v237
+  lot 501   base on DR9925 (310 m), benchmark 1079, C-v52 bare control, S-v324 meadow, R2-v237
             sward in 2008+2021 cut since, F2-3, the class transect
   lot 2597  best place 1: the 14 ha zero-penetration field, sward in every year, 283 m
             from the lot
@@ -59,7 +59,7 @@ tx = np.array([from_ll.transform(float(p.get("lon")), float(p.get("lat"))) for p
 # orthometric height of the same point, for the check. Antenna height is added on site.
 BASE_LAT = 44 + 7 / 60 + 18.13863 / 3600; BASE_LON = -(92 + 0 / 60 + 16.79318 / 3600); BASE_H_ELL = 188.669
 BASE_E, BASE_N = from_ll.transform(BASE_LON, BASE_LAT)
-mons = {"DR9925 base": (BASE_E, BASE_N), "DG8385 check": (579729.0, 4885711.0), "mark 1079": (579659.8, 4885857.1)}
+mons = {"DR9925 base": (BASE_E, BASE_N), "DG8385 check": (579729.0, 4885711.0), "benchmark 1079": (579659.8, 4885857.1)}
 print(f"BASE on DR9925: {BASE_LAT:.8f} N {-BASE_LON:.8f} W, ellipsoid height {BASE_H_ELL} m, NAD 83(2011) epoch 2010.00; UTM 15N E {BASE_E:.2f} N {BASE_N:.2f}")
 # EXECUTION order (Andy: the base must be up before any surveying): the base lot first
 # Order 501 -> 2597 -> 204 keeps every leg tied to DR9925 by LoRa or by a transfer point
@@ -69,7 +69,7 @@ print(f"BASE on DR9925: {BASE_LAT:.8f} N {-BASE_LON:.8f} W, ellipsoid height {BA
 # transfer point T in the R1-v140 field (clear, 0.37 km); stop 2 the north field with the base
 # still on DR9925 (grazing, 0.9-1.4 km); stop 3 base on T (known point) for the field, then on
 # lot 204 (measured under T) for the bluff.
-STOPS = [(501, ["DR9925 base", "mark 1079", "DG8385 check", "C-v52: bare control", "S-v324: meadow", "R2-v237: sward 2008+2021, cut since", "F2-3: zero penetration", "transect"]),
+STOPS = [(501, ["DR9925 base", "benchmark 1079", "DG8385 check", "C-v52: bare control", "S-v324: meadow", "R2-v237: sward 2008+2021, cut since", "F2-3: zero penetration", "transect"]),
          (2597, ["best place 1 (14 ha field)"]),
          (204, ["R1-v140: RCG-type field, both epochs", "R1-v149", "F2-1: zero penetration", "bluff stand (green <= 25 deg)", "gen2-high patches", "hillslope control"])]
 T_FIELD = (579981.0, 4885747.0)   # transfer point: centre of R1-v140, 0.37 km from DR9925, line of sight +1.4 m
