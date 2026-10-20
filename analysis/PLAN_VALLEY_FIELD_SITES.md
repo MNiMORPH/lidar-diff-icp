@@ -307,8 +307,13 @@ post-hoc views, not the product. D5 (same day, in part): "We have one day in the
 Do your best to find us the minimal set of places, ideally accessible and close, where we
 can survey RCG as well as other land-cover types." Delivered: `analysis/rcg/field_day_plan.py`,
 the one-day section of `analysis/FIELD_SITES_RTK.md` (lots 502 and 501 on the WMA road north
-of Elba, nine plus one cover types within 1 km, mark 1079_2021_MN). D5 for later days, D6,
-D7 remain open.
+of Elba, nine plus one cover types within 1 km, mark 1079_2021_MN). D5 for later days remains open.
+D6 (same day): "Only add private-land tiles where needed for the Clubb floodplain mapping
+method." The Clubb run uses the official 1 m DEM over the whole box (28 TNM tiles, public
+and private land alike, because the channel network and its stream orders must be
+complete); the gen1 / gen2 POINT-CLOUD tiles stay the 29 public-land tiles, and no private
+tile of those is fetched for its own sake. D7 (same day): "Sure" -- re-time the pipeline on
+one tile before any overnight loop. All seven decisions are now taken.
 
 **Decisions that are Andy's (none defaulted):** D1 the valley-floor mechanism (per-tile
 histogram valley top, landscape, or HAND) and the slope <= 2 deg cut; D2 keep full-density
