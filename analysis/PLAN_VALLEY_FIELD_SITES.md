@@ -617,7 +617,22 @@ points, completeness 0.977), class 2 16 s, base 583 s (CSF included), the rest 5
 26 s: 19 min per tile without a cache, so ~9 h for the remaining 27.
 
 
-## Checks run while writing (read-only; nothing processed)
+**LOOP DONE 2026-10-20 15:33** (started 09:37): 24 of the 29 public-land tiles complete
+through base, derived steps, lowveg, fingerprint and the site screen (`data/derived/<tile>/`,
+`valley_run.json` per tile); 5 FAILED at the gen2 fetch because the newest 3DEP project
+covering them (MN_SEDriftless_2_2021) misses 8.6-16.1% of their bbox and the fetch refuses to
+downgrade: 4342-29-59, 29-60, 29-61, 30-62, 31-62, the North/Middle Branch tiles on the
+project 2 / project 4 seam that section 1 flagged. Disk: data/after/valley 29 GB, csf_cache
+8.2 GB. The valley join (`analysis/valley_sites_rank.py`): 242 lidar sites on 24 tiles --
+F1 28, F2 49, F3 31, H2 40, H3 89, H4 5 -- in `data/derived/valley/sites_valley_ranked.csv`
+with the imagery values and the WorldCover class at each site; map `figures/valley_lidar_sites.png`.
+Caution found in the join: 25 of the 49 closed-canopy (F2) sites are CROPLAND today
+(WorldCover), e.g. the largest, 38.8 ha at 44.2024 N 91.9544 W on 4358-26-02, DoD -309 mm,
+not NE-like in any year: a zero-penetration cropped field in November 2008 is standing
+crop, not sward, so F2 alone does not mean RCG-type canopy. `analysis/valley_best_places.py`
+keeps the 20 F2 sites that are grass or wetland today, with their cluster outlines
+(`figures/valley_best_places.png`, `data/derived/valley/best_places.gpx`, `best_places.csv`).
+
 
 The three county tile lists (winona 223, olmsted 229, wabasha 194 lines); HEAD of one tile
 URL; the semn2008 metadata page; the Geospatial Commons queries of section 1;
