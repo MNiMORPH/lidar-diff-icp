@@ -34,8 +34,21 @@ METHOD, each step as it was done on the Elba tile (RCG_PHENOLOGY.md sections N, 
                  spring vigour, last 2026 cut date with the gap (days) it was detected across,
                  distance to nearest WMA parking and
                  road; ranked within class by hectares / (1 + distance to parking in km).
+D4 (Andy, 2026-10-20): "I'm not a fan of arbitrary cutoffs ... save any cutoffs for a
+post-hoc analysis." So the PRODUCT of this stage is the set of CONTINUOUS layers on the
+10 m valley grid, written as rasters with no threshold applied:
+  p_nelike_<year>.tif        NE-like probability per October scene (2008, 2021, 2025, 2026)
+  spring_ndvi_2026.tif       mean NDVI of the three green-up dates
+  oct_ndvi_2026.tif          NDVI on 2026-10-17
+  summer_max_ndvi_2026.tif   max NDVI over the Jun-Oct series
+  ndvi_drop_max_2026.tif     3 bands: the LARGEST NDVI drop between a pixel's consecutive
+                             clear dates, the day-of-year of the date after the drop, and
+                             the gap (days) between the two dates
+and the public-land, parking, road and river layers. The classes, the clusters and the
+ranked table below are a POST-HOC VIEW of those layers under cut-offs that are mine and
+printed; they are kept because they showed where to look, not as the product.
 Outputs: data/derived/valley/valley_sites.csv, valley_classes.tif (uint8 class map),
-figures/valley_sites.png, and the per-year p rasters.
+figures/valley_sites.png, and the rasters above.
 
     ./lidar-icp/bin/python analysis/rcg/valley_rank.py
 """
@@ -109,6 +122,7 @@ spring = np.nanmean(np.stack([nd(f"{V}/s2_{d}_ndvi.tif") for d in ("20260410", "
 cutfiles = sorted(f for f in glob.glob(f"{V}/s2_2026*_ndvi.tif") if os.path.basename(f)[3:11] >= "20260615")
 dates = [os.path.basename(f)[3:11] for f in cutfiles]; series = np.stack([nd(f) for f in cutfiles]) if cutfiles else np.zeros((0, ny, nx))
 summer_max = np.nanmax(series, 0) if len(series) else np.full((ny, nx), np.nan); last_cut = np.full((ny, nx), "", dtype=object); last_cut_doy = np.full((ny, nx), np.nan); last_cut_gap = np.full((ny, nx), np.nan)
+drop_max = np.full((ny, nx), np.nan); drop_max_doy = np.full((ny, nx), np.nan); drop_max_gap = np.full((ny, nx), np.nan)   # continuous, no threshold
 # a "cut" is dated to the first clear date AFTER the drop; the GAP (days since that pixel's
 # previous clear date) is carried because a drop across a long gap (Aug 28 -> Oct 2 is 35
 # days) also contains crop harvest and senescence, which this detector cannot separate
@@ -116,14 +130,28 @@ prev = None; prev_doy = None
 for k, d in enumerate(dates):
     cur = series[k]; doy = pd.Timestamp(d).dayofyear
     if prev is not None:
-        drop = np.isfinite(cur) & np.isfinite(prev) & ((prev - cur) >= CUT_DROP)
+        dd = prev - cur; fin2 = np.isfinite(cur) & np.isfinite(prev)
+        drop = fin2 & (dd >= CUT_DROP)
         last_cut[drop] = d; last_cut_doy[drop] = doy; last_cut_gap[drop] = (doy - prev_doy)[drop]
+        big = fin2 & ((dd > drop_max) | np.isnan(drop_max))
+        drop_max[big] = dd[big]; drop_max_doy[big] = doy; drop_max_gap[big] = (doy - prev_doy)[big]
     both = np.isfinite(cur)
     prev = np.where(both, cur, prev if prev is not None else cur)
     prev_doy = np.where(both, doy, prev_doy if prev_doy is not None else doy)
 print(f"cut-history dates used: {dates}; pixels with a 2026 cut on open valley floor: {100*np.mean(np.isfinite(last_cut_doy[open_])):.1f}%")
 print("  last-cut date, share of open valley floor, and the gap it was detected across:", "; ".join(f"{d} {100*np.mean(last_cut[open_] == d):.1f}% ({np.nanmedian(last_cut_gap[open_ & (last_cut == d)]):.0f} d)" for d in dates if np.any(last_cut[open_] == d)))
-# classes
+def wr(arr, name, bands=None):
+    if bands is None:
+        ref.isel(band=0).copy(data=np.asarray(arr, "float32")).rio.write_crs("EPSG:26915").rio.write_nodata(np.nan).rio.to_raster(f"{V}/{name}", compress="deflate")
+    else:
+        import xarray as xr
+        xr.concat([ref.isel(band=0).copy(data=np.asarray(a, "float32")) for a in arr], dim="band").assign_coords(band=bands).rio.write_crs("EPSG:26915").rio.write_nodata(np.nan).rio.to_raster(f"{V}/{name}", compress="deflate")
+wr(spring, "spring_ndvi_2026.tif"); wr(ndvi26, "oct_ndvi_2026.tif"); wr(summer_max, "summer_max_ndvi_2026.tif")
+wr([drop_max, drop_max_doy, drop_max_gap], "ndvi_drop_max_2026.tif", ["drop", "doy_after", "gap_days"])
+print("CONTINUOUS LAYERS written (the product, no threshold): spring_ndvi_2026, oct_ndvi_2026, summer_max_ndvi_2026, ndvi_drop_max_2026 (drop, doy_after, gap_days), p_nelike_<year>")
+print(f"  largest 2026 NDVI drop on the open valley floor: median {np.nanmedian(drop_max[open_]):.2f}, p90 {np.nanpercentile(drop_max[open_], 90):.2f}; its gap: median {np.nanmedian(drop_max_gap[open_]):.0f} d")
+# POST-HOC VIEW from here on (classes, clusters, ranking) -- cut-offs are mine and printed
+print("\nPOST-HOC VIEW (D4): classes, clusters and ranking under the cut-offs printed below")
 near_tree = binary_dilation(wc == 10, structure=np.ones((3, 3)), iterations=3) & (wc != 10)
 cls = np.zeros((ny, nx), np.uint8)   # 0 none, 1 R1, 2 R2, 3 S, 4 C, 5 E
 R1 = open_ & like26 & like25; R2 = open_ & (like26 ^ like25); Sc = open_ & ~like26 & ~like25 & (ndvi26 >= 0.30) & np.isin(wc, [30, 90]); Cc = open_ & (ndvi26 < 0.25) & ~like26; Ec = open_ & near_tree & ~R1 & ~R2
@@ -144,7 +172,7 @@ for v, nm in names.items():
         rows.append(dict(cls=nm, unit=unit, ha=round(mm.sum() * 0.01, 2), easting=round(e0, 1), northing=round(n0, 1), lat=round(lat, 6), lon=round(lon, 6),
                          training_patch_pct=round(100 * ne[mm].mean(), 0), nelike_2008=round(100 * np.nanmean(like08[mm]), 0), nelike_2021=round(100 * np.nanmean(like21[mm]), 0), nelike_2025=round(100 * np.nanmean(like25[mm]), 0), nelike_2026=round(100 * np.nanmean(like26[mm]), 0),
                          oct2026_ndvi=round(float(np.nanmedian(ndvi26[mm])), 2), spring2026_ndvi=round(float(np.nanmedian(spring[mm])), 2), summer2026_max_ndvi=round(float(np.nanmedian(summer_max[mm])), 2),
-                         cut_2026=(pd.Series(cuts).mode().iloc[0] if len(cuts) else ""), cut_share=round(100 * len(cuts) / mm.sum(), 0), cut_gap_days=(float(np.nanmedian(last_cut_gap[mm & (last_cut == (pd.Series(cuts).mode().iloc[0] if len(cuts) else "")) ])) if len(cuts) else np.nan), dist_parking_m=round(float(dpark[mm].min()), 0), dist_road_m=round(float(droad[mm].min()), 0)))
+                         cut_2026=(pd.Series(cuts).mode().iloc[0] if len(cuts) else ""), cut_share=round(100 * len(cuts) / mm.sum(), 0), cut_gap_days=(float(np.nanmedian(last_cut_gap[mm & (last_cut == (pd.Series(cuts).mode().iloc[0] if len(cuts) else "")) ])) if len(cuts) else np.nan), drop_max=round(float(np.nanmedian(drop_max[mm])), 2), drop_max_doy=(float(pd.Series(drop_max_doy[mm]).mode().iloc[0]) if np.isfinite(drop_max_doy[mm]).any() else np.nan), drop_max_gap=round(float(np.nanmedian(drop_max_gap[mm])), 0), dist_parking_m=round(float(dpark[mm].min()), 0), dist_road_m=round(float(droad[mm].min()), 0)))
 F = pd.DataFrame(rows); F["rank_score"] = F.ha / (1 + F.dist_parking_m / 1000.0); F = F.sort_values(["cls", "rank_score"], ascending=[True, False]); F.to_csv(f"{V}/valley_sites.csv", index=False)
 print(f"\nCANDIDATE SITES on public land (clusters >= {MIN_PX} px = 0.5 ha): {len(F)}; per class: {F.cls.value_counts().to_dict()}")
 pd.set_option("display.width", 250); pd.set_option("display.max_columns", 30)
