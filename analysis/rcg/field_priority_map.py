@@ -48,7 +48,7 @@ for rv in rivers: ax.plot(*rv.xy, color="#2a78d6", lw=1.2)
 for g in list(R.values()) + [north]:
     for pg in (g.geoms if hasattr(g, "geoms") else [g]): ax.fill(*pg.exterior.xy, color="white", alpha=0.2); ax.plot(*pg.exterior.xy, color="white", lw=1.2)
 ax.plot(tx[:, 0], tx[:, 1], color="#eda100", lw=2.5)
-for lot in (501, 2597, 204): L = lots[lot]; ax.plot(L.x, L.y, marker="P", ms=14, color="yellow", mec="black"); ax.annotate(f"lot {lot}", (L.x, L.y), xytext=(-10, -16), textcoords="offset points", ha="right", color="yellow", fontsize=11, weight="bold", path_effects=[__import__("matplotlib.patheffects", fromlist=["withStroke"]).withStroke(linewidth=3, foreground="black")])
+for lot in (501, 2597, 204): L = lots[lot]; ax.plot(L.x, L.y, marker="P", ms=14, color="yellow", mec="black"); ax.annotate(f"lot {lot}", (L.x, L.y), xytext=(-12, 12), textcoords="offset points", ha="right", color="yellow", fontsize=11, weight="bold", path_effects=[__import__("matplotlib.patheffects", fromlist=["withStroke"]).withStroke(linewidth=3, foreground="black")])
 for n, name, p in ITEMS:
     x, y = (p.x, p.y) if hasattr(p, "x") else p
     ax.annotate(f"{n}", (x, y), ha="center", va="center", fontsize=13, weight="bold", color="black", bbox=dict(boxstyle="circle,pad=0.3", fc="white", ec="black", lw=1.5))
