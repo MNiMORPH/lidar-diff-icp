@@ -81,7 +81,7 @@ bb = (578700, 4884500, 580900, 4887900); X0, Y0, X1, Y1 = bb
 url = f"https://imageserver.gisdata.mn.gov/cgi-bin/wms?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=fsa2025&STYLES=&SRS=EPSG:26915&BBOX={X0},{Y0},{X1},{Y1}&WIDTH=1400&HEIGHT={int(1400 * (Y1 - Y0) / (X1 - X0))}&FORMAT=image/jpeg"
 try: img = np.asarray(Image.open(io.BytesIO(urllib.request.urlopen(url, timeout=120).read())))
 except Exception as e: img = None; print("imagery not fetched:", e)
-fig, ax = plt.subplots(figsize=(9, 9 * (Y1 - Y0) / (X1 - X0) + 0.6))
+fig, ax = plt.subplots(figsize=(10, 10 * (Y1 - Y0) / (X1 - X0) + 0.6))
 if img is not None: ax.imshow(img, extent=[X0, X1, Y0, Y1])
 for g in units:
     for poly in (g.geoms if hasattr(g, "geoms") else [g]): ax.plot(*poly.exterior.xy, color="black", lw=0.8)
@@ -98,12 +98,12 @@ for (lot, _), n in zip(STOPS, ("1", "2", "3")):
 for k, (x, y) in mons.items():
     if k.startswith("mark"): ax.plot(x, y, marker="^", ms=11, mfc="none", mec="cyan", mew=2.2)
     else: ax.plot(x, y, marker="*", ms=16, color="magenta", mec="black")
-ax.annotate("BASE STATION HERE: monument DR9925 (8508 Y)\nknown point, NAD 83(2011) epoch 2010.00\n44 07 18.13863 N  092 00 16.79318 W  h 188.669 m", mons["DR9925 base"], xytext=(-16, 14), textcoords="offset points", ha="right", color="magenta", fontsize=10, weight="bold", path_effects=pe)
+ax.annotate("BASE STATION HERE\nmonument DR9925 (8508 Y)\nknown point, NAD 83(2011) epoch 2010.00\n44 07 18.13863 N  092 00 16.79318 W\nellipsoid h 188.669 m", mons["DR9925 base"], xytext=(16, 40), textcoords="offset points", ha="left", color="magenta", fontsize=10, weight="bold", path_effects=pe, arrowprops=dict(arrowstyle="-", color="magenta", lw=1.5))
 # the driving line: lots in order along the road (straight segments, drawn thin)
 P = [lots[l] for l, _ in STOPS]; ax.plot([p.x for p in P], [p.y for p in P], color="yellow", lw=1.2, ls=":")
 ax.plot([X0 + 100, X0 + 600], [Y0 + 100, Y0 + 100], color="white", lw=4); ax.annotate("500 m", (X0 + 350, Y0 + 130), color="white", ha="center", fontsize=11, weight="bold")
 ax.set_xlim(X0, X1); ax.set_ylim(Y0, Y1); ax.set_xticks([]); ax.set_yticks([])
-ax.set_title("Field route: three lots on one road, 2.6 km end to end. Stop 1 lot 204 (RCG-type field, bluff), stop 2 lot 501 (base, mark, controls, cut sward, transect),\nstop 3 lot 2597 (best place 1, the 14 ha field). Fills = survey regions; orange line = transect; magenta = monuments; cyan = mark 1079. 2025 FSA imagery.", fontsize=9)
+ax.set_title("Field route: three lots on one road, 2.6 km end to end.\nStop 1 lot 204: RCG-type field, bluff. Stop 2 lot 501: base, mark, controls, cut sward, transect. Stop 3 lot 2597: the 14 ha field.\nFills = survey regions; orange = transect; magenta stars = monuments; cyan = mark 1079; dotted yellow = drive order. 2025 FSA imagery.", fontsize=9)
 fig.tight_layout(); fig.savefig("figures/field_route.png", dpi=110); print("figures/field_route.png")
 with open(f"{V}/field_route.gpx", "w") as g:
     g.write('<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="field_route_plan.py" xmlns="http://www.topografix.com/GPX/1/1">\n')
