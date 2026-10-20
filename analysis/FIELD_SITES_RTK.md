@@ -288,3 +288,5 @@ horizontal) but the best vertical CHECK shot of the day. 1079_2021_MN is the lid
 vendor's control, a check point, not a monument. Alternative that needs no base: MnCORS
 network RTK over NTRIP, if there is cell data in the valley (UNVERIFIED); then occupy
 DR9925 as the check instead.
+Andy, 2026-10-20: the buildings at the junction are the DNR (Whitewater WMA) headquarters, so
+a base left on DR9925 beside them "is probably safe"; the base goes there for the afternoon.
