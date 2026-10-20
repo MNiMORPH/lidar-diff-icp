@@ -290,3 +290,23 @@ network RTK over NTRIP, if there is cell data in the valley (UNVERIFIED); then o
 DR9925 as the check instead.
 Andy, 2026-10-20: the buildings at the junction are the DNR (Whitewater WMA) headquarters, so
 a base left on DR9925 beside them "is probably safe"; the base goes there for the afternoon.
+
+**Zoomed views with every valley tile in hand (Andy, 2026-10-20: "create a zoomed-in look
+at our field-survey sites" / "produce a lidar difference map of the area(s), highlighting
+likely spurious 'deposition' and 'erosion'").** `analysis/field_sites_zoom.py` ->
+`figures/zoom_stop1_lot204.png`, `zoom_stop2_lot501.png`, `zoom_bestplace1_photo.png`,
+`zoom_reach.png`: imagery with the survey regions | the 2021-2008 difference mosaicked from
+the Phase B tiles | the same with likely-spurious clusters hatched: // dashed = zero 2008
+ground return on the flat floodplain (the 2008 "ground" is a canopy top), .. dotted = flat
+floodplain silenced by the vegetation LoD, \\ solid = hillslope cells above +LoD under
+top-quartile lowveg or WorldCover tree (gen2 in leaf reads the vegetation top). Counts per
+window in `data/derived/valley/spurious_<window>.json`; on the reach window (3.5 x 7 km)
+158,866 cells exceed the LoD, of which 33,466 are zero-penetration erosion, 5,323
+vegetation-LoD-silenced erosion and 21,015 vegetated-hillslope deposition, leaving 101,862
+as candidates for real change (most of them bank, road and channel edges). The mosaic
+carries each tile's own zero (its stable-ground median): across the 25-35 m overlap strips
+the adjacent tiles differ by a constant, 4342-29-64 vs 4358-29-01 +18.8 mm, 4342-28-64 vs
+4358-28-01 +22.7 mm, 4342-29-64 vs 4342-28-64 -26.4 mm, 4358-29-01 vs 4358-28-01 -6.0 mm
+(medians over 217-463 overlap cells; NMAD 52-159 mm), so a tile edge shows as a step of a
+few tens of mm in the zooms. Level is gauge (`level-is-gauge-compare-structure`); the step
+is not a landform.
