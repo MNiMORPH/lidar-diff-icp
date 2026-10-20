@@ -53,6 +53,7 @@ def score(pred, d):
 rows = []
 for run in runs:
     with rasterio.open(f"{OUT}/{run}/{run}_valley.bil") as r: fp = r.read(1) == 1
+    if fp.shape != (ny, nx): print(f"  {run}: different grid {fp.shape}, skipped"); continue
     rows.append(dict(run=run, **score(fp, dom)))
 # the Elba pipeline mask, on its tile only
 m5 = np.load("data/derived/elbaext_delong_star_nosurf/floodplain_mask.npy").astype(bool); EX0, EY0 = 575600.0, 4882200.0
