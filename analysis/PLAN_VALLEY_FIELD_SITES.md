@@ -261,7 +261,13 @@ quantile-quantile plots; `lsdtt-valley-metrics`, installed in the `lsdtt` conda 
 lsdtopotools 0.9), replacing the pipeline's histogram valley top for the valley product.
 D2 class-2 gen2 only, to start ("we can expand"). D3 NO logistic correction: "we're working
 on a more real solution to the floodplain elevation difference problem"; the "corrected
-DoD" column is dropped from the section-5 table. D4-D7 remain open.
+DoD" column is dropped from the section-5 table. D4 (same day): "I'm not a fan of arbitrary cutoffs. Those did show us some useful
+information. Let's save any cutoffs for a post-hoc analysis." So the Phase A PRODUCT is the
+set of continuous layers (`p_nelike_<year>.tif`, `spring_ndvi_2026.tif`, `oct_ndvi_2026.tif`,
+`summer_max_ndvi_2026.tif`, `ndvi_drop_max_2026.tif` with the largest drop, its date and its
+gap), and the classes, clusters and ranking of section 8 are a post-hoc view under cut-offs
+that are printed. The section-4 class table and the section-5 cluster minimum are likewise
+post-hoc views, not the product. D5-D7 remain open.
 
 **Decisions that are Andy's (none defaulted):** D1 the valley-floor mechanism (per-tile
 histogram valley top, landscape, or HAND) and the slope <= 2 deg cut; D2 keep full-density
@@ -295,8 +301,10 @@ to overnight loops.
 
 ## 8. Phase A RESULT (2026-10-20): imagery-only site candidates, whole valley
 
-Run, not planned. Stage 1 `analysis/rcg/valley_fetch.py` ("all present" printed on the
-second, stable-link run) and stage 2 `analysis/rcg/valley_rank.py` (no network); log
+Run, not planned. **Under D4 the product is the continuous layers; the classes, clusters and
+tables in this section are a post-hoc view under the cut-offs stated.** Stage 1
+`analysis/rcg/valley_fetch.py` ("all present" printed on the second, stable-link run) and
+stage 2 `analysis/rcg/valley_rank.py` (no network); log
 `data/derived/valley/valley_rank.log`; outputs `data/derived/valley/valley_sites.csv` (336
 rows), `valley_classes.tif`, `p_nelike_{2008,2021,2025,2026}.tif`, `figures/valley_sites.png`.
 Every number below is pasted from that log or from the CSV.
@@ -332,7 +340,14 @@ least specific (tree 22.3%: leaf-off deciduous canopy over a bright floor on 29 
 and scale findings. The class remains "NE-like", one senesced dense herbaceous state
 (sections N, U, V, AA), not a species.
 
-**Cut history 2026** (a cut = NDVI drop >= 0.25 between a pixel's consecutive clear dates;
+**Largest 2026 NDVI drop, continuous (the product):** on the open valley floor the median
+pixel's largest drop between consecutive clear dates is 0.35 (p90 0.50) across a median gap
+of 35 d (the Aug 28 -> Oct 2 interval). Per cluster (median of the cluster's pixels) by
+post-hoc class: C 0.22 (gap 35 d), E 0.15 (20 d), S 0.11 (35 d), R2 0.09 (20 d), R1 0.08
+(20 d); across all 336 clusters the median largest drop is 0.12, maximum 0.54. The NE-like
+clusters barely dropped at all in 2026: the senesced sward stood.
+
+**Cut history 2026, post-hoc view** (a cut = NDVI drop >= 0.25 between a pixel's consecutive clear dates;
 0.25 is mine): 61.6% of the open valley floor shows one, but 53.6% is dated 10-02 across
 the 35-day Aug 28 -> Oct 2 gap, which also holds crop harvest and senescence and is
 therefore not a hay-cut date; the hay cuts the detector CAN date are the short-gap ones:
