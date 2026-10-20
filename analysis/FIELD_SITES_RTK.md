@@ -235,3 +235,27 @@ on 2025 FSA imagery with the WMA road and a 200 m bar; and
 route as tracks) for a handheld GPS. Seen on the imagery: the bluff lowveg stand lies
 UNDER tree canopy although PyForestScan's canopy cover reads 0.23 there (the voxel
 metric under-reads, `gen2-vegetation-offset`), so expect a wooded slope, not shrubland.
+
+**Navigating to the regions with Emlid RTK and the free Emlid Flow (Andy, 2026-10-20).**
+Emlid's documentation (read 2026-10-20: docs.emlid.com "Create or import project"; the
+Emlid Flow plan comparison as summarised by two dealers) says the free plan imports and
+exports CSV, DXF, Shapefile and KML, collects and stakes out POINTS, and shows them on the
+app's default street map; lines and polygons, and switching the background to satellite or
+a WMS layer, need the paid Survey plan. So:
+
+1. `analysis/rcg/field_day_emlid_export.py` turns every region outline into a ring of named
+   points every ~20 m plus a CENTRE point (`R1v140-01..`, `R1v140-CENTRE`, ...), with the
+   lots, the mark and the transect's 25 m points: `data/derived/valley/field_day_points_emlid.csv`
+   (Name, Longitude, Latitude, WGS84), the same as `.kml` and as a point Shapefile. Import
+   one of these into the Flow project; the rover's position then sits among the region's
+   outline points on the map screen, and "Stake out" to a CENTRE or an outline point gives
+   distance and bearing. Being inside the ring of points is being inside the region.
+2. A phone beside the rover shows the true polygons: `field_day_regions_phone.kml` (polygons,
+   centres, waypoints) or `field_day_waypoints.gpx` (outlines as tracks) in any free map app
+   that reads KML/GPX over imagery (Google Earth, OsmAnd, Avenza, Gaia); phone GPS at a few
+   metres is enough to walk into a 0.5-12 ha region, and the Emlid does the measuring.
+3. Printed `figures/field_day_lot204.png` and `figures/field_day_lot501.png` as the
+   fallback; each has the WMA road, the lots and a 200 m bar.
+Project CRS in Flow: NAD83(2011) / UTM 15N with GEOID18 heights if the MnCORS network is
+used (the plan's datum paragraph); the navigation points are WGS84 lat/lon and import into
+any project CRS.
