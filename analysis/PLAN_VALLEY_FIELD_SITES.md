@@ -254,6 +254,15 @@ template.
 * **Phase D, field days**, scheduled by Andy; the data return to sections R/S/T as the
   species truth and the thatch thickness nobody measured.
 
+**Decided by Andy, 2026-10-20 (after Phase A):** D1 the valley floor comes from the
+"official" gen2 lidar DEM (the USGS 3DEP DEM product, not our gridded `z_after`) by Fiona
+Clubb's algorithm (Clubb et al. 2017, slope and channel-relief thresholds from
+quantile-quantile plots; `lsdtt-valley-metrics`, installed in the `lsdtt` conda env,
+lsdtopotools 0.9), replacing the pipeline's histogram valley top for the valley product.
+D2 class-2 gen2 only, to start ("we can expand"). D3 NO logistic correction: "we're working
+on a more real solution to the floodplain elevation difference problem"; the "corrected
+DoD" column is dropped from the section-5 table. D4-D7 remain open.
+
 **Decisions that are Andy's (none defaulted):** D1 the valley-floor mechanism (per-tile
 histogram valley top, landscape, or HAND) and the slope <= 2 deg cut; D2 keep full-density
 gen2 or class 2 only; D3 apply the Elba logistic correction off-tile; D4 every class cut-off
