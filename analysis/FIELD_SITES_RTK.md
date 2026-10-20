@@ -265,3 +265,26 @@ afternoon, then home. Afternoon order, by what the lidar question needs most: lo
 first (R1-v140 ground + sward top, F2-1 inside it, R1-v149 by the lot; the bluff stand
 only if the slope looks right from the field edge), then lot 501 (mark 1079 first for the
 tie, then C-v52 and S-v324 beside the lot, R2-v237, and the transect as the closing walk).
+
+**Monuments for a base station (Andy, 2026-10-20).** Sources: NGS datasheet API
+(`geodesy.noaa.gov/api/nde/bounds`, 45 marks in 44.05-44.20 N / 92.10-91.90 W, saved
+`data/derived/valley/monuments/ngs_marks.csv`) and the MnDOT Geodetic Control REST service
+(`dotapp9.dot.state.mn.us/egis12/rest/services/OLM/mndot_geodetic_agol_operational_lyrs1`,
+54 active stations in the box, `mndot_geodetic_box.csv`); datasheets DR9925 and DG8385 read.
+
+| mark | what | position | height | from lot 501 / 204 |
+|---|---|---|---|---|
+| DR9925 "8508 Y" (MnDOT, set 2023) | flange-encased aluminium rod, 18.9 m deep, removable disk, 37.9 ft SW of TH 74 | NAD 83(2011) ADJUSTED, network accuracy 0.61 cm horizontal, 1.49 cm ellipsoid height (95%) | ellipsoid 188.669 m; NAVD 88 218.75 m (GPS-derived); stability B | 0.31 / 0.63 km |
+| DG8385 "9 DRL" (USGS 1972) | survey disk in a flagpole base / concrete footing, by TH 74 | HD_HELD1: hand-held GPS, +/- 3 m | NAVD 88 223.352 m, leveled 2nd order class I; stability C | 0.37 / 0.45 km |
+| DR9926 "8508 F RESET" | rod, vertical only published | hand-held horizontal | NAVD 88 221.492 m, 2nd order | 1.28 / 0.70 km |
+
+DR9925 is the base-station monument: a published NAD 83(2011) position and ellipsoid height
+at the centimetre, "suitable for satellite observations", 310 m from lot 501 and within
+1.3 km of every site, in the public TH 74 right-of-way. Base over it with the published
+coordinates entered as the base position in Flow gives rover points in NAD 83(2011)
+directly, NAVD 88 by GEOID18 -- the same frame as gen2. DG8385 is the leveled benchmark
+of `leveled-benchmark-cross-epoch` (gen2 - gen1 = +73 mm there): not a base (3 m
+horizontal) but the best vertical CHECK shot of the day. 1079_2021_MN is the lidar
+vendor's control, a check point, not a monument. Alternative that needs no base: MnCORS
+network RTK over NTRIP, if there is cell data in the valley (UNVERIFIED); then occupy
+DR9925 as the check instead.
