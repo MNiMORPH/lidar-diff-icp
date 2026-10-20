@@ -23,10 +23,10 @@ PER TILE, resumable (every stage is skipped when its product exists):
             star, correction_surface False (= data/derived/elbaext_delong_star_nosurf),
             CSF cached at data/csf_cache/<tile>.las; detect_change_standard; every
             product saved as run_all_sites saves it. VALLEY TOP per tile: the 95th
-            percentile of the official DEM over the Clubb corridor floodplain cells inside
-            the tile (MINE, D1 detail; Elba's registry value is 230.0 m, and the rule is
-            printed beside it for the check). Falls back to the tile's DEM 20th percentile
-            if the tile holds no Clubb floodplain (printed when it happens).
+            percentile of the official DEM over the Clubb corridor floodplain cells WITHIN
+            500 m OF THE WHITEWATER CENTRELINES inside the tile (MINE, D1 detail; Elba's
+            registry value is 230.0 m and the rule gives 223.6 there). Fewer than 50 such
+            cells: the tile's DEM 5th percentile + 15 m (fallback, printed).
   6. steps  slope, ridge_mask, convexity (with that valley top), curvature, gen1_angles,
             beam_table, then gen1 span + penetration failure + the vegetation LoD
             (scripts/figures_with_vegetation_lod.py, Elba's 450 mm floor and 2 deg),
@@ -166,7 +166,7 @@ if not os.path.exists(f"{D}/dod.npy"):
     for _k, _g in (r.get("correction_grids") or {}).items(): np.save(f"{D}/applied_{_k}.npy", _g)
     c["valley_top_rule"] = vsrc; json.dump(c, open(f"{D}/corrections.json", "w"), indent=2)
     json.dump({**{k: det[k] for k in ("regions", "sigma", "corr_length_m", "tau_sys_m", "method")}, "gen2_null_cells": int((~np.isfinite(Z21)).sum())}, open(f"{D}/regions.json", "w"), indent=2)
-    json.dump({"bounds": list(B), "before": GEN1, "after": CLS2, "after_full": FULL, "csf_cache": CSF, "valley_top_m": vt, "valley_top_rule": vsrc, "built_by": "scripts/run_valley_tile.py", "like": "data/derived/elbaext_delong_star_nosurf"}, open(f"{D}/meta.json", "w"), indent=2)
+    json.dump({"bounds": list(B), "res": RES, "res_m": RES, "before": GEN1, "after": CLS2, "after_full": FULL, "csf_cache": CSF, "valley_top_m": vt, "valley_top_rule": vsrc, "built_by": "scripts/run_valley_tile.py", "like": "data/derived/elbaext_delong_star_nosurf"}, open(f"{D}/meta.json", "w"), indent=2)
     ex = np.isfinite(dod)
     stamp("base", t0, valley_top_m=round(vt, 2), stable_sigma_m=round(float(r["stable_sigma"]), 4), median_lod_mm=round(float(np.nanmedian(lod)) * 1000, 1), pct_exceed_lod=round(100 * float(np.mean(np.abs(dod[ex]) > lod[ex])), 1), regions=len(regions), zero_line=c.get("zero_line"))
     try: figures.dod_lod_figure(D, "figures/sites", T); figures.change_figure(D, "figures/sites", T)
