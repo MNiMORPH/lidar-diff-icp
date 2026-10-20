@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The best places to study on the field trip, valley-wide: closed-canopy floodplain sites
+"""The best places to study on the field trip, valley-wide: zero-penetration floodplain sites
 (F2: flat, public, zero gen1 penetration) that are GRASS or WETLAND today (WorldCover 2021),
 with their full cluster outlines rebuilt from the tile layers, on an overview map and in a
 GPX. Crop-covered F2 sites are listed but set aside: a zero-penetration cropped field in
@@ -24,7 +24,7 @@ V = "data/derived/valley"; to_ll = pyproj.Transformer.from_crs("EPSG:26915", "EP
 S = pd.read_csv(f"{V}/sites_valley_ranked.csv"); F2 = S[S.cls.str.startswith("F2")].copy()
 F2["today"] = np.where(F2.worldcover.isin(["grass", "wetland"]), "grass/wetland", F2.worldcover)
 F2 = F2.sort_values("ha", ascending=False)
-print("F2 closed-canopy sites by today's cover:", F2.today.value_counts().to_dict())
+print("F2 zero-penetration sites by today's cover:", F2.today.value_counts().to_dict())
 keep = F2[F2.today == "grass/wetland"].head(10)
 feats = lambda n: json.load(open(f"{V}/public_land/{n}"))["features"]
 units = [shape(f["geometry"]) for f in feats("wma_units.geojson")] + [shape(f["geometry"]) for f in feats("state_parks.geojson")]; rivers = [shape(f["geometry"]) for f in feats("rivers_whitewater.geojson")]
@@ -53,7 +53,7 @@ for i, (name, (poly, r)) in enumerate(polys.items()):
     for pg in (poly.geoms if hasattr(poly, "geoms") else [poly]): ax.fill(*pg.exterior.xy, color="#e34948", alpha=0.6); ax.plot(*pg.exterior.xy, color="#8b0000", lw=1)
     ax.annotate(f"{i + 1}", (r.easting, r.northing), xytext=(6, 6), textcoords="offset points", fontsize=11, weight="bold")
 xs = keep.easting; ys = keep.northing; ax.set_xlim(xs.min() - 2000, xs.max() + 2000); ax.set_ylim(ys.min() - 2000, ys.max() + 2000); ax.set_aspect("equal"); ax.set_xticks([]); ax.set_yticks([])
-ax.set_title("Best places: closed-canopy floodplain sites (zero gen1 penetration) that are grass or wetland today, numbered by size; yellow = WMA parking", fontsize=9)
+ax.set_title("Best places: zero-penetration floodplain sites (zero gen1 penetration) that are grass or wetland today, numbered by size; yellow = WMA parking", fontsize=9)
 fig.tight_layout(); fig.savefig("figures/valley_best_places.png", dpi=110)
 with open(f"{V}/best_places.gpx", "w") as g:
     g.write('<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="valley_best_places.py" xmlns="http://www.topografix.com/GPX/1/1">\n')

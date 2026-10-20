@@ -12,7 +12,7 @@ intersects it. DNR says the WMA boundaries are for general reference; verify at 
   erosion, was corrected). At each point: RTK on the GROUND (probe through the mat) and on
   the MAT TOP, late autumn. Ground vs gen2 tests gen2's floodplain surface (expected ~+20
   mm high); mat top minus ground is the sedge offset the logistic encodes.
-* **F2 closed canopy, zero penetration** (the reed-canary-grass-type cells). Same two
+* **F2 zero penetration** (no 2008 ground return; the label was "closed canopy" until Andy, 2026-10-20: "Zero penetration works. I was getting confused and thought you were discussing forests") (the reed-canary-grass-type cells). Same two
   measurements: this is the species-and-season offset that the marsh literature calibrates
   by survey and that cannot come from the lidar. F2-1 and F2-3 are the NE patch's public
   part.
@@ -135,7 +135,7 @@ What the day gives: the ground and the sward top under thick RCG-type sward in a
 was NE-like in 2008, 2021, 2025 and 2026 (R1-v140, 11.5 ha, uncut in 2026: largest NDVI
 drop 0.08), a sward that stood in 2008 and 2021 but was cut in 2026 (R2-v237, drop 0.11 is
 small too), a late-green non-NE-like meadow (S), bare and cropped controls (C, F3), the
-Elba sedge and closed-canopy lidar sites (F1, F2), a steep gen1-low slope and an open
+Elba sedge and zero-penetration lidar sites (F1, F2), a steep gen1-low slope and an open
 hillslope (H2, H3), a forest edge (E), and the mark. Species, stand height and thatch
 thickness at each point are the quantities nobody has (sections R, S, T, W).
 
@@ -151,7 +151,7 @@ table's `dist_parking_m` was a raster artefact and is being fixed in `valley_ran
 | mark 1079_2021_MN | datum tie | 41 | 501 (321) | |
 | R2-v237 | R2, sward 2008 + 2021, not 2026 | 62 | 501 (355) | both epochs |
 | R1-v140 | R1, sward 2008/2021/2025/2026, uncut 2026, 11.5 ha | 154 | 204 (69 from the field edge) | both epochs; the NE training field |
-| F2-3 | F2 closed canopy, zero penetration | 246 | 501 (547) | Elba lidar |
+| F2-3 | F2 zero penetration | 246 | 501 (547) | Elba lidar |
 | H3-2 | H3 open hillslope control | 303 | 501 (751) | Elba lidar |
 | H2-2 | H2 steep gen1-low slope | 456 | 501 (455) | Elba lidar |
 | E-v131 | E forest edge | 501 | 501 (648) | the only type > 400 m off the road |

@@ -6,7 +6,7 @@ other land-cover types."
 Inputs: the valley post-hoc clusters (data/derived/valley/valley_sites.csv: classes R1 NE-like
 2025+2026, R2 one year, S late-green not NE-like, C bare, E forest edge; each with the
 continuous values p NE-like per year, spring / October NDVI, largest 2026 drop); the Elba
-lidar sites (data/derived/field_sites_rtk.csv: F1 sedge, F2 closed canopy, F3 bare, H2 steep
+lidar sites (data/derived/field_sites_rtk.csv: F1 sedge, F2 zero penetration, F3 bare, H2 steep
 gen1-low, H3 open hillslope); WMA parking lots and roads; the 2021 project control marks on
 public land (the datum tie); the class raster and MnGeo 2025 FSA imagery for the map.
 

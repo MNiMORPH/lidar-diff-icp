@@ -5,10 +5,10 @@ every site to visit with its label, the walking routes, and a scale bar; plus a 
 waypoints for a handheld GPS.
 
 Lot 204 (44.116878 N 92.000471 W): the RCG-type field R1-v140 (and R1-v149 beside the lot),
-the closed-canopy lidar point F2-1 inside it, the bluff lowveg stand with its least-steep
+the zero-penetration lidar point F2-1 inside it, the bluff lowveg stand with its least-steep
 entry and its <= 25 deg part, the gen2-high hillslope patches, and the hillslope control.
 Lot 501 (44.120576 N 92.008147 W): the bare control C-v52, the meadow S-v324, mark
-1079_2021_MN, the cut sward R2-v237, the closed-canopy point F2-3, and the 300 m class
+1079_2021_MN, the cut sward R2-v237, the zero-penetration point F2-3, and the 300 m class
 transect with its 25 m waypoints.
 
 Inputs: data/derived/valley/field_day_sites.csv, hillslope_transect_lot501.csv,
@@ -139,12 +139,12 @@ def draw_region(ax, g, color, text, alpha=0.3):
 TRACKS = []
 # ---- map 1: lot 204
 bb = (579400, 4884900, 580300, 4885900); fig, ax = plt.subplots(figsize=(11, 12)); base_map(ax, bb); draw_monuments(ax, bb)
-draw_region(ax, REG["R1-v140"], "white", "R1-v140: RCG-type field, both epochs"); draw_region(ax, REG["R1-v149"], "white", "R1-v149"); draw_region(ax, REG["F2-1"], "#eb6834", "F2-1: closed canopy")
+draw_region(ax, REG["R1-v140"], "white", "R1-v140: RCG-type field, both epochs"); draw_region(ax, REG["R1-v149"], "white", "R1-v149"); draw_region(ax, REG["F2-1"], "#eb6834", "F2-1: zero penetration")
 draw_region(ax, REG["bluff stand, <= 25 deg"], "#1baf7a", "bluff stand (green <= 25 deg)"); draw_region(ax, REG["bluff stand, steeper"], "#e34948", "", 0.25)
 draw_region(ax, REG["gen2-high patches"], "#e87ba4", "gen2-high patches"); draw_region(ax, REG["hillslope control"], "#eda100", "hillslope control")
 ax.plot(route[:, 0], route[:, 1], color="#eda100", lw=3); ax.plot(route[-1, 0], route[-1, 1], marker="^", ms=12, mfc="none", mec="#eda100", mew=2.5)
 wps += [("lot_204", lots[204].x, lots[204].y), ("stand_entry", route[-1, 0], route[-1, 1])]
-ax.set_title("Stop 1, lot 204. Survey anywhere inside a region: RCG-type field R1-v140 and R1-v149 (white), closed-canopy F2-1 (orange),\nbluff lowveg stand (green <= 25 deg, red steeper; under tree canopy), gen2-high patches (pink), hillslope control (yellow).\nOrange line = least-steep route to the stand. Magenta stars = monuments (DR9925 base, DG8385 check). White dashed = WMA road. 2025 FSA imagery.", fontsize=9)
+ax.set_title("Stop 1, lot 204. Survey anywhere inside a region: RCG-type field R1-v140 and R1-v149 (white), zero-penetration F2-1 (orange),\nbluff lowveg stand (green <= 25 deg, red steeper; under tree canopy), gen2-high patches (pink), hillslope control (yellow).\nOrange line = least-steep route to the stand. Magenta stars = monuments (DR9925 base, DG8385 check). White dashed = WMA road. 2025 FSA imagery.", fontsize=9)
 fig.tight_layout(); fig.savefig("figures/field_day_lot204.png", dpi=110); print("figures/field_day_lot204.png")
 
 # ---- map 2: lot 501
@@ -152,9 +152,9 @@ bb = (578900, 4885300, 579900, 4886300); fig, ax = plt.subplots(figsize=(11, 12)
 ax.plot(T.easting, T.northing, color="#eda100", lw=3); wp = T[np.isclose(T.dist_m % 25, 0)]
 for _, r in wp.iterrows(): ax.plot(r.easting, r.northing, marker="o", ms=5, color="#eda100", mec="black"); wps.append((f"transect_{int(r.dist_m)}m", r.easting, r.northing))
 ax.annotate("class transect, 300 m, bearing 300", (T.easting.iloc[0], T.northing.iloc[0]), xytext=(10, -14), textcoords="offset points", color="#eda100", fontsize=10, weight="bold")
-draw_region(ax, REG["C-v52"], "#eda100", "C-v52: bare control"); draw_region(ax, REG["S-v324"], "#4a3aa7", "S-v324: meadow"); draw_region(ax, REG["R2-v237"], "#eb6834", "R2-v237: sward 2008+2021, cut since"); draw_region(ax, REG["F2-3"], "white", "F2-3: closed canopy")
+draw_region(ax, REG["C-v52"], "#eda100", "C-v52: bare control"); draw_region(ax, REG["S-v324"], "#4a3aa7", "S-v324: meadow"); draw_region(ax, REG["R2-v237"], "#eb6834", "R2-v237: sward 2008+2021, cut since"); draw_region(ax, REG["F2-3"], "white", "F2-3: zero penetration")
 ax.plot(579659.824, 4885857.071, marker="^", ms=12, mfc="none", mec="cyan", mew=2.5); ax.annotate("mark 1079_2021_MN", (579659.824, 4885857.071), xytext=(12, -22), textcoords="offset points", color="cyan", fontsize=10, weight="bold", path_effects=[__import__("matplotlib.patheffects", fromlist=["withStroke"]).withStroke(linewidth=3, foreground="black")]); wps += [("mark_1079_2021_MN", 579659.824, 4885857.071), ("lot_501", lots[501].x, lots[501].y)]
-ax.set_title("Stop 2, lot 501. Survey anywhere inside a region: bare control C-v52 (yellow), meadow S-v324 (purple),\nsward-both-epochs R2-v237 (orange), closed-canopy F2-3 (white). Exact points: mark 1079 (cyan), monuments DR9925 = 8508 Y BASE\nand DG8385 = 9 DRL check (magenta stars). Class transect: orange line, dots every 25 m. White dashed = WMA road. 2025 FSA imagery.", fontsize=9)
+ax.set_title("Stop 2, lot 501. Survey anywhere inside a region: bare control C-v52 (yellow), meadow S-v324 (purple),\nsward-both-epochs R2-v237 (orange), zero-penetration F2-3 (white). Exact points: mark 1079 (cyan), monuments DR9925 = 8508 Y BASE\nand DG8385 = 9 DRL check (magenta stars). Class transect: orange line, dots every 25 m. White dashed = WMA road. 2025 FSA imagery.", fontsize=9)
 fig.tight_layout(); fig.savefig("figures/field_day_lot501.png", dpi=110); print("figures/field_day_lot501.png")
 
 # ---- GPX

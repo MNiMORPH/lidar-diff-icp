@@ -11,7 +11,7 @@ WHAT THE SURVEY MEASURES, per class of site, and why each class is here:
                             vs gen2 tests gen2's floodplain surface; RTK ground vs the mat
                             top (probe through, and the top) in late autumn measures the
                             sedge-mat offset the logistic encodes.
-  F2 closed canopy          flat cells with NO gen1 return at the gen2 surface (the
+  F2 zero penetration       flat cells with NO gen1 return at the gen2 surface (the
                             penetration-failure flag): the reed-canary-grass-type case.
                             Ground + thatch top gives the species-and-season offset.
   F3 bare control           flat, least-vegetated quartile, |DoD| < 30 mm: the offset must
@@ -77,7 +77,7 @@ flat = fp & (sl <= 2.0) & np.isfinite(dod)
 fin = np.isfinite(dod)
 classes = {
     "F1 sedge-correction test": flat & public & (span_pool >= 400) & (dod < -lod) & (D > 0) & ~pf,
-    "F2 closed canopy (zero penetration)": flat & public & pf,
+    "F2 zero penetration (no 2008 ground return)": flat & public & pf,
     "F3 bare floodplain control": flat & public & (sp < 140) & (np.abs(dod) < 30),
     "H1 forest hillslope, gen2-high": fin & public & (sl >= 10) & (sl <= 35) & forest & (dod > lod),
     "H2 steep slope, gen1-low": fin & public & (sl > 25) & (dod < -lod),

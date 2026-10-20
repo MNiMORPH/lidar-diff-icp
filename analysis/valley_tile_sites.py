@@ -12,7 +12,7 @@ CLASSES. F1, F2, F3 and H2 are the Elba criteria VERBATIM (field_sites_rtk.py li
 
     flat = fp & (sl <= 2.0) & np.isfinite(dod)
     F1 sedge-correction test            flat & public & (span_pool >= 400) & (dod < -lod) & (D > 0) & ~pf
-    F2 closed canopy (zero penetration) flat & public & pf
+    F2 zero penetration (no 2008 ground return) flat & public & pf
     F3 bare floodplain control          flat & public & (sp < 140) & (np.abs(dod) < 30)
     H2 steep slope, gen1-low            fin & public & (sl > 25) & (dod < -lod)
 
@@ -174,7 +174,7 @@ def screen(tile_dir, pub=PUBLIC_DEFAULT, lowveg_path=None, compare=None, out=Non
     if D is not None: nD = int((f1 & ~(D > 0)).sum()); f1 = f1 & (D > 0); print(f"  F1's (D > 0) term removes {nD:,} of {f1.sum() + nD:,} cells on this tile")
     classes = {
         "F1 sedge-correction test": (f1, "flat & public & (span_pool >= 400) & (dod < -lod)" + (" & (D > 0)" if D is not None else "") + " & ~pf"),
-        "F2 closed canopy (zero penetration)": (flat & public & pf, "flat & public & pf"),
+        "F2 zero penetration (no 2008 ground return)": (flat & public & pf, "flat & public & pf"),
         "F3 bare floodplain control": (flat & public & (sp < 140) & (np.abs(dod) < 30), "flat & public & (sp < 140) & (|dod| < 30)"),
         "H2 steep slope, gen1-low": (fin & public & (sl > 25) & (dod < -lod), "fin & public & (sl > 25) & (dod < -lod)"),
         "H3 low-lowveg hillslope control": (fin & public & (sl >= 10) & (sl <= 35) & (lv <= q1) & (np.abs(dod) < 0.5 * lod), f"fin & public & (10 <= sl <= 35) & (lowveg <= Q1 {q1:.3f}) & (|dod| < 0.5 lod)"),

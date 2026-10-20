@@ -626,7 +626,7 @@ project 2 / project 4 seam that section 1 flagged. Disk: data/after/valley 29 GB
 8.2 GB. The valley join (`analysis/valley_sites_rank.py`): 242 lidar sites on 24 tiles --
 F1 28, F2 49, F3 31, H2 40, H3 89, H4 5 -- in `data/derived/valley/sites_valley_ranked.csv`
 with the imagery values and the WorldCover class at each site; map `figures/valley_lidar_sites.png`.
-Caution found in the join: 25 of the 49 closed-canopy (F2) sites are CROPLAND today
+Caution found in the join: 25 of the 49 zero-penetration (F2) sites are CROPLAND today
 (WorldCover), e.g. the largest, 38.8 ha at 44.2024 N 91.9544 W on 4358-26-02, DoD -309 mm,
 not NE-like in any year: a zero-penetration cropped field in November 2008 is standing
 crop, not sward, so F2 alone does not mean RCG-type canopy. `analysis/valley_best_places.py`
