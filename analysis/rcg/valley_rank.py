@@ -65,7 +65,7 @@ import pyproj
 import rioxarray
 import shapely
 from matplotlib.colors import ListedColormap
-from scipy.ndimage import binary_dilation, label, distance_transform_edt
+from scipy.ndimage import binary_dilation, label
 from shapely.geometry import shape
 
 V = "data/derived/valley"; PL = f"{V}/public_land"; FIG = "figures"; S = "data/derived/elbaext_delong_star_nosurf"
@@ -161,7 +161,14 @@ names = {1: "R1 NE-like 2025 and 2026", 2: "R2 NE-like one of 2025/2026", 3: "S 
 print("\nCLASS AREAS (ha): open valley floor / public open valley floor")
 for v, nm in names.items(): print(f"  {nm:<40} {(cls == v).sum()*0.01:>8,.0f} / {((cls == v) & pub).sum()*0.01:>8,.0f}")
 # sites on public land
-dpark = distance_transform_edt(~rasterize(shapely.union_all([g.buffer(5) for g in parking]))) * 10.0; droad = distance_transform_edt(~rasterize(shapely.union_all([g.buffer(5) for g in roads]))) * 10.0
+# EXACT distances (shapely) from every cluster pixel to the parking-lot POINTS and the road
+# LINES. The raster route used before (5 m buffer, EDT on the 10 m grid) lost most lots,
+# whose 5 m buffer holds no cell centre: C-v52 read 963 m from parking when a lot is 40 m
+# away (checked 2026-10-20 against point geometry). Roads survived (10 m strip) within a few m.
+G_park = shapely.union_all(parking); G_road = shapely.union_all(roads)
+def exact_dist(mm):
+    jy, jx = np.nonzero(mm); pts = shapely.points(E[jy, jx], N[jy, jx])
+    return float(shapely.distance(pts, G_park).min()), float(shapely.distance(pts, G_road).min())
 rows = []
 for v, nm in names.items():
     m = (cls == v) & pub; lab_, n_ = label(m, structure=np.ones((3, 3))); szs = np.bincount(lab_.ravel())
@@ -169,10 +176,11 @@ for v, nm in names.items():
         if k == 0: continue
         mm = lab_ == k; e0, n0 = E[mm].mean(), N[mm].mean(); lon, lat = to_ll.transform(e0, n0); pt = shapely.Point(e0, n0)
         unit = next((u for g, u in units if g.contains(pt)), "?"); cuts = last_cut[mm]; cuts = cuts[cuts != ""]
+        dp_, dr_ = exact_dist(mm)
         rows.append(dict(cls=nm, unit=unit, ha=round(mm.sum() * 0.01, 2), easting=round(e0, 1), northing=round(n0, 1), lat=round(lat, 6), lon=round(lon, 6),
                          training_patch_pct=round(100 * ne[mm].mean(), 0), nelike_2008=round(100 * np.nanmean(like08[mm]), 0), nelike_2021=round(100 * np.nanmean(like21[mm]), 0), nelike_2025=round(100 * np.nanmean(like25[mm]), 0), nelike_2026=round(100 * np.nanmean(like26[mm]), 0),
                          oct2026_ndvi=round(float(np.nanmedian(ndvi26[mm])), 2), spring2026_ndvi=round(float(np.nanmedian(spring[mm])), 2), summer2026_max_ndvi=round(float(np.nanmedian(summer_max[mm])), 2),
-                         cut_2026=(pd.Series(cuts).mode().iloc[0] if len(cuts) else ""), cut_share=round(100 * len(cuts) / mm.sum(), 0), cut_gap_days=(float(np.nanmedian(last_cut_gap[mm & (last_cut == (pd.Series(cuts).mode().iloc[0] if len(cuts) else "")) ])) if len(cuts) else np.nan), drop_max=round(float(np.nanmedian(drop_max[mm])), 2), drop_max_doy=(float(pd.Series(drop_max_doy[mm]).mode().iloc[0]) if np.isfinite(drop_max_doy[mm]).any() else np.nan), drop_max_gap=round(float(np.nanmedian(drop_max_gap[mm])), 0), dist_parking_m=round(float(dpark[mm].min()), 0), dist_road_m=round(float(droad[mm].min()), 0)))
+                         cut_2026=(pd.Series(cuts).mode().iloc[0] if len(cuts) else ""), cut_share=round(100 * len(cuts) / mm.sum(), 0), cut_gap_days=(float(np.nanmedian(last_cut_gap[mm & (last_cut == (pd.Series(cuts).mode().iloc[0] if len(cuts) else "")) ])) if len(cuts) else np.nan), drop_max=round(float(np.nanmedian(drop_max[mm])), 2), drop_max_doy=(float(pd.Series(drop_max_doy[mm]).mode().iloc[0]) if np.isfinite(drop_max_doy[mm]).any() else np.nan), drop_max_gap=round(float(np.nanmedian(drop_max_gap[mm])), 0), dist_parking_m=round(dp_, 0), dist_road_m=round(dr_, 0)))
 F = pd.DataFrame(rows); F["rank_score"] = F.ha / (1 + F.dist_parking_m / 1000.0); F = F.sort_values(["cls", "rank_score"], ascending=[True, False]); F.to_csv(f"{V}/valley_sites.csv", index=False)
 print(f"\nCANDIDATE SITES on public land (clusters >= {MIN_PX} px = 0.5 ha): {len(F)}; per class: {F.cls.value_counts().to_dict()}")
 pd.set_option("display.width", 250); pd.set_option("display.max_columns", 30)
