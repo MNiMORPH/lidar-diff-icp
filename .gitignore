@@ -52,3 +52,6 @@ analysis/mass_balance/out/*.npz
 # adopted products cite them BY FILENAME as the record of how each number was produced.
 # Ignoring them leaves those citations dangling on a fresh clone and discards the audit
 # trail that reconstructed a headline number after its producing script had been deleted.
+!/data/derived/rcg/
+/data/derived/rcg/*
+!/data/derived/rcg/fingerprint_lda.json

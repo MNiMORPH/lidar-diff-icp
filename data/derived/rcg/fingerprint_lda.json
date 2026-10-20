@@ -1,0 +1,153 @@
+{
+ "model": "gen1 return-shape fingerprint: LDA on standardised shape features; score = ((x - mean) / std) @ coef + intercept  (equivalently x @ coef_raw + intercept_raw); p = 1 / (1 + exp(-score))",
+ "fitted_from": "analysis/rcg/fingerprint_fit.py, reproducing analysis/rcg/return_shape.py gen1 pass B (NE patch excluded)",
+ "git_commit": "a9c80110beae6d7f444d557227740df1668672ac",
+ "git_dirty": false,
+ "sklearn": "1.4.1.post1",
+ "training_tile": "data/derived/elbaext_delong_star_nosurf",
+ "label": {
+  "raster": "data/derived/elbaext_delong_star_nosurf/rcg/nelike_p_ls_20081029.tif",
+  "defn": "p(NE-like) from Landsat-5 2008-10-29 two-class ML (map_ne_like.py), nearest 30 m pixel at the 5 m cell centre; in class at p > 0.5",
+  "caveat": "an imagery spectral class, not a species map"
+ },
+ "training_domain": {
+  "defn": "flat & open5 & ~NE, then >= 30 pooled returns, >= 1 own in-range return (REQUIRE_OWN_RETURN), finite features, finite logit(p)",
+  "flat": "floodplain_mask & slope <= 2 deg & finite dod",
+  "open5": "gen2 full-density cloud has no return above 2 m in the cell (rcg/gen2_cellstats.npz above2m == 0)",
+  "NE": "largest 8-connected patch of dod_floodplain_vegcorr < -lod on the floodplain, EXCLUDED",
+  "counts": {
+   "flat": 54548,
+   "open5": 13579,
+   "NE": 2355,
+   "dom_b": 12215
+  }
+ },
+ "histogram": {
+  "source": "beam_offset_table.parquet columns cell, d_mm_corr, in_grid",
+  "lo_mm": -1500.0,
+  "hi_mm": 1500.0,
+  "bin_mm": 20.0,
+  "n_bins": 150,
+  "pooling": "3x3 cells, scipy uniform_filter mode=nearest, x9, rint",
+  "min_pooled_returns": 30,
+  "require_own_return": true
+ },
+ "feature_names": [
+  "lo_w",
+  "hi_w",
+  "mode_med",
+  "bowley",
+  "peak",
+  "tail_L",
+  "tail_mass",
+  "low_mass"
+ ],
+ "feature_defs": {
+  "lo_w": "p50 - p10 of the pooled gen1 return heights, mm (lower width)",
+  "hi_w": "p90 - p50, mm (upper width)",
+  "mode_med": "half-sample mode (hsm_from_hist, middle-of-ties) - p50, mm",
+  "bowley": "(p75 + p25 - 2 p50) / max(p75 - p25, 20 mm) (Bowley skew, dimensionless)",
+  "peak": "share of pooled returns within +/-50 mm of the mode",
+  "tail_L": "mean of (h - mode - 100 mm) over returns above mode + 100 mm (e-folding length of the upper tail), mm",
+  "tail_mass": "share of pooled returns above mode + 100 mm",
+  "low_mass": "share of pooled returns below mode - 100 mm"
+ },
+ "mean": [
+  101.8854552946024,
+  129.64153275648948,
+  -8.766378244746601,
+  0.04473090042724817,
+  0.5352518151375704,
+  79.8772068349034,
+  0.12273808773818069,
+  0.06399401555198149
+ ],
+ "std": [
+  81.34715586822922,
+  112.98545970731472,
+  44.65445104962522,
+  0.22808134535304278,
+  0.1769556173222106,
+  88.4384677278466,
+  0.1338919168798113,
+  0.08825976656719556
+ ],
+ "coef": [
+  -0.19736925374271896,
+  -0.14304893329469914,
+  -0.11163233707736103,
+  0.05497890700203553,
+  0.4863164188151015,
+  -0.32502212295315847,
+  1.875730749948726,
+  0.9661036164392883
+ ],
+ "intercept": -3.328378263656367,
+ "coef_raw": [
+  -0.002426258811830807,
+  -0.0012660826770574964,
+  -0.002499915113798874,
+  0.2410495558808234,
+  2.7482395087213507,
+  -0.003675121599271675,
+  14.009290431120581,
+  10.946138359698889
+ ],
+ "intercept_raw": -6.547141050106418,
+ "n_cells": 12135,
+ "n_positives": 926,
+ "auc_resubstitution": 0.8100496611890282,
+ "auc_cv_500m_block": 0.707685865280657,
+ "cv": {
+  "folds": 5,
+  "block_cells": 100,
+  "block_m": 500,
+  "seed": 0,
+  "fold_sizes": [
+   5771,
+   849,
+   2993,
+   1209,
+   1313
+  ]
+ },
+ "affine_check_max_abs_diff": 1.0227374502846942e-12,
+ "reference_pass_A_NE_included": {
+  "n_cells": 13499,
+  "n_positives": 2168,
+  "auc_resubstitution": 0.8730788588664283,
+  "auc_cv_500m_block": 0.8177264938852724,
+  "coef": [
+   -0.5621202665642085,
+   -0.1936028484033535,
+   -0.3050362436067263,
+   0.03218184596213434,
+   0.49133072232071007,
+   -0.5887255651461283,
+   2.093235539945649,
+   2.0973361990826436
+  ],
+  "intercept": -2.684796678984065,
+  "mean": [
+   109.47625750055559,
+   137.50055559671085,
+   -8.791762352766872,
+   0.043827669157462674,
+   0.5098694897324335,
+   83.26927264386974,
+   0.13662756355202013,
+   0.07812364080836852
+  ],
+  "std": [
+   81.59777381550289,
+   110.93287087499546,
+   45.51683890817146,
+   0.22191630953467545,
+   0.18508358174344675,
+   85.27567368064196,
+   0.13901977139962077,
+   0.10158234861706353
+  ]
+ },
+ "on_record": "RCG_PHENOLOGY.md section S: shape-only AUC 0.71 (patch excluded), 0.82 (patch included)"
+}
