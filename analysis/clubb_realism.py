@@ -36,9 +36,16 @@ sfha = shapely.union_all([esri_poly(f["geometry"]) for f in feats]); print(f"FEM
 riv = shapely.union_all([shape(f["geometry"]) for f in json.load(open("data/derived/valley/public_land/rivers_whitewater.geojson"))["features"]])
 with rasterio.open(f"{OUT}/corr1500_10m/corr1500_10m_valley.bil") as r: tr = r.transform; ny, nx = r.shape
 jy, jx = np.mgrid[0:ny, 0:nx]; X, Y = tr * (jx + 0.5, jy + 0.5)
-corridor = shapely.contains_xy(riv.buffer(800), X.ravel(), Y.ravel()).reshape(ny, nx)
-mapped = shapely.contains_xy(sfha.buffer(1500), X.ravel(), Y.ravel()).reshape(ny, nx)
-fema = shapely.contains_xy(sfha, X.ravel(), Y.ravel()).reshape(ny, nx)
+# memory-lean: test only cells inside the corridor's bounding box, in chunks, against PREPARED
+# geometries (the first version tested all 15.5 M cells three times and was killed for memory)
+def inside(geom, limit_to=None):
+    shapely.prepare(geom); out = np.zeros((ny, nx), bool); bx0, by0, bx1, by1 = geom.bounds
+    cand = (X >= bx0) & (X <= bx1) & (Y >= by0) & (Y <= by1)
+    if limit_to is not None: cand &= limit_to
+    idx = np.flatnonzero(cand.ravel()); xs, ys = X.ravel()[idx], Y.ravel()[idx]
+    for i in range(0, idx.size, 500_000): out.ravel()[idx[i:i + 500_000]] = shapely.contains_xy(geom, xs[i:i + 500_000], ys[i:i + 500_000])
+    return out
+corridor = inside(riv.buffer(800)); mapped = inside(sfha.buffer(1500), corridor); fema = inside(sfha, corridor)
 dom = corridor & mapped; print(f"scoring domain: within 800 m of the Whitewater AND within 1500 m of an SFHA polygon: {dom.sum() * 0.01:,.0f} ha; FEMA SFHA inside it {np.sum(fema & dom) * 0.01:,.0f} ha")
 def score(pred, d):
     tp = np.sum(pred & fema & d); fp = np.sum(pred & ~fema & d); fn = np.sum(~pred & fema & d)
