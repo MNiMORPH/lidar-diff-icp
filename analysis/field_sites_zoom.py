@@ -7,7 +7,8 @@ For each window (stop 1 lot 204, stop 2 lot 501, the valley-wide best place 1 by
 photo site, and the whole reach) three panels:
   A  2025 FSA imagery (MnGeo WMS) with the survey REGION outlines, lots, monuments, transect;
   B  the 2021 - 2008 difference, mosaicked from the Phase B tiles (5 m, star frame, no
-     correction surface, stable-ground median removed per tile), +/- 300 mm, grey = no data;
+     correction surface, stable-ground median removed per tile), RED = lowering (erosion), BLUE = rise
+     (deposition), the project convention, +/- 300 mm, grey = no data;
   C  the same difference with the LIKELY SPURIOUS clusters hatched and outlined (a 3x3
      opening drops isolated cells; the json carries both the raw and the drawn counts):
        erosion, dashed //   = zero 2008 ground return (penetration_failure) on the flat
@@ -131,7 +132,7 @@ def outline(ax, mask, bb, color, ls, hatch):
         ax.contourf(xs, ys, m.astype(float), levels=[0.5, 1.5], colors="none", hatches=[hatch]); ax.contour(xs, ys, m.astype(float), levels=[0.5], colors=color, linewidths=0.9, linestyles=ls)
     return int(m.sum())
 
-cmap = plt.get_cmap("RdBu_r").copy(); cmap.set_bad("#bdbdbd"); norm = TwoSlopeNorm(vmin=-300, vcenter=0, vmax=300)
+cmap = plt.get_cmap("RdBu").copy(); cmap.set_bad("#bdbdbd"); norm = TwoSlopeNorm(vmin=-300, vcenter=0, vmax=300)
 for name, bb in WINDOWS.items():
     X0, Y0, X1, Y1 = bb; ext = [X0, X1, Y0, Y1]
     dod = mosaic(bb, "dod.npy"); lod = mosaic(bb, "lod.npy"); lodv = mosaic(bb, "lod_veg.npy"); sl = mosaic(bb, "slope.npy")

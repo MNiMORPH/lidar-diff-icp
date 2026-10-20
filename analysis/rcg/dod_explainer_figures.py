@@ -4,7 +4,7 @@ explaining why they are nonphysical. 2021 - 2008 ... Minimal: locations or area 
 
 DoD = gen2 (3DEP, 1 May 2021) - gen1 (MN DNR, 25 Nov 2008), the star-only product
 (data/derived/elbaext_delong_star_nosurf/dod.npy, m -> mm), stable-ground median removed as
-the gauge; diverging blue (2021 lower) / red (2021 higher), +/- 300 mm, grey = no data.
+the gauge; diverging RED = 2021 lower (erosion), BLUE = 2021 higher (deposition), the project convention (figures.py), +/- 300 mm, grey = no data.
 Overlays: survey-region outlines and the class transect from field_day_waypoints.gpx, the two
 parking lots, the two monuments; no text on the maps.
   figures/dod_explainer_tile.png     the whole Elba tile with a hillshade under the DoD
@@ -29,7 +29,7 @@ tracks = [(t.find("g:name", ns).text, np.array([from_ll.transform(float(p.get("l
 wpts = {w.find("g:name", ns).text: from_ll.transform(float(w.get("lon")), float(w.get("lat"))) for w in root.findall("g:wpt", ns)}
 lots = [wpts[k] for k in ("lot_204", "lot_501")]; mons = [v for k, v in wpts.items() if k.startswith("DR9925") or k.startswith("DG8385")]
 hs = LightSource(azdeg=315, altdeg=45).hillshade(np.nan_to_num(z, nan=np.nanmean(z)), vert_exag=1.5, dx=RES, dy=RES)
-cmap = plt.get_cmap("RdBu_r").copy(); cmap.set_bad("#bdbdbd"); norm = TwoSlopeNorm(vmin=-300, vcenter=0, vmax=300)
+cmap = plt.get_cmap("RdBu").copy(); cmap.set_bad("#bdbdbd"); norm = TwoSlopeNorm(vmin=-300, vcenter=0, vmax=300)
 
 def panel(bb, path, figsize, bar=200, lw=1.2):
     bb = (max(bb[0], ext[0]), max(bb[1], ext[2]), min(bb[2], ext[1]), min(bb[3], ext[3]))   # clip to the tile
