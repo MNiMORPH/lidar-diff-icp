@@ -138,3 +138,24 @@ small too), a late-green non-NE-like meadow (S), bare and cropped controls (C, F
 Elba sedge and closed-canopy lidar sites (F1, F2), a steep gen1-low slope and an open
 hillslope (H2, H3), a forest edge (E), and the mark. Species, stand height and thatch
 thickness at each point are the quantities nobody has (sections R, S, T, W).
+
+**Road-first (Andy, 2026-10-20: "Walks over open land can take a long time and include
+noxious plants ... Close places to the road are the best").** Exact shapely distances from
+each site's nearest pixel to the WMA road (the lot-501 list, recomputed 2026-10-20; the
+table's `dist_parking_m` was a raster artefact and is being fixed in `valley_rank.py`):
+
+| site | type | m from WMA road | nearest lot (m from site) | note |
+|---|---|---|---|---|
+| C-v52 | C bare / cropped | 1 | 501 (40) | |
+| S-v324 | S late-green meadow | 43 | 501 (52) | |
+| mark 1079_2021_MN | datum tie | 41 | 501 (321) | |
+| R2-v237 | R2, sward 2008 + 2021, not 2026 | 62 | 501 (355) | both epochs |
+| R1-v140 | R1, sward 2008/2021/2025/2026, uncut 2026, 11.5 ha | 154 | 204 (69 from the field edge) | both epochs; the NE training field |
+| F2-3 | F2 closed canopy, zero penetration | 246 | 501 (547) | Elba lidar |
+| H3-2 | H3 open hillslope control | 303 | 501 (751) | Elba lidar |
+| H2-2 | H2 steep gen1-low slope | 456 | 501 (455) | Elba lidar |
+| E-v131 | E forest edge | 501 | 501 (648) | the only type > 400 m off the road |
+
+So the day is one road: park at lot 501 for C, S, the mark and R2-v237 (all within ~60 m of
+the road), drive 500 m south to lot 204 for the big R1 field (its edge is 69 m from that
+lot), and take F2-3 and H3-2 as 250-300 m walks off the road. Everything else is optional.
