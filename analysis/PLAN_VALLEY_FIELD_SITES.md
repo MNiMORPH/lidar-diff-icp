@@ -633,6 +633,16 @@ crop, not sward, so F2 alone does not mean RCG-type canopy. `analysis/valley_bes
 keeps the 20 F2 sites that are grass or wetland today, with their cluster outlines
 (`figures/valley_best_places.png`, `data/derived/valley/best_places.gpx`, `best_places.csv`).
 
+**ALL 29 TILES DONE 2026-10-20 20:17.** The five seam tiles were fetched from both 2021
+projects and merged (248-348 M points each; completeness recorded as the sum over the two
+projects' availability, ratios 0.97-0.98), then ran the full chain. Per-tile base statistics
+in `data/derived/valley/tile_base_stats.csv`. One tile stands out and is NOT yet understood:
+4342-31-62 (South Branch headwaters, a seam tile) has median LoD 52.5 mm and 59.7% of its
+cells beyond the LoD, against 14-29% elsewhere; a step between the two merged projects
+inside the tile is the first thing to check. The valley join now holds 266 sites on 29
+tiles: F1 28, F2 49, F3 34, H2 44, H3 101, H4 10; the F2 grass/wetland shortlist is
+unchanged (20).
+
 
 The three county tile lists (winona 223, olmsted 229, wabasha 194 lines); HEAD of one tile
 URL; the semn2008 metadata page; the Geospatial Commons queries of section 1;
