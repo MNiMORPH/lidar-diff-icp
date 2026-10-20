@@ -34,6 +34,9 @@ PER TILE, resumable (every stage is skipped when its product exists):
             pfs_cover is skipped (plan section 3: needs an untwine COPC and ~14 GB scratch).
   7. clubb  floodplain_mask_clubb.npy: the D1 floodplain on the tile grid (nearest), beside
             the pipeline's own convexity mask, never over it.
+  8. fingerprint_score.npy / fingerprint_p.npy (analysis/rcg/fingerprint_apply.py, the saved
+            Elba model data/derived/rcg/fingerprint_lda.json) and the site screen
+            sites_<tile>.csv (analysis/valley_tile_sites.py).
 Stage times go to data/derived/<tile>/valley_run.json.
 
     ./lidar-icp/bin/python scripts/run_valley_tile.py --tile 4342-28-64
@@ -197,4 +200,9 @@ if not os.path.exists(f"{D}/floodplain_mask_clubb.npy"):
     own = np.load(f"{D}/floodplain_mask.npy").astype(bool)
     print(f"[{T}] floodplain_mask_clubb: {m.sum() * 25 / 1e4:.0f} ha; pipeline convexity mask {own.sum() * 25 / 1e4:.0f} ha; both {np.sum(m & own) * 25 / 1e4:.0f} ha", flush=True)
     log["clubb_vs_pipeline_ha"] = [round(m.sum() * 25 / 1e4, 1), round(own.sum() * 25 / 1e4, 1), round(np.sum(m & own) * 25 / 1e4, 1)]; json.dump(log, open(LOG, "w"), indent=1)
+# ---- 8. the Elba fingerprint applied (saved model, never refit) and the site screen
+for name, product, cmd in (("fingerprint", "fingerprint_score.npy", f"{PY} analysis/rcg/fingerprint_apply.py --tile {D}"),
+                           ("sites", f"sites_{T}.csv", f"{PY} analysis/valley_tile_sites.py --tile {D}")):
+    if os.path.exists(f"{D}/{product}"): print(f"[{T}] {name} present"); continue
+    t0 = time.time(); sh(cmd); stamp(name, t0)
 print(f"[{T}] DONE; stages: " + ", ".join(f"{k} {v['seconds']:.0f}s" for k, v in log["stages"].items()), flush=True)
