@@ -12,8 +12,8 @@ Andy changes is a decision; any value I change is a proposal and must be said.
         --bounds 570000 4880000 580000 4890000 --res 5          # one tile, the tool-chain check
     ./lidar-icp/bin/python analysis/valley_floodplain_clubb.py --name valley5m --res 5   # the box
 
-Outputs under data/derived/valley/clubb/<name>/: <name>.bil (+.hdr), <name>_FP.bil (floodplain
-mask, 1 = floodplain), <name>_filtered/_slope/_channel_relief.bil, <name>_qq_relief.txt,
+Outputs under data/derived/valley/clubb/<name>/: <name>.bil (+.hdr), <name>_valley.bil (the floodplain
+mask as 0.9 names it; 1 = floodplain), <name>_filtered/_slope/_channel_relief.bil, <name>_qq_relief.txt,
 <name>_qq_slope.txt, driver <name>.driver, log <name>.log, and floodplain_<name>.tif (the FP
 mask as GeoTIFF for the rest of the pipeline).
 """
@@ -27,7 +27,6 @@ import time
 import numpy as np
 import rasterio
 from rasterio.enums import Resampling
-from rasterio.merge import merge
 from rasterio.warp import reproject
 
 LSDTT = os.path.expanduser("~/anaconda3/envs/lsdtt/bin/lsdtt-valley-metrics")
@@ -53,32 +52,34 @@ if not tiles: sys.exit("no DEM tiles on disk intersect the bounds")
 print(f"DEM tiles intersecting the bounds: {len(tiles)}"); [print("  ", os.path.basename(t)) for t in tiles]
 bil = f"{D}/{A.name}.bil"
 if not os.path.exists(bil):
-    srcs = [rasterio.open(t) for t in tiles]
-    nod = srcs[0].nodata; crs = srcs[0].crs
-    mos, tr = merge(srcs, bounds=(X0, Y0, X1, Y1), res=(1.0, 1.0), nodata=nod)
-    [s.close() for s in srcs]
-    mos = mos[0].astype("float32"); mos[mos == nod] = np.nan
-    print(f"1 m mosaic {mos.shape}, nodata share {np.isnan(mos).mean():.4f}, z {np.nanmin(mos):.1f}-{np.nanmax(mos):.1f} m, CRS {crs}")
+    # resample EACH 1 m tile into the destination grid (average), never a 1 m mosaic of the
+    # box: the box at 1 m is 1.52e9 cells = 6 GB, the shared laptop's swap is full
     ny, nx = int(round((Y1 - Y0) / A.res)), int(round((X1 - X0) / A.res))
-    dst = np.full((ny, nx), np.nan, "float32"); dtr = rasterio.transform.from_origin(X0, Y1, A.res, A.res)
-    reproject(mos, dst, src_transform=tr, src_crs=crs, dst_transform=dtr, dst_crs=crs, src_nodata=np.nan, dst_nodata=np.nan, resampling=Resampling.average)
+    dst = np.full((ny, nx), np.nan, "float32"); dtr = rasterio.transform.from_origin(X0, Y1, A.res, A.res); crs = None
+    for t in tiles:
+        with rasterio.open(t) as r:
+            crs = r.crs; a = r.read(1).astype("float32"); a[a == r.nodata] = np.nan
+            part = np.full((ny, nx), np.nan, "float32")
+            reproject(a, part, src_transform=r.transform, src_crs=r.crs, dst_transform=dtr, dst_crs=r.crs, src_nodata=np.nan, dst_nodata=np.nan, resampling=Resampling.average)
+            dst = np.where(np.isfinite(part), part, dst); del a, part
+        print(f"  resampled {os.path.basename(t)}; filled {np.isfinite(dst).mean():.4f} of the grid so far")
     nod_out = -9999.0; out = np.where(np.isfinite(dst), dst, nod_out).astype("float32")
     with rasterio.open(bil, "w", driver="ENVI", height=ny, width=nx, count=1, dtype="float32", crs=crs, transform=dtr, nodata=nod_out) as w: w.write(out, 1)
-    print(f"wrote {bil}: {ny} x {nx} at {A.res} m, nodata {np.mean(out == nod_out):.4f}")
-    del mos, dst, out
+    print(f"wrote {bil}: {ny} x {nx} at {A.res} m, nodata {np.mean(out == nod_out):.4f}, z {np.nanmin(dst):.1f}-{np.nanmax(dst):.1f} m")
+    del dst, out
 
 # ---- 2. the lsdtt driver: every parameter stated
 P = {
     "read path": os.path.abspath(D), "write path": os.path.abspath(D), "read fname": A.name, "write fname": A.name,
     "dem read extension": "bil", "dem write extension": "bil",
-    "raster_is_filled": "false", "min_slope_for_fill": "0.0001", "carve_before_fill": "true",   # roads cross the channels
+    "min_slope_for_fill": "0.0001", "carve_before_fill": "true",   # roads cross the channels
     "surface_fitting_radius": "30",                 # tool default (m)
     "threshold_contributing_pixels": str(int(round(1e6 / A.res ** 2))),   # MINE: 1 km2 of drainage area, stated in pixels at this res
     "threshold_SO": str(A.threshold_SO),
     "floodplain_raster": "NULL", "get_terraces": "false",
     "slope_lower_percentile": "25", "slope_upper_percentile": "75", "relief_lower_percentile": "25", "relief_upper_percentile": "75",
     "QQ_threshold": "0.005", "use_absolute_thresholds": "false", "minimum_patch_size": "1000", "fill_floodplain": "true",
-    "print_channels_to_csv": "true", "print_junctions_to_csv": "false", "print_filled_raster": "true",
+    "print_channels_to_csv": "true", "print_junctions_to_csv": "false",
     "write_hillshade": "false",
 }
 drv = f"{D}/{A.name}.driver"
@@ -91,7 +92,7 @@ t0 = time.time()
 with open(f"{D}/{A.name}.log", "w") as lg:
     rc = subprocess.run([LSDTT, os.path.abspath(D) + "/", f"{A.name}.driver"], stdout=lg, stderr=subprocess.STDOUT).returncode
 print(f"lsdtt-valley-metrics exit {rc} in {time.time() - t0:.0f} s; log {D}/{A.name}.log")
-fp = f"{D}/{A.name}_FP.bil"
+fp = f"{D}/{A.name}_valley.bil"   # LSDTopoTools2 0.9 names the floodplain mask _valley, not _FP (verified on the smoke test)
 if os.path.exists(fp):
     with rasterio.open(fp) as r:
         m = r.read(1); prof = r.profile
