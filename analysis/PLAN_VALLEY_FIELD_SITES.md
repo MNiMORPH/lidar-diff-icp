@@ -324,7 +324,25 @@ C at all, and whether the 500 m or 800 m proxy defines "the valley" for tile sel
 (71 vs 79 tiles); D7 whether to re-time the pipeline on the first tile before committing
 to overnight loops.
 
-## 7. Risks
+## 9. Phase B RUNNING (2026-10-20, Andy: "Run all of your analyses through the entire valley
+... Do it." / "I want you to be as autonomous as possible.")
+
+`scripts/run_valley_tile.py` (per tile, resumable, the Elba star/no-surface build with the
+per-tile valley top from the Clubb floodplain within 500 m of the river) and
+`scripts/run_valley_all.sh` (serial, memory-gated, Main Branch reach first). D7's timed
+tile, 4342-28-64 (gen1 and CSF already on disk): gen2 fetch 422 s (979 MB, 177,179,937
+points, completeness ratio 0.978 against MN_SEDriftless_2_2021), class-2 copy 15 s
+(58,503,024 points), base 56 s (valley top 217.4 m; stable set 204,287 cells = 57.6% of the
+grid; stable sigma 60.8 mm; median LoD 117.5 mm; 21.8% of cells beyond LoD; 1,195 regions;
+zero line 135), slope/ridges/convexity/curvature/gen1 angles/beam table 21 s together,
+vegetation LoD 5 s (74,396 flat-floodplain cells, 20,977 penetration failures), lowveg
+grid streaming the full cloud last. Budget for the other 28 at this rate, plus ~460 s of
+CSF each where no cache exists: roughly 20 min per tile, ~10 h for the valley. The 15
+missing gen1 tiles were fetched first (data/derived/valley/gen1_fetch.log). Full-density
+gen2 is kept per tile (0.98 GB) because the lowveg grid needs all returns; that goes one
+step past D2 and is mine. Two agents work alongside: the Elba fingerprint refit saved as
+an applicable model, and the per-tile site screener (`analysis/valley_tile_sites.py`).
+
 
 * **Private land.** 6562 ha of the proxy's ~21,000 ha is public; most R-class stands will be
   private. The table carries public status; survey only inside the DNR polygons, which DNR
