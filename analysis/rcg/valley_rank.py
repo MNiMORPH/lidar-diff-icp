@@ -28,7 +28,9 @@ METHOD, each step as it was done on the Elba tile (RCG_PHENOLOGY.md sections N, 
                  E forest edge (open pixel within 30 m of WorldCover tree). All cut-offs
                  are MINE (D4) and printed.
   sites          connected clusters >= 50 pixels (0.5 ha) on PUBLIC land; per cluster:
-                 centroid (UTM, lat/lon), ha, unit, class memberships 2008/2021/2025/2026,
+                 centroid (UTM, lat/lon), ha, unit, % of the cluster inside the TRAINING
+                 patch (a site there is resubstitution, not a find), class memberships
+                 2008/2021/2025/2026 (2008 NaN until the Landsat scene is on disk),
                  spring vigour, last 2026 cut date, distance to nearest WMA parking and
                  road; ranked within class by hectares / (1 + distance to parking in km).
 Outputs: data/derived/valley/valley_sites.csv, valley_classes.tif (uint8 class map),
@@ -95,9 +97,10 @@ print("PRESENCE classifiers:")
 like26, ndvi26 = classify(f"{V}/s2_20261017_bands.tif", S2B, "2026")
 like25, _ = classify(f"{V}/s2_20251027_bands.tif", S2B, "2025")
 like21, _ = classify(f"{V}/s2_20211018_bands.tif", S2B, "2021")
-like08 = np.zeros((ny, nx), bool)
+like08 = np.full((ny, nx), np.nan)   # NaN until the Landsat 2008 scene is on disk: absent is not "not NE-like"
 if os.path.exists(f"{V}/ls_20081029_bands.tif"):
-    like08, _ = classify(f"{V}/ls_20081029_bands.tif", LSB, "2008")
+    like08, _ = classify(f"{V}/ls_20081029_bands.tif", LSB, "2008"); like08 = like08.astype(float)
+else: print("  2008: Landsat scene not on disk; nelike_2008 is NaN")
 # density and cut history
 nd = lambda f: rioxarray.open_rasterio(f).squeeze(drop=True).reindex(x=xs, y=ys, method="nearest").values
 spring = np.nanmean(np.stack([nd(f"{V}/s2_{d}_ndvi.tif") for d in ("20260410", "20260415", "20260515") if os.path.exists(f"{V}/s2_{d}_ndvi.tif")]), 0)
@@ -131,7 +134,7 @@ for v, nm in names.items():
         mm = lab_ == k; e0, n0 = E[mm].mean(), N[mm].mean(); lon, lat = to_ll.transform(e0, n0); pt = shapely.Point(e0, n0)
         unit = next((u for g, u in units if g.contains(pt)), "?"); cuts = last_cut[mm]; cuts = cuts[cuts != ""]
         rows.append(dict(cls=nm, unit=unit, ha=round(mm.sum() * 0.01, 2), easting=round(e0, 1), northing=round(n0, 1), lat=round(lat, 6), lon=round(lon, 6),
-                         nelike_2008=round(100 * np.nanmean(like08[mm]), 0), nelike_2021=round(100 * np.nanmean(like21[mm]), 0), nelike_2025=round(100 * np.nanmean(like25[mm]), 0), nelike_2026=round(100 * np.nanmean(like26[mm]), 0),
+                         training_patch_pct=round(100 * ne[mm].mean(), 0), nelike_2008=round(100 * np.nanmean(like08[mm]), 0), nelike_2021=round(100 * np.nanmean(like21[mm]), 0), nelike_2025=round(100 * np.nanmean(like25[mm]), 0), nelike_2026=round(100 * np.nanmean(like26[mm]), 0),
                          oct2026_ndvi=round(float(np.nanmedian(ndvi26[mm])), 2), spring2026_ndvi=round(float(np.nanmedian(spring[mm])), 2), summer2026_max_ndvi=round(float(np.nanmedian(summer_max[mm])), 2),
                          cut_2026=(pd.Series(cuts).mode().iloc[0] if len(cuts) else ""), cut_share=round(100 * len(cuts) / mm.sum(), 0), dist_parking_m=round(float(dpark[mm].min()), 0), dist_road_m=round(float(droad[mm].min()), 0)))
 F = pd.DataFrame(rows); F["rank_score"] = F.ha / (1 + F.dist_parking_m / 1000.0); F = F.sort_values(["cls", "rank_score"], ascending=[True, False]); F.to_csv(f"{V}/valley_sites.csv", index=False)
