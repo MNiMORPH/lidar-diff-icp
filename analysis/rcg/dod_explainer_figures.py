@@ -32,7 +32,8 @@ hs = LightSource(azdeg=315, altdeg=45).hillshade(np.nan_to_num(z, nan=np.nanmean
 cmap = plt.get_cmap("RdBu_r").copy(); cmap.set_bad("#bdbdbd"); norm = TwoSlopeNorm(vmin=-300, vcenter=0, vmax=300)
 
 def panel(bb, path, figsize, bar=200, lw=1.2):
-    fig, ax = plt.subplots(figsize=figsize)
+    bb = (max(bb[0], ext[0]), max(bb[1], ext[2]), min(bb[2], ext[1]), min(bb[3], ext[3]))   # clip to the tile
+    fig, ax = plt.subplots(figsize=(figsize[0], figsize[0] * (bb[3] - bb[1]) / (bb[2] - bb[0]) * 0.92))
     ax.imshow(hs, extent=ext, origin="lower", cmap="gray", vmin=0, vmax=1)
     im = ax.imshow(np.ma.masked_invalid(dod), extent=ext, origin="lower", cmap=cmap, norm=norm, alpha=0.75, interpolation="nearest")
     for name, xy in tracks:
@@ -45,6 +46,6 @@ def panel(bb, path, figsize, bar=200, lw=1.2):
     cb = fig.colorbar(im, ax=ax, shrink=0.6, pad=0.01); cb.set_label("2021 - 2008 (mm)")
     fig.tight_layout(); fig.savefig(path, dpi=130); plt.close(fig); print(path)
 
-panel((X0, Y0, X0 + nx * RES, Y0 + ny * RES), "figures/dod_explainer_tile.png", (11, 10), bar=500, lw=0.8)
-panel((579400, 4884900, 580300, 4885900), "figures/dod_explainer_lot204.png", (9, 9.5))
-panel((578900, 4885300, 579900, 4886300), "figures/dod_explainer_lot501.png", (9, 9.5))
+panel((X0, Y0, X0 + nx * RES, Y0 + ny * RES), "figures/dod_explainer_tile.png", (12, 10), bar=500, lw=0.8)
+panel((579250, 4884900, 580050, 4885900), "figures/dod_explainer_lot204.png", (9, 9.5))
+panel((578900, 4885250, 579900, 4886250), "figures/dod_explainer_lot501.png", (9, 9.5))
