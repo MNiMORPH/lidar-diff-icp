@@ -259,3 +259,9 @@ a WMS layer, need the paid Survey plan. So:
 Project CRS in Flow: NAD83(2011) / UTM 15N with GEOID18 heights if the MnCORS network is
 used (the plan's datum paragraph); the navigation points are WGS84 lat/lon and import into
 any project CRS.
+
+**The day (Andy, 2026-10-20):** a meander bend in the morning, the GNSS mapping in the
+afternoon, then home. Afternoon order, by what the lidar question needs most: lot 204
+first (R1-v140 ground + sward top, F2-1 inside it, R1-v149 by the lot; the bluff stand
+only if the slope looks right from the field edge), then lot 501 (mark 1079 first for the
+tie, then C-v52 and S-v324 beside the lot, R2-v237, and the transect as the closing walk).
