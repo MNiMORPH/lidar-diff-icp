@@ -341,8 +341,14 @@ CSF each where no cache exists: roughly 20 min per tile, ~10 h for the valley. A
 is not expected to match it and is not checked against it. The 15
 missing gen1 tiles were fetched first (data/derived/valley/gen1_fetch.log). Full-density
 gen2 is kept per tile (0.98 GB) because the lowveg grid needs all returns; that goes one
-step past D2 and is mine. Two agents work alongside: the Elba fingerprint refit saved as
-an applicable model, and the per-tile site screener (`analysis/valley_tile_sites.py`).
+step past D2 and is mine. Two agents delivered alongside: the Elba fingerprint refit saved as an applicable model
+(`data/derived/rcg/fingerprint_lda.json`, `analysis/rcg/fingerprint_apply.py`; block-CV AUC
+0.7077 reproduced; `analysis/rcg/FINGERPRINT_MODEL.md`) and the per-tile site screener
+(`analysis/valley_tile_sites.py`; Elba's 16 F/H2 clusters reproduced cell for cell; H3/H4
+now lowveg-based and labelled non-comparable); both are the runner's last two stages.
+Second timed tile, 4342-29-64 (no CSF cache): gen2 fetch 452 s (1.03 GB, 182,148,262
+points, completeness 0.977), class 2 16 s, base 583 s (CSF included), the rest 51 s, lowveg
+26 s: 19 min per tile without a cache, so ~9 h for the remaining 27.
 
 
 * **Private land.** 6562 ha of the proxy's ~21,000 ha is public; most R-class stands will be
