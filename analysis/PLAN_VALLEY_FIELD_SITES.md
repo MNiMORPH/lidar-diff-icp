@@ -157,7 +157,43 @@ tiles whose products exist (the workflow's STALE/OK state); CSF to
 `data/csf_cache/<tile>.las` so a crash resumes without re-classifying; delete the EPT node
 cache per tile once the LAS is written; the 29 public-land tiles first (section 6).
 
-## 4. Screening for candidate sites
+### 3a. D1 implementation: the Clubb floodplain on the official DEM (set up 2026-10-20)
+
+**The official DEM.** USGS 3DEP 1 m DEM, project `MN_SE_Driftless_2021_B21`, TNM product
+"USGS 1 Meter 15 xNNyNNN", 10 km tiles in EPSG:26915 (verified: TNM API query over the box,
+38 products, of which 28 are this project and 10 are Wisconsin tiles across the Mississippi,
+`data/derived/valley/tnm_1m_dem_products.json`); 28 tiles x55-59 / y486-491, published
+2023-11-10, ~280 MB each, ~7.8 GB. Note the TNM project is ONE product over the whole box
+although the EPT point clouds split at E ~574686 into MN_SEDriftless_2 and _4 (section 1).
+Downloading to `data/after/usgs_1m_dem/` (resumable curl loop, `urls.txt`, `fetch.log`).
+
+**The tool.** `lsdtt-valley-metrics` (LSDTopoTools2 0.9, conda env `lsdtt`, binary at
+`~/anaconda3/envs/lsdtt/bin/`), the implementation of Clubb et al. 2017 (ESurf 5, 369-385)
+and Clubb et al. 2022 (ESurf 10, 437). Its own help file (`lsdtt-valley-metrics-README.csv`,
+printed by the tool) gives the floodplain parameters and defaults: Perona-Malik filter on
+the DEM; `surface_fitting_radius` 30 m for the gradient; channel network by
+`threshold_contributing_pixels` 1000 (pixels, not area); `threshold_SO` 3 (relief is taken
+to the nearest channel of at least this Strahler order, "seems to still get lower order
+channels so check"); quantile-quantile thresholds from the 25th-75th percentiles of slope
+and channel relief (`slope_lower_percentile` 25, `slope_upper_percentile` 75,
+`relief_lower_percentile` 25, `relief_upper_percentile` 75), `QQ_threshold` 0.005;
+`minimum_patch_size` 1000 px; `fill_floodplain`; `min_slope_for_fill` 0.0001;
+`carve_before_fill` for road embankments across channels. Input must be ENVI bil
+(`gdal_translate -of ENVI`), UTM. Output `<name>_FP.bil` plus the filtered DEM, slope,
+channel relief and the two QQ text files.
+
+**Resolution, read from the paper (PDF read 2026-10-20, Tables 2 and 4):** the method was
+run at 1 m lidar and at 10 m NED on the same sites; floodplain quality Q was 0.59 (1 m) vs
+0.65 (10 m) at Mid Bailey Run and 0.67 vs 0.68 at the Russian River, i.e. coarsening to
+10 m did not degrade it. Le Sueur River, MN (Pleistocene till; the nearest analogue) at 1 m
+gave r 0.58, s 0.54, Q 0.39 against digitised terraces. Threshold stream order 3 was used at
+every site. The 1 m box is 1.52e9 cells and will not fit this laptop; 5 m (the DoD grid) is
+61 M cells, 2 m is 380 M. PROPOSAL (mine, D1 detail): run the whole box at 5 m, then check
+one tile at 2 m against it; the whole box in one run so the stream order of the main
+branches is complete (a per-tile run truncates the network and breaks `threshold_SO`).
+Machine rule unchanged: swap is full; the first run waits for it to clear, and the 5 m
+test on one 10 km tile (4 M cells) is the only thing run before that.
+
 
 **Lidar layers, each a 5 m grid per tile** (all exist at Elba; `field_sites_rtk.py` is the
 template): raw star-only DoD; `floodplain_mask` AND terrain slope <= 2 deg (flat
