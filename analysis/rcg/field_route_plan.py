@@ -61,9 +61,18 @@ BASE_LAT = 44 + 7 / 60 + 18.13863 / 3600; BASE_LON = -(92 + 0 / 60 + 16.79318 / 
 BASE_E, BASE_N = from_ll.transform(BASE_LON, BASE_LAT)
 mons = {"DR9925 base": (BASE_E, BASE_N), "DG8385 check": (579729.0, 4885711.0), "mark 1079": (579659.8, 4885857.1)}
 print(f"BASE on DR9925: {BASE_LAT:.8f} N {-BASE_LON:.8f} W, ellipsoid height {BASE_H_ELL} m, NAD 83(2011) epoch 2010.00; UTM 15N E {BASE_E:.2f} N {BASE_N:.2f}")
-STOPS = [(204, ["R1-v140: RCG-type field, both epochs", "R1-v149", "F2-1: zero penetration", "bluff stand (green <= 25 deg)", "gen2-high patches", "hillslope control"]),
-         (501, ["DR9925 base", "mark 1079", "DG8385 check", "C-v52: bare control", "S-v324: meadow", "R2-v237: sward 2008+2021, cut since", "F2-3: zero penetration", "transect"]),
-         (2597, ["best place 1 (14 ha field)"])]
+# EXECUTION order (Andy: the base must be up before any surveying): the base lot first
+# Order 501 -> 2597 -> 204 keeps every leg tied to DR9925 by LoRa or by a transfer point
+# measured under it (terrain line-of-sight on the bare-earth DEM, 2 m antennas; FIELD_SITES_RTK.md):
+# from DR9925 the lot-501 sites and the north field are clear or grazing; the lot-204 field is
+# behind the spur (-22 m), the bluff -72 to -88 m. So: stop 1 base on DR9925 and measure the
+# transfer point T in the R1-v140 field (clear, 0.37 km); stop 2 the north field with the base
+# still on DR9925 (grazing, 0.9-1.4 km); stop 3 base on T (known point) for the field, then on
+# lot 204 (measured under T) for the bluff.
+STOPS = [(501, ["DR9925 base", "mark 1079", "DG8385 check", "C-v52: bare control", "S-v324: meadow", "R2-v237: sward 2008+2021, cut since", "F2-3: zero penetration", "transect"]),
+         (2597, ["best place 1 (14 ha field)"]),
+         (204, ["R1-v140: RCG-type field, both epochs", "R1-v149", "F2-1: zero penetration", "bluff stand (green <= 25 deg)", "gen2-high patches", "hillslope control"])]
+T_FIELD = (579981.0, 4885747.0)   # transfer point: centre of R1-v140, 0.37 km from DR9925, line of sight +1.4 m
 rows = []
 for lot, items in STOPS:
     L = lots[lot]
@@ -74,7 +83,7 @@ for lot, items in STOPS:
             key = next((k for k in regions if k.startswith(it.split(":")[0])), None); d = regions[key].distance(L) if key else np.nan
         rows.append(dict(stop=lot, item=it, walk_m=round(float(d))))
 T = pd.DataFrame(rows); T.to_csv(f"{V}/field_route.csv", index=False); pd.set_option("display.width", 200); print(T.to_string(index=False))
-legs = [(204, 501), (501, 2597)]; print("driving legs (straight line along the valley):", [(a, b, round(np.hypot(lots[a].x - lots[b].x, lots[a].y - lots[b].y) / 1000, 2)) for a, b in legs])
+legs = [(501, 2597), (2597, 204)]; print("driving legs (straight line along the valley):", [(a, b, round(np.hypot(lots[a].x - lots[b].x, lots[a].y - lots[b].y) / 1000, 2)) for a, b in legs])
 for lot in (204, 501, 2597): lo, la = to_ll.transform(lots[lot].x, lots[lot].y); print(f"lot {lot}: {la:.6f} N {-lo:.6f} W")
 # map
 bb = (578700, 4884500, 580900, 4887900); X0, Y0, X1, Y1 = bb
@@ -94,22 +103,24 @@ for k, g in regions.items():
     for pg in (g.geoms if hasattr(g, "geoms") else [g]): ax.fill(*pg.exterior.xy, color=c, alpha=0.25); ax.plot(*pg.exterior.xy, color=c, lw=1.6)
 ax.plot(tx[:, 0], tx[:, 1], color="#eda100", lw=2.5)
 for (lot, _), n in zip(STOPS, ("1", "2", "3")):
-    L = lots[lot]; ax.plot(L.x, L.y, marker="P", ms=16, color="yellow", mec="black"); ax.annotate(f"stop {n}: lot {lot}", (L.x, L.y), xytext=(10, -4), textcoords="offset points", color="yellow", fontsize=12, weight="bold", path_effects=pe)
+    L = lots[lot]; ax.plot(L.x, L.y, marker="P", ms=16, color="yellow", mec="black"); ax.annotate(f"{n}", (L.x, L.y), xytext=(10, -6), textcoords="offset points", color="yellow", fontsize=18, weight="bold", path_effects=pe)
 for k, (x, y) in mons.items():
     if k.startswith("mark"): ax.plot(x, y, marker="^", ms=11, mfc="none", mec="cyan", mew=2.2)
     else: ax.plot(x, y, marker="*", ms=16, color="magenta", mec="black")
-ax.annotate("BASE STATION HERE\nmonument DR9925 (8508 Y)\nknown point, NAD 83(2011) epoch 2010.00\n44 07 18.13863 N  092 00 16.79318 W\nellipsoid h 188.669 m", mons["DR9925 base"], xytext=(16, 40), textcoords="offset points", ha="left", color="magenta", fontsize=10, weight="bold", path_effects=pe, arrowprops=dict(arrowstyle="-", color="magenta", lw=1.5))
+ax.plot(T_FIELD[0], T_FIELD[1], marker="*", ms=14, color="white", mec="black"); ax.annotate("T", T_FIELD, xytext=(10, -4), textcoords="offset points", color="white", fontsize=14, weight="bold", path_effects=pe)
+ax.annotate("BASE: DR9925", mons["DR9925 base"], xytext=(14, 14), textcoords="offset points", ha="left", color="magenta", fontsize=13, weight="bold", path_effects=pe, arrowprops=dict(arrowstyle="-", color="magenta", lw=1.5))
 # the driving line: lots in order along the road (straight segments, drawn thin)
 P = [lots[l] for l, _ in STOPS]; ax.plot([p.x for p in P], [p.y for p in P], color="yellow", lw=1.2, ls=":")
 ax.plot([X0 + 100, X0 + 600], [Y0 + 100, Y0 + 100], color="white", lw=4); ax.annotate("500 m", (X0 + 350, Y0 + 130), color="white", ha="center", fontsize=11, weight="bold")
 ax.set_xlim(X0, X1); ax.set_ylim(Y0, Y1); ax.set_xticks([]); ax.set_yticks([])
-ax.set_title("Field route: three lots on one road, 2.6 km end to end.\nStop 1 lot 204: RCG-type field, bluff. Stop 2 lot 501: base, mark, controls, cut sward, transect. Stop 3 lot 2597: the 14 ha field.\nFills = survey regions; orange = transect; magenta stars = monuments; cyan = mark 1079; dotted yellow = drive order. 2025 FSA imagery.", fontsize=9)
+ax.set_title("Stops in order. Dotted = drive. T = transfer point for the base at stop 3.", fontsize=11)
 fig.tight_layout(); fig.savefig("figures/field_route.png", dpi=110); print("figures/field_route.png")
 with open(f"{V}/field_route.gpx", "w") as g:
     g.write('<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="field_route_plan.py" xmlns="http://www.topografix.com/GPX/1/1">\n')
     for (lot, _), n in zip(STOPS, ("1", "2", "3")):
         lo, la = to_ll.transform(lots[lot].x, lots[lot].y); g.write(f'  <wpt lat="{la:.7f}" lon="{lo:.7f}"><name>stop{n}_lot{lot}</name></wpt>\n')
     g.write(f'  <wpt lat="{BASE_LAT:.8f}" lon="{BASE_LON:.8f}"><ele>{BASE_H_ELL}</ele><name>BASE_STATION_HERE_DR9925_8508Y</name><desc>known point NAD83(2011) epoch 2010.00; ellipsoid h 188.669 m; NAVD88 218.75 m (GEOID18)</desc></wpt>\n')
+    lo, la = to_ll.transform(*T_FIELD); g.write(f'  <wpt lat="{la:.7f}" lon="{lo:.7f}"><name>T_transfer_point_measure_under_DR9925</name></wpt>\n')
     for k, (x, y) in mons.items():
         if k.startswith("DR9925"): continue
         lo, la = to_ll.transform(x, y); g.write(f'  <wpt lat="{la:.7f}" lon="{lo:.7f}"><name>{escape(k)}</name></wpt>\n')

@@ -324,10 +324,29 @@ of each region.
 | 2 | 501 (44.120576 N 92.008148 W) | BASE on DR9925 306; mark 1079 321; DG8385 check 371; C-v52 bare control 32; S-v324 meadow 44; transect 141; R2-v237 cut sward 347; F2-3 zero penetration 435 | |
 | 3 | 2597 (44.137534 N 92.005149 W) | best place 1, the 14 ha zero-penetration field, sward in every year | 283 |
 
-Driving: lot 204 -> lot 501 0.74 km, lot 501 -> lot 2597 1.9 km (straight-line along the
-valley; the DNR road layer does not carry the public road the lots sit on). Order: stop 2
-FIRST to set the base and occupy the mark, then stop 1 (0.7 km south), then stop 3 (2.6 km
-north), collecting the base on the way home past the junction.
+**Order, revised 2026-10-20 (Andy: the base must be up before surveying; LoRa?):** lot 501
+-> lot 2597 -> lot 204 (1.9 + 2.3 km). Terrain line of sight from the base on DR9925, on
+the bare-earth DEM with 2 m antennas, canopy not included (clearance in m, <= 0 blocked):
+
+| target | from DR9925 | from T (R1-v140 centre) | from lot 204 |
+|---|---|---|---|
+| lot 501 sites (C, S, transect, R2-v237, F2-3, mark) | -0.7 to +1.6 (grazing to clear, 0.1-0.6 km) | | |
+| north field (best place 1) | +0.6 / -0.9 / 0.0 south / centre / north (0.9-1.4 km, grazing) | | |
+| R1-v140, R1-v149, F2-1 | -22 (behind the spur) | +1.9 / +2.0 / +1.9 | +1.9 / +1.8 / +2.0 |
+| bluff entry, gen2-high patch | -88 / -72 | -15 / -9 | +2.2 / +1.5 |
+| hillslope control | +0.9 | -1.4 | -3.9 |
+| T itself; lot 204 | +1.4; | ; +2.0 | |
+
+So: (1) base on DR9925; survey the lot-501 sites; walk 370 m into the R1-v140 field and
+measure the transfer point T (stake, 5-minute average). (2) Drive to lot 2597 with the base
+still on DR9925; the north field is at grazing incidence over 0.9-1.4 km of flat floor with
+riparian trees between, so expect LoRa but not certainly; if it drops, measure a point at
+the field's south end (+0.6, 0.6 km) and move the base there. (3) Move the base to T as a
+KNOWN point (its stop-1 coordinates); survey the field, F2-1, R1-v149; measure lot 204 under
+T, then put the base on lot 204 for the bluff entry and the gen2-high patches; the
+hillslope control is blocked from every base position and takes a walk with no fix
+guaranteed. The 2.6 km of road adds 1.3 km of driving over the geographic order, which is
+the price of every point staying tied to DR9925.
 
 **THE BASE STATION, unambiguously (Andy: "Make it unambiguous where we should place the base
 station and/or to what we should reference the base station").** Place the base ON monument
