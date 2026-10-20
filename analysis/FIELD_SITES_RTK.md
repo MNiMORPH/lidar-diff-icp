@@ -184,3 +184,43 @@ composition `lowveg` is what predicts the offset, -268 mm per unit). There is NO
 for the Elba tile yet (the only one, `data/derived/whitewater/lowveg_grid.npy`, is the
 Weaver-end tile 10 km NE); `scripts/make_lowveg.py --gen2` on the elbaext class-2 cloud
 makes it, a streaming pass, queued behind the machine pause.
+
+**gen2 lowveg on the Elba hillslopes (built 2026-10-20, Andy: "Go ahead and find those
+patches").** `scripts/make_lowveg.py --tile elbaext_independent --gen2
+data/after/elbaext_3dep_fulldensity.laz` wrote `data/derived/elbaext_independent/lowveg_grid.npy`
+(229,022,726 returns placed; 719,424 of 720,900 cells; lowveg p10 0.000, median 0.050, p90
+0.413). On the 169,697 public hillslope cells (10-35 deg, not floodplain), lowveg quartiles
+0.068 / 0.161 / 0.339 (p90 0.571), and the DoD by lowveg bin (log
+`data/derived/valley/hillslope_lowveg_patches.log`):
+
+| lowveg bin | median DoD (mm) | share > +LoD | n |
+|---|---|---|---|
+| 0.000-0.068 | 3.7 | 5.2% | 42,412 |
+| 0.068-0.161 | 11.0 | 6.7% | 42,416 |
+| 0.161-0.339 | 15.0 | 8.2% | 42,444 |
+| 0.339-0.571 | 13.6 | 11.6% | 25,453 |
+| 0.571-1.000 | 3.9 | 10.4% | 16,972 |
+
+Linear DoD = 15.7 - 40.9 * lowveg mm, r -0.066; canopy cover vs lowveg r 0.035. THE RESULT:
+the hillslope DoD on this tile does not carry the -268 mm per unit lowveg offset that the
+389 surveyed marks showed for gen2 alone (`gen2-vegetation-offset`). DoD = gen2 - gen1,
+so a gen2 offset shows in the DoD only if gen1 does not share it; a gen1 that reads high in
+the same vegetation (`gen1-cannot-see-its-own-vegetation`, the floodplain sward) cancels it.
+That is a hypothesis; the RTK transect is what tests it, because the survey compares each
+epoch to the ground separately. Patches of high lowveg (>= p75) with DoD > +LoD within
+800 m of the lots exist but are small (0.04-0.05 ha; e.g. E 579822 N 4885328, 157 m from
+lot 204, lowveg 0.47, DoD +166); the full list with low-lowveg controls is
+`data/derived/valley/hillslope_lowveg_patches.csv` (cut-offs mine, for locating only).
+
+**The class transect (Andy: "a hillslope transect that the class could walk to look for
+spatial variability in land-surface elevation to compare against the lidar data").** Of 47
+walkable 300 m lines near the two lots (all on public land, max slope <= 25 deg, mean >= 8,
+<= 20% floodplain; cut-offs mine), the one chosen: start E 579259.8 N 4885643.3 (44.119686 N
+92.009412 W), 141 m west of lot 501, bearing 300 deg, 300 m, never more than 115 m from the
+WMA road; rises 34 m; median slope 7 deg, max 25. It crosses a vegetated toe-slope (25-50 m:
+lowveg 0.54-0.79, DoD -274 then +110 mm), a bare bench (125-200 m: lowveg 0.000, DoD +26 to
++70 mm) and a vegetated upper slope (225-300 m: lowveg 0.17-0.42, DoD +59 to +108 mm).
+Waypoints every 25 m with lat/lon: `data/derived/valley/hillslope_transect_lot501.csv`;
+profile `figures/hillslope_transect_lot501.png`; producer `analysis/hillslope_transect.py
+--start 579259.8 4885643.3 --az 300 --length 300`. RTK every 10 m on the ground, plus the
+vegetation top where there is one, gives both epochs' offsets as a function of position.
