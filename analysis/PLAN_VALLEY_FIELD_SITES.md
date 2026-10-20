@@ -195,6 +195,64 @@ Machine rule unchanged: swap is full; the first run waits for it to clear, and t
 test on one 10 km tile (4 M cells) is the only thing run before that.
 
 
+**RUN 2026-10-20, whole box at 10 m** (`analysis/valley_floodplain_clubb.py --name valley10m
+--res 10`; `data/derived/valley/clubb/valley10m/`, map `figures/clubb_valley10m.png`): all 28
+tiles resampled by averaging; lsdtt 82 s, 2:21 wall, 1.9 GB peak RSS. QQ thresholds: channel
+relief 23.35 m, slope 0.0222; floodplain 9,957 ha over the box, 3,987 ha within 800 m of the
+Whitewater (19.1% of the proxy), 1,567 ha on public land; the raster also carries value 4 on
+80,040 px (an lsdtt code not in its README; not counted). On the whole box the floodplain is
+a strip along the Whitewater plus blobs on the flat loess plateau (fields with a nearby
+order-3 ditch) and the Mississippi margin: the method assumes a dissected landscape.
+Diagnosis against the Elba pipeline mask at 10 m: 100% of its cells pass the relief threshold
+(relief quartiles 3.4 / 4.3 / 5.8 m) but only 55% pass the slope threshold (slope quartiles
+0.0062 / 0.0169 / 0.0569 vs 0.0222 = 1.3 deg): the SLOPE threshold halves the Clubb floor on
+the Elba reach; the pipeline keeps terraces, levees and banks up to ~3 deg.
+
+**Corridor runs** (`--corridor`, NoData outside a buffer of the DNR centrelines; width mine):
+800 m -> lsdtt segfault in the QQ step; 1500 m -> relief threshold 128.0 m (the truncated
+network makes relief to an order-3 channel large nearly everywhere, so relief stops
+discriminating), slope 0.0226, floodplain 3,606 ha (3,361 within 800 m of the river); Elba:
+171 ha, Jaccard with the pipeline mask 0.46, 76% inside it, 54% of it covered. ADOPTED as
+the D1 floor: `data/derived/valley/clubb/corr1500_10m/corr1500_10m_valley.bil` (the Phase B
+runner's `floodplain_mask_clubb.npy` and its valley-top rule read it).
+
+**Parameter sensitivity** (Andy: "Test against Clubb-algorithm parameters ... consider the
+influence of those parameters and the realism of where the floodplain is identified";
+`analysis/clubb_sensitivity.py`, `data/derived/valley/clubb/sensitivity.csv`; one parameter
+changed per run from corr1500_10m, same DEM):
+
+| run | floodplain ha | within 800 m | Jaccard vs adopted | Jaccard vs Elba mask | relief thr (m) | slope thr | valley top 4342-28-64 / 4342-29-64 / 4358-26-03 (m) |
+|---|---|---|---|---|---|---|---|
+| adopted (QQ 0.005, pct 25-75, SO 3, fit 30 m, patch 1000, 1 km2) | 3,606 | 3,361 | 1.000 | 0.463 | 128.0 | 0.0230 | 217.42 / 223.57 / 225.58 |
+| QQ_threshold 0.002 | 4,008 | 3,702 | 0.900 | 0.475 | 129.3 | 0.0260 | 217.43 / 223.59 / 225.71 |
+| QQ_threshold 0.01 | 3,030 | 2,860 | 0.840 | 0.436 | 126.0 | 0.0180 | 217.42 / 223.55 / 225.15 |
+| percentiles 10-90 | 0 | 0 | 0 | 0 | 0 | 0 | the QQ fit degenerates: no floodplain |
+| threshold_SO 2 | 3,077 | 3,001 | 0.748 | 0.463 | 8.1 | 0.0230 | 217.42 / 223.54 / 203.52 |
+| threshold_SO 4 | tool crash | | | | | | |
+| surface_fitting_radius 15 m | 3,422 | 3,175 | 0.861 | 0.477 | 128.0 | 0.0220 | 217.43 / 223.59 / 225.72 |
+| surface_fitting_radius 60 m | 3,654 | 3,436 | 0.805 | 0.514 | 128.0 | 0.0220 | 217.37 / 223.58 / 225.20 |
+| minimum_patch_size 250 or 4000 | 3,606 | 3,361 | 1.000 | 0.463 | 128.0 | 0.0230 | identical: every patch is > 4,000 px |
+| contributing area 0.25 km2 | 3,058 | 2,985 | 0.731 | 0.461 | 8.3 | 0.0230 | 217.42 / 223.54 / 203.53 |
+| contributing area 4 km2 | tool crash | | | | | | |
+
+Reading: the slope threshold controls the result and moves only with QQ_threshold (0.018 to
+0.026 across a 5x range, +/- 11% in area); the relief threshold is inert at the default
+(128 m) and becomes active only when the channel network is denser (SO 2 or 0.25 km2: 8 m),
+which drops the higher valley floor in the LOWER valley (4358-26-03's valley top 225.6 ->
+203.5 m) while the Main Branch tiles move by < 0.1 m under every variant. Patch size does
+nothing; the 10-90 percentile fit returns nothing. On the reach where the field sites are,
+the Clubb valley top is insensitive to every parameter the tool exposes; in the lower
+valley the channel-order choice decides whether the terrace-level floor is in or out.
+Realism against the FEMA flood hazard zones: `analysis/clubb_realism.py` (result recorded
+when it lands).
+
+**Decision for Andy (D1 detail):** the Clubb floor is about half the pipeline's on the Elba
+reach, the difference being cells of slope 1.3-3 deg: (a) Clubb as adopted; (b) Clubb's
+relief with the pipeline's 2 deg slope cut; (c) the 5 m run first. Andy, same day: "the Clubb
+value is probably more realistic" -- (a) stands unless the FEMA comparison says otherwise.
+
+## 4. Screening for candidate sites
+
 **Lidar layers, each a 5 m grid per tile** (all exist at Elba; `field_sites_rtk.py` is the
 template): raw star-only DoD; `floodplain_mask` AND terrain slope <= 2 deg (flat
 floodplain); `gen1_spread_mm` (pooled 3x3 as the correction used it); `penetration_failure`;
@@ -324,32 +382,7 @@ C at all, and whether the 500 m or 800 m proxy defines "the valley" for tile sel
 (71 vs 79 tiles); D7 whether to re-time the pipeline on the first tile before committing
 to overnight loops.
 
-## 9. Phase B RUNNING (2026-10-20, Andy: "Run all of your analyses through the entire valley
-... Do it." / "I want you to be as autonomous as possible.")
-
-`scripts/run_valley_tile.py` (per tile, resumable, the Elba star/no-surface build with the
-per-tile valley top from the Clubb floodplain within 500 m of the river) and
-`scripts/run_valley_all.sh` (serial, memory-gated, Main Branch reach first). D7's timed
-tile, 4342-28-64 (gen1 and CSF already on disk): gen2 fetch 422 s (979 MB, 177,179,937
-points, completeness ratio 0.978 against MN_SEDriftless_2_2021), class-2 copy 15 s
-(58,503,024 points), base 56 s (valley top 217.4 m; stable set 204,287 cells = 57.6% of the
-grid; stable sigma 60.8 mm; median LoD 117.5 mm; 21.8% of cells beyond LoD; 1,195 regions;
-zero line 135), slope/ridges/convexity/curvature/gen1 angles/beam table 21 s together,
-vegetation LoD 5 s (74,396 flat-floodplain cells, 20,977 penetration failures), lowveg
-grid streaming the full cloud last. Budget for the other 28 at this rate, plus ~460 s of
-CSF each where no cache exists: roughly 20 min per tile, ~10 h for the valley. Andy, same day: Elba's 230.0 m "was from a rough elevation cut", so the Clubb-derived 223.6 m
-is not expected to match it and is not checked against it. The 15
-missing gen1 tiles were fetched first (data/derived/valley/gen1_fetch.log). Full-density
-gen2 is kept per tile (0.98 GB) because the lowveg grid needs all returns; that goes one
-step past D2 and is mine. Two agents delivered alongside: the Elba fingerprint refit saved as an applicable model
-(`data/derived/rcg/fingerprint_lda.json`, `analysis/rcg/fingerprint_apply.py`; block-CV AUC
-0.7077 reproduced; `analysis/rcg/FINGERPRINT_MODEL.md`) and the per-tile site screener
-(`analysis/valley_tile_sites.py`; Elba's 16 F/H2 clusters reproduced cell for cell; H3/H4
-now lowveg-based and labelled non-comparable); both are the runner's last two stages.
-Second timed tile, 4342-29-64 (no CSF cache): gen2 fetch 452 s (1.03 GB, 182,148,262
-points, completeness 0.977), class 2 16 s, base 583 s (CSF included), the rest 51 s, lowveg
-26 s: 19 min per tile without a cache, so ~9 h for the remaining 27.
-
+## 7. Risks
 
 * **Private land.** 6562 ha of the proxy's ~21,000 ha is public; most R-class stands will be
   private. The table carries public status; survey only inside the DNR polygons, which DNR
@@ -534,6 +567,33 @@ NWI or `water_dnr_hydrography` layer 1. Spring vigour is the mean of three dates
 them 10 April (mostly pre-green-up), so its absolute level is low (0.09-0.36 across the
 sites) and only its ranking is meaningful. June cuts are invisible (no clear scene 15 Jun-10
 Jul) and the 10-02 "cuts" are harvest-or-senescence.
+
+## 9. Phase B RUNNING (2026-10-20, Andy: "Run all of your analyses through the entire valley
+... Do it." / "I want you to be as autonomous as possible.")
+
+`scripts/run_valley_tile.py` (per tile, resumable, the Elba star/no-surface build with the
+per-tile valley top from the Clubb floodplain within 500 m of the river) and
+`scripts/run_valley_all.sh` (serial, memory-gated, Main Branch reach first). D7's timed
+tile, 4342-28-64 (gen1 and CSF already on disk): gen2 fetch 422 s (979 MB, 177,179,937
+points, completeness ratio 0.978 against MN_SEDriftless_2_2021), class-2 copy 15 s
+(58,503,024 points), base 56 s (valley top 217.4 m; stable set 204,287 cells = 57.6% of the
+grid; stable sigma 60.8 mm; median LoD 117.5 mm; 21.8% of cells beyond LoD; 1,195 regions;
+zero line 135), slope/ridges/convexity/curvature/gen1 angles/beam table 21 s together,
+vegetation LoD 5 s (74,396 flat-floodplain cells, 20,977 penetration failures), lowveg
+grid streaming the full cloud last. Budget for the other 28 at this rate, plus ~460 s of
+CSF each where no cache exists: roughly 20 min per tile, ~10 h for the valley. Andy, same day: Elba's 230.0 m "was from a rough elevation cut", so the Clubb-derived 223.6 m
+is not expected to match it and is not checked against it. The 15
+missing gen1 tiles were fetched first (data/derived/valley/gen1_fetch.log). Full-density
+gen2 is kept per tile (0.98 GB) because the lowveg grid needs all returns; that goes one
+step past D2 and is mine. Two agents delivered alongside: the Elba fingerprint refit saved as an applicable model
+(`data/derived/rcg/fingerprint_lda.json`, `analysis/rcg/fingerprint_apply.py`; block-CV AUC
+0.7077 reproduced; `analysis/rcg/FINGERPRINT_MODEL.md`) and the per-tile site screener
+(`analysis/valley_tile_sites.py`; Elba's 16 F/H2 clusters reproduced cell for cell; H3/H4
+now lowveg-based and labelled non-comparable); both are the runner's last two stages.
+Second timed tile, 4342-29-64 (no CSF cache): gen2 fetch 452 s (1.03 GB, 182,148,262
+points, completeness 0.977), class 2 16 s, base 583 s (CSF included), the rest 51 s, lowveg
+26 s: 19 min per tile without a cache, so ~9 h for the remaining 27.
+
 
 ## Checks run while writing (read-only; nothing processed)
 
