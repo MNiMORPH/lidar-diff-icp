@@ -303,7 +303,12 @@ set of continuous layers (`p_nelike_<year>.tif`, `spring_ndvi_2026.tif`, `oct_nd
 `summer_max_ndvi_2026.tif`, `ndvi_drop_max_2026.tif` with the largest drop, its date and its
 gap), and the classes, clusters and ranking of section 8 are a post-hoc view under cut-offs
 that are printed. The section-4 class table and the section-5 cluster minimum are likewise
-post-hoc views, not the product. D5-D7 remain open.
+post-hoc views, not the product. D5 (same day, in part): "We have one day in the field just now. We will have more later.
+Do your best to find us the minimal set of places, ideally accessible and close, where we
+can survey RCG as well as other land-cover types." Delivered: `analysis/rcg/field_day_plan.py`,
+the one-day section of `analysis/FIELD_SITES_RTK.md` (lots 502 and 501 on the WMA road north
+of Elba, nine plus one cover types within 1 km, mark 1079_2021_MN). D5 for later days, D6,
+D7 remain open.
 
 **Decisions that are Andy's (none defaulted):** D1 the valley-floor mechanism (per-tile
 histogram valley top, landscape, or HAND) and the slope <= 2 deg cut; D2 keep full-density
