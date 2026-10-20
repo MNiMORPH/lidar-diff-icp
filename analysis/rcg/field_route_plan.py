@@ -103,7 +103,7 @@ for k, g in regions.items():
     for pg in (g.geoms if hasattr(g, "geoms") else [g]): ax.fill(*pg.exterior.xy, color=c, alpha=0.25); ax.plot(*pg.exterior.xy, color=c, lw=1.6)
 ax.plot(tx[:, 0], tx[:, 1], color="#eda100", lw=2.5)
 for (lot, _), n in zip(STOPS, ("1", "2", "3")):
-    L = lots[lot]; ax.plot(L.x, L.y, marker="P", ms=16, color="yellow", mec="black"); ax.annotate(f"{n}  lot {lot}", (L.x, L.y), xytext=(10, -6), textcoords="offset points", color="yellow", fontsize=15, weight="bold", path_effects=pe)
+    L = lots[lot]; ax.plot(L.x, L.y, marker="P", ms=16, color="yellow", mec="black"); ax.annotate(f"{n}  lot {lot}" + ("\nset up base on DR9925 first" if lot == 501 else ""), (L.x, L.y), xytext=(10, -6), textcoords="offset points", color="yellow", fontsize=15, weight="bold", path_effects=pe, va="top")
 for k, (x, y) in mons.items():
     if k.startswith("mark"): ax.plot(x, y, marker="^", ms=11, mfc="none", mec="cyan", mew=2.2)
     else: ax.plot(x, y, marker="*", ms=16, color="magenta", mec="black")
@@ -113,7 +113,7 @@ ax.annotate("BASE: DR9925", mons["DR9925 base"], xytext=(14, 14), textcoords="of
 P = [lots[l] for l, _ in STOPS]; ax.plot([p.x for p in P], [p.y for p in P], color="yellow", lw=1.2, ls=":")
 ax.plot([X0 + 100, X0 + 600], [Y0 + 100, Y0 + 100], color="white", lw=4); ax.annotate("500 m", (X0 + 350, Y0 + 130), color="white", ha="center", fontsize=11, weight="bold")
 ax.set_xlim(X0, X1); ax.set_ylim(Y0, Y1); ax.set_xticks([]); ax.set_yticks([])
-ax.set_title("Stops in order. Dotted = drive. T = transfer point for the base at stop 3.", fontsize=11)
+ax.set_title("Stops in order. Base goes on DR9925 at stop 1. Dotted = drive. T = transfer point for the base at stop 3.", fontsize=11)
 fig.tight_layout(); fig.savefig("figures/field_route.png", dpi=110); print("figures/field_route.png")
 with open(f"{V}/field_route.gpx", "w") as g:
     g.write('<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="field_route_plan.py" xmlns="http://www.topografix.com/GPX/1/1">\n')
