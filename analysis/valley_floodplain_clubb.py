@@ -39,6 +39,8 @@ ap.add_argument("--bounds", type=float, nargs=4, default=BOX, metavar=("X0", "Y0
 ap.add_argument("--res", type=float, default=5.0, help="grid spacing in m for the lsdtt run (PROPOSAL: 5)")
 ap.add_argument("--threshold-SO", type=int, default=3, help="Clubb 2017 used 3 at every site")
 ap.add_argument("--skip-lsdtt", action="store_true")
+ap.add_argument("--set", action="append", default=[], metavar="KEY=VALUE", help="override any lsdtt driver parameter (sensitivity runs); printed in the driver")
+ap.add_argument("--dem-from", default=None, help="reuse the resampled .bil/.hdr of another run (same bounds/res/corridor) instead of rebuilding the mosaic")
 ap.add_argument("--corridor", type=float, default=None, help="if set, NoData outside this buffer (m) of the DNR Whitewater centrelines, so the quantile-quantile thresholds describe the VALLEY (hillslope vs floor), not the plateau. PROPOSAL (mine); Clubb 2017 assumes a dissected landscape")
 A = ap.parse_args()
 X0, Y0, X1, Y1 = A.bounds; D = f"{OUT}/{A.name}"; os.makedirs(D, exist_ok=True)
@@ -52,6 +54,10 @@ for f in sorted(glob.glob(f"{DEM_DIR}/USGS_1M_15_*.tif")):
 if not tiles: sys.exit("no DEM tiles on disk intersect the bounds")
 print(f"DEM tiles intersecting the bounds: {len(tiles)}"); [print("  ", os.path.basename(t)) for t in tiles]
 bil = f"{D}/{A.name}.bil"
+if A.dem_from and not os.path.exists(bil):
+    import shutil
+    for ext in (".bil", ".hdr"): shutil.copy(f"{OUT}/{A.dem_from}/{A.dem_from}{ext}", f"{D}/{A.name}{ext}")
+    print(f"DEM copied from run {A.dem_from}")
 if not os.path.exists(bil):
     # resample EACH 1 m tile into the destination grid (average), never a 1 m mosaic of the
     # box: the box at 1 m is 1.52e9 cells = 6 GB, the shared laptop's swap is full
@@ -90,6 +96,8 @@ P = {
     "print_channels_to_csv": "true", "print_junctions_to_csv": "false",
     "write_hillshade": "false",
 }
+for kv in A.set:
+    k, v = kv.split("=", 1); P[k] = v; print(f"  OVERRIDE {k}: {v}")
 drv = f"{D}/{A.name}.driver"
 with open(drv, "w") as f: f.write("# lsdtt-valley-metrics driver written by analysis/valley_floodplain_clubb.py\n" + "".join(f"{k}: {v}\n" for k, v in P.items()))
 print("driver parameters:"); [print(f"  {k}: {v}") for k, v in P.items()]
