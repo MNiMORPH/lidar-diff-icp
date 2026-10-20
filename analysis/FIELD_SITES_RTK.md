@@ -86,3 +86,54 @@ Elba tile yet), is `analysis/PLAN_VALLEY_FIELD_SITES.md` section 8: 336 clusters
 land in five classes, `data/derived/valley/valley_sites.csv`, map `figures/valley_sites.png`.
 The Elba sites above keep the lidar criteria; the valley sites carry the per-year NE-like
 class, spring vigour, and distance to WMA parking and roads.
+
+## One field day (Andy, 2026-10-20: "We have one day in the field just now")
+
+Produced by `analysis/rcg/field_day_plan.py` (log `data/derived/valley/field_day_plan.log`,
+table `data/derived/valley/field_day_sites.csv`, map `figures/field_day.png`). Every WMA
+parking lot (53) was scored by the cover types reachable within a straight-line walking
+radius (600 and 1000 m; the radius is mine), using the valley imagery clusters (post-hoc
+view, D4), the 20 Elba lidar sites above, and the five 2021 control marks on public land.
+
+**The minimal set: two lots 1.1 km apart on the WMA road north of Elba, both on the Elba
+tile.** Lot 502 (E 579942.8 N 4884848.7; 44.1163 N, 91.9995 W UNVERIFIED conversion, use the
+UTM) reaches nine types within 1 km: C, F1, F2, F3, H2, H3, R1, R2, S, including the
+both-epoch sward. Lot 501 (E 579359.8 N 4885743.3) reaches eight (adds E, lacks F1, F3) and
+has mark **1079_2021_MN** 321 m away (E 579659.8 N 4885857.1, LCP) for the datum tie. Two
+further lots sit on the same road between them.
+
+Nearest two sites of each type per lot (distance from the lot; NE-like % 2008/2021/2025/2026;
+spring and October 2026 NDVI; largest 2026 NDVI drop and its day-of-year; Elba lidar: raw
+DoD mm, gen1 span mm, slope deg):
+
+| lot | type | site | m | ha | E | N | NE08/21/25/26 | spr/Oct NDVI | drop (DOY) | DoD / span / slope |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 502 | C | C-v29 | 418 | 1.32 | 580125 | 4884472 | 18/5/0/0 | 0.18/0.16 | 0.25 (240) | |
+| 502 | C | C-v61 | 722 | 0.70 | 579774 | 4884146 | 10/17/0/0 | 0.15/0.20 | 0.11 (240) | |
+| 502 | F1 | F1-4 | 981 | 0.22 | 579892 | 4883869 | | | | -197 / 508 / 1.0 |
+| 502 | F2 | F2-1 | 772 | 1.70 | 579959 | 4885621 | | | | -271 / 282 / 0.6 |
+| 502 | F3 | F3-3 | 485 | 0.24 | 580001 | 4884368 | | | | 15 / 86 / 0.5 |
+| 502 | F3 | F3-1 | 715 | 1.81 | 579941 | 4884134 | | | | -2 / 91 / 0.4 |
+| 502 | H2 | H2-4 | 730 | 0.19 | 579313 | 4884479 | | | | -156 / 238 / 27.2 |
+| 502 | H3 | H3-3 | 507 | 0.14 | 579523 | 4884563 | | | | -43 / 165 / 11.0 |
+| 502 | H3 | H3-4 | 736 | 0.14 | 579774 | 4884132 | | | | 10 / 350 / 14.8 |
+| 502 | R1 | R1-v149 | 442 | 0.74 | 580056 | 4885276 | 97/1/100/100 | 0.23/0.49 | 0.08 (200) | |
+| 502 | R1 | R1-v140 (both epochs; the NE training field) | 899 | 11.50 | 579981 | 4885747 | 97/91/100/100 | 0.27/0.57 | 0.08 (240) | |
+| 502 | R2 | R2-v218 | 764 | 0.69 | 580675 | 4885067 | 38/77/3/97 | 0.22/0.28 | 0.09 (240) | |
+| 502 | S | S-v324 | 957 | 0.51 | 579465 | 4885678 | 49/37/0/0 | 0.25/0.36 | 0.12 (275) | |
+| 501 | C | C-v52 | 129 | 1.09 | 579489 | 4885742 | 26/6/0/0 | 0.15/0.21 | 0.23 (275) | |
+| 501 | E | E-v131 | 648 | 0.61 | 579367 | 4886391 | 90/7/0/0 | 0.19/0.49 | 0.07 (240) | |
+| 501 | F2 | F2-3 | 547 | 1.16 | 579813 | 4886051 | | | | -192 / 226 / 0.3 |
+| 501 | H2 | H2-2 | 455 | 0.36 | 579218 | 4886175 | | | | -156 / 227 / 28.3 |
+| 501 | H3 | H3-2 | 751 | 0.24 | 578713 | 4886125 | | | | 8 / 191 / 16.5 |
+| 501 | R2 | R2-v237 (both epochs) | 394 | 0.54 | 579681 | 4885972 | 56/93/100/0 | 0.16/0.37 | 0.11 (240) | |
+| 501 | R2 | R2-v196 | 657 | 1.48 | 579708 | 4886300 | 6/100/100/0 | 0.17/0.36 | 0.11 (275) | |
+| 501 | S | S-v259 | 744 | 2.85 | 579273 | 4886483 | 90/39/0/0 | 0.23/0.39 | 0.10 (275) | |
+
+What the day gives: the ground and the sward top under thick RCG-type sward in a field that
+was NE-like in 2008, 2021, 2025 and 2026 (R1-v140, 11.5 ha, uncut in 2026: largest NDVI
+drop 0.08), a sward that stood in 2008 and 2021 but was cut in 2026 (R2-v237, drop 0.11 is
+small too), a late-green non-NE-like meadow (S), bare and cropped controls (C, F3), the
+Elba sedge and closed-canopy lidar sites (F1, F2), a steep gen1-low slope and an open
+hillslope (H2, H3), a forest edge (E), and the mark. Species, stand height and thatch
+thickness at each point are the quantities nobody has (sections R, S, T, W).
