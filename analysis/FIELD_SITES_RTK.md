@@ -159,3 +159,28 @@ table's `dist_parking_m` was a raster artefact and is being fixed in `valley_ran
 So the day is one road: park at lot 501 for C, S, the mark and R2-v237 (all within ~60 m of
 the road), drive 500 m south to lot 204 for the big R1 field (its edge is 69 m from that
 lot), and take F2-3 and H3-2 as 250-300 m walks off the road. Everything else is optional.
+
+**Hillslope gen2-high patches by lot 204 (Andy, 2026-10-20: "where we saw issues on
+hillslopes with low veg on the [gen2] lidar biasing those returns high").** gen2 is the 3DEP
+flight of 2021-05-01 (green-up), not 2024. On the Elba tile's public hillslopes (10-35 deg,
+not floodplain, 169,697 cells) the DoD rises with PyForestScan canopy cover: median +1.8,
++6.8, +10.8, +19.6 mm by cover quartile (edges 0.22 / 0.28 / 0.35), share above +LoD 6.9,
+7.2, 7.5, 9.6%. Clusters of DoD > +LoD (>= 20 cells) within 300 m of lot 204, nearest cell:
+
+| ha | m from lot 204 | m from road | E | N | lat | lon | DoD (mm) | slope | canopy cover |
+|---|---|---|---|---|---|---|---|---|---|
+| 0.06 | 124 | 446 | 579862 | 4885382 | 44.117273 | -92.001920 | +146 | 20 | 0.21 |
+| 0.12 | 137 | 481 | 579842 | 4885338 | 44.116870 | -92.002177 | +170 | 23 | 0.29 |
+| 0.61 | 166 | 239 | 579868 | 4885462 | 44.117993 | -92.001846 | +147 | 24 | 0.27 |
+| 0.18 | 192 | 526 | 579798 | 4885278 | 44.116335 | -92.002748 | +164 | 21 | 0.26 |
+| 0.58 | 257 | 383 | 579738 | 4885252 | 44.116117 | -92.003502 | +147 | 27 | 0.34 |
+
+and the hillslope control beside them: 12.46 ha of |DoD| < LoD/2 (median +19 mm, slope
+22 deg, canopy cover 0.27) 271 m from lot 204 and 102 m from the road (nearest cell
+E 579738 N 4885462; 44.118007 N 92.003470 W). The gen2-high patches and the control have
+the SAME canopy cover (0.21-0.34 vs 0.27): cover does not separate them, which is what
+`gen2-vegetation-offset` found at the marks (canopy cover rho -0.053; the near-ground
+composition `lowveg` is what predicts the offset, -268 mm per unit). There is NO lowveg grid
+for the Elba tile yet (the only one, `data/derived/whitewater/lowveg_grid.npy`, is the
+Weaver-end tile 10 km NE); `scripts/make_lowveg.py --gen2` on the elbaext class-2 cloud
+makes it, a streaming pass, queued behind the machine pause.
