@@ -310,3 +310,44 @@ the adjacent tiles differ by a constant, 4342-29-64 vs 4358-29-01 +18.8 mm, 4342
 (medians over 217-463 overlap cells; NMAD 52-159 mm), so a tile edge shows as a step of a
 few tens of mm in the zooms. Level is gauge (`level-is-gauge-compare-structure`); the step
 is not a landform.
+
+## The route (Andy, 2026-10-20: "cover the terrain and minimize driving and parking")
+
+`analysis/rcg/field_route_plan.py` -> `figures/field_route.png`, `data/derived/valley/field_route.csv`,
+`field_route.gpx`. Everything is on ONE road, the WMA road up the Main Branch north of Elba,
+2.6 km end to end, three parking lots; walking distances are exact, lot to the nearest edge
+of each region.
+
+| stop | lot | what | walk (m) |
+|---|---|---|---|
+| 1 | 204 (44.116878 N 92.000473 W) | R1-v140 RCG-type field (sward every year, uncut 2026) 62; R1-v149 21; F2-1 zero penetration 90; gen2-high patches 154; bluff stand 240; hillslope control 291 | |
+| 2 | 501 (44.120576 N 92.008148 W) | BASE on DR9925 306; mark 1079 321; DG8385 check 371; C-v52 bare control 32; S-v324 meadow 44; transect 141; R2-v237 cut sward 347; F2-3 zero penetration 435 | |
+| 3 | 2597 (44.137534 N 92.005149 W) | best place 1, the 14 ha zero-penetration field, sward in every year | 283 |
+
+Driving: lot 204 -> lot 501 0.74 km, lot 501 -> lot 2597 1.9 km (straight-line along the
+valley; the DNR road layer does not carry the public road the lots sit on). Order: stop 2
+FIRST to set the base and occupy the mark, then stop 1 (0.7 km south), then stop 3 (2.6 km
+north), collecting the base on the way home past the junction.
+
+**THE BASE STATION, unambiguously (Andy: "Make it unambiguous where we should place the base
+station and/or to what we should reference the base station").** Place the base ON monument
+DR9925, stamped "8508 Y 2023": a 3/4-inch aluminium rod inside a PVC access cover, 11.5 m
+south-west of Trunk Highway 74 at the DNR headquarters junction, 306 m from lot 501 (GPX
+waypoint `BASE_STATION_HERE_DR9925_8508Y`). Configure it as a KNOWN POINT with the
+published NGS values (datasheet read 2026-10-20):
+
+| datum | NAD 83(2011) epoch 2010.00 |
+|---|---|
+| latitude | 44 07 18.13863 N = 44.12170518 |
+| longitude | 092 00 16.79318 W = -92.00466477 |
+| ellipsoid height | 188.669 m (network accuracy 0.61 cm horizontal, 1.49 cm height, 95%) |
+| NAVD 88 orthometric height (GEOID18), for the check | 218.75 m |
+| UTM 15N | E 579636.94 N 4885872.10 |
+
+plus the measured antenna height. Then every rover point is in NAD 83(2011) directly; set
+the project's vertical to NAVD 88 via GEOID18, which is gen2's frame. Reference checks:
+DG8385 "9 DRL" (leveled NAVD 88 223.352 m, second order; 3 m horizontal, so vertical only)
+and lidar control mark 1079. If the base cannot sit on the rod (cover not found, traffic),
+set it anywhere with sky view and REFERENCE it to DR9925 by occupying the rod with the rover
+first; and if MnCORS network RTK is available on the day, DR9925 becomes the first check
+shot instead of the base.
