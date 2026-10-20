@@ -96,10 +96,11 @@ radius (600 and 1000 m; the radius is mine), using the valley imagery clusters (
 view, D4), the 20 Elba lidar sites above, and the five 2021 control marks on public land.
 
 **The minimal set: two lots 1.1 km apart on the WMA road north of Elba, both on the Elba
-tile.** Lot 502 (E 579942.8 N 4884848.7; 44.1163 N, 91.9995 W UNVERIFIED conversion, use the
-UTM) reaches nine types within 1 km: C, F1, F2, F3, H2, H3, R1, R2, S, including the
-both-epoch sward. Lot 501 (E 579359.8 N 4885743.3) reaches eight (adds E, lacks F1, F3) and
-has mark **1079_2021_MN** 321 m away (E 579659.8 N 4885857.1, LCP) for the datum tie. Two
+tile.** Lot 502 (E 579942.8 N 4884848.7; 44.112459 N 92.000998 W, pyproj EPSG:26915 -> 4326)
+reaches nine types within 1 km: C, F1, F2, F3, H2, H3, R1, R2, S, including the
+both-epoch sward. Lot 501 (E 579359.8 N 4885743.3; 44.120576 N 92.008147 W) reaches eight (adds E, lacks
+F1, F3) and has mark **1079_2021_MN** 321 m away (E 579659.8 N 4885857.1; 44.121567 N
+92.004381 W; LCP) for the datum tie. Two
 further lots sit on the same road between them.
 
 Nearest two sites of each type per lot (distance from the lot; NE-like % 2008/2021/2025/2026;
