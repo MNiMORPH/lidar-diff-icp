@@ -98,8 +98,31 @@ if A.stop_after == "gen1": sys.exit(0)
 # ---- 3. gen2 full, then class 2
 if not os.path.exists(FULL):
     t0 = time.time(); cache = f"data/after/valley/_ept_{T}"
-    sh(f"PROJ_DATA=/usr/share/proj GDAL_DATA=/usr/share/gdal ./lidar-icp/bin/python scripts/fetch_3dep_curl.py --auto --bounds {B[0]} {B[1]} {B[2]} {B[3]} --workers {A.workers} --out {FULL} --ept-cache data/ept_index_cache.json")
-    stamp("gen2_fetch", t0, bytes=os.path.getsize(FULL))
+    r_ = subprocess.run(f"PROJ_DATA=/usr/share/proj GDAL_DATA=/usr/share/gdal ./lidar-icp/bin/python scripts/fetch_3dep_curl.py --auto --bounds {B[0]} {B[1]} {B[2]} {B[3]} --workers {A.workers} --out {FULL} --ept-cache data/ept_index_cache.json", shell=True)
+    if r_.returncode != 0 and not os.path.exists(FULL):
+        # SEAM TILE: no single 2021 project covers the bbox (the project 2 / project 4 seam of
+        # plan section 1). Fetch the overlapping nodes of EVERY non-mosaic 2021 project that
+        # touches the bbox, pinned by --base, and concatenate; both names go into meta.json.
+        # The two are the same 3DEP program and year but separate acquisitions: the seam is
+        # recorded, not hidden, and the per-swath star frame fits each flight line anyway.
+        import pyproj
+        from lidar_diff_icp import threedep
+        tl = pyproj.Transformer.from_crs("EPSG:26915", "EPSG:4326", always_xy=True); lo0, la0 = tl.transform(B[0], B[1]); lo1, la1 = tl.transform(B[2], B[3])
+        projs = [p_ for p_ in threedep.find_projects((lo0 + lo1) / 2, (la0 + la1) / 2, cache="data/ept_index_cache.json") if not p_.get("is_mosaic") and "2021" in p_["name"]]
+        print(f"[{T}] SEAM TILE: no single project covers the bbox; fetching from {[p_['name'] for p_ in projs]}", flush=True)
+        parts = []
+        for p_ in projs:
+            base_ = p_["url"].rsplit("/ept.json", 1)[0]; part = FULL.replace(".laz", f"_{p_['name']}.laz")
+            if not os.path.exists(part): sh(f"PROJ_DATA=/usr/share/proj GDAL_DATA=/usr/share/gdal ./lidar-icp/bin/python scripts/fetch_3dep_curl.py --base {base_} --bounds {B[0]} {B[1]} {B[2]} {B[3]} --workers {A.workers} --out {part}")
+            parts.append(part)
+        with laspy.open(parts[0]) as f0:
+            w = laspy.open(FULL + ".tmp.laz", mode="w", header=f0.header); n_ = 0
+            for part in parts:
+                with laspy.open(part) as f:
+                    for pts in f.chunk_iterator(5_000_000): w.write_points(pts); n_ += len(pts)
+            w.close()
+        os.replace(FULL + ".tmp.laz", FULL); log["seam_projects"] = [p_["name"] for p_ in projs]; print(f"[{T}] merged {n_:,} points from {len(parts)} projects", flush=True)
+    stamp("gen2_fetch", t0, bytes=os.path.getsize(FULL), seam_projects=log.get("seam_projects"))
     for c in glob.glob("data/after/valley/_ept_*") + glob.glob("data/after/_ept_tiles_*"): shutil.rmtree(c, ignore_errors=True)
 else: print(f"[{T}] gen2 full present: {FULL}")
 if not os.path.exists(CLS2):
