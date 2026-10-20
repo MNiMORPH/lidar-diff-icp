@@ -243,8 +243,30 @@ which drops the higher valley floor in the LOWER valley (4358-26-03's valley top
 nothing; the 10-90 percentile fit returns nothing. On the reach where the field sites are,
 the Clubb valley top is insensitive to every parameter the tool exposes; in the lower
 valley the channel-order choice decides whether the terrace-level floor is in or out.
-Realism against the FEMA flood hazard zones: `analysis/clubb_realism.py` (result recorded
-when it lands).
+Realism against the FEMA flood hazard zones (`analysis/clubb_realism.py`,
+`data/derived/valley/clubb/realism.csv`, `figures/clubb_realism.png`; NFHL layer 28, 97 SFHA
+polygons of zones A/AE, 19,373 ha in the box, fetched 2026-10-20): scored where FEMA mapped,
+i.e. within 800 m of the Whitewater AND within 1500 m of an SFHA polygon, 6,906 ha with
+1,143 ha of SFHA inside. FEMA has NO polygons on the Elba reach (the WMA is unstudied), so
+the pipeline mask cannot be scored there. Clubb 2017's own sites scored Q 0.39-0.68.
+
+| run | reliability r | sensitivity s | quality Q | predicted ha in the domain |
+|---|---|---|---|---|
+| adopted corr1500_10m | 0.385 | 0.569 | 0.298 | 1,689 |
+| stream order 2 | 0.470 | 0.602 | 0.359 | 1,462 |
+| contributing area 0.25 km2 | 0.459 | 0.593 | 0.349 | 1,478 |
+| QQ 0.01 | 0.417 | 0.528 | 0.304 | 1,447 |
+| QQ 0.002 | 0.367 | 0.595 | 0.294 | 1,850 |
+| fit 15 m / 60 m | 0.386 / 0.380 | 0.543 / 0.567 | 0.292 / 0.295 | 1,604 / 1,703 |
+| whole box valley10m | 0.389 | 0.786 | 0.351 | 2,312 |
+
+Reading: every variant finds 1.3-2x the FEMA 1%-zone where FEMA mapped (reliability 0.37-0.47)
+and misses a third to a half of it (sensitivity 0.53-0.79); Q 0.29-0.36 sits at or just
+below the bottom of Clubb's own range. The denser-network variants (SO 2, 0.25 km2), which
+drop the terrace-level floor in the lower valley, agree best with FEMA there (Q 0.35-0.36
+vs 0.30), i.e. the FEMA zone is closer to the active floodplain than to the terraced floor.
+The FEMA zone is a hydraulic 1%-flood extent, not the geomorphic valley floor, so this is a
+bound on realism, not a truth; on the Main Branch reach it says nothing at all.
 
 **Decision for Andy (D1 detail):** the Clubb floor is about half the pipeline's on the Elba
 reach, the difference being cells of slope 1.3-3 deg: (a) Clubb as adopted; (b) Clubb's
