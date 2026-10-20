@@ -78,3 +78,11 @@ from the lot at E 579979 N 4885340.
   which case the survey still gives the ground (for gen2) but not the offset.
 * H sites are under forest: leaf-off season, multi-constellation RTK, longer occupations,
   and expect some points to fail to fix.
+
+## Valley-wide extension (2026-10-20)
+
+The same selection for the whole Whitewater valley, from imagery only (no lidar off the
+Elba tile yet), is `analysis/PLAN_VALLEY_FIELD_SITES.md` section 8: 336 clusters on public
+land in five classes, `data/derived/valley/valley_sites.csv`, map `figures/valley_sites.png`.
+The Elba sites above keep the lidar criteria; the valley sites carry the per-year NE-like
+class, spring vigour, and distance to WMA parking and roads.
