@@ -8,14 +8,15 @@ photo site, and the whole reach) three panels:
   A  2025 FSA imagery (MnGeo WMS) with the survey REGION outlines, lots, monuments, transect;
   B  the 2021 - 2008 difference, mosaicked from the Phase B tiles (5 m, star frame, no
      correction surface, stable-ground median removed per tile), +/- 300 mm, grey = no data;
-  C  the same difference with the LIKELY SPURIOUS cells outlined:
-       erosion, dashed   = zero 2008 ground return (penetration_failure) on the flat
+  C  the same difference with the LIKELY SPURIOUS clusters hatched and outlined (a 3x3
+     opening drops isolated cells; the json carries both the raw and the drawn counts):
+       erosion, dashed //   = zero 2008 ground return (penetration_failure) on the flat
                            floodplain: the 2008 "ground" is a canopy top, so the lowering
                            is not ground (the F2 mechanism);
-       erosion, dotted   = flat-floodplain cells that the vegetation LoD silences: the 2008
+       erosion, dotted ..  = flat-floodplain cells that the vegetation LoD silences: the 2008
                            return span (p90-p10) makes the detection insignificant
                            (change.npy detected, change_veg.npy not);
-       deposition, solid = hillslope (10-35 deg) cells above +LoD whose gen2 near-ground
+       deposition, solid \\ = hillslope (10-35 deg) cells above +LoD whose gen2 near-ground
                            vegetation share (lowveg) is in the tile's top quartile or that
                            WorldCover 2021 calls tree: gen2 (May 2021, in leaf) reads the
                            vegetation top as ground (the gen2-vegetation-offset mechanism).
@@ -120,9 +121,15 @@ def overlays(ax, bb, lw=1.3):
     ax.plot([bb[0] + 0.04 * (bb[2] - bb[0]), bb[0] + 0.04 * (bb[2] - bb[0]) + 200], [bb[1] + 0.04 * (bb[3] - bb[1])] * 2, color="black", lw=4)
     ax.set_xlim(bb[0], bb[2]); ax.set_ylim(bb[1], bb[3]); ax.set_xticks([]); ax.set_yticks([])
 
-def outline(ax, mask, bb, color, ls):
-    X0, Y0, X1, Y1 = bb
-    if mask.any(): ax.contour(np.linspace(X0 + RES / 2, X1 - RES / 2, mask.shape[1]), np.linspace(Y0 + RES / 2, Y1 - RES / 2, mask.shape[0]), mask.astype(float), levels=[0.5], colors=color, linewidths=1.2, linestyles=ls)
+from scipy.ndimage import binary_opening
+def outline(ax, mask, bb, color, ls, hatch):
+    """clusters only (a 3x3 opening drops isolated cells, which drew as a speckle of dots), as a
+    hatched wash with its outline"""
+    X0, Y0, X1, Y1 = bb; m = binary_opening(mask, structure=np.ones((3, 3)))
+    if m.any():
+        xs = np.linspace(X0 + RES / 2, X1 - RES / 2, m.shape[1]); ys = np.linspace(Y0 + RES / 2, Y1 - RES / 2, m.shape[0])
+        ax.contourf(xs, ys, m.astype(float), levels=[0.5, 1.5], colors="none", hatches=[hatch]); ax.contour(xs, ys, m.astype(float), levels=[0.5], colors=color, linewidths=0.9, linestyles=ls)
+    return int(m.sum())
 
 cmap = plt.get_cmap("RdBu_r").copy(); cmap.set_bad("#bdbdbd"); norm = TwoSlopeNorm(vmin=-300, vcenter=0, vmax=300)
 for name, bb in WINDOWS.items():
@@ -140,6 +147,8 @@ for name, bb in WINDOWS.items():
     overlays(axs[0], bb)
     im = axs[1].imshow(np.ma.masked_invalid(dod), extent=ext, origin="lower", cmap=cmap, norm=norm, interpolation="nearest"); overlays(axs[1], bb)
     axs[2].imshow(np.ma.masked_invalid(dod), extent=ext, origin="lower", cmap=cmap, norm=norm, interpolation="nearest", alpha=0.55); overlays(axs[2], bb, lw=0.8)
-    outline(axs[2], sp_ero_pf, bb, "black", "dashed"); outline(axs[2], sp_ero_veg, bb, "black", "dotted"); outline(axs[2], sp_dep, bb, "black", "solid")
+    plt.rcParams["hatch.linewidth"] = 0.6
+    counts["drawn_clusters_cells"] = dict(zero_penetration=outline(axs[2], sp_ero_pf, bb, "black", "dashed", "////"), vegetation_lod=outline(axs[2], sp_ero_veg, bb, "black", "dotted", "...."), deposition=outline(axs[2], sp_dep, bb, "black", "solid", "\\\\\\\\"))
+    json.dump(counts, open(f"{V}/spurious_{name}.json", "w"), indent=1)
     cb = fig.colorbar(im, ax=axs[1:], shrink=0.7, pad=0.01); cb.set_label("2021 - 2008 (mm)")
     fig.savefig(f"figures/zoom_{name}.png", dpi=110, bbox_inches="tight"); plt.close(fig); print(f"figures/zoom_{name}.png")
