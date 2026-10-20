@@ -103,7 +103,7 @@ for k, g in regions.items():
     for pg in (g.geoms if hasattr(g, "geoms") else [g]): ax.fill(*pg.exterior.xy, color=c, alpha=0.25); ax.plot(*pg.exterior.xy, color=c, lw=1.6)
 ax.plot(tx[:, 0], tx[:, 1], color="#eda100", lw=2.5)
 for (lot, _), n in zip(STOPS, ("1", "2", "3")):
-    L = lots[lot]; ax.plot(L.x, L.y, marker="P", ms=16, color="yellow", mec="black"); ax.annotate(f"{n}", (L.x, L.y), xytext=(10, -6), textcoords="offset points", color="yellow", fontsize=18, weight="bold", path_effects=pe)
+    L = lots[lot]; ax.plot(L.x, L.y, marker="P", ms=16, color="yellow", mec="black"); ax.annotate(f"{n}  lot {lot}", (L.x, L.y), xytext=(10, -6), textcoords="offset points", color="yellow", fontsize=15, weight="bold", path_effects=pe)
 for k, (x, y) in mons.items():
     if k.startswith("mark"): ax.plot(x, y, marker="^", ms=11, mfc="none", mec="cyan", mew=2.2)
     else: ax.plot(x, y, marker="*", ms=16, color="magenta", mec="black")
