@@ -86,13 +86,16 @@ wps = []
 # ---- map 1: lot 204
 bb = (579400, 4884900, 580300, 4885900); fig, ax = plt.subplots(figsize=(11, 12)); base_map(ax, bb)
 jy, jx = np.nonzero(stand); ax.scatter(X0 + (jx + 0.5) * RES, Y0 + (jy + 0.5) * RES, s=9, c=np.where(sl[stand] <= 25, "#1baf7a", "#e34948"), alpha=0.7, marker="s", lw=0)
-ax.plot(route[:, 0], route[:, 1], color="#eda100", lw=3); mark(ax, route[-1, 0], route[-1, 1], "stand entry (least-steep route, max 21 deg)", "#eda100", "^")
-for _, r in F[(F.lot == 204) & (F.type.isin(["R1", "F2"]))].iterrows(): mark(ax, r.easting, r.northing, f"{r.site} {r.type}", "white"); wps.append((r.site, r.easting, r.northing))
+ax.plot(route[:, 0], route[:, 1], color="#eda100", lw=3); ax.plot(route[-1, 0], route[-1, 1], marker="^", ms=12, mfc="none", mec="#eda100", mew=2.5); ax.annotate("stand entry\n(least-steep route, max 21 deg)", (route[-1, 0], route[-1, 1]), xytext=(12, -34), textcoords="offset points", color="#eda100", fontsize=10, weight="bold", path_effects=[__import__("matplotlib.patheffects", fromlist=["withStroke"]).withStroke(linewidth=3, foreground="black")])
+for _, r in F[F.site.isin(["R1-v140", "R1-v149", "F2-1"])].drop_duplicates("site").iterrows():   # field_day_sites.csv lists them under lot 502; same sites
+    lab_ = {"R1-v140": "R1-v140: the RCG-type field, both epochs (11.5 ha)", "R1-v149": "R1-v149: sward 2008/2025/2026", "F2-1": "F2-1: closed canopy, DoD -271 mm"}[r.site]
+    mark(ax, r.easting, r.northing, lab_, "white"); wps.append((r.site, r.easting, r.northing))
 for _, r in P[(P.lot == "204") | (P.lot == 204)].iterrows():
-    if r.cls.startswith("high lowveg (>= p75) AND"): mark(ax, r.E, r.N, f"gen2-high +{r.dod_med:.0f} mm, lowveg {r.lowveg:.2f}", "#e34948", "D"); wps.append((f"gen2high_{r.E:.0f}_{r.N:.0f}", r.E, r.N))
+    if r.cls.startswith("high lowveg (>= p75) AND"):
+        ax.plot(r.E, r.N, marker="D", ms=12, mfc="none", mec="#e34948", mew=2.5); ax.annotate(f"gen2-high +{r.dod_med:.0f} mm, lowveg {r.lowveg:.2f}", (r.E, r.N), xytext=(-12, 10 if r.N > 4885300 else -22), textcoords="offset points", ha="right", color="#e34948", fontsize=10, weight="bold", path_effects=[__import__("matplotlib.patheffects", fromlist=["withStroke"]).withStroke(linewidth=3, foreground="black")]); wps.append((f"gen2high_{r.E:.0f}_{r.N:.0f}", r.E, r.N))
 ctrl = P[(P.cls.str.startswith("low lowveg")) & ((P.lot == "204") | (P.lot == 204))].sort_values("lot_m").iloc[0]; mark(ax, ctrl.E, ctrl.N, f"hillslope control, lowveg {ctrl.lowveg:.2f}", "#1baf7a", "s"); wps.append(("hillslope_control", ctrl.E, ctrl.N))
 wps += [("lot_204", lots[204].x, lots[204].y), ("stand_entry", route[-1, 0], route[-1, 1])]
-ax.set_title("Stop 1, lot 204: RCG-type field R1-v140 (+ R1-v149 by the lot), closed-canopy point F2-1, the bluff lowveg stand (green <= 25 deg, red steeper),\nits least-steep entry (orange), gen2-high patches (red diamonds), hillslope control (green square). White dashed = WMA road; black = WMA boundary. 2025 FSA imagery.", fontsize=9)
+ax.set_title("Stop 1, lot 204: RCG-type field R1-v140 (+ R1-v149 by the lot), closed-canopy point F2-1, the bluff lowveg stand (green <= 25 deg, red steeper),\nits least-steep entry (orange), gen2-high patches (red diamonds), hillslope control (green square). White dashed = WMA road; black = WMA boundary.\n2025 FSA imagery: the bluff stand is UNDER TREE CANOPY in the imagery although PyForestScan cover reads 0.23 there.", fontsize=9)
 fig.tight_layout(); fig.savefig("figures/field_day_lot204.png", dpi=110); print("figures/field_day_lot204.png")
 
 # ---- map 2: lot 501

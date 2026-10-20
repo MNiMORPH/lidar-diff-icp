@@ -224,3 +224,14 @@ Waypoints every 25 m with lat/lon: `data/derived/valley/hillslope_transect_lot50
 profile `figures/hillslope_transect_lot501.png`; producer `analysis/hillslope_transect.py
 --start 579259.8 4885643.3 --az 300 --length 300`. RTK every 10 m on the ground, plus the
 vegetation top where there is one, gives both epochs' offsets as a function of position.
+
+**Site maps (Andy, 2026-10-20: "Make site maps of where we should park and go").**
+`analysis/rcg/field_day_maps.py` -> `figures/field_day_lot204.png` (stop 1: the RCG field
+R1-v140 and R1-v149, F2-1, the bluff lowveg stand coloured by slope, its least-steep entry
+route, the gen2-high patches, the hillslope control) and `figures/field_day_lot501.png`
+(stop 2: C-v52, S-v324, mark 1079, R2-v237, F2-3, the class transect with 25 m dots), both
+on 2025 FSA imagery with the WMA road and a 200 m bar; and
+`data/derived/valley/field_day_waypoints.gpx` (27 waypoints, the transect and the bluff
+route as tracks) for a handheld GPS. Seen on the imagery: the bluff lowveg stand lies
+UNDER tree canopy although PyForestScan's canopy cover reads 0.23 there (the voxel
+metric under-reads, `gen2-vegetation-offset`), so expect a wooded slope, not shrubland.
