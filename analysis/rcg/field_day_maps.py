@@ -147,11 +147,13 @@ ax.set_title("Stop 2, lot 501 -- REGIONS to survey anywhere inside: bare control
 fig.tight_layout(); fig.savefig("figures/field_day_lot501.png", dpi=110); print("figures/field_day_lot501.png")
 
 # ---- GPX
+from xml.sax.saxutils import escape
 with open(f"{V}/field_day_waypoints.gpx", "w") as g:
     g.write('<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="lidar-diff-icp field_day_maps.py" xmlns="http://www.topografix.com/GPX/1/1">\n')
     for name, x, y in wps:
-        lo, la = to_ll.transform(x, y); g.write(f'  <wpt lat="{la:.7f}" lon="{lo:.7f}"><name>{name}</name></wpt>\n')
+        lo, la = to_ll.transform(x, y); g.write(f'  <wpt lat="{la:.7f}" lon="{lo:.7f}"><name>{escape(name)}</name></wpt>\n')
     g.write('  <trk><name>class_transect</name><trkseg>\n' + "".join(f'    <trkpt lat="{to_ll.transform(x, y)[1]:.7f}" lon="{to_ll.transform(x, y)[0]:.7f}"></trkpt>\n' for x, y in zip(T.easting, T.northing)) + '  </trkseg></trk>\n')
-    for name, xy in TRACKS: g.write(f'  <trk><name>region_{name}</name><trkseg>\n' + ''.join(f'    <trkpt lat="{to_ll.transform(x, y)[1]:.7f}" lon="{to_ll.transform(x, y)[0]:.7f}"></trkpt>\n' for x, y in xy) + '  </trkseg></trk>\n')
+    from xml.sax.saxutils import escape
+    for name, xy in TRACKS: g.write(f'  <trk><name>region_{escape(name)}</name><trkseg>\n' + ''.join(f'    <trkpt lat="{to_ll.transform(x, y)[1]:.7f}" lon="{to_ll.transform(x, y)[0]:.7f}"></trkpt>\n' for x, y in xy) + '  </trkseg></trk>\n')
     g.write('  <trk><name>route_lot204_to_stand</name><trkseg>\n' + "".join(f'    <trkpt lat="{to_ll.transform(x, y)[1]:.7f}" lon="{to_ll.transform(x, y)[0]:.7f}"></trkpt>\n' for x, y in route) + '  </trkseg></trk>\n</gpx>\n')
 print(f"GPX: {V}/field_day_waypoints.gpx ({len(wps)} waypoints, {len(TRACKS) + 2} tracks: region outlines, the transect, the bluff route)")
