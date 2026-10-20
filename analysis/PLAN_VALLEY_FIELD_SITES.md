@@ -284,6 +284,132 @@ to overnight loops.
 * **The shared laptop.** Swap was full at the time of writing; the loops are serial,
   per-tile, resumable, and never start while swap is in use.
 
+## 8. Phase A RESULT (2026-10-20): imagery-only site candidates, whole valley
+
+Run, not planned. Stage 1 `analysis/rcg/valley_fetch.py` (atomic, resumable; "all present"
+NOT yet printed) and stage 2 `analysis/rcg/valley_rank.py` (no network); log
+`data/derived/valley/valley_rank.log`; outputs `data/derived/valley/valley_sites.csv` (336
+rows), `valley_classes.tif`, `p_nelike_{2021,2025,2026}.tif`, `figures/valley_sites.png`.
+Every number below is pasted from that log or from the CSV.
+
+**What landed before the connection dropped** (`data/derived/valley/scenes.json`): the three
+ten-band presence mosaics 2026-10-17 (clear 0.971), 2025-10-27 (1.000), 2021-10-18 (0.999);
+the three density NDVI mosaics 2026-04-10 (0.998), 04-15 (0.849), 05-15 (1.000); WorldCover
+2021 v200; WMA units 6, state parks 3, WMA parking 66, WMA roads 39, Whitewater rivers 7
+(177.3 km). **Still missing** (fetch hung on the first cut-history scene, 2026-07-11, when the
+link fell to ~5-12 kB/s; killed; re-run `valley_fetch.py` when Andy says the connection is
+stable): the 2026 Jun-Oct cut-history NDVI series and Landsat-5 2008-10-29. So in this run
+`cut_2026`, `cut_share`, `summer2026_max_ndvi` are empty and `nelike_2008` is NaN.
+
+**Domain.** Valley-floor proxy = 800 m buffer of the Whitewater centrelines (D1 is Andy's;
+this is the plan's proxy): 20,853 ha; public inside it 6,565 ha; "open" (not WorldCover
+tree / built / water) 11,521 ha. The NE training patch carried onto the 10 m grid: 726 px.
+
+**Presence classifiers** (two-class ML on ten relative bands, NE patch vs the open valley
+floor, equal priors, p > 0.5), each trained in its own year:
+
+| year | NE resubstitution | NE-like on open valley floor | on public open valley | WorldCover confusion, whole box: tree / grass / crop / wetland |
+|---|---|---|---|---|
+| 2026-10-17 | 97% | 900 ha (8.0%) | 197 ha | 5.0 / 22.2 / 4.2 / 0.1 % |
+| 2025-10-27 | 97% | 1,310 ha (11.4%) | 218 ha | 4.5 / 19.9 / 7.9 / 0.1 % |
+| 2021-10-18 | 97% | 466 ha (4.0%) | 154 ha | 10.7 / 12.1 / 1.0 / 0.1 % |
+
+The section-6 stop condition for Phase B ("cropland or grassland MOSTLY NE-like") does not
+fire: grassland is 12-22% NE-like, cropland 1-8%. The class remains "NE-like", one senesced
+dense herbaceous state (sections N, U, V, AA), not a species.
+
+**Classes and cut-offs, all MINE (D4), printed by the script:** R1 NE-like in both 2026 and
+2025; R2 in exactly one; S not NE-like either year, Oct-2026 NDVI >= 0.30, WorldCover
+grassland or herbaceous wetland; C Oct-2026 NDVI < 0.25 and not NE-like; E open pixel within
+30 m of WorldCover tree and not R1/R2. Clusters >= 50 px (0.5 ha, 8-connected) on WMA or
+state-park land; rank score ha / (1 + km to the nearest WMA parking lot), also mine.
+
+| class | open valley floor, ha | public open valley floor, ha |
+|---|---|---|
+| R1 NE-like 2025 and 2026 | 360 | 93 |
+| R2 NE-like one of 2025/2026 | 1,490 | 229 |
+| S late-green herbaceous, not NE-like | 1,051 | 248 |
+| C bare / low October NDVI | 6,211 | 362 |
+| E forest edge | 684 | 188 |
+
+**Reading the map** (`figures/valley_sites.png`): off public land the floodplain is C almost
+everywhere (the farmed valley, 6,211 ha); R1/R2 concentrate on the WMA Main Branch Unit,
+which holds 24 of the 24 R1 clusters and 72 of 79 R2. The largest R1 cluster (11.50 ha,
+E 579981 N 4885747) is 55% inside the training patch: resubstitution, not a find; it is in
+the table with `training_patch_pct` = 55 so it is not mistaken for one. Andy's 2021-08-18
+photo site (E 579811 N 4888504) sits inside an R2 cluster (1.74 ha, NE-like 79% in 2025,
+21% in 2026, 6% in 2021), 1.6 m from its centroid.
+
+**C bare / low October NDVI** (89 clusters on public land; top 5 by ha / (1 + km to WMA parking)):
+
+| unit | ha | E | N | lat | lon | train% | NE21 | NE25 | NE26 | Oct26 NDVI | spr26 NDVI | park m | road m | km to photo |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| WMA Main | 39.18 | 583583 | 4895013 | 44.20355 | -91.95390 | 0 | 0 | 0 | 0 | 0.16 | 0.09 | 0 | 51 | 7.52 |
+| WMA Main | 24.44 | 582828 | 4894370 | 44.19785 | -91.96345 | 0 | 1 | 0 | 0 | 0.14 | 0.04 | 20 | 394 | 6.6 |
+| WMA Main | 18.58 | 582524 | 4893948 | 44.19408 | -91.96732 | 0 | 0 | 0 | 0 | 0.18 | 0.05 | 100 | 141 | 6.08 |
+| WMA North | 23.06 | 576296 | 4882374 | 44.09058 | -92.04692 | 0 | 11 | 0 | 0 | 0.14 | 0.14 | 549 | 390 | 7.07 |
+| WMA Main | 10.85 | 580050 | 4892534 | 44.18163 | -91.99850 | 0 | 0 | 0 | 0 | 0.09 | 0.00 | 182 | 439 | 4.04 |
+
+**E forest edge** (51 clusters on public land; top 5 by ha / (1 + km to WMA parking)):
+
+| unit | ha | E | N | lat | lon | train% | NE21 | NE25 | NE26 | Oct26 NDVI | spr26 NDVI | park m | road m | km to photo |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| WMA North | 7.42 | 574030 | 4878468 | 44.05565 | -92.07577 | 0 | 2 | 0 | 0 | 0.31 | 0.28 | 0 | 10 | 11.58 |
+| WMA Main | 11.96 | 583957 | 4894037 | 44.19472 | -91.94938 | 0 | 20 | 0 | 0 | 0.29 | 0.20 | 1000 | 0 | 6.91 |
+| WMA Main | 5.37 | 584793 | 4896040 | 44.21265 | -91.93860 | 0 | 4 | 0 | 0 | nan | 0.16 | 614 | 1475 | 9.03 |
+| WMA North | 3.22 | 575593 | 4881886 | 44.08625 | -92.05577 | 0 | 3 | 0 | 0 | 0.30 | 0.26 | 63 | 0 | 7.85 |
+| WMA Main | 4.99 | 580469 | 4886613 | 44.12828 | -91.99415 | 0 | 0 | 0 | 0 | 0.61 | 0.16 | 716 | 441 | 2.0 |
+
+**R1 NE-like 2025 and 2026** (24 clusters on public land; top 5 by ha / (1 + km to WMA parking)):
+
+| unit | ha | E | N | lat | lon | train% | NE21 | NE25 | NE26 | Oct26 NDVI | spr26 NDVI | park m | road m | km to photo |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| WMA Main | 11.50 | 579981 | 4885747 | 44.12054 | -92.00038 | 55 | 91 | 100 | 100 | 0.57 | 0.27 | 560 | 151 | 2.76 |
+| WMA Main | 1.16 | 584203 | 4895217 | 44.20531 | -91.94611 | 0 | 0 | 100 | 100 | 0.50 | 0.23 | 130 | 1003 | 8.02 |
+| WMA Main | 1.38 | 578951 | 4889283 | 44.15248 | -92.01273 | 0 | 2 | 100 | 100 | 0.49 | 0.23 | 413 | 215 | 1.16 |
+| WMA Main | 0.95 | 580304 | 4892529 | 44.18156 | -91.99532 | 0 | 6 | 100 | 100 | 0.54 | 0.23 | 224 | 595 | 4.06 |
+| WMA Main | 0.80 | 579982 | 4892006 | 44.17689 | -91.99942 | 0 | 1 | 100 | 100 | 0.45 | 0.22 | 211 | 54 | 3.51 |
+
+**R2 NE-like one of 2025/2026** (79 clusters on public land; top 5 by ha / (1 + km to WMA parking)):
+
+| unit | ha | E | N | lat | lon | train% | NE21 | NE25 | NE26 | Oct26 NDVI | spr26 NDVI | park m | road m | km to photo |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| WMA North | 6.51 | 569776 | 4882762 | 44.09471 | -92.12831 | 0 | 2 | 80 | 20 | 0.22 | 0.22 | 32 | 4142 | 11.56 |
+| WMA Main | 5.39 | 579507 | 4888687 | 44.14706 | -92.00587 | 0 | 19 | 12 | 88 | 0.56 | 0.23 | 28 | 54 | 0.36 |
+| WMA Main | 10.05 | 579578 | 4887227 | 44.13391 | -92.00520 | 0 | 90 | 2 | 98 | 0.50 | 0.17 | 1104 | 81 | 1.3 |
+| WMA Main | 4.37 | 580299 | 4892129 | 44.17796 | -91.99544 | 0 | 9 | 85 | 15 | 0.55 | 0.22 | 22 | 32 | 3.66 |
+| WMA Main | 3.32 | 582159 | 4893426 | 44.18943 | -91.97197 | 0 | 0 | 87 | 13 | 0.56 | 0.18 | 410 | 382 | 5.45 |
+
+**S late-green herbaceous, not NE-like** (93 clusters on public land; top 5 by ha / (1 + km to WMA parking)):
+
+| unit | ha | E | N | lat | lon | train% | NE21 | NE25 | NE26 | Oct26 NDVI | spr26 NDVI | park m | road m | km to photo |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| WMA Main | 4.01 | 580025 | 4892301 | 44.17953 | -91.99884 | 0 | 8 | 0 | 0 | 0.41 | 0.19 | 112 | 259 | 3.8 |
+| WMA Main | 4.07 | 582084 | 4893613 | 44.19112 | -91.97288 | 0 | 0 | 0 | 0 | 0.39 | 0.15 | 153 | 122 | 5.59 |
+| WMA Main | 3.59 | 582682 | 4894175 | 44.19611 | -91.96530 | 0 | 4 | 0 | 0 | 0.37 | 0.19 | 50 | 430 | 6.36 |
+| WMA Main | 3.51 | 579867 | 4891863 | 44.17561 | -92.00088 | 0 | 2 | 0 | 0 | 0.39 | 0.22 | 175 | 0 | 3.36 |
+| WMA Main | 3.04 | 579880 | 4889724 | 44.15635 | -92.00105 | 0 | 14 | 0 | 0 | 0.44 | 0.16 | 621 | 827 | 1.22 |
+
+Clusters per unit and class:
+
+| unit | C | E | R1 | R2 | S |
+|---|---|---|---|---|---|
+| Carley SP | 1 | 0 | 0 | 0 | 0 |
+| State Park | 5 | 3 | 0 | 3 | 11 |
+| WMA Main | 68 | 38 | 24 | 72 | 71 |
+| WMA North | 9 | 7 | 0 | 3 | 7 |
+| WMA South | 6 | 3 | 0 | 1 | 4 |
+
+Clusters within 300 m of a WMA parking lot: C 17, E 6, R1 7, R2 18, S 17
+
+**What is NOT in these tables and must be added before a field day:** the lidar criteria of
+section 4 (flat floodplain, spread quartile, penetration failure, fingerprint, DoD < -LoD)
+exist only on the Elba tile; every site off that tile is imagery-only, and "erosion" cannot
+yet highlight it (Phase B). Water and wetland exclusion used WorldCover class 80 only, not
+NWI or `water_dnr_hydrography` layer 1. Spring vigour is the mean of three dates, one of
+them 10 April (mostly pre-green-up), so its absolute level is low (0.09-0.36 across the
+sites) and only its ranking is meaningful. The 2008 column waits on Landsat.
+
 ## Checks run while writing (read-only; nothing processed)
 
 The three county tile lists (winona 223, olmsted 229, wabasha 194 lines); HEAD of one tile
