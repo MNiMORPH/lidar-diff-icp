@@ -37,10 +37,17 @@ def samp(path, band=1):
 for y in (2008, 2021, 2025, 2026): S[f"nelike_{y}"] = (100 * samp(f"{V}/p_nelike_{y}.tif")).round(0)
 S["spring2026_ndvi"] = samp(f"{V}/spring_ndvi_2026.tif").round(2); S["oct2026_ndvi"] = samp(f"{V}/oct_ndvi_2026.tif").round(2); S["drop_max_2026"] = samp(f"{V}/ndvi_drop_max_2026.tif", 1).round(2); S["drop_doy_2026"] = samp(f"{V}/ndvi_drop_max_2026.tif", 2)
 S["both_epochs_nelike"] = (S.nelike_2008 >= 50) & (S.nelike_2021 >= 50)
+# WorldCover 2021 class at the centroid (mode of the 3x3 10 m window): the only present-day
+# cover source off the imagery classes; it is what separates a 2008 standing crop from sward
+with rasterio.open(f"{V}/worldcover.tif") as r:
+    wc = r.read(1); trw = r.transform; names = {10: "tree", 20: "shrub", 30: "grass", 40: "crop", 50: "built", 60: "bare", 80: "water", 90: "wetland"}; cls_ = []
+    for x, y in zip(S.easting, S.northing):
+        c, rr = ~trw * (x, y); c, rr = int(c), int(rr); w = wc[max(rr - 1, 0):rr + 2, max(c - 1, 0):c + 2].ravel(); v, n = np.unique(w, return_counts=True); cls_.append(names.get(int(v[n.argmax()]), str(v[n.argmax()])))
+S["worldcover"] = cls_
 S["rank_score"] = S.ha / (1 + S.dist_parking_m / 1000.0); S = S.sort_values(["type", "rank_score"], ascending=[True, False])
 S.to_csv(f"{V}/sites_valley_ranked.csv", index=False)
 pd.set_option("display.width", 260); pd.set_option("display.max_columns", 30)
-cols = ["tile", "site", "ha", "lat", "lon", "raw_dod_mm", "gen1_span_mm", "slope_deg", "penfail_pct", "lowveg", "fingerprint_score", "nelike_2008", "nelike_2021", "nelike_2026", "spring2026_ndvi", "drop_max_2026", "dist_parking_m", "dist_wma_road_m"]
+cols = ["tile", "site", "ha", "lat", "lon", "worldcover", "raw_dod_mm", "gen1_span_mm", "slope_deg", "penfail_pct", "lowveg", "fingerprint_score", "nelike_2008", "nelike_2021", "nelike_2026", "spring2026_ndvi", "drop_max_2026", "dist_parking_m", "dist_wma_road_m"]
 print("\nimagery values = median of the 3x3 10 m window at the cluster centroid (MINE); nelike = NE-like probability %, per year; rank = ha / (1 + km to WMA parking) (MINE)")
 for t, g in S.groupby("type", sort=True):
     print(f"\n{g.cls.iloc[0]}: {len(g)} sites; top 5:"); print(g[cols].head(5).to_string(index=False))
