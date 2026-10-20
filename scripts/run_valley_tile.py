@@ -139,11 +139,13 @@ else: print(f"[{T}] gen2 class-2 present: {CLS2}")
 # ---- 4. completeness (gen2), the ept_coverage_check arithmetic
 if "completeness" not in log["stages"]:
     t0 = time.time()
-    def available(bounds):
+    def available(bounds, base=None, name=None):
         to_ll = Transformer.from_crs("EPSG:26915", "EPSG:4326", always_xy=True); get = lambda u: json.load(urllib.request.urlopen(u, timeout=60))
         pts = [to_ll.transform(cx, cy) for cx in bounds[0::2] for cy in bounds[1::2]]; lons = [p[0] for p in pts]; lats = [p[1] for p in pts]
-        ref = threedep.resolve_reference((min(lons) + max(lons)) / 2, (min(lats) + max(lats)) / 2, (min(lons), min(lats), max(lons), max(lats)), cache="data/ept_index_cache.json")
-        base = ref["url"].rsplit("/ept.json", 1)[0]; ept = get(f"{base}/ept.json"); b = ept["bounds"]; side = b[3] - b[0]
+        if base is None:
+            ref = threedep.resolve_reference((min(lons) + max(lons)) / 2, (min(lats) + max(lats)) / 2, (min(lons), min(lats), max(lons), max(lats)), cache="data/ept_index_cache.json")
+            base = ref["url"].rsplit("/ept.json", 1)[0]; name = ref["name"]
+        ept = get(f"{base}/ept.json"); b = ept["bounds"]; side = b[3] - b[0]
         t = Transformer.from_crs("EPSG:26915", "EPSG:3857", always_xy=True); xs, ys = zip(*[t.transform(cx, cy) for cx in bounds[0::2] for cy in bounds[1::2]]); bx0, bx1, by0, by1 = min(xs), max(xs), min(ys), max(ys)
         def node(d, x, y): s = side / (2 ** d); return (b[0] + x * s, b[1] + y * s, b[0] + (x + 1) * s, b[1] + (y + 1) * s, s)
         def ov(d, x, y): n = node(d, x, y); return not (n[2] < bx0 or n[0] > bx1 or n[3] < by0 or n[1] > by1)
@@ -157,8 +159,15 @@ if "completeness" not in log["stages"]:
                 if cnt == -1:
                     if key not in seen: seen.add(key); frontier.append(get(f"{base}/ept-hierarchy/{key}.json"))
                 else: avail += cnt; inb += cnt * frac_in(d, x, y)
-        return ref["name"], avail, inb
-    proj, avail, inb = available(B)
+        return name, avail, inb
+    if log.get("seam_projects"):
+        # seam tile: the available count is the SUM over the projects the cloud was merged from
+        import pyproj
+        tl = pyproj.Transformer.from_crs("EPSG:26915", "EPSG:4326", always_xy=True); lo0, la0 = tl.transform(B[0], B[1]); lo1, la1 = tl.transform(B[2], B[3])
+        projs = {p_["name"]: p_["url"].rsplit("/ept.json", 1)[0] for p_ in threedep.find_projects((lo0 + lo1) / 2, (la0 + la1) / 2, cache="data/ept_index_cache.json") if p_["name"] in log["seam_projects"]}
+        parts = [available(B, base=u, name=n) for n, u in projs.items()]; proj = "+".join(n for n, _, _ in parts); avail = sum(a for _, a, _ in parts); inb = sum(i for _, _, i in parts)
+    else:
+        proj, avail, inb = available(B)
     with laspy.open(FULL) as f: have = f.header.point_count
     completeness.write(D, epoch="gen2", cloud=FULL, points_in_file=have, points_available=inb, measured_by=f"scripts/run_valley_tile.py against {proj} (ept_coverage_check arithmetic)", note="area-weighted share of the EPT node set inside the bbox; nodes clip the box, so a raw node-count sum overstates a complete fetch")
     stamp("completeness", t0, project=proj, points_in_file=int(have), points_available=round(inb), ratio=round(have / max(inb, 1), 4))
