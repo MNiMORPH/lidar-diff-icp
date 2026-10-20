@@ -469,6 +469,12 @@ same ground was a cut sward with no return-structure signature; only the vendor'
 classifier noticed something. So a lidar-only detector is a 2008 (standing, senesced
 sward) capability, not a 2021 one -- and it gives presence, not cover.
 
+**Saved and applicable (2026-10-20).** The gen1 shape LDA is refitted and stored by
+`analysis/rcg/fingerprint_fit.py` in `data/derived/rcg/fingerprint_lda.json` (block-CV AUC
+0.7077, resubstitution 0.8100, 12,135 cells / 926 positives, reproducing this section's run to
+the digit) and applied to any tile by `analysis/rcg/fingerprint_apply.py --tile <dir>`;
+record in `analysis/rcg/FINGERPRINT_MODEL.md`.
+
 ## T. The conjugate test: class in 2021 but not 2008 (2026-10-19)
 
 Andy: look for areas with the class in 2021 but not in 2008 and try the conjugate test.
