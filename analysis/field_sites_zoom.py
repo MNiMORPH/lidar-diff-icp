@@ -3,8 +3,9 @@
 (Andy, 2026-10-20: "create a zoomed-in look at our field-survey sites" and "produce a lidar
 difference map of the area(s), highlighting likely spurious 'deposition' and 'erosion'").
 
-For each window (stop 1 lot 204, stop 2 lot 501, the valley-wide best place 1 by the 2021
-photo site, and the whole reach) three panels:
+For each window (stop 1 lot 204, stop 2 lot 501, the valley-wide best place 1 (the 14 ha
+zero-penetration field at 44.1301 N, NOT the 2021 photo site, which is 1.7 km further north
+and gets its own window), and the whole reach) three panels:
   A  2025 FSA imagery (MnGeo WMS) with the survey REGION outlines, lots, monuments, transect;
   B  the 2021 - 2008 difference, mosaicked from the Phase B tiles (5 m, star frame, no
      correction surface, stable-ground median removed per tile), RED = lowering (erosion), BLUE = rise
@@ -50,7 +51,7 @@ V = "data/derived/valley"; RES = 5.0
 from_ll = pyproj.Transformer.from_crs("EPSG:4326", "EPSG:26915", always_xy=True)
 TILES = {t: v["bounds"] for t, v in json.load(open(f"{V}/public_tiles.json")).items()}
 WINDOWS = {"stop1_lot204": (579250, 4884900, 580700, 4885950), "stop2_lot501": (578900, 4885250, 580100, 4886450),
-           "bestplace1_photo": (579000, 4888000, 580900, 4889900), "reach": (578000, 4883500, 581500, 4890500)}
+           "bestplace1": (578900, 4886100, 580500, 4887700), "photosite": (579000, 4888000, 580900, 4889900), "reach": (578000, 4883500, 581500, 4890500)}
 
 def tile_layer(t, name):
     p = f"data/derived/{t}/{name}"
