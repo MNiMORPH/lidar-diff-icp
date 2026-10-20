@@ -88,14 +88,16 @@ wps = []
 # as a filled outline, and its outline goes to the GPX as a track.
 import rasterio
 from scipy.ndimage import binary_dilation
-def cells_to_poly(mask, x0, y0, res):
-    jy, jx = np.nonzero(mask); pts = shapely.points(x0 + (jx + 0.5) * res, y0 + (jy + 0.5) * res)
+def cells_to_poly(mask, x0, y0, res, dy=None):
+    """cells -> polygon. Elba grids: row index increases NORTHWARD (y = y0 + (jy+0.5)*res).
+    North-up GeoTIFFs: pass dy = transform.e (negative) and y0 = transform.f (the top edge)."""
+    jy, jx = np.nonzero(mask); dy = res if dy is None else dy; pts = shapely.points(x0 + (jx + 0.5) * res, y0 + (jy + 0.5) * dy)
     return shapely.union_all(shapely.buffer(pts, res * 0.5 + 0.6, cap_style="square")).simplify(1.0)
 with rasterio.open(f"{V}/valley_classes.tif") as r: cls10 = r.read(1); tr10 = r.transform
 def valley_region(site):
     row = F[F.site == site].iloc[0]; v = {"R1": 1, "R2": 2, "S": 3, "C": 4, "E": 5}[row.type]
     lab_, _ = label(cls10 == v, structure=np.ones((3, 3))); c, rr = ~tr10 * (row.easting, row.northing); k = lab_[int(rr), int(c)]
-    return cells_to_poly(lab_ == k, tr10.c, tr10.f + cls10.shape[0] * tr10.e, 10.0) if k else None
+    return cells_to_poly(lab_ == k, tr10.c, tr10.f, tr10.a, dy=tr10.e) if k else None
 def elba_region(mask, x, y):
     lab_, _ = label(mask, structure=np.ones((3, 3))); k = lab_[int((y - Y0) / RES), int((x - X0) / RES)]
     return cells_to_poly(lab_ == k, X0, Y0, RES) if k else None
@@ -127,11 +129,11 @@ TRACKS = []
 # ---- map 1: lot 204
 bb = (579400, 4884900, 580300, 4885900); fig, ax = plt.subplots(figsize=(11, 12)); base_map(ax, bb)
 draw_region(ax, REG["R1-v140"], "white", "R1-v140: RCG-type field, both epochs"); draw_region(ax, REG["R1-v149"], "white", "R1-v149"); draw_region(ax, REG["F2-1"], "#eb6834", "F2-1: closed canopy")
-draw_region(ax, REG["bluff stand, <= 25 deg"], "#1baf7a", "bluff stand <= 25 deg"); draw_region(ax, REG["bluff stand, steeper"], "#e34948", "steeper", 0.25)
+draw_region(ax, REG["bluff stand, <= 25 deg"], "#1baf7a", "bluff stand (green <= 25 deg)"); draw_region(ax, REG["bluff stand, steeper"], "#e34948", "", 0.25)
 draw_region(ax, REG["gen2-high patches"], "#e87ba4", "gen2-high patches"); draw_region(ax, REG["hillslope control"], "#eda100", "hillslope control")
 ax.plot(route[:, 0], route[:, 1], color="#eda100", lw=3); ax.plot(route[-1, 0], route[-1, 1], marker="^", ms=12, mfc="none", mec="#eda100", mew=2.5)
 wps += [("lot_204", lots[204].x, lots[204].y), ("stand_entry", route[-1, 0], route[-1, 1])]
-ax.set_title("Stop 1, lot 204 -- REGIONS to survey anywhere inside: RCG-type field R1-v140 and R1-v149 (white), closed-canopy F2-1 (orange), bluff lowveg stand (green <= 25 deg, red steeper),\ngen2-high patches (pink), hillslope control (yellow); orange line = least-steep route to the stand. White dashed = WMA road. 2025 FSA imagery; the bluff stand is under tree canopy.", fontsize=9)
+ax.set_title("Stop 1, lot 204. Survey anywhere inside a region: RCG-type field R1-v140 and R1-v149 (white), closed-canopy F2-1 (orange),\nbluff lowveg stand (green <= 25 deg, red steeper; under tree canopy), gen2-high patches (pink), hillslope control (yellow).\nOrange line = least-steep route to the stand. White dashed = WMA road. 2025 FSA imagery.", fontsize=9)
 fig.tight_layout(); fig.savefig("figures/field_day_lot204.png", dpi=110); print("figures/field_day_lot204.png")
 
 # ---- map 2: lot 501
