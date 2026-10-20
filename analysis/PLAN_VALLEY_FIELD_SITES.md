@@ -337,7 +337,8 @@ grid; stable sigma 60.8 mm; median LoD 117.5 mm; 21.8% of cells beyond LoD; 1,19
 zero line 135), slope/ridges/convexity/curvature/gen1 angles/beam table 21 s together,
 vegetation LoD 5 s (74,396 flat-floodplain cells, 20,977 penetration failures), lowveg
 grid streaming the full cloud last. Budget for the other 28 at this rate, plus ~460 s of
-CSF each where no cache exists: roughly 20 min per tile, ~10 h for the valley. The 15
+CSF each where no cache exists: roughly 20 min per tile, ~10 h for the valley. Andy, same day: Elba's 230.0 m "was from a rough elevation cut", so the Clubb-derived 223.6 m
+is not expected to match it and is not checked against it. The 15
 missing gen1 tiles were fetched first (data/derived/valley/gen1_fetch.log). Full-density
 gen2 is kept per tile (0.98 GB) because the lowveg grid needs all returns; that goes one
 step past D2 and is mine. Two agents work alongside: the Elba fingerprint refit saved as
