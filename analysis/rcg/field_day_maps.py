@@ -81,13 +81,13 @@ def base_map(ax, bb):
 
 # monuments (NGS datasheets, read 2026-10-20): DR9925 = MnDOT "8508 Y" rod, NAD 83(2011) adjusted,
 # the BASE STATION; DG8385 = USGS "9 DRL" leveled disk, the vertical CHECK shot
-MONUMENTS = {"DR9925 (8508 Y): BASE": (-92.004665, 44.121705), "DG8385 (9 DRL): vertical check": (-92.003536, 44.120247)}
+MONUMENTS = {"DR9925 (8508 Y): BASE": (-92.004665, 44.121705, (-14, 14), "right"), "DG8385 (9 DRL): vertical check": (-92.003536, 44.120247, (10, -16), "left")}
 from_ll = pyproj.Transformer.from_crs("EPSG:4326", "EPSG:26915", always_xy=True)
 def draw_monuments(ax, bb):
-    for name, (lo, la) in MONUMENTS.items():
+    for name, (lo, la, off, ha) in MONUMENTS.items():
         x, y = from_ll.transform(lo, la)
         if bb[0] < x < bb[2] and bb[1] < y < bb[3]:
-            ax.plot(x, y, marker="*", ms=20, color="magenta", mec="black", mew=1.2); ax.annotate(name, (x, y), xytext=(10, -4), textcoords="offset points", color="magenta", fontsize=11, weight="bold", path_effects=[__import__("matplotlib.patheffects", fromlist=["withStroke"]).withStroke(linewidth=3, foreground="black")])
+            ax.plot(x, y, marker="*", ms=20, color="magenta", mec="black", mew=1.2); ax.annotate(name, (x, y), xytext=off, textcoords="offset points", ha=ha, color="magenta", fontsize=11, weight="bold", path_effects=[__import__("matplotlib.patheffects", fromlist=["withStroke"]).withStroke(linewidth=3, foreground="black")])
             wps.append((name.split(" ")[0] + "_" + name.split("(")[1].split(")")[0].replace(" ", ""), x, y))
 
 def mark(ax, x, y, text, color="white", m="o"):
@@ -153,8 +153,8 @@ ax.plot(T.easting, T.northing, color="#eda100", lw=3); wp = T[np.isclose(T.dist_
 for _, r in wp.iterrows(): ax.plot(r.easting, r.northing, marker="o", ms=5, color="#eda100", mec="black"); wps.append((f"transect_{int(r.dist_m)}m", r.easting, r.northing))
 ax.annotate("class transect, 300 m, bearing 300", (T.easting.iloc[0], T.northing.iloc[0]), xytext=(10, -14), textcoords="offset points", color="#eda100", fontsize=10, weight="bold")
 draw_region(ax, REG["C-v52"], "#eda100", "C-v52: bare control"); draw_region(ax, REG["S-v324"], "#4a3aa7", "S-v324: meadow"); draw_region(ax, REG["R2-v237"], "#eb6834", "R2-v237: sward 2008+2021, cut since"); draw_region(ax, REG["F2-3"], "white", "F2-3: closed canopy")
-mark(ax, 579659.824, 4885857.071, "mark 1079_2021_MN", "cyan", "^"); wps += [("mark_1079_2021_MN", 579659.824, 4885857.071), ("lot_501", lots[501].x, lots[501].y)]
-ax.set_title("Stop 2, lot 501 -- REGIONS to survey anywhere inside: bare control C-v52 (yellow), meadow S-v324 (purple), sward-both-epochs R2-v237 (orange), closed-canopy F2-3 (white),\nmark 1079 (cyan, an exact point), monuments DR9925 = 8508 Y BASE and DG8385 = 9 DRL check (magenta stars), the class transect (orange line, dots every 25 m). White dashed = WMA road.", fontsize=9)
+ax.plot(579659.824, 4885857.071, marker="^", ms=12, mfc="none", mec="cyan", mew=2.5); ax.annotate("mark 1079_2021_MN", (579659.824, 4885857.071), xytext=(12, -22), textcoords="offset points", color="cyan", fontsize=10, weight="bold", path_effects=[__import__("matplotlib.patheffects", fromlist=["withStroke"]).withStroke(linewidth=3, foreground="black")]); wps += [("mark_1079_2021_MN", 579659.824, 4885857.071), ("lot_501", lots[501].x, lots[501].y)]
+ax.set_title("Stop 2, lot 501. Survey anywhere inside a region: bare control C-v52 (yellow), meadow S-v324 (purple),\nsward-both-epochs R2-v237 (orange), closed-canopy F2-3 (white). Exact points: mark 1079 (cyan), monuments DR9925 = 8508 Y BASE\nand DG8385 = 9 DRL check (magenta stars). Class transect: orange line, dots every 25 m. White dashed = WMA road. 2025 FSA imagery.", fontsize=9)
 fig.tight_layout(); fig.savefig("figures/field_day_lot501.png", dpi=110); print("figures/field_day_lot501.png")
 
 # ---- GPX
