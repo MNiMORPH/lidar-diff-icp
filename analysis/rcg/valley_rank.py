@@ -31,7 +31,8 @@ METHOD, each step as it was done on the Elba tile (RCG_PHENOLOGY.md sections N, 
                  centroid (UTM, lat/lon), ha, unit, % of the cluster inside the TRAINING
                  patch (a site there is resubstitution, not a find), class memberships
                  2008/2021/2025/2026 (2008 NaN until the Landsat scene is on disk),
-                 spring vigour, last 2026 cut date, distance to nearest WMA parking and
+                 spring vigour, last 2026 cut date with the gap (days) it was detected across,
+                 distance to nearest WMA parking and
                  road; ranked within class by hectares / (1 + distance to parking in km).
 Outputs: data/derived/valley/valley_sites.csv, valley_classes.tif (uint8 class map),
 figures/valley_sites.png, and the per-year p rasters.
@@ -82,7 +83,8 @@ def logpdf(Z, C):
     return -0.5 * np.einsum("ij,jk,ik->i", dz, inv, dz) - 0.5 * np.linalg.slogdet(cov)[1]
 def classify(tif, bn, tag):
     da = rioxarray.open_rasterio(tif)
-    if not (np.allclose(da.x.values, xs) and np.allclose(da.y.values, ys)): da = da.reindex(x=xs, y=ys, method="nearest")
+    if da.x.size != nx or da.y.size != ny or not (np.allclose(da.x.values, xs) and np.allclose(da.y.values, ys)):
+        da = da.reindex(x=xs, y=ys, method="nearest")   # Landsat is 30 m: nearest onto the 10 m grid, each 30 m pixel repeated 3x3
     X = np.stack([da.values[i] for i in range(len(bn))], -1); fin = np.all(np.isfinite(X), -1)
     refm = np.nanmedian(X[open_ & fin], 0); Xr = X / refm
     c1 = Xr[ne & fin]; c0 = Xr[open_ & ~ne & fin]
@@ -106,15 +108,21 @@ nd = lambda f: rioxarray.open_rasterio(f).squeeze(drop=True).reindex(x=xs, y=ys,
 spring = np.nanmean(np.stack([nd(f"{V}/s2_{d}_ndvi.tif") for d in ("20260410", "20260415", "20260515") if os.path.exists(f"{V}/s2_{d}_ndvi.tif")]), 0)
 cutfiles = sorted(f for f in glob.glob(f"{V}/s2_2026*_ndvi.tif") if os.path.basename(f)[3:11] >= "20260615")
 dates = [os.path.basename(f)[3:11] for f in cutfiles]; series = np.stack([nd(f) for f in cutfiles]) if cutfiles else np.zeros((0, ny, nx))
-summer_max = np.nanmax(series, 0) if len(series) else np.full((ny, nx), np.nan); last_cut = np.full((ny, nx), "", dtype=object); last_cut_doy = np.full((ny, nx), np.nan)
-prev = None; prev_d = None
+summer_max = np.nanmax(series, 0) if len(series) else np.full((ny, nx), np.nan); last_cut = np.full((ny, nx), "", dtype=object); last_cut_doy = np.full((ny, nx), np.nan); last_cut_gap = np.full((ny, nx), np.nan)
+# a "cut" is dated to the first clear date AFTER the drop; the GAP (days since that pixel's
+# previous clear date) is carried because a drop across a long gap (Aug 28 -> Oct 2 is 35
+# days) also contains crop harvest and senescence, which this detector cannot separate
+prev = None; prev_doy = None
 for k, d in enumerate(dates):
-    cur = series[k]
+    cur = series[k]; doy = pd.Timestamp(d).dayofyear
     if prev is not None:
-        drop = (prev - cur) >= CUT_DROP; last_cut[drop] = d; last_cut_doy[drop] = pd.Timestamp(d).dayofyear
+        drop = np.isfinite(cur) & np.isfinite(prev) & ((prev - cur) >= CUT_DROP)
+        last_cut[drop] = d; last_cut_doy[drop] = doy; last_cut_gap[drop] = (doy - prev_doy)[drop]
     both = np.isfinite(cur)
-    prev = np.where(both, cur, prev if prev is not None else cur); prev_d = d
+    prev = np.where(both, cur, prev if prev is not None else cur)
+    prev_doy = np.where(both, doy, prev_doy if prev_doy is not None else doy)
 print(f"cut-history dates used: {dates}; pixels with a 2026 cut on open valley floor: {100*np.mean(np.isfinite(last_cut_doy[open_])):.1f}%")
+print("  last-cut date, share of open valley floor, and the gap it was detected across:", "; ".join(f"{d} {100*np.mean(last_cut[open_] == d):.1f}% ({np.nanmedian(last_cut_gap[open_ & (last_cut == d)]):.0f} d)" for d in dates if np.any(last_cut[open_] == d)))
 # classes
 near_tree = binary_dilation(wc == 10, structure=np.ones((3, 3)), iterations=3) & (wc != 10)
 cls = np.zeros((ny, nx), np.uint8)   # 0 none, 1 R1, 2 R2, 3 S, 4 C, 5 E
@@ -136,7 +144,7 @@ for v, nm in names.items():
         rows.append(dict(cls=nm, unit=unit, ha=round(mm.sum() * 0.01, 2), easting=round(e0, 1), northing=round(n0, 1), lat=round(lat, 6), lon=round(lon, 6),
                          training_patch_pct=round(100 * ne[mm].mean(), 0), nelike_2008=round(100 * np.nanmean(like08[mm]), 0), nelike_2021=round(100 * np.nanmean(like21[mm]), 0), nelike_2025=round(100 * np.nanmean(like25[mm]), 0), nelike_2026=round(100 * np.nanmean(like26[mm]), 0),
                          oct2026_ndvi=round(float(np.nanmedian(ndvi26[mm])), 2), spring2026_ndvi=round(float(np.nanmedian(spring[mm])), 2), summer2026_max_ndvi=round(float(np.nanmedian(summer_max[mm])), 2),
-                         cut_2026=(pd.Series(cuts).mode().iloc[0] if len(cuts) else ""), cut_share=round(100 * len(cuts) / mm.sum(), 0), dist_parking_m=round(float(dpark[mm].min()), 0), dist_road_m=round(float(droad[mm].min()), 0)))
+                         cut_2026=(pd.Series(cuts).mode().iloc[0] if len(cuts) else ""), cut_share=round(100 * len(cuts) / mm.sum(), 0), cut_gap_days=(float(np.nanmedian(last_cut_gap[mm & (last_cut == (pd.Series(cuts).mode().iloc[0] if len(cuts) else "")) ])) if len(cuts) else np.nan), dist_parking_m=round(float(dpark[mm].min()), 0), dist_road_m=round(float(droad[mm].min()), 0)))
 F = pd.DataFrame(rows); F["rank_score"] = F.ha / (1 + F.dist_parking_m / 1000.0); F = F.sort_values(["cls", "rank_score"], ascending=[True, False]); F.to_csv(f"{V}/valley_sites.csv", index=False)
 print(f"\nCANDIDATE SITES on public land (clusters >= {MIN_PX} px = 0.5 ha): {len(F)}; per class: {F.cls.value_counts().to_dict()}")
 pd.set_option("display.width", 250); pd.set_option("display.max_columns", 30)
