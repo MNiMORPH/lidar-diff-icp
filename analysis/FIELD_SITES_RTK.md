@@ -381,3 +381,16 @@ vegetated slope in one walk); 7 slope patches (vegetated hillslope, gen2-high); 
 (wooded slope); then 9 north sward (second uncut sward); 10 the zero-penetration cores
 F2-1 / F2-3 (inside types 2 and 5); 11 slope control (second hillslope). Map
 `figures/field_priority.png` (`analysis/rcg/field_priority_map.py`).
+
+**Hillslope target in two classes (Andy, 2026-10-22: "mark out the broad region as a
+second-class target and the 0.1ish ha areas as the first-class hillslope target").**
+First class: the two gen2-high patches by lot 204 (high lowveg AND DoD > +LoD; 0.0475 +
+0.0425 = 0.09 ha; 154 m from the lot; 20-26 deg under canopy). Second class: the LOWER
+BLUFF FACE, a region to measure anywhere inside: hillslope cells 8-30 deg within 80 m of
+the floodplain edge, within 350 m of lot 204, west of the road, largest cluster (the
+cut-offs are mine): 3.45 ha, elevation 230-269 m (the lowest 40 m of the bluff), slope
+median 24 deg (p90 29), lowveg median 0.26 (quartiles 0.14-0.40), DoD median +118 mm with
+36% of cells above +LoD, nearest point 124 m from the lot. Any fixed point inside it is a
+vegetated-hillslope measurement; the patches are where the difference also exceeded the
+LoD. On the map (`figures/field_day_lot204.png`) the face is the white dashed region and
+the patches are pink; both are in the GPX and the Emlid point files.
