@@ -128,6 +128,15 @@ REG["gen2-high patches"] = cells_to_poly(big_clusters(hillp & (lv >= hiq) & (bas
 ctrl_mask = hillp & (lv < loq) & (np.abs(base_) < lod_ / 2); lab_c, _ = label(ctrl_mask, structure=np.ones((3, 3))); sz_c = np.bincount(lab_c.ravel())
 kc = lab_c[int((4885442 - Y0) / RES), int((579728 - X0) / RES)]; print(f"  hillslope control cluster at the recorded cell: label {kc}, {sz_c[kc] if kc else 0} cells; largest control cluster within 400 m of lot 204: {max(sz_c[k] for k in np.unique(lab_c[near204 & ctrl_mask]) if k) if (near204 & ctrl_mask).any() else 0} cells")
 kbest = max((k for k in np.unique(lab_c[near204 & ctrl_mask]) if k), key=lambda k: sz_c[k]); REG["hillslope control"] = cells_to_poly(lab_c == kbest, X0, Y0, RES)
+# TWO-CLASS HILLSLOPE TARGET (Andy, 2026-10-22): first class = the gen2-high patches (0.09 ha
+# together); second class = the LOWER BLUFF FACE as a region the students can work anywhere
+# inside: hillslope cells 8-30 deg, within 80 m of the floodplain edge, within 350 m of
+# lot 204, west of the road; largest cluster (3.45 ha, slope median 24 deg, lowveg median
+# 0.26, DoD median +118 mm, 36% above +LoD; the cut-offs are mine)
+from scipy.ndimage import distance_transform_edt
+dtoe = distance_transform_edt(~fp) * RES
+lf = np.isfinite(sl) & ~fp & (sl >= 8) & (sl <= 30) & (dtoe <= 80) & (np.hypot(X0 + (jx_ + 0.5) * RES - lots[204].x, Y0 + (jy_ + 0.5) * RES - lots[204].y) <= 350) & ((X0 + (jx_ + 0.5) * RES) < lots[204].x)
+lab_f, _ = label(lf, structure=np.ones((3, 3))); sz_f = np.bincount(lab_f.ravel()); REG["lower face (2nd-class hillslope)"] = cells_to_poly(lab_f == (sz_f[1:].argmax() + 1), X0, Y0, RES).buffer(8).buffer(-8)
 for k, g in list(REG.items()):
     if g is not None and hasattr(g, "geoms"): REG[k] = shapely.union_all([pg for pg in g.geoms if pg.area >= 500.0]) if any(pg.area >= 500.0 for pg in g.geoms) else None   # fragments < 0.05 ha dropped (MINE)
 for k, g in REG.items(): print(f"  region {k}: {g.area / 1e4:.2f} ha" if g is not None else f"  region {k}: NONE")
@@ -141,10 +150,11 @@ TRACKS = []
 bb = (579400, 4884900, 580300, 4885900); fig, ax = plt.subplots(figsize=(11, 12)); base_map(ax, bb); draw_monuments(ax, bb)
 draw_region(ax, REG["R1-v140"], "white", "R1-v140: RCG-type field, both epochs"); draw_region(ax, REG["R1-v149"], "white", "R1-v149"); draw_region(ax, REG["F2-1"], "#eb6834", "F2-1: zero penetration")
 draw_region(ax, REG["bluff stand, <= 25 deg"], "#1baf7a", "bluff stand (green <= 25 deg)"); draw_region(ax, REG["bluff stand, steeper"], "#e34948", "", 0.25)
-draw_region(ax, REG["gen2-high patches"], "#e87ba4", "gen2-high patches"); draw_region(ax, REG["hillslope control"], "#eda100", "hillslope control")
+draw_region(ax, REG["lower face (2nd-class hillslope)"], "white", "lower face: 2nd-class hillslope target", 0.15)
+draw_region(ax, REG["gen2-high patches"], "#e87ba4", "1st-class hillslope target"); draw_region(ax, REG["hillslope control"], "#eda100", "hillslope control")
 ax.plot(route[:, 0], route[:, 1], color="#eda100", lw=3); ax.plot(route[-1, 0], route[-1, 1], marker="^", ms=12, mfc="none", mec="#eda100", mew=2.5)
 wps += [("lot_204", lots[204].x, lots[204].y), ("stand_entry", route[-1, 0], route[-1, 1])]
-ax.set_title("Stop 1, lot 204. Survey anywhere inside a region: RCG-type field R1-v140 and R1-v149 (white), zero-penetration F2-1 (orange),\nbluff lowveg stand (green <= 25 deg, red steeper; under tree canopy), gen2-high patches (pink), hillslope control (yellow).\nOrange line = least-steep route to the stand. Magenta stars = monuments (DR9925 base, DG8385 check). White dashed = WMA road. 2025 FSA imagery.", fontsize=9)
+ax.set_title("Stop 1, lot 204. Survey anywhere inside a region: RCG-type field R1-v140 and R1-v149 (white), zero-penetration F2-1 (orange),\nbluff lowveg stand (green <= 25 deg, red steeper; under tree canopy), hillslope targets: 1st class = pink patches, 2nd class = the white lower face; hillslope control (yellow).\nOrange line = least-steep route to the stand. Magenta stars = monuments (DR9925 base, DG8385 check). White dashed = WMA road. 2025 FSA imagery.", fontsize=9)
 fig.tight_layout(); fig.savefig("figures/field_day_lot204.png", dpi=110); print("figures/field_day_lot204.png")
 
 # ---- map 2: lot 501
