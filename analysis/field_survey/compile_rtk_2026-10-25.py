@@ -67,7 +67,7 @@ import pyproj
 
 RAW = "data/field/2026-10-25/raw"; OUT = "data/field/2026-10-25/rtk_points_all.csv"
 # PROJECTION ONLY, no datum shift: the lidar grids are NAD83(2011) UTM 15N (3DEP; the pipeline's "EPSG:26915"
-# is a label on the same metres). EPSG:6318 -> EPSG:26915 made pyproj insert a NAD83(2011) -> NAD83 datum
+# is a label on the same meters). EPSG:6318 -> EPSG:26915 made pyproj insert a NAD83(2011) -> NAD83 datum
 # shift of +0.012 m E, -0.242 m N here, which put every surveyed point 0.24 m south of the lidar (fixed 2026-11-11).
 to_utm = pyproj.Transformer.from_crs("EPSG:6318", "EPSG:6344", always_xy=True)   # NAD83(2011) -> NAD83(2011) / UTM 15N
 to_ll = pyproj.Transformer.from_crs("EPSG:6344", "EPSG:6318", always_xy=True)
@@ -168,7 +168,7 @@ for c in glob.glob("data/derived/4*/corrections.json"):
     t = os.path.basename(os.path.dirname(c)); j = json.load(open(c)); tiles[t] = (j["bounds"], float(j.get("res") or j.get("res_m")))
 _zero = {}
 def sample(name, x, y, kind="float"):
-    """z_after and dod are read BILINEARLY from the 5 m grid (cell centres at +2.5 m): on a 30 deg
+    """z_after and dod are read BILINEARLY from the 5 m grid (cell centers at +2.5 m): on a 30 deg
     slope the nearest-cell value is off by up to 3.5 m x tan(30) = 2 m, which the first run showed
     as an NMAD over 1 m on the hillslope groups. Masks and slope are nearest-cell."""
     for t, (b, res) in tiles.items():
