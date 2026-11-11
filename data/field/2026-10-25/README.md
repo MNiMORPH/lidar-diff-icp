@@ -155,8 +155,10 @@ puts a colored marker at every FIX point on 2025 FSA imagery, minus 2021 on the 
 2008 on the right; points with no 2008 difference (most of the steep bluff) are open gray.
 
 Translation fit: `analysis/field_survey/fit_hillslope_translation.py` fits a rigid (dE, dN, dZ)
-of the UNTIED hillslope points onto the 2021 grid; `figures/rtk_2026-10-25_hillslope_translation.png`.
-L1 minimum dE +0.65, dN -1.05, dZ -0.436 m (bootstrap p16-p84: dE 0.55-0.75, dN -1.15 to -0.95,
-dZ -0.506 to -0.405; corr(dE, dZ) -0.93, -466 mm of dZ per m of dE); the pole-pair tie
-(+0.802, -1.123, -0.473) sits at the edge of that band, and at its horizontal the hillslope's own
-best dZ is -0.508, i.e. the ground 35 mm above the 2021 surface, the same +35 mm the cloud gives.
+of the UNTIED hillslope points onto the 2021 grid; `figures/rtk_2026-10-25_hillslope_translation.png`
+(rerun 2026-11-11 in the EPSG:6344 frame). L1 minimum dE +0.55, dN -1.15, dZ -0.411 m (bootstrap
+p16-p84: dE 0.55-0.85, dN -1.15 to -1.05, dZ -0.561 to -0.400; corr(dE, dZ) -0.96, -464 mm of
+dZ per m of dE). At the benchmark tie's horizontal (+0.771, -1.112) the hillslope's own best dZ
+is -0.503 against the tie's -0.537, i.e. the tied ground 34 mm below the 2021 surface; at the
+pole pair's (+0.802, -1.123) it is -0.515 against the pair's -0.473, 42 mm above. The fit's
+dE-dZ degeneracy is why the bluff cannot choose between the two ties on its own.
