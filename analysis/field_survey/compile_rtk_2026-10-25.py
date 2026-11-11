@@ -14,9 +14,10 @@ names kept so the provenance is traceable):
   rover_RSplus_824350D44A583F7B_floodplain_T2a.csv              Emlid Flow CSV from the
         shared Google Sheet, 100 pts
   (T3a's other CSV is a 9 October practice session in St Paul and is excluded.)
-  benchmark_DR9925_occupation_T5a.csv   transcribed from the PDF embedded in T5a
-        T5a's .docx: TWO 60-second FIX occupations of monument DR9925 ("8508 Y") under
-        base B2 at 15:03 and 15:37 CDT, Reach RS2, ellipsoid h 189.202 and 189.210 m.
+  benchmark_DR9925_occupation_T5a_flow_export.csv   T5a's unrounded Flow export
+        (received 2026-11-11): TWO 60-second FIX occupations of monument DR9925 ("8508 Y") under
+        base B2 at 15:03 and 15:37 CDT, Reach RS2, ellipsoid h 189.202 and 189.210 m. The PDF
+        transcription (benchmark_DR9925_occupation_T5a.csv, positions rounded) is superseded.
         "Purpose: To reference other teams' GNSS data to a known location."
   rover_CORS_Wickert_Whitewater_floodplain_LiDAR_veg.csv   Andy's Reach RS2+ on MnDOT CORS
         (mount point RTCM_34_NAD83(2011), a network solution; CS "NAD83(2011) / UTM 15N +
@@ -25,13 +26,16 @@ names kept so the provenance is traceable):
         point lies within 3 m of one of them the two are compared, which checks the
         benchmark tie against an independent frame.
 
-THE TIE. DR9925's published NAD83(2011) ellipsoid height is 188.669 m (NGS datasheet,
-network accuracy 1.49 cm). T5a's mean occupation reads 189.206 m, so everything
-measured under B2 is HIGH by +0.537 m (the two occupations agree to 8 mm, 34 minutes
-apart), and that constant is SUBTRACTED from every B2 point here: column `h_ell_tied_m`.
-Horizontally the printed occupation (E 579636.2, N 4885873) sits within the PDF's own
-rounding (0.1 m, 1 m) of the published E 579636.94 N 4885872.10, so no horizontal shift is
-applied and B2's horizontal error is bounded only at the metre level by this record. 
+THE TIE (Andy, 2026-11-11: "Let's trust the reference point"). DR9925's published NAD83(2011)
+position is 44 07 18.13863 N 092 00 16.79318 W, ellipsoid height 188.669 m (NGS datasheet,
+network accuracy 0.61 cm horizontal, 1.49 cm height). T5a's two occupations (unrounded
+Flow export, raw/benchmark_DR9925_occupation_T5a_flow_export.csv) read 189.202 and
+189.210 m, mean 189.206, so everything measured under B2 is HIGH by +0.537 m, SUBTRACTED
+from every B2 point: column `h_ell_tied_m`. Horizontally the occupations sit at E 579636.167
+/ .176, N 4885873.225 / .203 against the published E 579636.942 N 4885872.102, so every B2
+point is SHIFTED by their difference: columns `easting_tied`, `northing_tied`, and the lidar
+is read there. The CORS 11 = T1a 63 pair, the tie applied before this export arrived, is
+printed as the check (horizontal within 0.03 m; vertical 64 mm short, see the antenna note).
 
 BASES. The student rovers show two base positions. "B1" (lon -92.000382, lat 44.116855,
 h 187.878, ~13:20-13:30 CDT) was NOT the class base: a student's receiver was accidentally
@@ -104,10 +108,12 @@ for _, r in d.iterrows():
                      status=r["Solution status"], rms_e=r["Easting RMS"], rms_n=r["Northing RMS"], rms_v=r["Elevation RMS"], t_start=r["Averaging start"], base="CORS", baseline_m=r["Baseline"], tilt_deg=np.nan, source="rover_CORS_Wickert_Whitewater_floodplain_LiDAR_veg.csv"))
 P = pd.DataFrame(rows)
 # the benchmark occupation itself, as a fifth record set (so it is in the table and the check is visible)
-bm = pd.read_csv(f"{RAW}/benchmark_DR9925_occupation_T5a.csv", comment="#")
+# T5a's unrounded Flow export (2026-11-11) replaces the PDF transcription: the MEASURED position, under B2
+# like every other student point. Andy (2026-11-11): "The reference point was made on the metal disk, properly."
+bm = pd.read_csv(f"{RAW}/benchmark_DR9925_occupation_T5a_flow_export.csv")
 for _, r in bm.iterrows():
-    rows.append(dict(group="benchmark_DR9925", people="T5a, T5b, T5c", device="Reach RS2", serial="824377FA5B116E0F", point=int(r.point), lon=-92.00466477, lat=44.12170518, h_ell_m=r.h_ell_m, elev_app_m=r.elev_app_m, antenna_m=2.134,
-                     status=r.status, rms_e=r.rms_e, rms_n=r.rms_n, rms_v=r.rms_v, t_start=f"{r.t_start_cdt} UTC-05:00", base="B2", baseline_m=r.baseline_m, tilt_deg=np.nan, source="benchmark_DR9925_occupation_T5a.csv (position = the published monument position; the PDF prints the measured one rounded)"))
+    rows.append(dict(group="benchmark_DR9925", people="T5a, T5b, T5c", device=r["Device type"], serial=r["Device serial number"], point=int(r["Name"]), lon=r["Longitude"], lat=r["Latitude"], h_ell_m=r["Ellipsoidal height"], elev_app_m=r["Elevation"], antenna_m=r["Antenna height"],
+                     status=r["Solution status"], rms_e=r["Easting RMS"], rms_n=r["Northing RMS"], rms_v=r["Elevation RMS"], t_start=r["Averaging start"], base="B2", baseline_m=r["Baseline"], tilt_deg=np.nan, source="benchmark_DR9925_occupation_T5a_flow_export.csv (measured position under B2; tied position = the published monument)"))
 P = pd.DataFrame(rows)
 # a few exports lost the base columns on individual points (the link dropped and came back); the base is
 # assigned by TIME: B1 ran ~13:20-13:30 CDT, B2 from ~14:40 (the earliest B2 point is 14:40:14). Stated per point.
@@ -117,28 +123,32 @@ print(f"base assigned by time on {int(lost.sum())} points whose export had no ba
 # DROP B1: a student's receiver acting as a base; everything that used its corrections goes
 b1 = P.base == "B1"; print(f"DROPPED {int(b1.sum())} points corrected from B1 (a student's receiver, not the class base): {P.loc[b1, ['group', 'point', 't_hhmm', 'status']].to_dict('records')}")
 P = P[~b1].reset_index(drop=True)
-DR9925_H_ELL = 188.669; B2_OFFSET_BM = float(bm.h_ell_m.mean() - DR9925_H_ELL)
-print(f"B2 vertical, benchmark: DR9925 measured {bm.h_ell_m.tolist()} m vs published {DR9925_H_ELL} m -> B2 reads {B2_OFFSET_BM:+.3f} m")
+# DR9925, NGS datasheet retrieved 2026-11-11 (raw/DR9925_NGS_datasheet_2026-11-11.txt): NAD 83(2011) 44 07 18.13863 N
+# 092 00 16.79318 W, ellipsoid 188.669 m (network accuracy 0.61 cm horizontal, 1.49 cm ellipsoid height, 95 %),
+# UTM 15 N 4,885,872.102 E 579,636.942 (computed from the position, no datum shift; to_utm reproduces it to 1 mm).
+DR9925_H_ELL = 188.669; DR9925_LON, DR9925_LAT = -(92 + 0 / 60 + 16.79318 / 3600), 44 + 7 / 60 + 18.13863 / 3600
+B2_OFFSET_BM = float(bm["Ellipsoidal height"].mean() - DR9925_H_ELL)
+print(f"B2 vertical, benchmark: DR9925 measured {bm['Ellipsoidal height'].tolist()} m vs published {DR9925_H_ELL} m -> B2 reads {B2_OFFSET_BM:+.3f} m  [ADOPTED, Andy 2026-11-11: trust the reference point]")
 P["easting"], P["northing"] = to_utm.transform(P.lon.values, P.lat.values)
 P["easting"] = P.easting.round(3); P["northing"] = P.northing.round(3)
 
-# B2 HORIZONTAL tie (provisional, Andy 2026-11-11: "I am guessing our tie point is 11"): T1a 63
-# (15:53:33) and Andy's CORS point 11 (15:53:52) were the same spot, one after the other. The shift
-# CORS minus T1a is applied to every B2 point: easting_tied / northing_tied. Test
-# (test_b2_horizontal_tie.py): hillslope NMAD vs gen2 540 -> 139 mm, and a free fit over +/-2.5 m
-# lands within 0.1 m of the same shift. T5a's unrounded benchmark export replaces it when it comes.
+# B2 HORIZONTAL tie: the published monument minus the measured occupation (mean of the two FIX points),
+# applied to every B2 point as easting_tied / northing_tied. ADOPTED, Andy 2026-11-11: "Let's trust the
+# reference point and not on my comparison with CORS."
+_pe, _pn = to_utm.transform(DR9925_LON, DR9925_LAT); _bmrows = P[P.group == "benchmark_DR9925"]
+B2_DX, B2_DY = float(_pe - _bmrows.easting.mean()), float(_pn - _bmrows.northing.mean())
+print(f"B2 HORIZONTAL TIE, benchmark: published DR9925 E {_pe:.3f} N {_pn:.3f} (datasheet UTM 579636.942 / 4885872.102) minus measured E {_bmrows.easting.mean():.3f} N {_bmrows.northing.mean():.3f} -> B2 shifted by dE {B2_DX:+.3f} m, dN {B2_DY:+.3f} m  [ADOPTED]; CORS unshifted")
+# THE CHECK: T1a point 63 (15:53:33) and Andy's CORS point 11 (15:53:52), the same spot one after the other
+# (Andy: "accurate to within a centimeter"). CORS minus T1a is an independent tie in both axes; it was the
+# applied tie until the unrounded benchmark export arrived. Its vertical value sits 64 mm below the benchmark's;
+# T1a's Reach RS+ was exported with antenna height 2.134 m (the RS2 value; Emlid's RS+ offset is 65 mm, and
+# T2a's RS+ carries 2.065), which would put his points 69 mm low and the pair tie 69 mm short. NOT applied.
 _d63 = P[(P.group == "floodplain_RSplus_A") & (P.point == 63)].iloc[0]; _c11 = P[(P.group == "floodplain_CORS_Wickert") & (P.point == 11)].iloc[0]
-B2_DX, B2_DY = float(_c11.easting - _d63.easting), float(_c11.northing - _d63.northing)
-# VERTICAL tie from the same pair (Andy, 2026-11-11: "And vertical tie too"): B2 reads T1a 63 minus CORS 11.
-# ADOPTED: Andy, 2026-11-11: the poles were "at the exact same point on the ground, accurate to within a
-# centimeter", so this is a benchmark-quality tie; the monument occupation is printed beside it (64 mm higher:
-# a question about that occupation, e.g. the pole tip on the access cover rather than the rod).
-B2_OFFSET_C11 = float(_d63.h_ell_m - _c11.h_ell_m); B2_OFFSET = B2_OFFSET_C11
-print(f"B2 vertical, CORS 11 pair: T1a 63 ({_d63.h_ell_m:.3f}) minus CORS 11 ({_c11.h_ell_m:.3f}) -> B2 reads {B2_OFFSET_C11:+.3f} m  [ADOPTED]; benchmark said {B2_OFFSET_BM:+.3f}: the two ties differ by {1000 * (B2_OFFSET_BM - B2_OFFSET_C11):+.0f} mm")
+B2_OFFSET_C11 = float(_d63.h_ell_m - _c11.h_ell_m); B2_OFFSET = B2_OFFSET_BM
+print(f"CHECK, CORS 11 pair: horizontal CORS minus T1a dE {float(_c11.easting - _d63.easting):+.3f} dN {float(_c11.northing - _d63.northing):+.3f} (benchmark minus pair dE {B2_DX - float(_c11.easting - _d63.easting):+.3f} dN {B2_DY - float(_c11.northing - _d63.northing):+.3f}); vertical T1a 63 ({_d63.h_ell_m:.3f}) minus CORS 11 ({_c11.h_ell_m:.3f}) = {B2_OFFSET_C11:+.3f} m, benchmark minus pair {1000 * (B2_OFFSET_BM - B2_OFFSET_C11):+.0f} mm; T1a RS+ antenna 2.134 vs the RS+ offset 2.065 = 69 mm")
 P["easting_tied"] = np.where(P.base == "B2", P.easting + B2_DX, P.easting).round(3); P["northing_tied"] = np.where(P.base == "B2", P.northing + B2_DY, P.northing).round(3)
-print(f"B2 HORIZONTAL TIE (provisional): T1a 63 = CORS 11 -> B2 shifted by dE {B2_DX:+.3f} m, dN {B2_DY:+.3f} m; B1 and CORS unshifted")
-# tied ellipsoid heights: B2 by the benchmark; B1 provisional (bare-ground check, filled in below after the lidar sampling)
-P["h_ell_tied_m"] = np.where(P.base == "B2", P.h_ell_m - B2_OFFSET, np.where(P.base == "CORS", P.h_ell_m, np.nan)); P["tie_source"] = np.where(P.base == "B2", f"CORS 11 = T1a 63 pair under B2 ({B2_OFFSET:+.3f} m removed; benchmark gives {B2_OFFSET_BM:+.3f})", np.where(P.base == "CORS", "MnDOT CORS network RTK, NAD83(2011) direct", ""))
+# tied ellipsoid heights: B2 by the benchmark; CORS direct
+P["h_ell_tied_m"] = np.where(P.base == "B2", P.h_ell_m - B2_OFFSET, np.where(P.base == "CORS", P.h_ell_m, np.nan)); P["tie_source"] = np.where(P.base == "B2", f"DR9925 benchmark under B2 ({B2_OFFSET:+.3f} m removed, dE {B2_DX:+.3f} dN {B2_DY:+.3f} m shifted; CORS 11 = T1a 63 pair gives {B2_OFFSET_C11:+.3f} m)", np.where(P.base == "CORS", "MnDOT CORS network RTK, NAD83(2011) direct", ""))
 # NAVD 88 via GEOID18 (PROJ network fetches the grid)
 geoid_source = "none"
 try:
@@ -188,7 +198,7 @@ P["tile"] = [sample("z_after.npy", x, y)[1] for x, y in zip(P.easting_tied, P.no
 P["gen1_z_m"] = P.gen2_zref_m - P.dod_2021_2008_m
 P["rtk_minus_gen2_m"] = P.navd88_m - P.gen2_z_m; P["rtk_minus_gen1_m"] = P.navd88_m - P.gen1_z_m
 P["navd88_tied_m"] = P.navd88_m - (P.h_ell_m - P.h_ell_tied_m)
-# CORS vs B2 cross-check: nearest B2 FIX point within 3 m of each CORS point, raw ellipsoid-height difference (B2 minus CORS); the benchmark says +B2_OFFSET
+# CORS vs B2 cross-check: nearest B2 FIX point within 3 m of each CORS point, raw ellipsoid-height difference (B2 minus CORS); the benchmark says +B2_OFFSET (the B2 points here are T1a's RS+, see the antenna note above)
 cors = P[P.base == "CORS"]; b2f = P[(P.base == "B2") & P.status.str.startswith("FIX") & (P.group != "benchmark_DR9925")]
 pairs = []
 for _, c in cors.iterrows():
