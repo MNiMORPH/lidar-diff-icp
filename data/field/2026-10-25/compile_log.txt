@@ -34,6 +34,22 @@ CROSS-CHECK, B against CORS on the same ground (pairs within 3 m; the 3 m is min
 
 220 points written to data/field/2026-10-25/rtk_points_all.csv
 
+FITTED TABLE data/field/2026-10-25/rtk_points_all_fitted.csv: shift dE -0.05 dN -0.05 dZ +0.13 m applied to every point (B and CORS alike), lidar re-read there; 220 points
+  FIX points, 2021 lidar minus shifted RTK, mm [median, NMAD, n]:
+    benchmark_DR9925           -35     6    2
+    floodplain_CORS_Wickert     -8    34   17
+    floodplain_RSplus_A        +28    50   32
+    floodplain_RSplus_B         -2    31   98
+    hillslope_T4a           -108   115   21
+    hillslope_RS3               -7   143   18
+  FIX points, 2008 lidar minus shifted RTK, mm [median, NMAD, n]:
+    benchmark_DR9925           -78     6    2
+    floodplain_CORS_Wickert    +15    59    6
+    floodplain_RSplus_A       +101    98   22
+    floodplain_RSplus_B       +224    82   98
+    hillslope_T4a           -130    87    4
+    hillslope_RS3             -216     0    1
+
 by group / base / status:
 group                    base  status
 benchmark_DR9925         B     FIX        2

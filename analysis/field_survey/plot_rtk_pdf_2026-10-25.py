@@ -17,7 +17,7 @@ import pandas as pd
 from scipy.stats import gaussian_kde
 from matplotlib.transforms import blended_transform_factory
 
-P = pd.read_csv("data/field/2026-10-25/rtk_points_all.csv")
+P = pd.read_csv(sys.argv[2] if len(sys.argv) > 2 else "data/field/2026-10-25/rtk_points_all.csv")   # argv[2]: another table with the same columns, e.g. rtk_points_all_fitted.csv
 SUF = sys.argv[1] if len(sys.argv) > 1 else ""   # output-name suffix, so a replot need not clobber an earlier figure
 F = P[P.status.str.startswith("FIX")].copy()
 rows = (("floodplain", ["floodplain_RSplus_B", "floodplain_RSplus_A", "floodplain_CORS_Wickert"], "floodplain: the sward field east of the road (R1-v140)"),

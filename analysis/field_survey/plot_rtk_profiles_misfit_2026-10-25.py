@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-P = pd.read_csv("data/field/2026-10-25/rtk_points_all.csv")
+P = pd.read_csv(sys.argv[2] if len(sys.argv) > 2 else "data/field/2026-10-25/rtk_points_all.csv")   # argv[2]: another table with the same columns, e.g. rtk_points_all_fitted.csv
 SUF = sys.argv[1] if len(sys.argv) > 1 else ""
 F = P[P.status.str.startswith("FIX") & P.gen2_minus_rtk_m.notna()].copy()
 mk = {"hillslope_RS3": "o", "hillslope_T4a": "s", "floodplain_RSplus_A": "^", "floodplain_RSplus_B": "v", "floodplain_CORS_Wickert": "D"}

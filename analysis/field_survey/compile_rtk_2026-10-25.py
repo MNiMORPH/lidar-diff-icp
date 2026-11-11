@@ -207,14 +207,18 @@ def sample(name, x, y, kind="float"):
                 v = v - _zero[t]
             return v, t
     return np.nan, ""
-for col, lay, kind in (("gen2_z_m", "z_after.npy", "bilinear"), ("gen2_zref_m", "z_after_differenced.npy", "bilinear"), ("dod_2021_2008_m", "dod.npy", "bilinear"), ("slope_deg", "slope.npy", "nearest"), ("lowveg_gen2", "lowveg_grid.npy", "nearest"), ("clubb_floodplain", "floodplain_mask_clubb.npy", "nearest"), ("penetration_failure_2008", "penetration_failure.npy", "nearest")):
-    vals = [sample(lay, x, y, kind) for x, y in zip(P.easting_tied, P.northing_tied)]; P[col] = [v for v, _ in vals]   # lidar read at the TIED position
-P["tile"] = [sample("z_after.npy", x, y)[1] for x, y in zip(P.easting_tied, P.northing_tied)]
-# gen1 = the 2021 surface the difference was built on (z_after_differenced = slope-normal median at the
-# cell center, Zref) minus the difference. z_after.npy is the HORIZONTAL per-cell median (Z21), which the
-# point-cloud check reproduces at the survey points (-8 mm median) and is kept as gen2_z_m; on the bluff
-# the two differ by up to 0.13 m at single points, so mixing them put that error into gen1 (fixed 2026-11-11).
-P["gen1_z_m"] = P.gen2_zref_m - P.dod_2021_2008_m
+def attach_lidar(P):
+    """Read every lidar layer at the point's easting_tied / northing_tied (bilinear for surfaces, nearest for masks) and derive gen1_z_m."""
+    for col, lay, kind in (("gen2_z_m", "z_after.npy", "bilinear"), ("gen2_zref_m", "z_after_differenced.npy", "bilinear"), ("dod_2021_2008_m", "dod.npy", "bilinear"), ("slope_deg", "slope.npy", "nearest"), ("lowveg_gen2", "lowveg_grid.npy", "nearest"), ("clubb_floodplain", "floodplain_mask_clubb.npy", "nearest"), ("penetration_failure_2008", "penetration_failure.npy", "nearest")):
+        vals = [sample(lay, x, y, kind) for x, y in zip(P.easting_tied, P.northing_tied)]; P[col] = [v for v, _ in vals]   # lidar read at the TIED position
+    P["tile"] = [sample("z_after.npy", x, y)[1] for x, y in zip(P.easting_tied, P.northing_tied)]
+    # gen1 = the 2021 surface the difference was built on (z_after_differenced = slope-normal median at the
+    # cell center, Zref) minus the difference. z_after.npy is the HORIZONTAL per-cell median (Z21), which the
+    # point-cloud check reproduces at the survey points (-8 mm median) and is kept as gen2_z_m; on the bluff
+    # the two differ by up to 0.13 m at single points, so mixing them put that error into gen1 (fixed 2026-11-11).
+    P["gen1_z_m"] = P.gen2_zref_m - P.dod_2021_2008_m
+    return P
+P = attach_lidar(P)
 P["rtk_minus_gen2_m"] = P.navd88_m - P.gen2_z_m; P["rtk_minus_gen1_m"] = P.navd88_m - P.gen1_z_m
 P["navd88_tied_m"] = P.navd88_m - (P.h_ell_m - P.h_ell_tied_m)
 # CORS vs B cross-check: nearest B FIX point within 3 m of each CORS point, raw ellipsoid-height difference (B minus CORS); the benchmark says +B_OFFSET (the B points here are T1a's RS+, see the antenna note above)
@@ -226,13 +230,37 @@ for _, c in cors.iterrows():
 PAIRS = pd.DataFrame(pairs)
 print(f"\nCROSS-CHECK, B against CORS on the same ground (pairs within 3 m; the 3 m is mine): {len(PAIRS)} pairs")
 if len(PAIRS): print(PAIRS.to_string(index=False)); print(f"  median B minus CORS {PAIRS.b2_minus_cors_m.median():+.3f} m, NMAD {1.4826 * np.median(np.abs(PAIRS.b2_minus_cors_m - PAIRS.b2_minus_cors_m.median())):.3f} m; benchmark tie said {B_OFFSET:+.3f} m")
-P["tied_minus_gen2_m"] = P.navd88_tied_m - P.gen2_z_m; P["tied_minus_gen1_m"] = P.navd88_tied_m - P.gen1_z_m
-# the LIDAR misfit, re-referenced to the surveyed ground (Andy, 2026-11-11): lidar minus tied RTK; positive = lidar above the ground
-P["gen2_minus_rtk_m"] = -P.tied_minus_gen2_m; P["gen1_minus_rtk_m"] = -P.tied_minus_gen1_m
+def residuals(P):
+    P["tied_minus_gen2_m"] = P.navd88_tied_m - P.gen2_z_m; P["tied_minus_gen1_m"] = P.navd88_tied_m - P.gen1_z_m
+    # the LIDAR misfit, re-referenced to the surveyed ground (Andy, 2026-11-11): lidar minus tied RTK; positive = lidar above the ground
+    P["gen2_minus_rtk_m"] = -P.tied_minus_gen2_m; P["gen1_minus_rtk_m"] = -P.tied_minus_gen1_m
+    return P
+P = residuals(P)
 P = P[["group", "people", "device", "serial", "point", "t_start", "t_hhmm", "base", "baseline_m", "status", "lon", "lat", "easting", "northing", "easting_tied", "northing_tied", "h_ell_m", "h_ell_tied_m", "tie_source", "navd88_m", "navd88_tied_m", "elev_app_m", "antenna_m", "antenna_corr_m", "rms_e", "rms_n", "rms_v", "tilt_deg", "tile", "gen2_z_m", "gen2_zref_m", "gen1_z_m", "dod_2021_2008_m", "rtk_minus_gen2_m", "rtk_minus_gen1_m", "tied_minus_gen2_m", "tied_minus_gen1_m", "gen2_minus_rtk_m", "gen1_minus_rtk_m", "slope_deg", "lowveg_gen2", "clubb_floodplain", "penetration_failure_2008", "source"]]
 os.makedirs(os.path.dirname(OUT), exist_ok=True); P.to_csv(OUT, index=False)
 pd.set_option("display.width", 250); pd.set_option("display.max_columns", 40)
 print(f"\n{len(P)} points written to {OUT}")
+
+# THE FITTED SHIFT (Andy, 2026-11-11: "After settling on this offset for the whole set of points"): the weighted
+# inversion over every logged point (invert_shift_weighted.py, sigmas calibrated by status) gives one rigid
+# shift of the tied RTK points, dE, dN, dZ. A second table applies it, built by the SAME sampling and residual
+# code: positions shifted, heights raised by dZ, every lidar layer re-read at the shifted position. Nothing in
+# the main table changes. gen2_minus_rtk_m in this table is the residual after the fitted shift.
+FIT = "data/derived/4342-29-64/bluff_check/weighted_shift.json"; OUT_FIT = OUT.replace(".csv", "_fitted.csv")
+if os.path.exists(FIT):
+    import json
+    sol = json.load(open(FIT))["solution_2_calibrated_sigmas"]; dE, dN, dZ = sol["dE"], sol["dN"], sol["dZ"]
+    Q = P.copy(); Q["easting_tied"] = (Q.easting_tied + dE).round(3); Q["northing_tied"] = (Q.northing_tied + dN).round(3)
+    Q["h_ell_tied_m"] = Q.h_ell_tied_m + dZ; Q["navd88_tied_m"] = Q.navd88_tied_m + dZ
+    Q["tie_source"] = Q.tie_source + f"; fitted shift applied: dE {dE:+.2f} dN {dN:+.2f} dZ {dZ:+.2f} m ({os.path.basename(FIT)}, solution 2)"
+    Q = residuals(attach_lidar(Q)); Q.to_csv(OUT_FIT, index=False)
+    print(f"\nFITTED TABLE {OUT_FIT}: shift dE {dE:+.2f} dN {dN:+.2f} dZ {dZ:+.2f} m applied to every point (B and CORS alike), lidar re-read there; {len(Q)} points")
+    f_ = Q.status.str.startswith("FIX")
+    print("  FIX points, 2021 lidar minus shifted RTK, mm [median, NMAD, n]:")
+    for g, v in Q[f_].groupby("group").gen2_minus_rtk_m: print(f"    {g:24s} {1000 * v.median():+5.0f} {1000 * 1.4826 * np.median(np.abs(v - v.median())):5.0f} {len(v):4d}")
+    print("  FIX points, 2008 lidar minus shifted RTK, mm [median, NMAD, n]:")
+    for g, v in Q[f_].groupby("group").gen1_minus_rtk_m: v = v.dropna(); print(f"    {g:24s} {1000 * v.median():+5.0f} {1000 * 1.4826 * np.median(np.abs(v - v.median())):5.0f} {len(v):4d}")
+else: print(f"\n(no fitted shift: {FIT} not found)")
 print("\nby group / base / status:"); print(P.groupby(["group", "base", P.status.str[:5]]).size().to_string())
 fix = P[P.status.str.startswith("FIX")]
 print("\nFIX points, RTK NAVD88 minus gen2 (2021) ground, mm, by group and base [median, NMAD, n]:")
