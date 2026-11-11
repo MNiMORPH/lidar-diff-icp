@@ -180,6 +180,11 @@ also `_map_polecorr.png` and `_profiles_polecorr.png` from `plot_rtk_2026-10-25.
 puts a colored marker at every FIX point on 2025 FSA imagery, minus 2021 on the left and minus
 2008 on the right; points with no 2008 difference (most of the steep bluff) are open gray.
 
+Misfit transects: `figures/rtk_2026-10-25_profiles_misfit_polecorr.png` (from
+`analysis/field_survey/plot_rtk_profiles_misfit_2026-10-25.py _polecorr`) is the elevation transect
+figure with tied RTK minus each lidar surface on the y-axis, group medians dashed, nothing cut (one
+RS3 point at -1.6 m sets the hillslope panel's range).
+
 Translation fit: `analysis/field_survey/fit_hillslope_translation.py` fits a rigid (dE, dN, dZ)
 of the UNTIED hillslope points onto the 2021 grid; `figures/rtk_2026-10-25_hillslope_translation.png`
 (rerun 2026-11-11 in the EPSG:6344 frame). L1 minimum dE +0.55, dN -1.15, dZ -0.411 m (bootstrap
