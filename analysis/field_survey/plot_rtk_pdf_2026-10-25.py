@@ -7,6 +7,8 @@ columns (minus 2021 lidar gen2, minus 2008 lidar gen1); a Gaussian KDE per group
 rug of the points, with median and NMAD per group printed in the legend. The KDE bandwidth is
 Scott's rule (scipy default); no cut is applied to the residuals.
 """
+import sys
+
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -16,6 +18,9 @@ from scipy.stats import gaussian_kde
 from matplotlib.transforms import blended_transform_factory
 
 P = pd.read_csv("data/field/2026-10-25/rtk_points_all.csv")
+SUF = sys.argv[1] if len(sys.argv) > 1 else ""   # output-name suffix, so a replot need not clobber an earlier figure
+_b2 = P[P.base == "B2"].tie_source.iloc[0]; _pc = P[P.antenna_corr_m != 0].groupby("group").antenna_corr_m.max()
+TIE = f"B2 tied to {_b2.split(' under B2 (')[0]} ({_b2.split(' under B2 (')[1].split('; ')[0]}" + ("; pole heights corrected: " + ", ".join(f"{g} {v:+.3f} m" for g, v in _pc.items()) if len(_pc) else "") + ")"
 F = P[P.status.str.startswith("FIX")].copy()
 rows = (("floodplain", ["floodplain_RSplus_B", "floodplain_RSplus_A", "floodplain_CORS_Wickert"], "floodplain: the sward field east of the road (R1-v140)"),
         ("hillslope", ["hillslope_RS3", "hillslope_T4a"], "hillslope: the forested bluff west of the road"))
@@ -45,7 +50,7 @@ for i, (rk, groups, title) in enumerate(rows):
         ax.axvline(0, color="gray", lw=0.8); ax.set_ylim(bottom=0)
         ax.set_xlabel(xl); ax.set_ylabel("density (per mm)"); ax.legend(fontsize=7.5, loc="upper left"); ax.grid(alpha=0.25)
         ax.set_title(title if j == 0 else "", fontsize=9, loc="left")
-fig.suptitle("25 Oct 2026 RTK survey, FIX points, B2 tied through the CORS-11 = T1a-63 pair (+0.473 m; dE +0.802, dN -1.123 m); negative = ground below the lidar surface", fontsize=9)
+fig.suptitle(f"25 Oct 2026 RTK survey, FIX points, {TIE}; negative = ground below the lidar surface", fontsize=9)
 fig.tight_layout()
 for ext in ("png", "pdf"):
-    fig.savefig(f"figures/rtk_2026-10-25_pdf.{ext}", dpi=120); print(f"figures/rtk_2026-10-25_pdf.{ext}")
+    fig.savefig(f"figures/rtk_2026-10-25_pdf{SUF}.{ext}", dpi=120); print(f"figures/rtk_2026-10-25_pdf{SUF}.{ext}")
