@@ -1,5 +1,6 @@
 base assigned by time on 10 points whose export had no base columns: [{'group': 'hillslope_RS3', 'point': 23, 't_hhmm': '15:11', 'base': 'B2'}, {'group': 'hillslope_RS3', 'point': 24, 't_hhmm': '15:12', 'base': 'B2'}, {'group': 'hillslope_T4a', 'point': 24, 't_hhmm': '15:16', 'base': 'B2'}, {'group': 'hillslope_T4a', 'point': 25, 't_hhmm': '15:20', 'base': 'B2'}, {'group': 'hillslope_T4a', 'point': 28, 't_hhmm': '15:31', 'base': 'B2'}, {'group': 'floodplain_RSplus_A', 'point': 16, 't_hhmm': '14:49', 'base': 'B2'}, {'group': 'floodplain_RSplus_A', 'point': 17, 't_hhmm': '14:50', 'base': 'B2'}, {'group': 'floodplain_RSplus_A', 'point': 19, 't_hhmm': '14:52', 'base': 'B2'}, {'group': 'floodplain_RSplus_A', 'point': 20, 't_hhmm': '14:53', 'base': 'B2'}, {'group': 'floodplain_RSplus_A', 'point': 52, 't_hhmm': '15:43', 'base': 'B2'}]
-B2 TIE: benchmark DR9925 measured [189.202, 189.21] m vs published 188.669 m -> B2 reads +0.537 m; subtracted from every B2 point
+B2 vertical, benchmark: DR9925 measured [189.202, 189.21] m vs published 188.669 m -> B2 reads +0.537 m
+B2 vertical, CORS 11 pair: T1a 63 (188.569) minus CORS 11 (188.096) -> B2 reads +0.473 m  [ADOPTED]; benchmark said +0.537: the two ties differ by +64 mm
 B2 HORIZONTAL TIE (provisional): T1a 63 = CORS 11 -> B2 shifted by dE +0.802 m, dN -1.123 m; B1 and CORS unshifted
 geoid: pyproj EPSG:6319->6318+5703 (GEOID18); check at DR9925: 218.748 vs published 218.75
 B1 PROVISIONAL TIE: 4 bare flat FIX points under B1 read -2.636 m against gen2 (median); removed from every B1 point as a provisional constant
@@ -11,7 +12,7 @@ CROSS-CHECK, B2 against CORS on the same ground (pairs within 3 m; the 3 m is mi
       11 floodplain_RSplus_A     63   1.38        1.0            0.473
       12 floodplain_RSplus_A     63   2.02        0.9            0.508
       13 floodplain_RSplus_A     62   1.98        1.5            0.444
-  median B2 minus CORS +0.508 m, NMAD 0.006 m; benchmark tie said +0.537 m
+  median B2 minus CORS +0.508 m, NMAD 0.006 m; benchmark tie said +0.473 m
 
 235 points written to data/field/2026-10-25/rtk_points_all.csv
 
@@ -41,24 +42,24 @@ FIX points, RTK NAVD88 minus gen2 (2021) ground, mm, by group and base [median, 
   hillslope_RS3          B2                 +488     158    18
 
 AFTER THE TIE (FIX points): tied NAVD88 minus gen2, mm, by group and base [median, NMAD, n]:
-  benchmark_DR9925       B2                 -109       6     2
+  benchmark_DR9925       B2                  -45       6     2
   floodplain_CORS_Wickert CORS               -121      31    17
-  floodplain_RSplus_A    B2                 -227      51    32
-  floodplain_RSplus_B    B2                 -129      32    98
+  floodplain_RSplus_A    B2                 -163      51    32
+  floodplain_RSplus_B    B2                  -65      32    98
   hillslope_T4a        B1                  +86     165     8
-  hillslope_T4a        B2                  +15     124    21
+  hillslope_T4a        B2                  +79     124    21
   hillslope_RS3          B1                 +285     256     6
-  hillslope_RS3          B2                  -49     158    18
+  hillslope_RS3          B2                  +15     158    18
 
 AFTER THE TIE (FIX points): tied NAVD88 minus gen1 (2008) ground, mm, by group and base [median, NMAD, n]:
-  benchmark_DR9925       B2                  -54       6     2
+  benchmark_DR9925       B2                  +10       6     2
   floodplain_CORS_Wickert CORS               -144      56     6
-  floodplain_RSplus_A    B2                 -297      97    22
-  floodplain_RSplus_B    B2                 -354      91    98
+  floodplain_RSplus_A    B2                 -233      97    22
+  floodplain_RSplus_B    B2                 -290      91    98
   hillslope_T4a        B1                 +163     209     8
-  hillslope_T4a        B2                  +69     187     5
+  hillslope_T4a        B2                 +133     187     5
   hillslope_RS3          B1                 +343     210     5
-  hillslope_RS3          B2                 +101       0     1
+  hillslope_RS3          B2                 +165       0     1
 
 BARE-GROUND CHECK (slope <= 3 deg, lowveg <= 0.05, FIX): median RTK minus gen2 per base, the provisional vertical tie of each base to the 2021 lidar:
   B1: -2636 mm (NMAD 29, n 4; groups ['hillslope_T4a'])

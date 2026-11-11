@@ -38,13 +38,20 @@ positions were the base's own average, so each carries an unknown absolute error
 two differ by an unknown constant. Ten points whose export lost the base columns were
 assigned by time (listed in the log).
 
-**B2 is tied to the benchmark.** T5a's two occupations of DR9925 read 189.202
-and 189.210 m ellipsoid against the published 188.669 m: B2 is high by **+0.537 m**, removed
-from every B2 point. Independent check: five of Andy's CORS points lie within 1.4-2.0 m of
-T1a points 62-63 on 1 deg ground; raw B2 minus CORS there is **+0.508 m** (NMAD 6 mm), 29 mm
-from the benchmark value on ground that varies over that separation. The benchmark after
-the tie sits 93 mm below the 2021 lidar cell it falls in (the monument is 11 m off the
-highway shoulder).
+**B2 vertical: two ties, 64 mm apart; the CORS-11 pair is applied (Andy's call).** (1) T5a
+T5a's two 60-second occupations of DR9925 read 189.202 and 189.210 m ellipsoid against the
+published 188.669 m: B2 high by +0.537 m. (2) T1a point 63 and Andy's CORS point 11, the
+same spot occupied one after the other: 188.569 minus 188.096, B2 high by **+0.473 m**. Andy
+(2026-11-11): "And vertical tie too", so +0.473 m is what `h_ell_tied_m` removes from every
+B2 point; `tie_source` carries both numbers. What each tie implies: under the benchmark tie
+T2a's 98 floodplain points sat -124 mm from the 2021 lidar and Andy's 17 CORS points
+-121 mm, 3 mm apart; under the pair tie T2a sits -65 mm and the benchmark itself reads
+64 mm above its published height. The pair is two 5-second points on turf; the benchmark is
+two 60-second averages on a monument whose height is published to 1.5 cm. My reading is
+that the benchmark is the better vertical tie and the pair the better horizontal one, and
+T5a's raw export, which gives the monument occupation's position unrounded, will say
+whether the pair was in fact one spot. The table is built the way Andy asked; switching
+is one constant.
 
 **B1 is tied PROVISIONALLY.** No benchmark was occupied under B1. The four FIX points on the
 gravel of lot 204 read -2.636 m against the 2021 lidar, and that constant is removed from
@@ -68,18 +75,19 @@ with a direct tie to the monument.
 
 | group | base | vs 2021 lidar (gen2) | vs 2008 lidar (gen1) |
 |---|---|---|---|
-| benchmark_DR9925 | B2 | -93, 6, 2 | -34, 6, 2 |
+| benchmark_DR9925 | B2 | -45, 6, 2 | +10, 6, 2 |
 | floodplain_CORS_Wickert | CORS | **-121, 31, 17** | -144, 56, 6 |
-| floodplain_RSplus_B | B2 | **-124, 34, 98** | **-347, 94, 98** |
-| floodplain_RSplus_A | B2 | **-227, 48, 32** | -309, 125, 22 |
+| floodplain_RSplus_B | B2 | **-65, 32, 98** (-129 under the benchmark tie) | **-290, 91, 98** (-354) |
+| floodplain_RSplus_A | B2 | **-163, 51, 32** (-227) | -233, 97, 22 (-297) |
 | hillslope_T4a | B1 (provisional) | +86, 165, 8 | +163, 209, 8 |
 | hillslope_RS3 | B1 (provisional) | +285, 256, 6 | +343, 210, 5 |
-| hillslope_T4a | B2 (shifted) | +15, 124, 21 | +69, 187, 5 |
-| hillslope_RS3 | B2 (shifted) | -49, 158, 18 | +101, -, 1 |
+| hillslope_T4a | B2 (shifted) | +79, 124, 21 | +133, 187, 5 |
+| hillslope_RS3 | B2 (shifted) | +15, 158, 18 | +165, -, 1 |
 
-Bare: in the sward field the surveyed ground lies 0.12 m (CORS, T2a) to 0.23 m
-(T1a) below the May-2021 lidar surface and 0.30-0.35 m below the November-2008 one, on
-two independent ties (benchmark and CORS) and three rovers. On the bluff, with B2 shifted
+Bare: in the sward field the surveyed ground lies 0.07-0.16 m (pair tie) or 0.12-0.23 m
+(benchmark tie) below the May-2021 lidar surface, and 0.23-0.29 m (pair) or 0.30-0.35 m
+(benchmark) below the November-2008 one; the CORS rover, which needs no tie, says 0.12 m
+below 2021 and 0.14 m below 2008 where it has 2008 data. On the bluff, with B2 shifted
 onto CORS 11, the two traverses sit +15 and -49 mm from the 2021 lidar with 124-158 mm
 scatter (the gen1 comparison there has 1-5 points: the 2008 difference is NaN under
 canopy on most of the traverse). The B1 rows (+86, +285) rest on the provisional B1 tie.

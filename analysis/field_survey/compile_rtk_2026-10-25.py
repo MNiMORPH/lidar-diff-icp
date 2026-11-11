@@ -116,8 +116,8 @@ P = pd.DataFrame(rows)
 P["t_hhmm"] = P.t_start.str.extract(r"(\d\d:\d\d)")[0]
 lost = P.base == "none recorded"; P.loc[lost & (P.t_hhmm >= "14:30"), "base"] = "B2"; P.loc[lost & (P.t_hhmm < "14:30"), "base"] = "B1"
 print(f"base assigned by time on {int(lost.sum())} points whose export had no base columns: {P.loc[lost, ['group', 'point', 't_hhmm', 'base']].to_dict('records')}")
-DR9925_H_ELL = 188.669; B2_OFFSET = float(bm.h_ell_m.mean() - DR9925_H_ELL)
-print(f"B2 TIE: benchmark DR9925 measured {bm.h_ell_m.tolist()} m vs published {DR9925_H_ELL} m -> B2 reads {B2_OFFSET:+.3f} m; subtracted from every B2 point")
+DR9925_H_ELL = 188.669; B2_OFFSET_BM = float(bm.h_ell_m.mean() - DR9925_H_ELL)
+print(f"B2 vertical, benchmark: DR9925 measured {bm.h_ell_m.tolist()} m vs published {DR9925_H_ELL} m -> B2 reads {B2_OFFSET_BM:+.3f} m")
 P["easting"], P["northing"] = to_utm.transform(P.lon.values, P.lat.values)
 P["easting"] = P.easting.round(3); P["northing"] = P.northing.round(3)
 
@@ -128,10 +128,14 @@ P["easting"] = P.easting.round(3); P["northing"] = P.northing.round(3)
 # lands within 0.1 m of the same shift. T5a's unrounded benchmark export replaces it when it comes.
 _d63 = P[(P.group == "floodplain_RSplus_A") & (P.point == 63)].iloc[0]; _c11 = P[(P.group == "floodplain_CORS_Wickert") & (P.point == 11)].iloc[0]
 B2_DX, B2_DY = float(_c11.easting - _d63.easting), float(_c11.northing - _d63.northing)
+# VERTICAL tie from the same pair (Andy, 2026-11-11: "And vertical tie too"): B2 reads T1a 63 minus CORS 11.
+# ADOPTED for B2 at Andy's word; the benchmark value is printed beside it and the two disagree by their difference.
+B2_OFFSET_C11 = float(_d63.h_ell_m - _c11.h_ell_m); B2_OFFSET = B2_OFFSET_C11
+print(f"B2 vertical, CORS 11 pair: T1a 63 ({_d63.h_ell_m:.3f}) minus CORS 11 ({_c11.h_ell_m:.3f}) -> B2 reads {B2_OFFSET_C11:+.3f} m  [ADOPTED]; benchmark said {B2_OFFSET_BM:+.3f}: the two ties differ by {1000 * (B2_OFFSET_BM - B2_OFFSET_C11):+.0f} mm")
 P["easting_tied"] = np.where(P.base == "B2", P.easting + B2_DX, P.easting).round(3); P["northing_tied"] = np.where(P.base == "B2", P.northing + B2_DY, P.northing).round(3)
 print(f"B2 HORIZONTAL TIE (provisional): T1a 63 = CORS 11 -> B2 shifted by dE {B2_DX:+.3f} m, dN {B2_DY:+.3f} m; B1 and CORS unshifted")
 # tied ellipsoid heights: B2 by the benchmark; B1 provisional (bare-ground check, filled in below after the lidar sampling)
-P["h_ell_tied_m"] = np.where(P.base == "B2", P.h_ell_m - B2_OFFSET, np.where(P.base == "CORS", P.h_ell_m, np.nan)); P["tie_source"] = np.where(P.base == "B2", f"benchmark DR9925 under B2 ({B2_OFFSET:+.3f} m removed)", np.where(P.base == "CORS", "MnDOT CORS network RTK, NAD83(2011) direct", ""))
+P["h_ell_tied_m"] = np.where(P.base == "B2", P.h_ell_m - B2_OFFSET, np.where(P.base == "CORS", P.h_ell_m, np.nan)); P["tie_source"] = np.where(P.base == "B2", f"CORS 11 = T1a 63 pair under B2 ({B2_OFFSET:+.3f} m removed; benchmark gives {B2_OFFSET_BM:+.3f})", np.where(P.base == "CORS", "MnDOT CORS network RTK, NAD83(2011) direct", ""))
 # NAVD 88 via GEOID18 (PROJ network fetches the grid)
 geoid_source = "none"
 try:
