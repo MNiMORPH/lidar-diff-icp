@@ -62,8 +62,11 @@ import pandas as pd
 import pyproj
 
 RAW = "data/field/2026-10-25/raw"; OUT = "data/field/2026-10-25/rtk_points_all.csv"
-to_utm = pyproj.Transformer.from_crs("EPSG:6318", "EPSG:26915", always_xy=True)   # NAD83(2011) -> UTM 15N (NAD83)
-to_ll = pyproj.Transformer.from_crs("EPSG:26915", "EPSG:6318", always_xy=True)
+# PROJECTION ONLY, no datum shift: the lidar grids are NAD83(2011) UTM 15N (3DEP; the pipeline's "EPSG:26915"
+# is a label on the same metres). EPSG:6318 -> EPSG:26915 made pyproj insert a NAD83(2011) -> NAD83 datum
+# shift of +0.012 m E, -0.242 m N here, which put every surveyed point 0.24 m south of the lidar (fixed 2026-11-11).
+to_utm = pyproj.Transformer.from_crs("EPSG:6318", "EPSG:6344", always_xy=True)   # NAD83(2011) -> NAD83(2011) / UTM 15N
+to_ll = pyproj.Transformer.from_crs("EPSG:6344", "EPSG:6318", always_xy=True)
 B1 = dict(label="B1", lon=-92.00038215, lat=44.11685493, h=187.878, where="lot 204 (gravel lot)")
 B2 = dict(label="B2", lon=-91.99835123, lat=44.11721583, h=191.032, where="field east of the WMA road")
 
