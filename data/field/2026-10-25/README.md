@@ -8,10 +8,10 @@ log (`compile_log.txt`).
 ## The table: `rtk_points_all.csv` (220 rows)
 
 One row per logged point, nothing filtered. Columns: `group`, `people`, `device`, `serial`,
-`point`, `t_start` (CDT), `base` (B1, B2 or CORS), `baseline_m`, `status` (FIX / FLOAT /
+`point`, `t_start` (CDT), `base` (B1, B or CORS), `baseline_m`, `status` (FIX / FLOAT /
 SINGLE as exported), `lon`, `lat` (NAD83(2011)), `easting`, `northing` (NAD83(2011) / UTM 15N, EPSG:6344, projection only; see Frame),
 `h_ell_m` (ellipsoid height as exported), **`h_ell_tied_m`** (after the base tie below),
-`tie_source`, `easting_tied`, `northing_tied` (B2 shifted onto the monument, see the tie; the lidar is read here), `navd88_m`, **`navd88_tied_m`** (GEOID18 through pyproj, checked at DR9925:
+`tie_source`, `easting_tied`, `northing_tied` (B shifted onto the monument, see the tie; the lidar is read here), `navd88_m`, **`navd88_tied_m`** (GEOID18 through pyproj, checked at DR9925:
 218.748 vs published 218.75), `elev_app_m` (the Flow app's own NAVD88 where exported),
 `antenna_m` (as exported), `antenna_corr_m` (the pole-height correction, see the check), RMS columns, `tile`, `gen2_z_m` (2021 lidar ground, the horizontal per-cell median grid, bilinear from 5 m;
 the point-cloud check reproduces it at the survey points to -8 mm), `gen2_zref_m` (the
@@ -31,16 +31,16 @@ Use FIX rows and the `tied_` columns. Groups:
 | floodplain_RSplus_A | T1a, T1b | Reach RS+ | 62 (63 logged; 1 under B1 dropped) | the field east of the road (R1-v140), loop to the north; 30 FLOAT/SINGLE where the link dropped |
 | floodplain_RSplus_B | T2a (+ group) | Reach RS+ | 100 | the same field, a tighter loop |
 | floodplain_CORS_Wickert | Wickert | Reach RS2+, MnDOT CORS | 17 | SW corner of the same field |
-| benchmark_DR9925 | T5a, T5b, T5c | Reach RS2 | 2 | monument DR9925 "8508 Y", two 60-s occupations under B2 |
+| benchmark_DR9925 | T5a, T5b, T5c | Reach RS2 | 2 | monument DR9925 "8508 Y", two 60-s occupations under B |
 
 ## Coordinate system and datums (what every column is in)
 
 Horizontal: NAD83(2011) / UTM zone 15N, meters (EPSG:6344), for the RTK points and both
 lidar grids (3DEP 2021 is NAD83(2011); the 2008 MN DNR tiles are NAD83(NSRS2007), the same
-to centimeters; the pipeline labels the grids "EPSG:26915", the same projection). B2 points
+to centimeters; the pipeline labels the grids "EPSG:26915", the same projection). B points
 are shifted onto the monument (see the tie), CORS points are as delivered. Vertical: NAVD 88
 orthometric heights on GEOID18. The CORS rover delivers NAD83(2011) ellipsoid heights
-directly; every B2 point is brought to the same ellipsoid through DR9925's published
+directly; every B point is brought to the same ellipsoid through DR9925's published
 NAD83(2011) height; both are then converted with GEOID18 through pyproj at each point's own
 position (`navd88_tied_m`; the published 218.75 at DR9925 is reproduced to 2 mm). The 2021
 lidar is NAVD 88 on GEOID18 as delivered (`gen2_z_m`, `gen2_zref_m`). The 2008 surface
@@ -55,20 +55,20 @@ shifts, and the 2008 column's absolute level is the registration's, not a measur
 The student exports show two base positions. **B1 was not the class base**: a student's
 receiver was accidentally configured as a base and confused the radio link (Andy,
 2026-11-11), so the 15 points corrected from it between 13:20 and 13:30 CDT, T3a 1-6,
-T4a 1-8 and T1a 1, are dropped from the table; the compile log lists them. **B2**
+T4a 1-8 and T1a 1, are dropped from the table; the compile log lists them. **B**
 (the field east of the road, lon -91.998351, lat 44.117216, h 191.032, from 14:40 on) is
 the class base; its position was the base's own average, so it carries an unknown offset
 that the ties below remove. Ten points whose export lost the base columns were assigned to
-B2 by time (all after 14:49; listed in the log).
+B by time (all after 14:49; listed in the log).
 
-**B2 is tied to monument DR9925 in both axes** (Andy, 2026-11-11: "Let's trust the reference
+**B is tied to monument DR9925 in both axes** (Andy, 2026-11-11: "Let's trust the reference
 point and not on my comparison with CORS"). T5a's two 60-second occupations of DR9925
 (unrounded Flow export, `raw/benchmark_DR9925_occupation_T5a_flow_export.csv`; Andy: "The
 reference point was made on the metal disk, properly") read 189.202 and 189.210 m ellipsoid
 against the published 188.669 m (NGS datasheet, `raw/DR9925_NGS_datasheet_2026-11-11.txt`,
-network accuracy 0.61 cm horizontal, 1.49 cm height): B2 high by **+0.537 m**, removed from
-every B2 point in `h_ell_tied_m`. Horizontally they sit at E 579636.167 / 579636.176,
-N 4885873.225 / 4885873.203 against the published E 579636.942, N 4885872.102, so every B2
+network accuracy 0.61 cm horizontal, 1.49 cm height): B high by **+0.537 m**, removed from
+every B point in `h_ell_tied_m`. Horizontally they sit at E 579636.167 / 579636.176,
+N 4885873.225 / 4885873.203 against the published E 579636.942, N 4885872.102, so every B
 point is shifted by **dE +0.771 m, dN -1.112 m** (`easting_tied`, `northing_tied`), and the
 lidar is read at the tied position. After the tie the two benchmark rows land within 1 cm of
 the monument and read 218.744 and 218.752 m NAVD 88 against the published 218.75.
@@ -86,13 +86,13 @@ pair tie 69 mm short, against the 64 mm observed. Under the benchmark tie T2a's 
 sit -129 mm from the 2021 lidar and Andy's 17 CORS points -122 mm, 7 mm apart, while
 T1a's 32 FIX points sit -228 mm, 99 mm below T2a on the same field. APPLIED (Andy,
 2026-11-11: "after correcting the pole heights"): column `antenna_corr_m` raises each point by its
-rover's implied-pole excess over the others' 2.000 m, +0.069 m on T1a's 62 B2 points and 0
+rover's implied-pole excess over the others' 2.000 m, +0.069 m on T1a's 62 B points and 0
 everywhere else, and enters `h_ell_tied_m` and the `tied_` columns; `h_ell_m`, `navd88_m` and
 `antenna_m` stay as exported. T1a's group moves to -159 mm, and the pair tie, recomputed
 with the corrected T1a 63, becomes +0.542 m, 5 mm from the benchmark. The compile now prints this check on every run (Andy:
 "checking antenna heights seems a necessary thing in all cases"): exported antenna height
 minus the model's offset, one row per distinct value, flagged where it differs from the
-others' 2.000 m pole; T1a's one B1-era point carried 2.086 m (+21 mm), the 62 B2 points
+others' 2.000 m pole; T1a's one B1-era point carried 2.086 m (+21 mm), the 62 B points
 2.134 m (+69 mm); T4a's table exports no antenna height or model.
 
 **Frame (fixed 2026-11-11).** The lidar grids are NAD83(2011) UTM 15N (3DEP; the pipeline's
@@ -114,17 +114,17 @@ gives 193 mm.
 
 | group | base | vs 2021 lidar (gen2) | vs 2008 lidar (gen1) |
 |---|---|---|---|
-| benchmark_DR9925 | B2 | -96, 6, 2 | -54, 6, 2 |
+| benchmark_DR9925 | B | -96, 6, 2 | -54, 6, 2 |
 | floodplain_CORS_Wickert | CORS | **-122, 33, 17** | -145, 57, 6 |
-| floodplain_RSplus_B | B2 | **-129, 31, 98** | **-357, 81, 98** |
-| floodplain_RSplus_A | B2 | -159, 50, 32 (pole-corrected, +0.069 m) | -232, 102, 22 |
-| hillslope_T4a | B2 (shifted) | -2, 115, 21 | +50, 180, 5 |
-| hillslope_RS3 | B2 (shifted) | -98, 162, 18 | +103, -, 1 |
+| floodplain_RSplus_B | B | **-129, 31, 98** | **-357, 81, 98** |
+| floodplain_RSplus_A | B | -159, 50, 32 (pole-corrected, +0.069 m) | -232, 102, 22 |
+| hillslope_T4a | B (shifted) | -2, 115, 21 | +50, 180, 5 |
+| hillslope_RS3 | B (shifted) | -98, 162, 18 | +103, -, 1 |
 
 Bare: in the sward field the surveyed ground lies 0.12-0.16 m below the May-2021 lidar
 surface (CORS rover, which needs no tie, 0.12; T2a's RS+ 0.13; T1a's RS+ after the pole
 correction 0.16), and 0.15-0.36 m below the November-2008 one.
-On the bluff, with B2 shifted onto the monument, the two traverses sit -2 and -98 mm from the
+On the bluff, with B shifted onto the monument, the two traverses sit -2 and -98 mm from the
 2021 lidar with 115-162 mm scatter (the gen1 comparison there has 1-5 points: the 2008
 difference is NaN under canopy on most of the traverse). At the monument itself, on the
 mown roadside, the 2021 lidar reads 96 mm above the disk and the 2008 lidar 54 mm above it.
