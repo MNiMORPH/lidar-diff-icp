@@ -26,8 +26,10 @@ figures use these), `slope_deg`, `lowveg_gen2`, `clubb_floodplain`,
 
 Use FIX rows and the `tied_` columns. Groups:
 
-`rtk_points_all_fitted.csv` (same columns, 2026-11-11) applies the settled rigid shift from the
-weighted inversion, dE -0.05, dN -0.05, dZ +0.13 m, to every point (B and CORS alike), with every
+`rtk_points_all_fitted.csv` (same columns, 2026-11-11) applies the fitted offset from the
+weighted inversion, dE -0.05, dN -0.05, dZ +0.13 m (an EMPIRICAL offset between the May 2021
+ground class and the pole tips on vegetated covers, not a datum correction: see "Is the fitted
+offset vegetation?" below), to every point (B and CORS alike), with every
 lidar layer re-read at the shifted position by the same compile code; its `gen2_minus_rtk_m` is the
 residual after that shift, and `tie_source` names the shift. The main table is unchanged.
 
@@ -317,6 +319,19 @@ floodplain's +0.13 the hillslope wants dE -0.05 (delta chi2 0.1); for dZ = 0 it 
 shift, which is 0.05 m at the minimum and 0.00 m gives +0.11, but the hillslope's vertical is weakly
 held: on its own it says +0.14 with a 2-sigma range of +0.04 to +0.24 m, and the floodplain's +0.13
 sits at its center rather than being tested by it.
+
+**Is the fitted offset a coordinate-system fix or vegetation (Andy, 2026-11-11)? Vegetation, by the
+acquisition's own checkpoints.** The 3DEP MN_SEDriftless 2021 acquisition's 519 surveyed checkpoints
+(`analysis/GROUND_Q_FROM_CLASS2_SPREAD.md`, class-2 median minus surveyed truth): NVA, non-vegetated
+open ground, n 227, **-3.5 mm**; VVA, sited under vegetation by design, n 162, **+103.3 mm**; LCP, the
+acquisition's calibration points, n 130, -23.1 mm. On open ground the 2021 lidar is on its datum to
+a few millimeters; under vegetation it reads about a decimeter high. This survey has no open-ground
+point (the gravel-lot points were under B1 and are dropped), its floodplain is sward and its bluff is
+forest floor, and its +0.13 m is the VVA number. The vertical part of the fitted offset is therefore
+the lidar's vegetated-surface response, not a datum error, and the fitted table should be read as
+"residual after removing the vegetated-surface offset", not as a corrected coordinate system. The
+geoid, the tie and the rovers were excluded as its source above; the measurement that would show it
+directly, the same rovers on a bare surface, is still missing from this survey.
 
 **After the settled shift (fitted table), 2021 lidar minus RTK, FIX, mm [median, NMAD, n]:**
 CORS -8, 34, 17; RS+ B -2, 31, 98; RS+ A +28, 50, 32; benchmark -35, 6, 2; T4a -108, 115, 21;

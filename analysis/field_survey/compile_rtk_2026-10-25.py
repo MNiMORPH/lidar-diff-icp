@@ -243,7 +243,9 @@ print(f"\n{len(P)} points written to {OUT}")
 
 # THE FITTED SHIFT (Andy, 2026-11-11: "After settling on this offset for the whole set of points"): the weighted
 # inversion over every logged point (invert_shift_weighted.py, sigmas calibrated by status) gives one rigid
-# shift of the tied RTK points, dE, dN, dZ. A second table applies it, built by the SAME sampling and residual
+# shift of the tied RTK points, dE, dN, dZ. Its vertical is the lidar's vegetated-surface response (the
+# acquisition's own VVA checkpoints read +103 mm, NVA -3.5 mm), NOT a datum correction; the fitted table is
+# "residual after removing the vegetated-surface offset". A second table applies it, built by the SAME sampling and residual
 # code: positions shifted, heights raised by dZ, every lidar layer re-read at the shifted position. Nothing in
 # the main table changes. gen2_minus_rtk_m in this table is the residual after the fitted shift.
 FIT = "data/derived/4342-29-64/bluff_check/weighted_shift.json"; OUT_FIT = OUT.replace(".csv", "_fitted.csv")
