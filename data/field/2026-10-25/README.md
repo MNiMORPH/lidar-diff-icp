@@ -33,6 +33,23 @@ Use FIX rows and the `tied_` columns. Groups:
 | floodplain_CORS_Wickert | Wickert | Reach RS2+, MnDOT CORS | 17 | SW corner of the same field |
 | benchmark_DR9925 | T5a, T5b, T5c | Reach RS2 | 2 | monument DR9925 "8508 Y", two 60-s occupations under B2 |
 
+## Coordinate system and datums (what every column is in)
+
+Horizontal: NAD83(2011) / UTM zone 15N, meters (EPSG:6344), for the RTK points and both
+lidar grids (3DEP 2021 is NAD83(2011); the 2008 MN DNR tiles are NAD83(NSRS2007), the same
+to centimeters; the pipeline labels the grids "EPSG:26915", the same projection). B2 points
+are shifted onto the monument (see the tie), CORS points are as delivered. Vertical: NAD 88
+orthometric heights on GEOID18. The CORS rover delivers NAD83(2011) ellipsoid heights
+directly; every B2 point is brought to the same ellipsoid through DR9925's published
+NAD83(2011) height; both are then converted with GEOID18 through pyproj at each point's own
+position (`navd88_tied_m`; the published 218.75 at DR9925 is reproduced to 2 mm). The 2021
+lidar is NAVD 88 on GEOID18 as delivered (`gen2_z_m`, `gen2_zref_m`). The 2008 surface
+(`gen1_z_m`) is the 2021 slope-normal grid minus the tile's difference, so it is in the
+2021 datum BY CONSTRUCTION: the pipeline registered each 2008 swath onto the 2021 surface
+(star frame, vertical shifts +0.064 to +0.081 m per swath, `corrections.json`) and applied
+no geoid grid (`geoid_applied: false`); the GEOID03-to-GEOID18 difference went into those
+shifts, and the 2008 column's absolute level is the registration's, not a measurement.
+
 ## Bases and the tie
 
 The student exports show two base positions. **B1 was not the class base**: a student's
@@ -69,7 +86,11 @@ pair tie 69 mm short, against the 64 mm observed. Under the benchmark tie T2a's 
 sit -129 mm from the 2021 lidar and Andy's 17 CORS points -122 mm, 7 mm apart, while
 T1a's 32 FIX points sit -228 mm, 99 mm below T2a on the same field. PROPOSAL, not
 applied: raise T1a's group (floodplain_RSplus_A) by 0.069 m, to -159 mm; the raw antenna
-entries stay in `antenna_m` either way.
+entries stay in `antenna_m` either way. The compile now prints this check on every run (Andy:
+"checking antenna heights seems a necessary thing in all cases"): exported antenna height
+minus the model's offset, one row per distinct value, flagged where it differs from the
+others' 2.000 m pole; T1a's one B1-era point carried 2.086 m (+21 mm), the 62 B2 points
+2.134 m (+69 mm); T4a's table exports no antenna height or model.
 
 **Frame (fixed 2026-11-11).** The lidar grids are NAD83(2011) UTM 15N (3DEP; the pipeline's
 "EPSG:26915" labels the same meters). The compile had projected lon/lat with EPSG:26915,
