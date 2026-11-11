@@ -217,6 +217,24 @@ grids in `data/derived/4342-29-64/bluff_check/offsets_by_group.csv`.
 | T4a | 21 | -0.35, -0.10 m (bootstrap dE -0.55 to -0.25) | 115 -> 53 mm | +156 mm (+99 to +201) |
 | both | 39 | -0.35, -0.15 m (bootstrap dE -0.35 to -0.05) | 131 -> 99 mm | +199 mm (+85 to +215) |
 
+**The combined shift (Andy: "Is there a combined horizontal and vertical shift that best fits all
+these points?").** Minimizing the mean absolute residual with the vertical closed-form (median), the
+same script:
+
+| points | n | dE, dN | lidar minus RTK at that shift | mean abs residual before -> after |
+|---|---|---|---|---|
+| hillslope, both groups | 39 | -0.20, -0.05 m | +122 mm | 163 -> 158 mm |
+| every FIX point | 188 | -0.20, -0.05 m | +127 mm | 69 -> 64 mm |
+| RS3 alone | 18 | -0.05, 0.00 m | +128 mm | 204 -> 204 mm |
+| T4a alone | 21 | -0.30, -0.05 m | +139 mm | 114 -> 95 mm |
+
+So one rigid shift, 0.20 m west and 0.05 m south of the tied positions with the lidar 0.12-0.13 m
+above the surveyed ground, is the best fit to the whole survey and to the hillslope alone; the
+floodplain's 149 flat points fix the vertical (their +0.125 m hardly moves with any shift) and
+the 39 hillslope points fix the horizontal. The gain over no shift is small (mean absolute
+residual 69 -> 64 mm overall) because the hillslope's scatter is wide; the minimum-NMAD criterion
+above prefers a larger westward shift (0.35 m) that the mean-absolute criterion does not.
+
 Both groups minimize at the same lateral shift, 0.35 m west (upslope on this east-facing bluff) of
 the tied positions, and the shift halves T4a's spread; at that shift the two groups differ by
 about 110 mm in level, as they do with no shift, so the RS3-T4a difference is vertical and not
