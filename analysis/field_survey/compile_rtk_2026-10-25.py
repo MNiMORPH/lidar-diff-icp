@@ -31,19 +31,14 @@ measured under B2 is HIGH by +0.537 m (the two occupations agree to 8 mm, 34 min
 apart), and that constant is SUBTRACTED from every B2 point here: column `h_ell_tied_m`.
 Horizontally the printed occupation (E 579636.2, N 4885873) sits within the PDF's own
 rounding (0.1 m, 1 m) of the published E 579636.94 N 4885872.10, so no horizontal shift is
-applied and B2's horizontal error is bounded only at the metre level by this record. B1 has
-no benchmark occupation: its points are tied PROVISIONALLY by the bare-ground check below
-(their offset from the 2021 lidar on the gravel lot), stated as such in `tie_source`.
+applied and B2's horizontal error is bounded only at the metre level by this record. 
 
-BASES. Every student rover worked from the class base station, which was set TWICE: B1 at
-lot 204 (lon -92.000382, lat 44.116855, ellipsoid h 187.878) from ~13:20 to ~13:30 CDT, and
-B2 in the field east of the road (lon -91.998351, lat 44.117216, h 191.032) from ~14:40 on.
-Both base positions came from the base's own averaging (no known point was entered), so
-each carries an unknown absolute error of order a metre and the two differ by an unknown
-constant. Rover coordinates are therefore RELATIVE to their base. This script keeps the
-base label on every point and reports, for each base, the vertical offset of its bare-ground
-points from the 2021 lidar (gen2, which reads bare ground to -3.5 mm against surveyed
-control) as a provisional datum check; the real tie is the benchmark on Andy's rover.
+BASES. The student rovers show two base positions. "B1" (lon -92.000382, lat 44.116855,
+h 187.878, ~13:20-13:30 CDT) was NOT the class base: a student's receiver was accidentally
+configured as a base and confused the radio link (Andy, 2026-11-11: "Remove it and all
+points that count on it"). Every point whose corrections came from B1 is DROPPED from the
+table (listed in the log). B2 (lon -91.998351, lat 44.117216, h 191.032, ~14:40 on) is the
+class base; its averaged position carries an unknown offset, removed by the ties below.
 
 HEIGHTS. Ellipsoid heights are as exported (NAD83(2011) ellipsoid, the base's frame).
 NAVD 88 is computed with GEOID18 through pyproj (EPSG:6319 -> 6318+5703) when the grid is
@@ -116,6 +111,9 @@ P = pd.DataFrame(rows)
 P["t_hhmm"] = P.t_start.str.extract(r"(\d\d:\d\d)")[0]
 lost = P.base == "none recorded"; P.loc[lost & (P.t_hhmm >= "14:30"), "base"] = "B2"; P.loc[lost & (P.t_hhmm < "14:30"), "base"] = "B1"
 print(f"base assigned by time on {int(lost.sum())} points whose export had no base columns: {P.loc[lost, ['group', 'point', 't_hhmm', 'base']].to_dict('records')}")
+# DROP B1: a student's receiver acting as a base; everything that used its corrections goes
+b1 = P.base == "B1"; print(f"DROPPED {int(b1.sum())} points corrected from B1 (a student's receiver, not the class base): {P.loc[b1, ['group', 'point', 't_hhmm', 'status']].to_dict('records')}")
+P = P[~b1].reset_index(drop=True)
 DR9925_H_ELL = 188.669; B2_OFFSET_BM = float(bm.h_ell_m.mean() - DR9925_H_ELL)
 print(f"B2 vertical, benchmark: DR9925 measured {bm.h_ell_m.tolist()} m vs published {DR9925_H_ELL} m -> B2 reads {B2_OFFSET_BM:+.3f} m")
 P["easting"], P["northing"] = to_utm.transform(P.lon.values, P.lat.values)
@@ -180,11 +178,6 @@ for col, lay, kind in (("gen2_z_m", "z_after.npy", "bilinear"), ("dod_2021_2008_
 P["tile"] = [sample("z_after.npy", x, y)[1] for x, y in zip(P.easting_tied, P.northing_tied)]
 P["gen1_z_m"] = P.gen2_z_m - P.dod_2021_2008_m
 P["rtk_minus_gen2_m"] = P.navd88_m - P.gen2_z_m; P["rtk_minus_gen1_m"] = P.navd88_m - P.gen1_z_m
-# PROVISIONAL B1 tie: median offset of B1's bare, flat, FIX points from gen2 (gen2 reads bare ground to -3.5 mm against control). MINE, replaced when Andy's CORS rover gives a B1-era common point.
-fixm = P.status.str.startswith("FIX"); bare1 = fixm & (P.base == "B1") & (P.slope_deg <= 3) & (P.lowveg_gen2 <= 0.05) & np.isfinite(P.rtk_minus_gen2_m)
-B1_OFFSET = float(np.median(P.loc[bare1, "rtk_minus_gen2_m"])) if bare1.sum() else np.nan
-print(f"B1 PROVISIONAL TIE: {int(bare1.sum())} bare flat FIX points under B1 read {B1_OFFSET:+.3f} m against gen2 (median); removed from every B1 point as a provisional constant")
-P.loc[P.base == "B1", "h_ell_tied_m"] = P.loc[P.base == "B1", "h_ell_m"] - B1_OFFSET; P.loc[P.base == "B1", "tie_source"] = f"PROVISIONAL: bare-ground offset from gen2 under B1 ({B1_OFFSET:+.3f} m removed)"
 P["navd88_tied_m"] = P.navd88_m - (P.h_ell_m - P.h_ell_tied_m)
 # CORS vs B2 cross-check: nearest B2 FIX point within 3 m of each CORS point, raw ellipsoid-height difference (B2 minus CORS); the benchmark says +B2_OFFSET
 cors = P[P.base == "CORS"]; b2f = P[(P.base == "B2") & P.status.str.startswith("FIX") & (P.group != "benchmark_DR9925")]
@@ -213,8 +206,8 @@ print("\nAFTER THE TIE (FIX points): tied NAVD88 minus gen1 (2008) ground, mm, b
 for (g, b), s_ in fix.groupby(["group", "base"]):
     v = P.loc[s_.index, "tied_minus_gen1_m"].dropna() * 1000
     if len(v): print(f"  {g:<22} {b:<14} {np.median(v):+8.0f}  {1.4826 * np.median(np.abs(v - np.median(v))):6.0f}  {len(v):4d}")
-print("\nBARE-GROUND CHECK (slope <= 3 deg, lowveg <= 0.05, FIX): median RTK minus gen2 per base, the provisional vertical tie of each base to the 2021 lidar:")
+print("\nBARE-GROUND CHECK (slope <= 3 deg, lowveg <= 0.05, FIX): median tied RTK minus gen2 per base (note: on the floodplain the gen2 lowveg filter does not separate cut sward from bare ground):")
 bare = fix[(fix.slope_deg <= 3) & (fix.lowveg_gen2 <= 0.05)]
 for b, s in bare.groupby("base"):
-    v = s.rtk_minus_gen2_m.dropna() * 1000; print(f"  {b}: {np.median(v):+.0f} mm (NMAD {1.4826 * np.median(np.abs(v - np.median(v))):.0f}, n {len(v)}; groups {sorted(s.group.unique())})")
+    v = s.tied_minus_gen2_m.dropna() * 1000; print(f"  {b}: {np.median(v):+.0f} mm (NMAD {1.4826 * np.median(np.abs(v - np.median(v))):.0f}, n {len(v)}; groups {sorted(s.group.unique())})")
 print("  (the 0.05 lowveg and 3 deg cut-offs are MINE, for the check only)")

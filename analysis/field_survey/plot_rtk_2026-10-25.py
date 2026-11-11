@@ -27,10 +27,10 @@ if img is not None: ax.imshow(img, extent=[X0, X1, Y0, Y1])
 norm = TwoSlopeNorm(vmin=-0.6, vcenter=0, vmax=0.6); mk = {"hillslope_RS3": "o", "hillslope_T4a": "s", "floodplain_RSplus_A": "^", "floodplain_RSplus_B": "v", "floodplain_CORS_Wickert": "D", "benchmark_DR9925": "*"}
 for g, s in F.groupby("group"):
     sc = ax.scatter(s.easting_tied, s.northing_tied, c=s.tied_minus_gen2_m, cmap="RdBu", norm=norm, s=48 if g != "benchmark_DR9925" else 200, marker=mk.get(g, "o"), edgecolors="black", linewidths=0.5, label=g)
-for lbl, x, y in (("B1", 579986.1, 4885337.5), ("B2", 580148.2, 4885379.6)): ax.plot(x, y, marker="P", ms=14, color="yellow", mec="black"); ax.annotate(lbl, (x, y), xytext=(6, 6), textcoords="offset points", color="yellow", weight="bold")
+for lbl, x, y in (("B2", 580148.2, 4885379.6),): ax.plot(x, y, marker="P", ms=14, color="yellow", mec="black"); ax.annotate(lbl, (x, y), xytext=(6, 6), textcoords="offset points", color="yellow", weight="bold")
 ax.set_xlim(X0, X1); ax.set_ylim(Y0, Y1); ax.set_xticks([]); ax.set_yticks([]); ax.legend(loc="lower left", fontsize=8)
 cb = fig.colorbar(sc, ax=ax, shrink=0.6, pad=0.01); cb.set_label("RTK (tied) minus 2021 lidar ground, m; red = lidar above the ground")
-ax.set_title("25 Oct 2026 RTK survey, FIX points, tied to DR9925 (B2) / CORS / bare ground (B1); yellow P = base positions", fontsize=9)
+ax.set_title("25 Oct 2026 RTK survey, FIX points, B2 tied through the CORS-11 pair; B1 (a student receiver) removed; yellow P = base B2", fontsize=9)
 fig.tight_layout(); fig.savefig("figures/rtk_2026-10-25_map.png", dpi=110); print("figures/rtk_2026-10-25_map.png")
 
 fig, axs = plt.subplots(2, 1, figsize=(12, 9))
