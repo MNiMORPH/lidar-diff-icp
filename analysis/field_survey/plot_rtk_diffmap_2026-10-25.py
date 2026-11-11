@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Map of RTK (tied) minus the lidar surfaces at every FIX point, 25 October 2026 survey.
-Reads data/field/2026-10-25/rtk_points_all.csv (compile_rtk_2026-10-25.py): FIX points, B2 tied
+Reads data/field/2026-10-25/rtk_points_all.csv (compile_rtk_2026-10-25.py): FIX points, B tied
 through the CORS-11 = T1a-63 pair, B1 removed. Writes figures/rtk_2026-10-25_diffmap.png:
 two panels on 2025 FSA imagery (MnGeo WMS), left minus the 2021 lidar ground (gen2), right minus
 the 2008 lidar ground (gen1); one coloured marker per point, red = ground below the lidar
@@ -21,8 +21,8 @@ from PIL import Image
 
 P = pd.read_csv("data/field/2026-10-25/rtk_points_all.csv"); F = P[P.status.str.startswith("FIX")].copy()
 SUF = sys.argv[1] if len(sys.argv) > 1 else ""   # output-name suffix, so a replot need not clobber an earlier figure
-_b2 = P[P.base == "B2"].tie_source.iloc[0]; _pc = P[P.antenna_corr_m != 0].groupby("group").antenna_corr_m.max()
-TIE = f"B2 tied to {_b2.split(' under B2 (')[0]} ({_b2.split(' under B2 (')[1].split('; ')[0]}" + ("; pole heights corrected: " + ", ".join(f"{g} {v:+.3f} m" for g, v in _pc.items()) if len(_pc) else "") + ")"
+_b2 = P[P.base == "B"].tie_source.iloc[0]; _pc = P[P.antenna_corr_m != 0].groupby("group").antenna_corr_m.max()
+TIE = f"B tied to {_b2.split(' under B (')[0]} ({_b2.split(' under B (')[1].split('; ')[0]}" + ("; pole heights corrected: " + ", ".join(f"{g} {v:+.3f} m" for g, v in _pc.items()) if len(_pc) else "") + ")"
 X0, Y0, X1, Y1 = 579700, 4885300, 580100, 4885720
 url = f"https://imageserver.gisdata.mn.gov/cgi-bin/wms?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=fsa2025&STYLES=&SRS=EPSG:26915&BBOX={X0},{Y0},{X1},{Y1}&WIDTH=1200&HEIGHT={int(1200*(Y1-Y0)/(X1-X0))}&FORMAT=image/jpeg"
 try: img = np.asarray(Image.open(io.BytesIO(urllib.request.urlopen(url, timeout=120).read())))

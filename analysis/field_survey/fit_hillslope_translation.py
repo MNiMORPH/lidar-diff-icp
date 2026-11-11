@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Fit a rigid translation (dE, dN, dZ) of the UNTIED hillslope RTK points (B2 base, 25 Oct 2026)
+"""Fit a rigid translation (dE, dN, dZ) of the UNTIED hillslope RTK points (B base, 25 Oct 2026)
 that minimizes their misfit to the 2021 lidar ground (tile 4342-29-64 z_after.npy, 5 m, bilinear).
-The B2 tie is left out on purpose: the hillslope then estimates the whole translation on its own,
+The B tie is left out on purpose: the hillslope then estimates the whole translation on its own,
 and the benchmark tie (DR9925: dE +0.771, dN -1.112, dZ -0.537 m; the adopted tie, 2026-11-11) is the
 independent check; the CORS-11 pole-pair tie (dE +0.802, dN -1.123, dZ -0.473 m) is drawn beside it.
 Residual r_i = (navd88_untied_i + dZ) - Z2021(E_i + dE, N_i + dN). For each (dE, dN) on a grid the
@@ -23,7 +23,7 @@ Z = np.load(f"data/derived/{T}/z_after.npy")
 P = pd.read_csv("data/field/2026-10-25/rtk_points_all.csv")
 H = P[P.status.str.startswith("FIX") & P.group.str.startswith("hillslope")].copy()
 E, N, h = H.easting.to_numpy(), H.northing.to_numpy(), H.navd88_m.to_numpy()   # UNTIED
-print(f"points: {len(H)} hillslope FIX, untied (B2 as exported)")
+print(f"points: {len(H)} hillslope FIX, untied (B as exported)")
 PAIR = (0.771, -1.112, -0.537)   # the DR9925 benchmark tie (adopted); the pole pair below is the second check
 POLE = (0.802, -1.123, -0.473)
 
@@ -77,5 +77,5 @@ axs[0].set_xlabel("dE (m)"); axs[0].set_ylabel("dN (m)"); axs[0].set_title("mean
 axs[1].plot(sel.dE, sel.L1_m * 1000, "k-", label="mean |r|"); axs[1].plot(sel.dE, sel.nmad_m * 1000, "b--", label="NMAD"); axs[1].axvline(PAIR[0], color="gray", ls=":", label="benchmark dE"); axs[1].set_xlabel("dE (m)"); axs[1].set_ylabel("mm"); axs[1].set_title(f"misfit along dN = {best1.dN:+.2f}", fontsize=9); axs[1].legend(fontsize=8); axs[1].grid(alpha=0.3)
 axs[2].plot(sel.dE, sel.dZ_L1, "k-"); axs[2].axvline(PAIR[0], color="gray", ls=":"); axs[2].axhline(PAIR[2], color="gray", ls=":"); axs[2].plot(PAIR[0], PAIR[2], "wo", mec="k", ms=9, label="benchmark tie"); axs[2].plot(POLE[0], POLE[2], "w^", mec="k", ms=8, label="pole-pair tie"); axs[2].plot(best1.dE, best1.dZ_L1, "r*", ms=14, label="L1 min")
 axs[2].scatter(B[:, 0], B[:, 2], s=6, c="orange", alpha=0.5, label="bootstrap"); axs[2].set_xlabel("dE (m)"); axs[2].set_ylabel("best dZ (m)"); axs[2].set_title("the dE-dZ trade-off on an east-facing bluff", fontsize=9); axs[2].legend(fontsize=8); axs[2].grid(alpha=0.3)
-fig.suptitle("Hillslope RTK (39 FIX, B2 untied) vs 2021 lidar ground: rigid translation fit", fontsize=10); fig.tight_layout()
+fig.suptitle("Hillslope RTK (39 FIX, B untied) vs 2021 lidar ground: rigid translation fit", fontsize=10); fig.tight_layout()
 fig.savefig("figures/rtk_2026-10-25_hillslope_translation.png", dpi=120); print("figures/rtk_2026-10-25_hillslope_translation.png")

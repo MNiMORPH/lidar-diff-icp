@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Probability densities of RTK (tied) minus the lidar surfaces, 25 October 2026 survey.
 Reads data/field/2026-10-25/rtk_points_all.csv (compile_rtk_2026-10-25.py): FIX points only,
-B2 tied through the CORS-11 = T1a-63 pair (+0.473 m vertical, dE +0.802 dN -1.123 m), B1 removed.
+B tied through the CORS-11 = T1a-63 pair (+0.473 m vertical, dE +0.802 dN -1.123 m), B1 removed.
 Writes figures/rtk_2026-10-25_pdf.png and .pdf: two rows (floodplain field, hillslope bluff), two
 columns (minus 2021 lidar gen2, minus 2008 lidar gen1); a Gaussian KDE per group over a stacked
 rug of the points, with median and NMAD per group printed in the legend. The KDE bandwidth is
@@ -19,14 +19,14 @@ from matplotlib.transforms import blended_transform_factory
 
 P = pd.read_csv("data/field/2026-10-25/rtk_points_all.csv")
 SUF = sys.argv[1] if len(sys.argv) > 1 else ""   # output-name suffix, so a replot need not clobber an earlier figure
-_b2 = P[P.base == "B2"].tie_source.iloc[0]; _pc = P[P.antenna_corr_m != 0].groupby("group").antenna_corr_m.max()
-TIE = f"B2 tied to {_b2.split(' under B2 (')[0]} ({_b2.split(' under B2 (')[1].split('; ')[0]}" + ("; pole heights corrected: " + ", ".join(f"{g} {v:+.3f} m" for g, v in _pc.items()) if len(_pc) else "") + ")"
+_b2 = P[P.base == "B"].tie_source.iloc[0]; _pc = P[P.antenna_corr_m != 0].groupby("group").antenna_corr_m.max()
+TIE = f"B tied to {_b2.split(' under B (')[0]} ({_b2.split(' under B (')[1].split('; ')[0]}" + ("; pole heights corrected: " + ", ".join(f"{g} {v:+.3f} m" for g, v in _pc.items()) if len(_pc) else "") + ")"
 F = P[P.status.str.startswith("FIX")].copy()
 rows = (("floodplain", ["floodplain_RSplus_B", "floodplain_RSplus_A", "floodplain_CORS_Wickert"], "floodplain: the sward field east of the road (R1-v140)"),
         ("hillslope", ["hillslope_RS3", "hillslope_T4a"], "hillslope: the forested bluff west of the road"))
 cols = (("tied_minus_gen2_m", "RTK minus 2021 lidar ground (gen2), mm"), ("tied_minus_gen1_m", "RTK minus 2008 lidar ground (gen1), mm"))
 colour = {"floodplain_RSplus_B": "#2a78d6", "floodplain_RSplus_A": "#e3a008", "floodplain_CORS_Wickert": "#1a1a1a", "hillslope_RS3": "#2a78d6", "hillslope_T4a": "#e3a008"}
-label = {"floodplain_RSplus_B": "T2a, RS+ (B2)", "floodplain_RSplus_A": "T1a/T1b, RS+ (B2)", "floodplain_CORS_Wickert": "Wickert, RS2+ (CORS, no tie)", "hillslope_RS3": "T3a/T3b/T3c, RS3 (B2)", "hillslope_T4a": "T4a/T4b (B2)"}
+label = {"floodplain_RSplus_B": "T2a, RS+ (B)", "floodplain_RSplus_A": "T1a/T1b, RS+ (B)", "floodplain_CORS_Wickert": "Wickert, RS2+ (CORS, no tie)", "hillslope_RS3": "T3a/T3b/T3c, RS3 (B)", "hillslope_T4a": "T4a/T4b (B)"}
 fig, axs = plt.subplots(2, 2, figsize=(12, 8), sharex="row")
 print("row, group, column, n, median_mm, NMAD_mm")
 for i, (rk, groups, title) in enumerate(rows):
