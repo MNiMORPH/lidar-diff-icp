@@ -270,6 +270,16 @@ there is filled from neighbors and they have no lidar datum (listed in the log, 
 | sigmas as reported | 0.00, 0.00, +0.10 m | dE 0.00 to +0.05, dN -0.05 to 0.00, dZ +0.10 | 620 | T1a's 14 FLOAT points sit 4-24 m off the lidar with reported vertical RMS 0.05-0.24 m and supply 98.6 % of chi2: the reported FLOAT RMS is not an uncertainty |
 | sigmas calibrated by status (reported x robust spread of r/sigma: FIX x2.3, FLOAT x79.5, SINGLE x0.8) | -0.05, -0.05, +0.13 m | dE -0.05 to 0.00, dN -0.05 to 0.00, dZ +0.13 | 1.63 | 2 of 203 points beyond 3 sigma; floodplain carries 0.95 of the weight |
 
+The same inversion on the HILLSLOPE ALONE (`invert_shift_weighted.py hillslope`; Andy: "I meant the
+hillslope lidar alone"): all 39 points enter (every one has class-2 returns within 3 m); reported
+sigmas give dE -0.05, dN -0.05, dZ +0.14 m with reduced chi2 31.6; calibrated (FIX x3.3) the
+minimum stays at -0.05, -0.05, +0.14 m with reduced chi2 2.93, 1-sigma dE -0.20 to +0.05, dN
+-0.15 to 0.00, dZ +0.09 to +0.21 m, 1 of 39 points beyond 3 sigma
+(`figures/rtk_2026-10-25_shift_weighted_hillslope.png`). The weighting is what the unweighted
+hillslope fits lacked: each point's lidar roughness and reported RMS set its weight, the -1.6 m RS3
+point and the rough north end count for little, and the hillslope then gives the same vertical as
+the floodplain, +0.14 against +0.13 m, with the lateral residual within a grid step of zero.
+
 The weighted answer is the 2021 lidar 0.13 m above the surveyed ground with no lateral shift
 beyond the grid step, formally tight because 185 FIX points at ~0.05 m each enter independently;
 the formal ranges do not include whatever is systematic between a pole tip and a May lidar ground
