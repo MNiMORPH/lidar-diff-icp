@@ -103,3 +103,7 @@ Figure: `figures/rtk_2026-10-25_pdf.png` (and `.pdf`, from
 `analysis/field_survey/plot_rtk_pdf_2026-10-25.py`) shows these as probability densities,
 floodplain and hillslope rows, minus 2021 and minus 2008 columns, one Gaussian KDE per group
 over a rug of the points, nothing cut.
+
+Map: `figures/rtk_2026-10-25_diffmap.png` (from `analysis/field_survey/plot_rtk_diffmap_2026-10-25.py`)
+puts a colored marker at every FIX point on 2025 FSA imagery, minus 2021 on the left and minus
+2008 on the right; points with no 2008 difference (most of the steep bluff) are open gray.
