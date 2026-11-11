@@ -26,7 +26,7 @@ fig, ax = plt.subplots(figsize=(10, 10.6))
 if img is not None: ax.imshow(img, extent=[X0, X1, Y0, Y1])
 norm = TwoSlopeNorm(vmin=-0.6, vcenter=0, vmax=0.6); mk = {"hillslope_RS3": "o", "hillslope_T4a": "s", "floodplain_RSplus_A": "^", "floodplain_RSplus_B": "v", "floodplain_CORS_Wickert": "D", "benchmark_DR9925": "*"}
 for g, s in F.groupby("group"):
-    sc = ax.scatter(s.easting, s.northing, c=s.tied_minus_gen2_m, cmap="RdBu", norm=norm, s=48 if g != "benchmark_DR9925" else 200, marker=mk.get(g, "o"), edgecolors="black", linewidths=0.5, label=g)
+    sc = ax.scatter(s.easting_tied, s.northing_tied, c=s.tied_minus_gen2_m, cmap="RdBu", norm=norm, s=48 if g != "benchmark_DR9925" else 200, marker=mk.get(g, "o"), edgecolors="black", linewidths=0.5, label=g)
 for lbl, x, y in (("B1", 579986.1, 4885337.5), ("B2", 580148.2, 4885379.6)): ax.plot(x, y, marker="P", ms=14, color="yellow", mec="black"); ax.annotate(lbl, (x, y), xytext=(6, 6), textcoords="offset points", color="yellow", weight="bold")
 ax.set_xlim(X0, X1); ax.set_ylim(Y0, Y1); ax.set_xticks([]); ax.set_yticks([]); ax.legend(loc="lower left", fontsize=8)
 cb = fig.colorbar(sc, ax=ax, shrink=0.6, pad=0.01); cb.set_label("RTK (tied) minus 2021 lidar ground, m; red = lidar above the ground")
@@ -37,7 +37,7 @@ fig, axs = plt.subplots(2, 1, figsize=(12, 9))
 for ax, groups, title in ((axs[0], ["hillslope_RS3", "hillslope_T4a"], "hillslope traverse west of the road (RS3 circles, T4a squares), survey order within group"), (axs[1], ["floodplain_RSplus_A", "floodplain_RSplus_B", "floodplain_CORS_Wickert"], "floodplain field east of the road (RS+ A triangles up, RS+ B down, CORS diamonds)")):
     off = 0
     for g in groups:
-        s = F[F.group == g].sort_values(["t_start"]); d = np.r_[0, np.cumsum(np.hypot(np.diff(s.easting), np.diff(s.northing)))] + off
+        s = F[F.group == g].sort_values(["t_start"]); d = np.r_[0, np.cumsum(np.hypot(np.diff(s.easting_tied), np.diff(s.northing_tied)))] + off
         ax.plot(d, s.navd88_tied_m, "k-", lw=1); ax.scatter(d, s.navd88_tied_m, c="black", s=16, marker=mk[g], label=f"{g}: RTK tied" if g == groups[0] else None)
         ax.plot(d, s.gen2_z_m, color="#2a78d6", lw=1.2, label="2021 lidar (gen2)" if g == groups[0] else None); ax.plot(d, s.gen1_z_m, color="#e34948", lw=1.2, label="2008 lidar (gen1)" if g == groups[0] else None)
         off = d[-1] + 30

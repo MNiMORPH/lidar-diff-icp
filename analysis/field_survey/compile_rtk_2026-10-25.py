@@ -121,6 +121,15 @@ print(f"B2 TIE: benchmark DR9925 measured {bm.h_ell_m.tolist()} m vs published {
 P["easting"], P["northing"] = to_utm.transform(P.lon.values, P.lat.values)
 P["easting"] = P.easting.round(3); P["northing"] = P.northing.round(3)
 
+# B2 HORIZONTAL tie (provisional, Andy 2026-11-11: "I am guessing our tie point is 11"): T1a 63
+# (15:53:33) and Andy's CORS point 11 (15:53:52) were the same spot, one after the other. The shift
+# CORS minus T1a is applied to every B2 point: easting_tied / northing_tied. Test
+# (test_b2_horizontal_tie.py): hillslope NMAD vs gen2 540 -> 139 mm, and a free fit over +/-2.5 m
+# lands within 0.1 m of the same shift. T5a's unrounded benchmark export replaces it when it comes.
+_d63 = P[(P.group == "floodplain_RSplus_A") & (P.point == 63)].iloc[0]; _c11 = P[(P.group == "floodplain_CORS_Wickert") & (P.point == 11)].iloc[0]
+B2_DX, B2_DY = float(_c11.easting - _d63.easting), float(_c11.northing - _d63.northing)
+P["easting_tied"] = np.where(P.base == "B2", P.easting + B2_DX, P.easting).round(3); P["northing_tied"] = np.where(P.base == "B2", P.northing + B2_DY, P.northing).round(3)
+print(f"B2 HORIZONTAL TIE (provisional): T1a 63 = CORS 11 -> B2 shifted by dE {B2_DX:+.3f} m, dN {B2_DY:+.3f} m; B1 and CORS unshifted")
 # tied ellipsoid heights: B2 by the benchmark; B1 provisional (bare-ground check, filled in below after the lidar sampling)
 P["h_ell_tied_m"] = np.where(P.base == "B2", P.h_ell_m - B2_OFFSET, np.where(P.base == "CORS", P.h_ell_m, np.nan)); P["tie_source"] = np.where(P.base == "B2", f"benchmark DR9925 under B2 ({B2_OFFSET:+.3f} m removed)", np.where(P.base == "CORS", "MnDOT CORS network RTK, NAD83(2011) direct", ""))
 # NAVD 88 via GEOID18 (PROJ network fetches the grid)
@@ -163,8 +172,8 @@ def sample(name, x, y, kind="float"):
             return v, t
     return np.nan, ""
 for col, lay, kind in (("gen2_z_m", "z_after.npy", "bilinear"), ("dod_2021_2008_m", "dod.npy", "bilinear"), ("slope_deg", "slope.npy", "nearest"), ("lowveg_gen2", "lowveg_grid.npy", "nearest"), ("clubb_floodplain", "floodplain_mask_clubb.npy", "nearest"), ("penetration_failure_2008", "penetration_failure.npy", "nearest")):
-    vals = [sample(lay, x, y, kind) for x, y in zip(P.easting, P.northing)]; P[col] = [v for v, _ in vals]
-P["tile"] = [sample("z_after.npy", x, y)[1] for x, y in zip(P.easting, P.northing)]
+    vals = [sample(lay, x, y, kind) for x, y in zip(P.easting_tied, P.northing_tied)]; P[col] = [v for v, _ in vals]   # lidar read at the TIED position
+P["tile"] = [sample("z_after.npy", x, y)[1] for x, y in zip(P.easting_tied, P.northing_tied)]
 P["gen1_z_m"] = P.gen2_z_m - P.dod_2021_2008_m
 P["rtk_minus_gen2_m"] = P.navd88_m - P.gen2_z_m; P["rtk_minus_gen1_m"] = P.navd88_m - P.gen1_z_m
 # PROVISIONAL B1 tie: median offset of B1's bare, flat, FIX points from gen2 (gen2 reads bare ground to -3.5 mm against control). MINE, replaced when Andy's CORS rover gives a B1-era common point.
@@ -183,7 +192,7 @@ PAIRS = pd.DataFrame(pairs)
 print(f"\nCROSS-CHECK, B2 against CORS on the same ground (pairs within 3 m; the 3 m is mine): {len(PAIRS)} pairs")
 if len(PAIRS): print(PAIRS.to_string(index=False)); print(f"  median B2 minus CORS {PAIRS.b2_minus_cors_m.median():+.3f} m, NMAD {1.4826 * np.median(np.abs(PAIRS.b2_minus_cors_m - PAIRS.b2_minus_cors_m.median())):.3f} m; benchmark tie said {B2_OFFSET:+.3f} m")
 P["tied_minus_gen2_m"] = P.navd88_tied_m - P.gen2_z_m; P["tied_minus_gen1_m"] = P.navd88_tied_m - P.gen1_z_m
-P = P[["group", "people", "device", "serial", "point", "t_start", "t_hhmm", "base", "baseline_m", "status", "lon", "lat", "easting", "northing", "h_ell_m", "h_ell_tied_m", "tie_source", "navd88_m", "navd88_tied_m", "elev_app_m", "antenna_m", "rms_e", "rms_n", "rms_v", "tilt_deg", "tile", "gen2_z_m", "gen1_z_m", "dod_2021_2008_m", "rtk_minus_gen2_m", "rtk_minus_gen1_m", "tied_minus_gen2_m", "tied_minus_gen1_m", "slope_deg", "lowveg_gen2", "clubb_floodplain", "penetration_failure_2008", "source"]]
+P = P[["group", "people", "device", "serial", "point", "t_start", "t_hhmm", "base", "baseline_m", "status", "lon", "lat", "easting", "northing", "easting_tied", "northing_tied", "h_ell_m", "h_ell_tied_m", "tie_source", "navd88_m", "navd88_tied_m", "elev_app_m", "antenna_m", "rms_e", "rms_n", "rms_v", "tilt_deg", "tile", "gen2_z_m", "gen1_z_m", "dod_2021_2008_m", "rtk_minus_gen2_m", "rtk_minus_gen1_m", "tied_minus_gen2_m", "tied_minus_gen1_m", "slope_deg", "lowveg_gen2", "clubb_floodplain", "penetration_failure_2008", "source"]]
 os.makedirs(os.path.dirname(OUT), exist_ok=True); P.to_csv(OUT, index=False)
 pd.set_option("display.width", 250); pd.set_option("display.max_columns", 40)
 print(f"\n{len(P)} points written to {OUT}")
