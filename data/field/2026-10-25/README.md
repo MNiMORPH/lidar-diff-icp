@@ -235,6 +235,26 @@ the 39 hillslope points fix the horizontal. The gain over no shift is small (mea
 residual 69 -> 64 mm overall) because the hillslope's scatter is wide; the minimum-NMAD criterion
 above prefers a larger westward shift (0.35 m) that the mean-absolute criterion does not.
 
+**All three axes free (Andy: "I am asking E, N, and z"), `analysis/field_survey/fit_shift_3d.py`.**
+A full grid search over dE, dN (+/-1.5 m by 0.05) and dZ (-0.2 to +0.6 m by 0.01) added to the
+tied RTK points, residual = lidar minus shifted RTK, nothing cut; `figures/rtk_2026-10-25_shift_3d.png`
+shows RMS slices through the minimum.
+
+| points | n | RMS minimum (dE, dN, dZ) | RMS before -> after | mean-abs minimum (dE, dN, dZ) | within 5 % of the RMS minimum |
+|---|---|---|---|---|---|
+| every FIX point | 188 | -0.10, -0.15, +0.13 m | 194 -> 150 mm | -0.20, -0.05, +0.13 m | dE -0.30 to +0.15, dZ +0.08 to +0.18 |
+| hillslope, both | 39 | +0.05, -0.10, +0.05 m | 318 -> 309 mm | -0.20, -0.05, +0.12 m | dE -0.35 to +0.45, dZ -0.13 to +0.23 |
+| RS3 alone | 18 | +0.25, -0.15, +0.06 m | 433 -> 395 mm | -0.05, -0.05, +0.12 m | dE -0.20 to +0.75 |
+| T4a alone | 21 | -0.40, -0.15, +0.15 m | 163 -> 152 mm | -0.30, -0.05, +0.14 m | dE -0.60 to -0.20 |
+
+With the vertical free the answer for the whole survey is dZ +0.13 m (the lidar 0.13 m above the
+surveyed ground) with a small westward and southward lateral shift of one to two decimeters; the
+vertical is tight (0.08 to 0.18 m at 5 %) and the lateral is loose. The hillslope on its own cannot
+fix the shift by RMS: the -1.6 m RS3 point dominates the squares (RMS 318 mm against a mean absolute
+residual of 166), and the 5 % region spans 0.8 m in dE and 0.36 m in dZ along the dE-dZ ridge; the
+mean-absolute criterion, which that point cannot dominate, puts the hillslope at the same
+(-0.20, -0.05, +0.12) as the whole survey.
+
 Both groups minimize at the same lateral shift, 0.35 m west (upslope on this east-facing bluff) of
 the tied positions, and the shift halves T4a's spread; at that shift the two groups differ by
 about 110 mm in level, as they do with no shift, so the RS3-T4a difference is vertical and not
