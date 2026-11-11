@@ -22,7 +22,7 @@ SUF = sys.argv[1] if len(sys.argv) > 1 else ""   # output-name suffix, so a repl
 F = P[P.status.str.startswith("FIX")].copy()
 rows = (("floodplain", ["floodplain_RSplus_B", "floodplain_RSplus_A", "floodplain_CORS_Wickert"], "floodplain: the sward field east of the road (R1-v140)"),
         ("hillslope", ["hillslope_RS3", "hillslope_T4a"], "hillslope: the forested bluff west of the road"))
-cols = (("tied_minus_gen2_m", "RTK minus 2021 lidar (mm)"), ("tied_minus_gen1_m", "RTK minus 2008 lidar (mm)"))
+cols = (("gen2_minus_rtk_m", "2021 lidar minus RTK (mm)"), ("gen1_minus_rtk_m", "2008 lidar minus RTK (mm)"))
 colour = {"floodplain_RSplus_B": "#2a78d6", "floodplain_RSplus_A": "#e3a008", "floodplain_CORS_Wickert": "#1a1a1a", "hillslope_RS3": "#2a78d6", "hillslope_T4a": "#e3a008"}
 label = {'floodplain_RSplus_B': 'RS+ B (T2a)', 'floodplain_RSplus_A': 'RS+ A (T1a)', 'floodplain_CORS_Wickert': 'CORS (Wickert)', 'hillslope_RS3': 'RS3 (T3a)', 'hillslope_T4a': 'T4a', 'benchmark_DR9925': 'DR9925'}
 fig, axs = plt.subplots(2, 2, figsize=(12, 8), sharex="row")

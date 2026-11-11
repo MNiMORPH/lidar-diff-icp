@@ -28,7 +28,7 @@ except Exception as e: img = None; print("imagery not fetched:", e)
 mk = {"hillslope_RS3": "o", "hillslope_T4a": "s", "floodplain_RSplus_A": "^", "floodplain_RSplus_B": "v", "floodplain_CORS_Wickert": "D"}
 norm = TwoSlopeNorm(vmin=-0.5, vcenter=0, vmax=0.5)
 fig, axs = plt.subplots(1, 2, figsize=(14, 7.2)); fig.subplots_adjust(left=0.01, right=0.99, top=0.9, bottom=0.01, wspace=0.03)
-for ax, col, title in ((axs[0], "tied_minus_gen2_m", "2021 lidar"), (axs[1], "tied_minus_gen1_m", "2008 lidar")):
+for ax, col, title in ((axs[0], "gen2_minus_rtk_m", "2021 lidar"), (axs[1], "gen1_minus_rtk_m", "2008 lidar")):
     if img is not None: ax.imshow(img, extent=[X0, X1, Y0, Y1], alpha=0.85)
     nan = F[col].isna()
     print(f"{col}: {int((~nan).sum())} points with a value, {int(nan.sum())} without")
@@ -41,5 +41,5 @@ for ax, col, title in ((axs[0], "tied_minus_gen2_m", "2021 lidar"), (axs[1], "ti
     ax.set_xlim(X0, X1); ax.set_ylim(Y0, Y1); ax.set_xticks([]); ax.set_yticks([]); ax.set_title(title, fontsize=10)
     ax.plot([X0 + 20, X0 + 120], [Y0 + 15, Y0 + 15], "w-", lw=3); ax.text(X0 + 70, Y0 + 22, "100 m", color="white", ha="center", fontsize=9)
 axs[0].legend(loc="upper right", fontsize=8); axs[1].scatter([], [], facecolors="none", edgecolors="0.35", s=40, label="no value"); axs[1].legend(loc="upper right", fontsize=8)
-cb = fig.colorbar(sc, ax=axs, shrink=0.75, pad=0.01, extend="both"); cb.set_label("RTK minus lidar (m)")
+cb = fig.colorbar(sc, ax=axs, shrink=0.75, pad=0.01, extend="both"); cb.set_label("lidar minus RTK (m)")
 fig.savefig(f"figures/rtk_2026-10-25_diffmap{SUF}.png", dpi=120, bbox_inches="tight"); print(f"figures/rtk_2026-10-25_diffmap{SUF}.png")
