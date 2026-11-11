@@ -192,6 +192,38 @@ Misfit transects: `figures/rtk_2026-10-25_profiles_misfit_polecorr.png` (from
 figure with tied RTK minus each lidar surface on the y-axis, points only, nothing cut (one RS3
 point at -1.6 m sets the hillslope panel's range).
 
+**Why T3a's RS3 line reads farther from the lidar than T4a's (asked 2026-11-11).** Nothing
+measurable separates the two traverses: slope at the points 31.2 vs 32.2 deg (medians), time
+14:43-15:12 vs 14:44-15:34, rover vertical RMS 0.020 vs 0.018 m, 2021 class-2 points within 3 m
+178 vs 203, local 2021 plane rms 0.052 vs 0.049 m. Pairing each RS3 point with its nearest T4a
+point (19 m away on median) the RS3 point reads +100 mm more lidar-high, steadily so on the clean
+east-facing part of the face. The RS3 export records pole tilt (median 2.4 deg) and the misfit does
+not track it (correlation +0.05). Vegetation: the RS3 line sits in more 2021 low vegetation
+(lowveg_gen2 0.215 vs 0.163), but within each group the misfit falls with vegetation (correlation
+-0.41 and -0.35) and the group term with vegetation held fixed is +87 mm, so the 2021 proxy does
+not explain it. Andy's notes say both groups used the same pole and the same model; the RS3 export
+carries antenna height 2.134 m (a 2.000 m pole entry) and T4a's table carries none, which is the
+one entry still unverified.
+
+**One or more translations (Andy, 2026-11-11), `analysis/field_survey/fit_hillslope_offsets_by_group.py`.**
+For each group and for both pooled, the lateral shift of the TIED points that minimizes the NMAD of
+lidar minus RTK against the 2021 grid, with the vertical offset read at that shift (grid +/-1.5 m,
+0.05 m steps; bootstrap 500 draws; nothing cut). `figures/rtk_2026-10-25_hillslope_offsets_by_group.png`;
+grids in `data/derived/4342-29-64/bluff_check/offsets_by_group.csv`.
+
+| fit | n | shift that minimizes the spread (dE, dN) | NMAD before -> after | lidar minus RTK at that shift |
+|---|---|---|---|---|
+| RS3 (T3a) | 18 | -0.35, -0.10 m (bootstrap dE -0.45 to -0.05) | 162 -> 92 mm | +268 mm (p16-p84 +88 to +324) |
+| T4a | 21 | -0.35, -0.10 m (bootstrap dE -0.55 to -0.25) | 115 -> 53 mm | +156 mm (+99 to +201) |
+| both | 39 | -0.35, -0.15 m (bootstrap dE -0.35 to -0.05) | 131 -> 99 mm | +199 mm (+85 to +215) |
+
+Both groups minimize at the same lateral shift, 0.35 m west (upslope on this east-facing bluff) of
+the tied positions, and the shift halves T4a's spread; at that shift the two groups differ by
+about 110 mm in level, as they do with no shift, so the RS3-T4a difference is vertical and not
+positional. The minimum-clipped-rms criterion lands 0.1-0.2 m from the minimum-NMAD one (the dE-dZ
+trade-off, 486 mm of level per m of easting, is still there: a 0.35 m shift moves the level by
++0.17 m, which is why the offsets at the minimum are larger than with no shift).
+
 Translation fit (PARKED, Andy 2026-11-11: "more exploration than believing it to be correct"; an idea to
 come back to): `analysis/field_survey/fit_hillslope_translation.py` fits a rigid (dE, dN, dZ)
 of the UNTIED hillslope points onto the 2021 grid; `figures/rtk_2026-10-25_hillslope_translation.png`
