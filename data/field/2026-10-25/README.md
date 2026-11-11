@@ -286,6 +286,23 @@ the formal ranges do not include whatever is systematic between a pole tip and a
 (the FIX factor of 2.3 is that excess over the reported RMS). The reported RMS of a FLOAT solution
 understates its error by a factor near 80 on this survey.
 
+**Why the same +0.13 m on a grassy floodplain and a forested bluff (Andy's question, 2026-11-11).**
+First, the agreement is at the hillslope's 1-sigma, +0.09 to +0.21 m, so it is a match at +/-6 cm, not
+to the centimeter. Second, what it is not: (1) not the geoid conversion, since pyproj's GEOID18 and
+Flow's own NAVD 88 agree on Andy's CORS rover to 0.1 mm (max 0.8 mm, 17 points); (2) not the B tie,
+since the CORS rover, which needs no tie, reads +122 mm on the same field as T2a's +129; (3) not a
+common pole or antenna constant on the survey side, because such a constant c would enter the tied
+B points as zero (it cancels through T5a's occupation) and the CORS rover as c, so T2a and CORS
+would differ by c, and they differ by 7 mm. The +0.13 m is in the lidar relative to the pole tips, and
+the flush monument disk in roadside grass reads +96 mm the same way. The 2021 low-vegetation proxy
+cannot test the floodplain (it counts returns 0.15-2 m up and reads 0.00-0.01 over the sward) and is
+not monotonic on the hillslope (quartile medians +31, +102, +110, -28 mm). What remains is that the
+May 2021 ground surface sits about a decimeter above where a shod pole tip rests on both covers,
+spring grass and forest floor, which is either one property of that acquisition's ground or two
+causes of similar size; the project's bare control marks (-3.5 mm) say it is not there on bare
+gravel. The measurement that separates the two is a bare surface occupied with the same rovers; this
+survey has none (the gravel-lot points were under B1 and are dropped).
+
 Both groups minimize at the same lateral shift, 0.35 m west (upslope on this east-facing bluff) of
 the tied positions, and the shift halves T4a's spread; at that shift the two groups differ by
 about 110 mm in level, as they do with no shift, so the RS3-T4a difference is vertical and not
