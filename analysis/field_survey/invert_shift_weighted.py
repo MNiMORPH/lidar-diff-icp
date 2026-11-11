@@ -24,7 +24,7 @@ Writes data/derived/4342-29-64/bluff_check/gen2_local_rms_all_points.csv (cached
        data/derived/4342-29-64/bluff_check/weighted_shift.json,
        figures/rtk_2026-10-25_shift_weighted.png (chi2 slices through the minimum; star = minimum, circle = no shift).
 """
-import json, os
+import json, os, sys
 import laspy
 import matplotlib
 matplotlib.use("Agg")
@@ -39,6 +39,8 @@ b = json.load(open(f"data/derived/{T}/corrections.json"))["bounds"]; res = 5.0
 Z = np.load(f"data/derived/{T}/z_after.npy")
 P = pd.read_csv("data/field/2026-10-25/rtk_points_all.csv")
 RADIUS = 3.0
+SUBSET = sys.argv[1] if len(sys.argv) > 1 else "all"   # "all" or "hillslope" (Andy, 2026-11-11: "the hillslope lidar alone in the inversion")
+SUF = "" if SUBSET == "all" else f"_{SUBSET}"
 
 # --- lidar roughness at every point, from the class-2 cloud (cached)
 cache = f"{D}/gen2_local_rms_all_points.csv"
@@ -61,6 +63,8 @@ else:
         rows.append(dict(group=p.group, point=p.point, gen2_n_3m=n, gen2_plane_rms_m=rms))
     R = pd.DataFrame(rows); R.to_csv(cache, index=False); print(f"class-2 returns kept in the survey box: {len(x)}; cached {cache}")
 P = P.merge(R, on=["group", "point"], how="left")
+if SUBSET == "hillslope": P = P[P.group.str.startswith("hillslope")].reset_index(drop=True)
+print(f"SUBSET: {SUBSET}, {len(P)} logged points")
 
 # --- the error model
 rms_h = np.where(P.rms_n.isna(), P.rms_e, np.hypot(P.rms_e, P.rms_n))
@@ -107,15 +111,15 @@ print("\nvariance-component factors (reported sigma x factor = sigma the residua
 res2, C2, k2, r2 = solve(1.0 / sg ** 2, "SOLUTION 2, sigmas calibrated by status")
 P.loc[ok, "sigma_calibrated_m"] = sg; P.loc[ok, "r_at_solution2_m"] = r2
 json.dump(dict(radius_m=RADIUS, error_model="sigma^2 = rms_v^2 + (tan(slope)*rms_h)^2 + gen2_plane_rms_3m^2; chi2 = sum (r/sigma)^2; r = lidar - (RTK + dZ) at the shifted position", left_out=left[["group", "point", "status"]].to_dict("records"),
-               solution_1_reported_sigmas=res1, variance_component_factors=factors, solution_2_calibrated_sigmas=res2), open(f"{D}/weighted_shift.json", "w"), indent=1)
-P.to_csv(f"{D}/weighted_shift_points.csv", index=False)
+               solution_1_reported_sigmas=res1, variance_component_factors=factors, solution_2_calibrated_sigmas=res2), open(f"{D}/weighted_shift{SUF}.json", "w"), indent=1)
+P.to_csv(f"{D}/weighted_shift_points{SUF}.csv", index=False)
 C, k = C2, k2
 
 fig, axs = plt.subplots(1, 3, figsize=(14, 4.2))
-D2 = C - C[k]; vmax = 50
+D2 = C - C[k]; vmax = 50 if SUBSET == "all" else 20
 panels = ((D2[:, k[1], :].T, gE, gZ, "dE (m)", "dZ (m)", (gE[k[0]], gZ[k[2]])), (D2[k[0], :, :].T, gE, gZ, "dN (m)", "dZ (m)", (gE[k[1]], gZ[k[2]])), (D2[:, :, k[2]].T, gE, gE, "dE (m)", "dN (m)", (gE[k[0]], gE[k[1]])))
 for ax, (A, gx, gy, xl, yl, best) in zip(axs, panels):
     im = ax.imshow(A, origin="lower", extent=[gx[0], gx[-1], gy[0], gy[-1]], aspect="auto", cmap="viridis", vmin=0, vmax=vmax)
     ax.contour(gx, gy, A, levels=[1.0, 4.0], colors=["white", "0.7"], linewidths=0.8); ax.plot(*best, "w*", ms=12, mec="k"); ax.plot(0, 0, "wo", ms=6, mec="k"); ax.set_xlabel(xl); ax.set_ylabel(yl)
 fig.colorbar(im, ax=axs, shrink=0.9, pad=0.02).set_label("$\\chi^2 - \\chi^2_{min}$ (calibrated sigmas)")
-fig.savefig("figures/rtk_2026-10-25_shift_weighted.png", dpi=120, bbox_inches="tight"); print("\nfigures/rtk_2026-10-25_shift_weighted.png")
+fig.savefig(f"figures/rtk_2026-10-25_shift_weighted{SUF}.png", dpi=120, bbox_inches="tight"); print(f"\nfigures/rtk_2026-10-25_shift_weighted{SUF}.png")
