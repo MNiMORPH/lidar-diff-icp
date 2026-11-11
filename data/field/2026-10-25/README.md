@@ -13,7 +13,7 @@ SINGLE as exported), `lon`, `lat` (NAD83(2011)), `easting`, `northing` (NAD83(20
 `h_ell_m` (ellipsoid height as exported), **`h_ell_tied_m`** (after the base tie below),
 `tie_source`, `easting_tied`, `northing_tied` (B2 shifted onto the monument, see the tie; the lidar is read here), `navd88_m`, **`navd88_tied_m`** (GEOID18 through pyproj, checked at DR9925:
 218.748 vs published 218.75), `elev_app_m` (the Flow app's own NAVD88 where exported),
-`antenna_m`, RMS columns, `tile`, `gen2_z_m` (2021 lidar ground, the horizontal per-cell median grid, bilinear from 5 m;
+`antenna_m` (as exported), `antenna_corr_m` (the pole-height correction, see the check), RMS columns, `tile`, `gen2_z_m` (2021 lidar ground, the horizontal per-cell median grid, bilinear from 5 m;
 the point-cloud check reproduces it at the survey points to -8 mm), `gen2_zref_m` (the
 slope-normal 2021 grid the difference was built on), `gen1_z_m` (2008 lidar ground =
 `gen2_zref_m` minus the tile's difference; until 2026-11-11 it was taken from `gen2_z_m`, which
@@ -84,9 +84,12 @@ center is 65 mm for the RS/RS+ and 134.9 mm for the RS2/RS2+/RS3, so the two RS+
 differ by 69 mm with T1a's reading lower, and a T1a 63 that is 69 mm low makes the
 pair tie 69 mm short, against the 64 mm observed. Under the benchmark tie T2a's 98 points
 sit -129 mm from the 2021 lidar and Andy's 17 CORS points -122 mm, 7 mm apart, while
-T1a's 32 FIX points sit -228 mm, 99 mm below T2a on the same field. PROPOSAL, not
-applied: raise T1a's group (floodplain_RSplus_A) by 0.069 m, to -159 mm; the raw antenna
-entries stay in `antenna_m` either way. The compile now prints this check on every run (Andy:
+T1a's 32 FIX points sit -228 mm, 99 mm below T2a on the same field. APPLIED (Andy,
+2026-11-11: "after correcting the pole heights"): column `antenna_corr_m` raises each point by its
+rover's implied-pole excess over the others' 2.000 m, +0.069 m on T1a's 62 B2 points and 0
+everywhere else, and enters `h_ell_tied_m` and the `tied_` columns; `h_ell_m`, `navd88_m` and
+`antenna_m` stay as exported. T1a's group moves to -159 mm, and the pair tie, recomputed
+with the corrected T1a 63, becomes +0.542 m, 5 mm from the benchmark. The compile now prints this check on every run (Andy:
 "checking antenna heights seems a necessary thing in all cases"): exported antenna height
 minus the model's offset, one row per distinct value, flagged where it differs from the
 others' 2.000 m pole; T1a's one B1-era point carried 2.086 m (+21 mm), the 62 B2 points
@@ -114,13 +117,13 @@ gives 193 mm.
 | benchmark_DR9925 | B2 | -96, 6, 2 | -54, 6, 2 |
 | floodplain_CORS_Wickert | CORS | **-122, 33, 17** | -145, 57, 6 |
 | floodplain_RSplus_B | B2 | **-129, 31, 98** | **-357, 81, 98** |
-| floodplain_RSplus_A | B2 | -228, 50, 32 (see the antenna note) | -301, 102, 22 |
+| floodplain_RSplus_A | B2 | -159, 50, 32 (pole-corrected, +0.069 m) | -232, 102, 22 |
 | hillslope_T4a | B2 (shifted) | -2, 115, 21 | +50, 180, 5 |
 | hillslope_RS3 | B2 (shifted) | -98, 162, 18 | +103, -, 1 |
 
-Bare: in the sward field the surveyed ground lies 0.12-0.13 m below the May-2021 lidar
-surface by the CORS rover, which needs no tie, and by T2a's RS+ under the benchmark tie
-(0.23 m by T1a's RS+, see the antenna note), and 0.15-0.36 m below the November-2008 one.
+Bare: in the sward field the surveyed ground lies 0.12-0.16 m below the May-2021 lidar
+surface (CORS rover, which needs no tie, 0.12; T2a's RS+ 0.13; T1a's RS+ after the pole
+correction 0.16), and 0.15-0.36 m below the November-2008 one.
 On the bluff, with B2 shifted onto the monument, the two traverses sit -2 and -98 mm from the
 2021 lidar with 115-162 mm scatter (the gen1 comparison there has 1-5 points: the 2008
 difference is NaN under canopy on most of the traverse). At the monument itself, on the
@@ -166,12 +169,14 @@ floor (`estimate_ground` blanks only empty cells).
 T3a's other CSV (9 October 2026, UTM 481 km E) is a practice session in St Paul.
 Clast counts and OSL sample locations are in the submissions but are not elevation data.
 
-Figure: `figures/rtk_2026-10-25_pdf.png` (and `.pdf`, from
-`analysis/field_survey/plot_rtk_pdf_2026-10-25.py`) shows these as probability densities,
+Figure: `figures/rtk_2026-10-25_pdf_polecorr.png` (and `.pdf`, from
+`analysis/field_survey/plot_rtk_pdf_2026-10-25.py _polecorr`; the unsuffixed file is the plot
+before the pole correction, kept) shows these as probability densities,
 floodplain and hillslope rows, minus 2021 and minus 2008 columns, one Gaussian KDE per group
 over a rug of the points, nothing cut.
 
-Map: `figures/rtk_2026-10-25_diffmap.png` (from `analysis/field_survey/plot_rtk_diffmap_2026-10-25.py`)
+Map: `figures/rtk_2026-10-25_diffmap_polecorr.png` (from `analysis/field_survey/plot_rtk_diffmap_2026-10-25.py _polecorr`;
+also `_map_polecorr.png` and `_profiles_polecorr.png` from `plot_rtk_2026-10-25.py`; unsuffixed files predate the pole correction)
 puts a colored marker at every FIX point on 2025 FSA imagery, minus 2021 on the left and minus
 2008 on the right; points with no 2008 difference (most of the steep bluff) are open gray.
 
