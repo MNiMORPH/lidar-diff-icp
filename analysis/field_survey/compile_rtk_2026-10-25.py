@@ -127,7 +127,9 @@ P["easting"] = P.easting.round(3); P["northing"] = P.northing.round(3)
 _d63 = P[(P.group == "floodplain_RSplus_A") & (P.point == 63)].iloc[0]; _c11 = P[(P.group == "floodplain_CORS_Wickert") & (P.point == 11)].iloc[0]
 B2_DX, B2_DY = float(_c11.easting - _d63.easting), float(_c11.northing - _d63.northing)
 # VERTICAL tie from the same pair (Andy, 2026-11-11: "And vertical tie too"): B2 reads T1a 63 minus CORS 11.
-# ADOPTED for B2 at Andy's word; the benchmark value is printed beside it and the two disagree by their difference.
+# ADOPTED: Andy, 2026-11-11: the poles were "at the exact same point on the ground, accurate to within a
+# centimeter", so this is a benchmark-quality tie; the monument occupation is printed beside it (64 mm higher:
+# a question about that occupation, e.g. the pole tip on the access cover rather than the rod).
 B2_OFFSET_C11 = float(_d63.h_ell_m - _c11.h_ell_m); B2_OFFSET = B2_OFFSET_C11
 print(f"B2 vertical, CORS 11 pair: T1a 63 ({_d63.h_ell_m:.3f}) minus CORS 11 ({_c11.h_ell_m:.3f}) -> B2 reads {B2_OFFSET_C11:+.3f} m  [ADOPTED]; benchmark said {B2_OFFSET_BM:+.3f}: the two ties differ by {1000 * (B2_OFFSET_BM - B2_OFFSET_C11):+.0f} mm")
 P["easting_tied"] = np.where(P.base == "B2", P.easting + B2_DX, P.easting).round(3); P["northing_tied"] = np.where(P.base == "B2", P.northing + B2_DY, P.northing).round(3)

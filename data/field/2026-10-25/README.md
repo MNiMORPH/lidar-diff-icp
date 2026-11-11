@@ -45,16 +45,17 @@ B2 by time (all after 14:49; listed in the log).
 T5a's two 60-second occupations of DR9925 read 189.202 and 189.210 m ellipsoid against the
 published 188.669 m: B2 high by +0.537 m. (2) T1a point 63 and Andy's CORS point 11, the
 same spot occupied one after the other: 188.569 minus 188.096, B2 high by **+0.473 m**. Andy
-(2026-11-11): "And vertical tie too", so +0.473 m is what `h_ell_tied_m` removes from every
-B2 point; `tie_source` carries both numbers. What each tie implies: under the benchmark tie
+(2026-11-11): the two poles "at the exact same point on the ground, accurate to within a
+centimeter", so the pair is a tie of benchmark quality in both axes, and +0.473 m is what
+`h_ell_tied_m` removes from every B2 point; `tie_source` carries both numbers. What each tie implies: under the benchmark tie
 T2a's 98 floodplain points sat -124 mm from the 2021 lidar and Andy's 17 CORS points
 -121 mm, 3 mm apart; under the pair tie T2a sits -65 mm and the benchmark itself reads
-64 mm above its published height. The pair is two 5-second points on turf; the benchmark is
-two 60-second averages on a monument whose height is published to 1.5 cm. My reading is
-that the benchmark is the better vertical tie and the pair the better horizontal one, and
-T5a's raw export, which gives the monument occupation's position unrounded, will say
-whether the pair was in fact one spot. The table is built the way Andy asked; switching
-is one constant.
+64 mm above its published height. With the pair fixed to a centimetre, the 64 mm is a
+question about the monument occupation, not the pair: DR9925 is a rod inside a PVC access
+cover, and a pole tip resting on the cover rim or on the sleeve instead of the rod's disk
+would read high by exactly that kind of amount; an antenna-height slip would do the same.
+T5a's raw export gives the occupation's position unrounded and may show which. Switching
+the table to the benchmark tie is one constant if that is ever warranted.
 
 **B1 is tied PROVISIONALLY.** No benchmark was occupied under B1. The four FIX points on the
 gravel of lot 204 read -2.636 m against the 2021 lidar, and that constant is removed from
