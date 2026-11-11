@@ -255,6 +255,27 @@ residual of 166), and the 5 % region spans 0.8 m in dE and 0.36 m in dZ along th
 mean-absolute criterion, which that point cannot dominate, puts the hillslope at the same
 (-0.20, -0.05, +0.12) as the whole survey.
 
+**Weighted inversion, every logged point (Andy: "Instead of classifying FIX points, perform the
+inversion taking all uncertainties into account"), `analysis/field_survey/invert_shift_weighted.py`.**
+Residual = lidar minus (tied RTK + dZ) at the shifted position; sigma_i^2 = (reported vertical RMS)^2
++ (tan(slope) x reported horizontal RMS)^2 + (rms of the 2021 class-2 returns within 3 m about their
+plane)^2; chi2 = sum (r/sigma)^2 over the full dE, dN, dZ grid; 1-sigma where the profile chi2 rises by
+1 (the 3 m disk, the grid and the error model are mine). 203 of 220 points enter: CORS 1-3 and T1a
+27-40 sit where the 2021 ground class is empty, 12-18 m to the nearest class-2 return, so the grid
+there is filled from neighbors and they have no lidar datum (listed in the log, not a cut).
+`figures/rtk_2026-10-25_shift_weighted.png` (chi2 slices through the calibrated minimum).
+
+| solution | dE, dN, dZ | 1-sigma | reduced chi2 | note |
+|---|---|---|---|---|
+| sigmas as reported | 0.00, 0.00, +0.10 m | dE 0.00 to +0.05, dN -0.05 to 0.00, dZ +0.10 | 620 | T1a's 14 FLOAT points sit 4-24 m off the lidar with reported vertical RMS 0.05-0.24 m and supply 98.6 % of chi2: the reported FLOAT RMS is not an uncertainty |
+| sigmas calibrated by status (reported x robust spread of r/sigma: FIX x2.3, FLOAT x79.5, SINGLE x0.8) | -0.05, -0.05, +0.13 m | dE -0.05 to 0.00, dN -0.05 to 0.00, dZ +0.13 | 1.63 | 2 of 203 points beyond 3 sigma; floodplain carries 0.95 of the weight |
+
+The weighted answer is the 2021 lidar 0.13 m above the surveyed ground with no lateral shift
+beyond the grid step, formally tight because 185 FIX points at ~0.05 m each enter independently;
+the formal ranges do not include whatever is systematic between a pole tip and a May lidar ground
+(the FIX factor of 2.3 is that excess over the reported RMS). The reported RMS of a FLOAT solution
+understates its error by a factor near 80 on this survey.
+
 Both groups minimize at the same lateral shift, 0.35 m west (upslope on this east-facing bluff) of
 the tied positions, and the shift halves T4a's spread; at that shift the two groups differ by
 about 110 mm in level, as they do with no shift, so the RS3-T4a difference is vertical and not
