@@ -13,8 +13,11 @@ SINGLE as exported), `lon`, `lat` (NAD83(2011)), `easting`, `northing` (UTM 15N)
 `h_ell_m` (ellipsoid height as exported), **`h_ell_tied_m`** (after the base tie below),
 `tie_source`, `easting_tied`, `northing_tied` (B2 shifted, see Horizontal), `navd88_m`, **`navd88_tied_m`** (GEOID18 through pyproj, checked at DR9925:
 218.748 vs published 218.75), `elev_app_m` (the Flow app's own NAVD88 where exported),
-`antenna_m`, RMS columns, `tile`, `gen2_z_m` (2021 lidar ground, bilinear from the 5 m
-grid), `gen1_z_m` (2008 lidar ground = gen2 minus the tile's difference), `dod_2021_2008_m`,
+`antenna_m`, RMS columns, `tile`, `gen2_z_m` (2021 lidar ground, the horizontal per-cell median grid, bilinear from 5 m;
+the point-cloud check reproduces it at the survey points to -8 mm), `gen2_zref_m` (the
+slope-normal 2021 grid the difference was built on), `gen1_z_m` (2008 lidar ground =
+`gen2_zref_m` minus the tile's difference; until 2026-11-11 it was taken from `gen2_z_m`, which
+is wrong by up to 0.13 m at single bluff points and by 8 mm in the group medians), `dod_2021_2008_m`,
 `rtk_minus_gen2_m`, `rtk_minus_gen1_m` (untied), **`tied_minus_gen2_m`,
 `tied_minus_gen1_m`** (the numbers to use), `slope_deg`, `lowveg_gen2`, `clubb_floodplain`,
 `penetration_failure_2008`, `source`.
@@ -79,12 +82,12 @@ with a direct tie to the monument.
 
 | group | base | vs 2021 lidar (gen2) | vs 2008 lidar (gen1) |
 |---|---|---|---|
-| benchmark_DR9925 | B2 | -45, 6, 2 | +10, 6, 2 |
-| floodplain_CORS_Wickert | CORS | **-121, 31, 17** | -144, 56, 6 |
-| floodplain_RSplus_B | B2 | **-65, 32, 98** (-129 under the benchmark tie) | **-290, 91, 98** (-354) |
-| floodplain_RSplus_A | B2 | **-163, 51, 32** (-227) | -233, 97, 22 (-297) |
-| hillslope_T4a | B2 (shifted) | +79, 124, 21 | +133, 187, 5 |
-| hillslope_RS3 | B2 (shifted) | +15, 158, 18 | +165, -, 1 |
+| benchmark_DR9925 | B2 | -45, 6, 2 | -3, 6, 2 |
+| floodplain_CORS_Wickert | CORS | **-121, 31, 17** | -146, 60, 6 |
+| floodplain_RSplus_B | B2 | **-65, 32, 98** (-129 under the benchmark tie) | **-290, 92, 98** (-354) |
+| floodplain_RSplus_A | B2 | **-163, 51, 32** (-227) | -233, 95, 22 (-297) |
+| hillslope_T4a | B2 (shifted) | +79, 124, 21 | +125, 198, 5 |
+| hillslope_RS3 | B2 (shifted) | +15, 158, 18 | +233, -, 1 |
 
 Bare: in the sward field the surveyed ground lies 0.07-0.16 m (pair tie) or 0.12-0.23 m
 (benchmark tie) below the May-2021 lidar surface, and 0.23-0.29 m (pair) or 0.30-0.35 m
@@ -108,7 +111,23 @@ the registered 2008 last returns within 5 m sit at a median of -119 mm (p25 -224
 CSF-selected 7.4 % of them at -101 mm, the central body with the canopy tail removed. The two
 grid cells that read the 2008 surface 0.4 m below the ground at 29-30 deg are a 3-return CSF cell
 and a disk whose 2008 returns are mostly canopy; the 2008 population at the bluff is ~0.12 m below
-the 2021 surface, not 0.4. One detail not
+the 2021 surface, not 0.4.
+
+**Is the bluff offset horizontal misregistration? No (`analysis/field_survey/bluff/NUTH_KAAB_RAW.md`).**
+A 0.40 m vertical offset on this bluff (aspect 116 deg, 30 deg) needs 0.69 m of shift along the
+downslope direction. The Nuth & Kaab (2011) fit of the registered 2008 raw last returns against the
+slope-normal 2021 grid on all non-floodplain cells steeper than 15 deg leaves a residual amplitude
+of 0.0194 m pooled (bootstrap 95 % 0.0082-0.0378) and 0.0695 m for swath 138, the only swath on
+the traverse; projected onto the bluff those residuals predict +0.0004 +/- 0.0059 m (pooled) and
+-0.0055 +/- 0.0067 m (swath 138) of gen1 minus gen2. The pipeline's applied per-swath shifts agree
+with the independent raw-cloud fit to 2-6 cm. In the traverse window the registered raw last
+returns sit -0.0611 m from the 2021 surface on cells under 10 deg and -0.1015 m on cells over 25
+deg, and the pipeline's own difference grid on its 290 finite steep cells reads +0.2473 m against
++0.1239 m from a raw-last-return proxy on the same cells: the extra 0.12 m, and the blank cells,
+are what the CSF selection calls ground there, not where the swath sits. Tile-wide, after
+registration, the raw last returns show no reads-low-on-steep-slopes trend: slope-band medians
+relative to 0-5 deg are within +/-0.011 m up to 35 deg and +0.029 m at 35-45 (agent's cuts at
+15, 10 and 25 deg are proposals). One detail not
 closed: tile-wide, 30,475 blank cells hold 1-9 CSF points and no finite cell holds fewer than
 11, so a floor near ten acts somewhere after the CSF cache; `pipeline.difference` has no such
 floor (`estimate_ground` blanks only empty cells).
