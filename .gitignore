@@ -55,3 +55,7 @@ analysis/mass_balance/out/*.npz
 !/data/derived/rcg/
 /data/derived/rcg/*
 !/data/derived/rcg/fingerprint_lda.json
+
+# The 2026-10-25 class RTK survey: raw submissions, the compiled table and its log are TRACKED
+!/data/field/
+!/data/field/**
