@@ -128,6 +128,12 @@ _mode = _a.implied_pole_m.mode().iloc[0]
 _a["flag"] = [("antenna or model not exported" if np.isnan(p_) else "" if p_ == _mode else f"DIFFERS from the others' {_mode:.3f} m by {1000 * (p_ - _mode):+.0f} mm") for p_ in _a.implied_pole_m]
 print("ANTENNA-HEIGHT CHECK: exported antenna height minus the model's offset = implied pole height, one row per distinct exported value; a rover that differs from the others is flagged, not corrected:")
 print(_a.to_string(index=False))
+# POLE-HEIGHT CORRECTION, APPLIED (Andy, 2026-11-11: "Replot the PDFs ... after correcting the pole heights"): each
+# point is raised by its rover's implied-pole excess over the others' pole, so a rover told it stood on a 2.069 m
+# pole when it stood on a 2.000 m one comes up 69 mm. It enters h_ell_tied_m (and so navd88_tied_m and the tied_
+# columns); h_ell_m and navd88_m stay as exported. Rows with no exported antenna or model (T4a) get 0.
+P["antenna_corr_m"] = (P.antenna_m - P.device.map(EMLID_OFFSET_M) - _mode).round(3).fillna(0.0)
+print("POLE-HEIGHT CORRECTION APPLIED, m added to h_ell_tied_m, by group [min, max, n]:"); print(P.groupby("group").antenna_corr_m.agg(["min", "max", "count"]).to_string())
 # a few exports lost the base columns on individual points (the link dropped and came back); the base is
 # assigned by TIME: B1 ran ~13:20-13:30 CDT, B2 from ~14:40 (the earliest B2 point is 14:40:14). Stated per point.
 P["t_hhmm"] = P.t_start.str.extract(r"(\d\d:\d\d)")[0]
@@ -157,11 +163,11 @@ print(f"B2 HORIZONTAL TIE, benchmark: published DR9925 E {_pe:.3f} N {_pn:.3f} (
 # T1a's Reach RS+ was exported with antenna height 2.134 m (the RS2 value; Emlid's RS+ offset is 65 mm, and
 # T2a's RS+ carries 2.065), which would put his points 69 mm low and the pair tie 69 mm short. NOT applied.
 _d63 = P[(P.group == "floodplain_RSplus_A") & (P.point == 63)].iloc[0]; _c11 = P[(P.group == "floodplain_CORS_Wickert") & (P.point == 11)].iloc[0]
-B2_OFFSET_C11 = float(_d63.h_ell_m - _c11.h_ell_m); B2_OFFSET = B2_OFFSET_BM
-print(f"CHECK, CORS 11 pair: horizontal CORS minus T1a dE {float(_c11.easting - _d63.easting):+.3f} dN {float(_c11.northing - _d63.northing):+.3f} (benchmark minus pair dE {B2_DX - float(_c11.easting - _d63.easting):+.3f} dN {B2_DY - float(_c11.northing - _d63.northing):+.3f}); vertical T1a 63 ({_d63.h_ell_m:.3f}) minus CORS 11 ({_c11.h_ell_m:.3f}) = {B2_OFFSET_C11:+.3f} m, benchmark minus pair {1000 * (B2_OFFSET_BM - B2_OFFSET_C11):+.0f} mm; T1a RS+ antenna 2.134 vs the RS+ offset 2.065 = 69 mm")
+B2_OFFSET_C11 = float(_d63.h_ell_m + _d63.antenna_corr_m - _c11.h_ell_m); B2_OFFSET = B2_OFFSET_BM   # T1a 63 after its pole correction
+print(f"CHECK, CORS 11 pair: horizontal CORS minus T1a dE {float(_c11.easting - _d63.easting):+.3f} dN {float(_c11.northing - _d63.northing):+.3f} (benchmark minus pair dE {B2_DX - float(_c11.easting - _d63.easting):+.3f} dN {B2_DY - float(_c11.northing - _d63.northing):+.3f}); vertical T1a 63 ({_d63.h_ell_m:.3f} exported {_d63.antenna_corr_m:+.3f} pole correction) minus CORS 11 ({_c11.h_ell_m:.3f}) = {B2_OFFSET_C11:+.3f} m, benchmark minus pair {1000 * (B2_OFFSET_BM - B2_OFFSET_C11):+.0f} mm (was +64 before the pole correction)")
 P["easting_tied"] = np.where(P.base == "B2", P.easting + B2_DX, P.easting).round(3); P["northing_tied"] = np.where(P.base == "B2", P.northing + B2_DY, P.northing).round(3)
 # tied ellipsoid heights: B2 by the benchmark; CORS direct
-P["h_ell_tied_m"] = np.where(P.base == "B2", P.h_ell_m - B2_OFFSET, np.where(P.base == "CORS", P.h_ell_m, np.nan)); P["tie_source"] = np.where(P.base == "B2", f"DR9925 benchmark under B2 ({B2_OFFSET:+.3f} m removed, dE {B2_DX:+.3f} dN {B2_DY:+.3f} m shifted; CORS 11 = T1a 63 pair gives {B2_OFFSET_C11:+.3f} m)", np.where(P.base == "CORS", "MnDOT CORS network RTK, NAD83(2011) direct", ""))
+P["h_ell_tied_m"] = np.where(P.base == "B2", P.h_ell_m + P.antenna_corr_m - B2_OFFSET, np.where(P.base == "CORS", P.h_ell_m + P.antenna_corr_m, np.nan)); P["tie_source"] = np.where(P.base == "B2", f"DR9925 benchmark under B2 ({B2_OFFSET:+.3f} m removed, dE {B2_DX:+.3f} dN {B2_DY:+.3f} m shifted; CORS 11 = T1a 63 pair gives {B2_OFFSET_C11:+.3f} m)", np.where(P.base == "CORS", "MnDOT CORS network RTK, NAD83(2011) direct", ""))
 # NAVD 88 via GEOID18 (PROJ network fetches the grid)
 geoid_source = "none"
 try:
@@ -216,12 +222,12 @@ cors = P[P.base == "CORS"]; b2f = P[(P.base == "B2") & P.status.str.startswith("
 pairs = []
 for _, c in cors.iterrows():
     d_ = np.hypot(b2f.easting - c.easting, b2f.northing - c.northing); k = d_.idxmin()
-    if d_[k] <= 3.0: pairs.append(dict(cors_pt=c.point, b2_group=b2f.loc[k, "group"], b2_pt=b2f.loc[k, "point"], sep_m=round(float(d_[k]), 2), slope_deg=round(float(c.slope_deg), 1) if np.isfinite(c.slope_deg) else np.nan, b2_minus_cors_m=round(float(b2f.loc[k, "h_ell_m"] - c.h_ell_m), 3)))
+    if d_[k] <= 3.0: pairs.append(dict(cors_pt=c.point, b2_group=b2f.loc[k, "group"], b2_pt=b2f.loc[k, "point"], sep_m=round(float(d_[k]), 2), slope_deg=round(float(c.slope_deg), 1) if np.isfinite(c.slope_deg) else np.nan, b2_minus_cors_m=round(float((b2f.loc[k, "h_ell_m"] + b2f.loc[k, "antenna_corr_m"]) - c.h_ell_m), 3)))
 PAIRS = pd.DataFrame(pairs)
 print(f"\nCROSS-CHECK, B2 against CORS on the same ground (pairs within 3 m; the 3 m is mine): {len(PAIRS)} pairs")
 if len(PAIRS): print(PAIRS.to_string(index=False)); print(f"  median B2 minus CORS {PAIRS.b2_minus_cors_m.median():+.3f} m, NMAD {1.4826 * np.median(np.abs(PAIRS.b2_minus_cors_m - PAIRS.b2_minus_cors_m.median())):.3f} m; benchmark tie said {B2_OFFSET:+.3f} m")
 P["tied_minus_gen2_m"] = P.navd88_tied_m - P.gen2_z_m; P["tied_minus_gen1_m"] = P.navd88_tied_m - P.gen1_z_m
-P = P[["group", "people", "device", "serial", "point", "t_start", "t_hhmm", "base", "baseline_m", "status", "lon", "lat", "easting", "northing", "easting_tied", "northing_tied", "h_ell_m", "h_ell_tied_m", "tie_source", "navd88_m", "navd88_tied_m", "elev_app_m", "antenna_m", "rms_e", "rms_n", "rms_v", "tilt_deg", "tile", "gen2_z_m", "gen2_zref_m", "gen1_z_m", "dod_2021_2008_m", "rtk_minus_gen2_m", "rtk_minus_gen1_m", "tied_minus_gen2_m", "tied_minus_gen1_m", "slope_deg", "lowveg_gen2", "clubb_floodplain", "penetration_failure_2008", "source"]]
+P = P[["group", "people", "device", "serial", "point", "t_start", "t_hhmm", "base", "baseline_m", "status", "lon", "lat", "easting", "northing", "easting_tied", "northing_tied", "h_ell_m", "h_ell_tied_m", "tie_source", "navd88_m", "navd88_tied_m", "elev_app_m", "antenna_m", "antenna_corr_m", "rms_e", "rms_n", "rms_v", "tilt_deg", "tile", "gen2_z_m", "gen2_zref_m", "gen1_z_m", "dod_2021_2008_m", "rtk_minus_gen2_m", "rtk_minus_gen1_m", "tied_minus_gen2_m", "tied_minus_gen1_m", "slope_deg", "lowveg_gen2", "clubb_floodplain", "penetration_failure_2008", "source"]]
 os.makedirs(os.path.dirname(OUT), exist_ok=True); P.to_csv(OUT, index=False)
 pd.set_option("display.width", 250); pd.set_option("display.max_columns", 40)
 print(f"\n{len(P)} points written to {OUT}")

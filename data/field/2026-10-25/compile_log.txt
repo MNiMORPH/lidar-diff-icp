@@ -7,21 +7,30 @@ floodplain_CORS_Wickert                     Reach RS2+ 8243408af8ece061      2.1
     floodplain_RSplus_B                      Reach RS+ 824350D44A583F7B      2.065 100     0.065           2.000                                           
         hillslope_T4a Reach (model not in the table)                         NaN  29       NaN             NaN              antenna or model not exported
           hillslope_RS3                      Reach RS3 8243D2AFB94BDAE3      2.134  24     0.134           2.000                                           
+POLE-HEIGHT CORRECTION APPLIED, m added to h_ell_tied_m, by group [min, max, n]:
+                           min    max  count
+group                                       
+benchmark_DR9925         0.000  0.000      2
+floodplain_CORS_Wickert  0.000  0.000     17
+floodplain_RSplus_A      0.021  0.069     63
+floodplain_RSplus_B      0.000  0.000    100
+hillslope_T4a          0.000  0.000     29
+hillslope_RS3            0.000  0.000     24
 base assigned by time on 10 points whose export had no base columns: [{'group': 'hillslope_RS3', 'point': 23, 't_hhmm': '15:11', 'base': 'B2'}, {'group': 'hillslope_RS3', 'point': 24, 't_hhmm': '15:12', 'base': 'B2'}, {'group': 'hillslope_T4a', 'point': 24, 't_hhmm': '15:16', 'base': 'B2'}, {'group': 'hillslope_T4a', 'point': 25, 't_hhmm': '15:20', 'base': 'B2'}, {'group': 'hillslope_T4a', 'point': 28, 't_hhmm': '15:31', 'base': 'B2'}, {'group': 'floodplain_RSplus_A', 'point': 16, 't_hhmm': '14:49', 'base': 'B2'}, {'group': 'floodplain_RSplus_A', 'point': 17, 't_hhmm': '14:50', 'base': 'B2'}, {'group': 'floodplain_RSplus_A', 'point': 19, 't_hhmm': '14:52', 'base': 'B2'}, {'group': 'floodplain_RSplus_A', 'point': 20, 't_hhmm': '14:53', 'base': 'B2'}, {'group': 'floodplain_RSplus_A', 'point': 52, 't_hhmm': '15:43', 'base': 'B2'}]
 DROPPED 15 points corrected from B1 (a student's receiver, not the class base): [{'group': 'hillslope_RS3', 'point': 1, 't_hhmm': '13:24', 'status': 'FIX'}, {'group': 'hillslope_RS3', 'point': 2, 't_hhmm': '13:25', 'status': 'FIX'}, {'group': 'hillslope_RS3', 'point': 3, 't_hhmm': '13:25', 'status': 'FIX'}, {'group': 'hillslope_RS3', 'point': 4, 't_hhmm': '13:26', 'status': 'FIX'}, {'group': 'hillslope_RS3', 'point': 5, 't_hhmm': '13:27', 'status': 'FIX'}, {'group': 'hillslope_RS3', 'point': 6, 't_hhmm': '13:28', 'status': 'FIX'}, {'group': 'hillslope_T4a', 'point': 1, 't_hhmm': '13:20', 'status': 'FIX (table lists RMS only; status not exported)'}, {'group': 'hillslope_T4a', 'point': 2, 't_hhmm': '13:20', 'status': 'FIX (table lists RMS only; status not exported)'}, {'group': 'hillslope_T4a', 'point': 3, 't_hhmm': '13:21', 'status': 'FIX (table lists RMS only; status not exported)'}, {'group': 'hillslope_T4a', 'point': 4, 't_hhmm': '13:24', 'status': 'FIX (table lists RMS only; status not exported)'}, {'group': 'hillslope_T4a', 'point': 5, 't_hhmm': '13:25', 'status': 'FIX (table lists RMS only; status not exported)'}, {'group': 'hillslope_T4a', 'point': 6, 't_hhmm': '13:26', 'status': 'FIX (table lists RMS only; status not exported)'}, {'group': 'hillslope_T4a', 'point': 7, 't_hhmm': '13:26', 'status': 'FIX (table lists RMS only; status not exported)'}, {'group': 'hillslope_T4a', 'point': 8, 't_hhmm': '13:28', 'status': 'FIX (table lists RMS only; status not exported)'}, {'group': 'floodplain_RSplus_A', 'point': 1, 't_hhmm': '13:27', 'status': 'FLOAT'}]
 B2 vertical, benchmark: DR9925 measured [189.202, 189.21] m vs published 188.669 m -> B2 reads +0.537 m  [ADOPTED, Andy 2026-11-11: trust the reference point]
 B2 HORIZONTAL TIE, benchmark: published DR9925 E 579636.942 N 4885872.102 (datasheet UTM 579636.942 / 4885872.102) minus measured E 579636.171 N 4885873.214 -> B2 shifted by dE +0.771 m, dN -1.112 m  [ADOPTED]; CORS unshifted
-CHECK, CORS 11 pair: horizontal CORS minus T1a dE +0.802 dN -1.123 (benchmark minus pair dE -0.031 dN +0.011); vertical T1a 63 (188.569) minus CORS 11 (188.096) = +0.473 m, benchmark minus pair +64 mm; T1a RS+ antenna 2.134 vs the RS+ offset 2.065 = 69 mm
+CHECK, CORS 11 pair: horizontal CORS minus T1a dE +0.802 dN -1.123 (benchmark minus pair dE -0.031 dN +0.011); vertical T1a 63 (188.569 exported +0.069 pole correction) minus CORS 11 (188.096) = +0.542 m, benchmark minus pair -5 mm (was +64 before the pole correction)
 geoid: pyproj EPSG:6319->6318+5703 (GEOID18); check at DR9925: 218.748 vs published 218.75
 
 CROSS-CHECK, B2 against CORS on the same ground (pairs within 3 m; the 3 m is mine): 5 pairs
  cors_pt            b2_group  b2_pt  sep_m  slope_deg  b2_minus_cors_m
-       9 floodplain_RSplus_A     63   1.67        1.0            0.512
-      10 floodplain_RSplus_A     63   1.64        1.0            0.512
-      11 floodplain_RSplus_A     63   1.38        1.0            0.473
-      12 floodplain_RSplus_A     63   2.02        0.9            0.508
-      13 floodplain_RSplus_A     62   1.98        1.5            0.444
-  median B2 minus CORS +0.508 m, NMAD 0.006 m; benchmark tie said +0.537 m
+       9 floodplain_RSplus_A     63   1.67        1.0            0.581
+      10 floodplain_RSplus_A     63   1.64        1.0            0.581
+      11 floodplain_RSplus_A     63   1.38        1.0            0.542
+      12 floodplain_RSplus_A     63   2.02        0.9            0.577
+      13 floodplain_RSplus_A     62   1.98        1.5            0.513
+  median B2 minus CORS +0.577 m, NMAD 0.006 m; benchmark tie said +0.537 m
 
 220 points written to data/field/2026-10-25/rtk_points_all.csv
 
@@ -48,7 +57,7 @@ FIX points, RTK NAVD88 minus gen2 (2021) ground, mm, by group and base [median, 
 AFTER THE TIE (FIX points): tied NAVD88 minus gen2, mm, by group and base [median, NMAD, n]:
   benchmark_DR9925       B2                  -96       6     2
   floodplain_CORS_Wickert CORS               -122      33    17
-  floodplain_RSplus_A    B2                 -228      50    32
+  floodplain_RSplus_A    B2                 -159      50    32
   floodplain_RSplus_B    B2                 -129      31    98
   hillslope_T4a        B2                   -2     115    21
   hillslope_RS3          B2                  -98     162    18
@@ -56,12 +65,12 @@ AFTER THE TIE (FIX points): tied NAVD88 minus gen2, mm, by group and base [media
 AFTER THE TIE (FIX points): tied NAVD88 minus gen1 (2008) ground, mm, by group and base [median, NMAD, n]:
   benchmark_DR9925       B2                  -54       6     2
   floodplain_CORS_Wickert CORS               -145      57     6
-  floodplain_RSplus_A    B2                 -301     102    22
+  floodplain_RSplus_A    B2                 -232     102    22
   floodplain_RSplus_B    B2                 -357      81    98
   hillslope_T4a        B2                  +50     180     5
   hillslope_RS3          B2                 +103       0     1
 
 BARE-GROUND CHECK (slope <= 3 deg, lowveg <= 0.05, FIX): median tied RTK minus gen2 per base (note: on the floodplain the gen2 lowveg filter does not separate cut sward from bare ground):
-  B2: -144 mm (NMAD 47, n 117; groups ['floodplain_RSplus_A', 'floodplain_RSplus_B'])
+  B2: -136 mm (NMAD 37, n 117; groups ['floodplain_RSplus_A', 'floodplain_RSplus_B'])
   CORS: -120 mm (NMAD 33, n 13; groups ['floodplain_CORS_Wickert'])
   (the 0.05 lowveg and 3 deg cut-offs are MINE, for the check only)
