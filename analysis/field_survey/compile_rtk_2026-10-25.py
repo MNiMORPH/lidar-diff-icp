@@ -175,10 +175,14 @@ def sample(name, x, y, kind="float"):
                 v = v - _zero[t]
             return v, t
     return np.nan, ""
-for col, lay, kind in (("gen2_z_m", "z_after.npy", "bilinear"), ("dod_2021_2008_m", "dod.npy", "bilinear"), ("slope_deg", "slope.npy", "nearest"), ("lowveg_gen2", "lowveg_grid.npy", "nearest"), ("clubb_floodplain", "floodplain_mask_clubb.npy", "nearest"), ("penetration_failure_2008", "penetration_failure.npy", "nearest")):
+for col, lay, kind in (("gen2_z_m", "z_after.npy", "bilinear"), ("gen2_zref_m", "z_after_differenced.npy", "bilinear"), ("dod_2021_2008_m", "dod.npy", "bilinear"), ("slope_deg", "slope.npy", "nearest"), ("lowveg_gen2", "lowveg_grid.npy", "nearest"), ("clubb_floodplain", "floodplain_mask_clubb.npy", "nearest"), ("penetration_failure_2008", "penetration_failure.npy", "nearest")):
     vals = [sample(lay, x, y, kind) for x, y in zip(P.easting_tied, P.northing_tied)]; P[col] = [v for v, _ in vals]   # lidar read at the TIED position
 P["tile"] = [sample("z_after.npy", x, y)[1] for x, y in zip(P.easting_tied, P.northing_tied)]
-P["gen1_z_m"] = P.gen2_z_m - P.dod_2021_2008_m
+# gen1 = the 2021 surface the difference was built on (z_after_differenced = slope-normal median at the
+# cell center, Zref) minus the difference. z_after.npy is the HORIZONTAL per-cell median (Z21), which the
+# point-cloud check reproduces at the survey points (-8 mm median) and is kept as gen2_z_m; on the bluff
+# the two differ by up to 0.13 m at single points, so mixing them put that error into gen1 (fixed 2026-11-11).
+P["gen1_z_m"] = P.gen2_zref_m - P.dod_2021_2008_m
 P["rtk_minus_gen2_m"] = P.navd88_m - P.gen2_z_m; P["rtk_minus_gen1_m"] = P.navd88_m - P.gen1_z_m
 P["navd88_tied_m"] = P.navd88_m - (P.h_ell_m - P.h_ell_tied_m)
 # CORS vs B2 cross-check: nearest B2 FIX point within 3 m of each CORS point, raw ellipsoid-height difference (B2 minus CORS); the benchmark says +B2_OFFSET
@@ -191,7 +195,7 @@ PAIRS = pd.DataFrame(pairs)
 print(f"\nCROSS-CHECK, B2 against CORS on the same ground (pairs within 3 m; the 3 m is mine): {len(PAIRS)} pairs")
 if len(PAIRS): print(PAIRS.to_string(index=False)); print(f"  median B2 minus CORS {PAIRS.b2_minus_cors_m.median():+.3f} m, NMAD {1.4826 * np.median(np.abs(PAIRS.b2_minus_cors_m - PAIRS.b2_minus_cors_m.median())):.3f} m; benchmark tie said {B2_OFFSET:+.3f} m")
 P["tied_minus_gen2_m"] = P.navd88_tied_m - P.gen2_z_m; P["tied_minus_gen1_m"] = P.navd88_tied_m - P.gen1_z_m
-P = P[["group", "people", "device", "serial", "point", "t_start", "t_hhmm", "base", "baseline_m", "status", "lon", "lat", "easting", "northing", "easting_tied", "northing_tied", "h_ell_m", "h_ell_tied_m", "tie_source", "navd88_m", "navd88_tied_m", "elev_app_m", "antenna_m", "rms_e", "rms_n", "rms_v", "tilt_deg", "tile", "gen2_z_m", "gen1_z_m", "dod_2021_2008_m", "rtk_minus_gen2_m", "rtk_minus_gen1_m", "tied_minus_gen2_m", "tied_minus_gen1_m", "slope_deg", "lowveg_gen2", "clubb_floodplain", "penetration_failure_2008", "source"]]
+P = P[["group", "people", "device", "serial", "point", "t_start", "t_hhmm", "base", "baseline_m", "status", "lon", "lat", "easting", "northing", "easting_tied", "northing_tied", "h_ell_m", "h_ell_tied_m", "tie_source", "navd88_m", "navd88_tied_m", "elev_app_m", "antenna_m", "rms_e", "rms_n", "rms_v", "tilt_deg", "tile", "gen2_z_m", "gen2_zref_m", "gen1_z_m", "dod_2021_2008_m", "rtk_minus_gen2_m", "rtk_minus_gen1_m", "tied_minus_gen2_m", "tied_minus_gen1_m", "slope_deg", "lowveg_gen2", "clubb_floodplain", "penetration_failure_2008", "source"]]
 os.makedirs(os.path.dirname(OUT), exist_ok=True); P.to_csv(OUT, index=False)
 pd.set_option("display.width", 250); pd.set_option("display.max_columns", 40)
 print(f"\n{len(P)} points written to {OUT}")
