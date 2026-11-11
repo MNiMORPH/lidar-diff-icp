@@ -98,3 +98,8 @@ canopy on most of the traverse).
 
 T3a's other CSV (9 October 2026, UTM 481 km E) is a practice session in St Paul.
 Clast counts and OSL sample locations are in the submissions but are not elevation data.
+
+Figure: `figures/rtk_2026-10-25_pdf.png` (and `.pdf`, from
+`analysis/field_survey/plot_rtk_pdf_2026-10-25.py`) shows these as probability densities,
+floodplain and hillslope rows, minus 2021 and minus 2008 columns, one Gaussian KDE per group
+over a rug of the points, nothing cut.
