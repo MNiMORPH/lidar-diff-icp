@@ -115,6 +115,19 @@ for _, r in bm.iterrows():
     rows.append(dict(group="benchmark_DR9925", people="T5a, T5b, T5c", device=r["Device type"], serial=r["Device serial number"], point=int(r["Name"]), lon=r["Longitude"], lat=r["Latitude"], h_ell_m=r["Ellipsoidal height"], elev_app_m=r["Elevation"], antenna_m=r["Antenna height"],
                      status=r["Solution status"], rms_e=r["Easting RMS"], rms_n=r["Northing RMS"], rms_v=r["Elevation RMS"], t_start=r["Averaging start"], base="B2", baseline_m=r["Baseline"], tilt_deg=np.nan, source="benchmark_DR9925_occupation_T5a_flow_export.csv (measured position under B2; tied position = the published monument)"))
 P = pd.DataFrame(rows)
+# ANTENNA-HEIGHT CHECK (Andy, 2026-11-11: "checking antenna heights seems a necessary thing in all cases").
+# The exported antenna height minus the model's phase-center offset (Emlid docs, read 2026-11-11: Reach RS/RS+
+# 65 mm; RS2/RS2+/RS3 134.9 mm at L1, which Flow carries as 0.134 in the exports: 2.134 = 2.000 + 0.134) is the
+# pole height the rover was told it stood on. One rover whose implied pole differs from the others' is a
+# constant error in that rover's heights, of exactly the kind a base tie cannot remove. Every distinct exported
+# value gets a row. Printed, never applied here: a mismatch is a correction to propose for that rover's group.
+EMLID_OFFSET_M = {"Reach RS": 0.065, "Reach RS+": 0.065, "Reach RS2": 0.134, "Reach RS2+": 0.134, "Reach RS3": 0.134}
+_a = P.groupby(["group", "device", "serial", "antenna_m"], dropna=False).size().rename("n").reset_index()
+_a["offset_m"] = _a.device.map(EMLID_OFFSET_M); _a["implied_pole_m"] = (_a.antenna_m - _a.offset_m).round(3)
+_mode = _a.implied_pole_m.mode().iloc[0]
+_a["flag"] = [("antenna or model not exported" if np.isnan(p_) else "" if p_ == _mode else f"DIFFERS from the others' {_mode:.3f} m by {1000 * (p_ - _mode):+.0f} mm") for p_ in _a.implied_pole_m]
+print("ANTENNA-HEIGHT CHECK: exported antenna height minus the model's offset = implied pole height, one row per distinct exported value; a rover that differs from the others is flagged, not corrected:")
+print(_a.to_string(index=False))
 # a few exports lost the base columns on individual points (the link dropped and came back); the base is
 # assigned by TIME: B1 ran ~13:20-13:30 CDT, B2 from ~14:40 (the earliest B2 point is 14:40:14). Stated per point.
 P["t_hhmm"] = P.t_start.str.extract(r"(\d\d:\d\d)")[0]
