@@ -345,6 +345,19 @@ single rigid shift moves both traverses together; its 5 cm lateral part changes 
 through the re-read lidar and cannot change what separates them. The team difference stays a
 vertical constant on one rover (above).
 
+Which rover, and what kind of error (Andy's hypothesis, 2026-11-11: T4a "set up for a RS+ on a 2-m
+pole with adapter but instead used a RS2"). Sign first: T4a's RTK heights sit about 0.10 m ABOVE
+T3a's for the same ground, so whichever rover is wrong, T4a's entered antenna height would be
+~0.10 m too SHORT, or T3a's ~0.10 m too LONG. A receiver-model mix-up in Flow is not available as a
+setting: Emlid's documentation (read 2026-11-11) says the app applies the phase-center offset of the
+connected receiver and the user enters only the pole height; if an RS+ offset (65 mm) had somehow been
+applied to an RS2 (134.9 mm) the ground would come out 70 mm too high, T4a's sign but short of the
+100 mm. A pole adapter of ~0.1 m under the receiver that was not added to the entered pole height fits
+T4a's sign and size exactly; a 1.9 m pole entered as 2.0 on the RS3 fits T3a's. One circumstantial
+pointer: the acquisition's vegetated checkpoints read +103 mm, and before the fitted offset T3a's
+forest-floor traverse read +98 and T4a's +2, so T3a's is the one that looks like the rest of the
+survey. The Flow export from T4a's unit (device, serial, antenna height) decides it.
+
 Both groups minimize at the same lateral shift, 0.35 m west (upslope on this east-facing bluff) of
 the tied positions, and the shift halves T4a's spread; at that shift the two groups differ by
 about 110 mm in level, as they do with no shift, so the RS3-T4a difference is vertical and not
