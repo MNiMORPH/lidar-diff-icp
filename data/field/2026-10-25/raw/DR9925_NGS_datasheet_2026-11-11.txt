@@ -1,0 +1,118 @@
+DATASHEETS
+  The NGS Data Sheet See file dsdata.pdf for more information about the datasheet.
+PROGRAM = datasheet95, VERSION = 8.12.5.20
+Starting Datasheet Retrieval...
+1    National Geodetic Survey, Retrieval Date = NOVEMBER 11, 2026 12:14:35 EST
+ DR9925 ***********************************************************************
+ DR9925  HT_MOD      -  This is a Height Modernization Survey Station.
+ DR9925  DESIGNATION -  8508 Y
+ DR9925  PID         -  DR9925
+ DR9925  STATE/COUNTY-  MN/WINONA
+ DR9925  COUNTRY     -  US
+ DR9925  USGS QUAD   -  ELBA (2019)
+ DR9925
+ DR9925                         *CURRENT SURVEY CONTROL
+ DR9925  ______________________________________________________________________
+ DR9925* NAD 83(2011) POSITION- 44 07 18.13863(N) 092 00 16.79318(W)   ADJUSTED
+ DR9925* NAD 83(2011) ELLIP HT-   188.669 (meters)        (04/02/24)   ADJUSTED
+ DR9925* NAD 83(2011) EPOCH   -  2010.00
+ DR9925* NAVD 88 ORTHO HEIGHT -   218.75  (meters)      717.7   (feet) GPS OBS
+ DR9925  ______________________________________________________________________
+ DR9925  GEOID HEIGHT    -        -30.080 (meters)                     GEOID18
+ DR9925  NAD 83(2011) X  -   -160,429.496 (meters)                     COMP
+ DR9925  NAD 83(2011) Y  - -4,583,400.709 (meters)                     COMP
+ DR9925  NAD 83(2011) Z  -  4,417,940.666 (meters)                     COMP
+ DR9925  LAPLACE CORR    -         -2.51  (seconds)                    DEFLEC18
+ DR9925
+ DR9925  Network accuracy estimates per FGDC Geospatial Positioning Accuracy
+ DR9925  Standards:
+ DR9925         FGDC (95% conf, cm)     Standard deviation (cm)     CorrNE
+ DR9925            Horiz  Ellip           SD_N   SD_E   SD_h      (unitless)
+ DR9925  -------------------------------------------------------------------
+ DR9925  NETWORK    0.61   1.49           0.27   0.22   0.76     -0.05404228
+ DR9925  -------------------------------------------------------------------
+ DR9925  Click here for local accuracies and other accuracy information.
+ DR9925
+ DR9925.The horizontal coordinates were established by GPS observations
+ DR9925.and adjusted by the MN DEPT OF TRANSP in April 2024.
+ DR9925
+ DR9925.NAD 83(2011) refers to NAD 83 coordinates where the reference frame has
+ DR9925.been affixed to the stable North American tectonic plate. See
+ DR9925.NA2011 for more information.
+ DR9925
+ DR9925.The horizontal coordinates are valid at the epoch date displayed above
+ DR9925.which is a decimal equivalence of Year/Month/Day.
+ DR9925
+ DR9925.The orthometric height was determined by GPS observations and a
+ DR9925.high-resolution geoid model using precise GPS observation and
+ DR9925.processing techniques.
+ DR9925
+ DR9925.Significant digits in the geoid height do not necessarily reflect accuracy.
+ DR9925.GEOID18 height accuracy estimate available here.
+ DR9925
+ DR9925.Click photographs - Photos may exist for this station.
+ DR9925
+ DR9925.The X, Y, and Z were computed from the position and the ellipsoidal ht.
+ DR9925
+ DR9925.The Laplace correction was computed from DEFLEC18 derived deflections.
+ DR9925
+ DR9925.The ellipsoidal height was determined by GPS observations
+ DR9925.and is referenced to NAD 83.
+ DR9925
+ DR9925. The following values were computed from the NAD 83(2011) position.
+ DR9925
+ DR9925;                    North         East     Units Scale Factor Converg.
+ DR9925;SPC MN S     -   226,583.507   959,685.917   MT  0.99994388   +1 23 54.9
+ DR9925;SPC MN S     -   743,382.72  3,148,569.55   sFT  0.99994388   +1 23 54.9
+ DR9925;UTM  15      - 4,885,872.102   579,636.942   MT  0.99967800   +0 41 34.7
+ DR9925
+ DR9925!             -  Elev Factor  x  Scale Factor =   Combined Factor
+ DR9925!SPC MN S     -   0.99997042  x   0.99994388  =   0.99991430
+ DR9925!UTM  15      -   0.99997042  x   0.99967800  =   0.99964843
+ DR9925
+ DR9925_U.S. NATIONAL GRID SPATIAL ADDRESS: 15TWJ7963685872(NAD 83)
+ DR9925
+ DR9925                          SUPERSEDED SURVEY CONTROL
+ DR9925
+ DR9925  NAVD 88 (08/07/26)  218.770  (m)          717.75   (f) ADJUSTED    2 1
+ DR9925
+ DR9925.Superseded values are not recommended for survey control.
+ DR9925
+ DR9925.NGS no longer adjusts projects to the NAD 27 or NGVD 29 datums.
+ DR9925.See file dsdata.pdf to determine how the superseded data were derived.
+ DR9925
+ DR9925_MARKER: F = FLANGE-ENCASED ROD
+ DR9925_SETTING: 50 = ALUMINUM ALLOY ROD W/O SLEEVE (10 FT.+)
+ DR9925_STAMPING: 8508 Y 2023
+ DR9925_MARK LOGO: MNDT
+ DR9925_PROJECTION: FLUSH
+ DR9925_MAGNETIC: H = BAR MAGNET SET IN DRILL HOLE
+ DR9925_STABILITY: B = PROBABLY HOLD POSITION/ELEVATION WELL
+ DR9925_SATELLITE: THE SITE LOCATION WAS REPORTED AS SUITABLE FOR
+ DR9925+SATELLITE: SATELLITE OBSERVATIONS - April 12, 2023
+ DR9925_ROD/PIPE-DEPTH: 18.9 meters
+ DR9925
+ DR9925  HISTORY     - Date     Condition        Report By
+ DR9925  HISTORY     - 20230412 MONUMENTED       MNDT
+ DR9925
+ DR9925                          STATION DESCRIPTION
+ DR9925
+ DR9925'DESCRIBED BY MN DEPT OF TRANSP 2023 (KMS)
+ DR9925'THE MARK IS LOCATED ABOUT 4.7 MI (7.6 KM) NORTHWEST OF ALTURA, 2.4 MI
+ DR9925'(3.9 KM) NORTH-NORTHEAST OF ELBA AND 2.2 MI (3.5 KM) SOUTH OF BEAVER.
+ DR9925'
+ DR9925'THE MARK WAS LOCATED ABOUT 2.0 MI (3.2 KM) NORTHEAST OF ELBA, 2.35 MI
+ DR9925'(3.78 KM) NORTHEAST ALONG TRUNK HIGHWAY 74 FROM THE NORTH JUNCTION OF
+ DR9925'TRUNK HIGHWAY 74 AND COUNTY ROAD 26 IN ELBA, AT TRUNK HIGHWAY 74 MILE
+ DR9925'POINT 45.95.
+ DR9925'
+ DR9925'IT IS 37.9 FT (11.6 M) SOUTHWEST OF TRUNK HIGHWAY 74, 52.4 FT (16.0 M)
+ DR9925'SOUTHEAST OF A DRIVEWAY, 4.6 FT (1.4 M) NORTHEAST OF THE EAST POST OF
+ DR9925'A SIGN AND 4.4 FT (1.3 M) NORTHEAST OF A WITNESS POST.
+ DR9925'
+ DR9925'NOTE-THE STATION STATION CONSISTS OF A 3/4 INCH (19 MM) DIAMETER
+ DR9925'ALUMINUM ROD DRIVEN TO REFUSAL WITH A STANDARD MNDT CONTROL STATION
+ DR9925'REMOVABLE DISK SET ON A THREE FT (0.9 M) STABILIZER FIN SURROUNDED BY
+ DR9925'A SIX-INCH PVC PIPE BACK FILLED WITH WASHED SAND.
+ *** retrieval complete.
+ Elapsed Time = 00:00:04
