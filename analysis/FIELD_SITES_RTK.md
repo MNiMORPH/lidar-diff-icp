@@ -394,3 +394,15 @@ median 24 deg (p90 29), lowveg median 0.26 (quartiles 0.14-0.40), DoD median +11
 vegetated-hillslope measurement; the patches are where the difference also exceeded the
 LoD. On the map (`figures/field_day_lot204.png`) the face is the white dashed region and
 the patches are pink; both are in the GPX and the Emlid point files.
+
+## What the field day measured (25 October 2026; compiled 2026-11-11)
+
+`data/field/2026-10-25/README.md` is the record; `rtk_points_all.csv` the table. In the
+RCG-type field R1-v140 (zero 2008 penetration, NE-like every year) the surveyed ground
+lies 0.12 m (CORS rover and T2a's rover) to 0.23 m (T1a's rover) below the May-2021
+lidar surface and 0.31-0.35 m below the November-2008 surface, FIX points only, tied to
+DR9925 and cross-checked against CORS to 29 mm. The 2008 sward offset there is therefore
+about 0.33 m and the 2021 offset about 0.12-0.23 m, so the 2021-2008 difference of about
+-0.2 m in that field is the DIFFERENCE of two canopy heights, not erosion. The bluff
+traverses are not yet a measurement (0.5-0.8 m scatter from the base's horizontal
+uncertainty on steep ground).
