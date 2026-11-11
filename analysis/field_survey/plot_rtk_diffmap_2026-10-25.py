@@ -44,5 +44,5 @@ for ax, col, title in ((axs[0], "tied_minus_gen2_m", "RTK minus 2021 lidar groun
     ax.plot([X0 + 20, X0 + 120], [Y0 + 15, Y0 + 15], "w-", lw=3); ax.text(X0 + 70, Y0 + 22, "100 m", color="white", ha="center", fontsize=9)
 axs[0].legend(loc="upper right", fontsize=8); axs[1].scatter([], [], facecolors="none", edgecolors="0.35", s=40, label="no lidar value in this panel"); axs[1].legend(loc="upper right", fontsize=8)
 cb = fig.colorbar(sc, ax=axs, shrink=0.75, pad=0.01, extend="both"); cb.set_label("RTK (tied) minus lidar ground, m; red = ground below the lidar surface")
-fig.suptitle(f"25 Oct 2026 RTK survey, FIX points; {TIE}; B1 removed; 2025 FSA imagery; open gray = no value", fontsize=10)
+fig.suptitle(f"25 Oct 2026 RTK survey, FIX points; B1 removed; 2025 FSA imagery; open gray = no value\n{TIE}", fontsize=9)
 fig.savefig(f"figures/rtk_2026-10-25_diffmap{SUF}.png", dpi=120, bbox_inches="tight"); print(f"figures/rtk_2026-10-25_diffmap{SUF}.png")

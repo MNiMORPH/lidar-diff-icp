@@ -50,7 +50,7 @@ for i, (rk, groups, title) in enumerate(rows):
         ax.axvline(0, color="gray", lw=0.8); ax.set_ylim(bottom=0)
         ax.set_xlabel(xl); ax.set_ylabel("density (per mm)"); ax.legend(fontsize=7.5, loc="upper left"); ax.grid(alpha=0.25)
         ax.set_title(title if j == 0 else "", fontsize=9, loc="left")
-fig.suptitle(f"25 Oct 2026 RTK survey, FIX points, {TIE}; negative = ground below the lidar surface", fontsize=9)
+fig.suptitle(f"25 Oct 2026 RTK survey, FIX points; negative = ground below the lidar surface\n{TIE}", fontsize=9)
 fig.tight_layout()
 for ext in ("png", "pdf"):
     fig.savefig(f"figures/rtk_2026-10-25_pdf{SUF}.{ext}", dpi=120); print(f"figures/rtk_2026-10-25_pdf{SUF}.{ext}")
