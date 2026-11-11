@@ -102,9 +102,13 @@ cells that have a value. What is empty is the CSF ground selection: the cached C
 (`data/csf_cache/4342-29-64.las`, rigidness 1, PDAL defaults otherwise) holds a median of 0
 points in the blank cells against 11-16 in the finite ones, and the blank fraction of the tile
 climbs with the 2021 slope: 4 % at 0-5 deg, 15 % at 15-20, 30 % at 20-25, 47 % at 25-30, 64 %
-at 30-35 and 79 % above 35 deg. The cloth does not drape the bluff, so the 2008 ground there is
-whatever it keeps, and the six bluff points that do have a value read the 2008 surface 0.4 m
-below the surveyed ground at 29-30 deg and 0.01-0.02 m below it at 6-15 deg. One detail not
+at 30-35 and 79 % above 35 deg. The cloth does not drape the bluff. What it keeps is NOT the low tail:
+against local 2021 planes at the 39 points (`analysis/field_survey/bluff/LOCAL_CLOUD_CHECK.md`),
+the registered 2008 last returns within 5 m sit at a median of -119 mm (p25 -224, p75 +5) and the
+CSF-selected 7.4 % of them at -101 mm, the central body with the canopy tail removed. The two
+grid cells that read the 2008 surface 0.4 m below the ground at 29-30 deg are a 3-return CSF cell
+and a disk whose 2008 returns are mostly canopy; the 2008 population at the bluff is ~0.12 m below
+the 2021 surface, not 0.4. One detail not
 closed: tile-wide, 30,475 blank cells hold 1-9 CSF points and no finite cell holds fewer than
 11, so a floor near ten acts somewhere after the CSF cache; `pipeline.difference` has no such
 floor (`estimate_ground` blanks only empty cells).
@@ -122,3 +126,10 @@ over a rug of the points, nothing cut.
 Map: `figures/rtk_2026-10-25_diffmap.png` (from `analysis/field_survey/plot_rtk_diffmap_2026-10-25.py`)
 puts a colored marker at every FIX point on 2025 FSA imagery, minus 2021 on the left and minus
 2008 on the right; points with no 2008 difference (most of the steep bluff) are open gray.
+
+Translation fit: `analysis/field_survey/fit_hillslope_translation.py` fits a rigid (dE, dN, dZ)
+of the UNTIED hillslope points onto the 2021 grid; `figures/rtk_2026-10-25_hillslope_translation.png`.
+L1 minimum dE +0.65, dN -1.05, dZ -0.436 m (bootstrap p16-p84: dE 0.55-0.75, dN -1.15 to -0.95,
+dZ -0.506 to -0.405; corr(dE, dZ) -0.93, -466 mm of dZ per m of dE); the pole-pair tie
+(+0.802, -1.123, -0.473) sits at the edge of that band, and at its horizontal the hillslope's own
+best dZ is -0.508, i.e. the ground 35 mm above the 2021 surface, the same +35 mm the cloud gives.
