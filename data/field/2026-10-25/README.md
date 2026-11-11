@@ -173,19 +173,23 @@ Figure: `figures/rtk_2026-10-25_pdf_polecorr.png` (and `.pdf`, from
 `analysis/field_survey/plot_rtk_pdf_2026-10-25.py _polecorr`; the unsuffixed file is the plot
 before the pole correction, kept) shows these as probability densities,
 floodplain and hillslope rows, minus 2021 and minus 2008 columns, one Gaussian KDE per group
-over a rug of the points, nothing cut.
+over a rug of the points, nothing cut, nothing annotated.
 
 Map: `figures/rtk_2026-10-25_diffmap_polecorr.png` (from `analysis/field_survey/plot_rtk_diffmap_2026-10-25.py _polecorr`;
-also `_map_polecorr.png` and `_profiles_polecorr.png` from `plot_rtk_2026-10-25.py`; unsuffixed files predate the pole correction)
+also `_profiles_polecorr.png`, the elevation transects, from `plot_rtk_2026-10-25.py`; unsuffixed files
+predate the pole correction; the one-panel map that script once drew is dropped). The figures carry no
+titles, medians or provenance text (Andy, 2026-11-11): the tie and the corrections are stated here and in
+the compile log.
 puts a colored marker at every FIX point on 2025 FSA imagery, minus 2021 on the left and minus
 2008 on the right; points with no 2008 difference (most of the steep bluff) are open gray.
 
 Misfit transects: `figures/rtk_2026-10-25_profiles_misfit_polecorr.png` (from
 `analysis/field_survey/plot_rtk_profiles_misfit_2026-10-25.py _polecorr`) is the elevation transect
-figure with tied RTK minus each lidar surface on the y-axis, group medians dashed, nothing cut (one
-RS3 point at -1.6 m sets the hillslope panel's range).
+figure with tied RTK minus each lidar surface on the y-axis, points only, nothing cut (one RS3
+point at -1.6 m sets the hillslope panel's range).
 
-Translation fit: `analysis/field_survey/fit_hillslope_translation.py` fits a rigid (dE, dN, dZ)
+Translation fit (PARKED, Andy 2026-11-11: "more exploration than believing it to be correct"; an idea to
+come back to): `analysis/field_survey/fit_hillslope_translation.py` fits a rigid (dE, dN, dZ)
 of the UNTIED hillslope points onto the 2021 grid; `figures/rtk_2026-10-25_hillslope_translation.png`
 (rerun 2026-11-11 in the EPSG:6344 frame). L1 minimum dE +0.55, dN -1.15, dZ -0.411 m (bootstrap
 p16-p84: dE 0.55-0.85, dN -1.15 to -1.05, dZ -0.561 to -0.400; corr(dE, dZ) -0.96, -464 mm of
