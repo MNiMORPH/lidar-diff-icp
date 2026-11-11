@@ -5,7 +5,7 @@ Wickert), the rest on a class base station that was set twice. Compiled 2026-11-
 `analysis/field_survey/compile_rtk_2026-10-25.py`; every number here is pasted from its
 log (`compile_log.txt`).
 
-## The table: `rtk_points_all.csv` (220 rows)
+## The table: `rtk_points_all.csv` (220 rows); the fitted table `rtk_points_all_fitted.csv`
 
 One row per logged point, nothing filtered. Columns: `group`, `people`, `device`, `serial`,
 `point`, `t_start` (CDT), `base` (B1, B or CORS), `baseline_m`, `status` (FIX / FLOAT /
@@ -25,6 +25,11 @@ figures use these), `slope_deg`, `lowveg_gen2`, `clubb_floodplain`,
 `penetration_failure_2008`, `source`.
 
 Use FIX rows and the `tied_` columns. Groups:
+
+`rtk_points_all_fitted.csv` (same columns, 2026-11-11) applies the settled rigid shift from the
+weighted inversion, dE -0.05, dN -0.05, dZ +0.13 m, to every point (B and CORS alike), with every
+lidar layer re-read at the shifted position by the same compile code; its `gen2_minus_rtk_m` is the
+residual after that shift, and `tie_source` names the shift. The main table is unchanged.
 
 | group | people | device | n | where |
 |---|---|---|---|---|
@@ -312,6 +317,18 @@ floodplain's +0.13 the hillslope wants dE -0.05 (delta chi2 0.1); for dZ = 0 it 
 shift, which is 0.05 m at the minimum and 0.00 m gives +0.11, but the hillslope's vertical is weakly
 held: on its own it says +0.14 with a 2-sigma range of +0.04 to +0.24 m, and the floodplain's +0.13
 sits at its center rather than being tested by it.
+
+**After the settled shift (fitted table), 2021 lidar minus RTK, FIX, mm [median, NMAD, n]:**
+CORS -8, 34, 17; RS+ B -2, 31, 98; RS+ A +28, 50, 32; benchmark -35, 6, 2; T4a -108, 115, 21;
+RS3 -7, 143, 18. Against 2008: CORS +15, RS+ A +101, RS+ B +224, benchmark -78, T4a -130 (4),
+RS3 -216 (1). Figures from this table carry the suffix `_fitted` (`rtk_2026-10-25_{profiles_misfit,
+pdf,diffmap}_fitted.png`); the `_polecorr` figures are the same plots before the shift.
+
+**Does the translation close the gap between the two hillslope teams (Andy, 2026-11-11)? No.** T4a
+-108 against RS3 -7 after the shift, a 101 mm difference, against -2 and +98 (100 mm) before. A
+single rigid shift moves both traverses together; its 5 cm lateral part changes each by a few mm
+through the re-read lidar and cannot change what separates them. The team difference stays a
+vertical constant on one rover (above).
 
 Both groups minimize at the same lateral shift, 0.35 m west (upslope on this east-facing bluff) of
 the tied positions, and the shift halves T4a's spread; at that shift the two groups differ by
