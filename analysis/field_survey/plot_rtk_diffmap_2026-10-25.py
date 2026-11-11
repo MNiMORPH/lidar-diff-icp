@@ -20,7 +20,8 @@ from cmcrameri import cm as cmc   # Scientific colour maps (Crameri); bam_r: gre
 from matplotlib.colors import TwoSlopeNorm
 from PIL import Image
 
-P = pd.read_csv(sys.argv[2] if len(sys.argv) > 2 else "data/field/2026-10-25/rtk_points_all.csv")   # argv[2]: another table with the same columns, e.g. rtk_points_all_fitted.csv; F = P[P.status.str.startswith("FIX")].copy()
+P = pd.read_csv(sys.argv[2] if len(sys.argv) > 2 else "data/field/2026-10-25/rtk_points_all.csv")   # argv[2]: another table with the same columns, e.g. rtk_points_all_fitted.csv
+F = P[P.status.str.startswith("FIX")].copy()
 SUF = sys.argv[1] if len(sys.argv) > 1 else ""   # output-name suffix, so a replot need not clobber an earlier figure
 X0, Y0, X1, Y1 = 579700, 4885300, 580100, 4885720
 url = f"https://imageserver.gisdata.mn.gov/cgi-bin/wms?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=fsa2025&STYLES=&SRS=EPSG:26915&BBOX={X0},{Y0},{X1},{Y1}&WIDTH=1200&HEIGHT={int(1200*(Y1-Y0)/(X1-X0))}&FORMAT=image/jpeg"
