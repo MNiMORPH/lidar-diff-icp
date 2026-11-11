@@ -38,7 +38,7 @@ Use FIX rows and the `tied_` columns. Groups:
 Horizontal: NAD83(2011) / UTM zone 15N, meters (EPSG:6344), for the RTK points and both
 lidar grids (3DEP 2021 is NAD83(2011); the 2008 MN DNR tiles are NAD83(NSRS2007), the same
 to centimeters; the pipeline labels the grids "EPSG:26915", the same projection). B2 points
-are shifted onto the monument (see the tie), CORS points are as delivered. Vertical: NAD 88
+are shifted onto the monument (see the tie), CORS points are as delivered. Vertical: NAVD 88
 orthometric heights on GEOID18. The CORS rover delivers NAD83(2011) ellipsoid heights
 directly; every B2 point is brought to the same ellipsoid through DR9925's published
 NAD83(2011) height; both are then converted with GEOID18 through pyproj at each point's own
