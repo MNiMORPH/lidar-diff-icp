@@ -303,6 +303,16 @@ causes of similar size; the project's bare control marks (-3.5 mm) say it is not
 gravel. The measurement that separates the two is a bare surface occupied with the same rovers; this
 survey has none (the gravel-lot points were under B1 and are dropped).
 
+**Does the hillslope's lateral shift manufacture its vertical (Andy, 2026-11-11)?** The hillslope's
+weighted chi2, profiled along dE with dN and dZ free: the ridge runs -400 mm of dZ per m of dE, and
+within delta chi2 < 4 (2 sigma) it spans dE -0.40 to +0.20 m and dZ +0.28 to +0.04 m. With no lateral
+shift allowed at all the hillslope's best dZ is +0.11 m (delta chi2 0.4 above the minimum); at the
+floodplain's +0.13 the hillslope wants dE -0.05 (delta chi2 0.1); for dZ = 0 it needs dE +0.25 m
+(downslope) at delta chi2 4.9, just outside 2 sigma. So the agreement is not made by the lateral
+shift, which is 0.05 m at the minimum and 0.00 m gives +0.11, but the hillslope's vertical is weakly
+held: on its own it says +0.14 with a 2-sigma range of +0.04 to +0.24 m, and the floodplain's +0.13
+sits at its center rather than being tested by it.
+
 Both groups minimize at the same lateral shift, 0.35 m west (upslope on this east-facing bluff) of
 the tied positions, and the shift halves T4a's spread; at that shift the two groups differ by
 about 110 mm in level, as they do with no shift, so the RS3-T4a difference is vertical and not
