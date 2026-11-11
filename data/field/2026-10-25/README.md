@@ -19,7 +19,9 @@ slope-normal 2021 grid the difference was built on), `gen1_z_m` (2008 lidar grou
 `gen2_zref_m` minus the tile's difference; until 2026-11-11 it was taken from `gen2_z_m`, which
 is wrong by up to 0.13 m at single bluff points and by 8 mm in the group medians), `dod_2021_2008_m`,
 `rtk_minus_gen2_m`, `rtk_minus_gen1_m` (untied), **`tied_minus_gen2_m`,
-`tied_minus_gen1_m`** (the numbers to use), `slope_deg`, `lowveg_gen2`, `clubb_floodplain`,
+`tied_minus_gen1_m`** (RTK minus lidar), **`gen2_minus_rtk_m`, `gen1_minus_rtk_m`** (their negatives:
+the LIDAR misfit re-referenced to the surveyed ground, positive = lidar above the ground; the
+figures use these), `slope_deg`, `lowveg_gen2`, `clubb_floodplain`,
 `penetration_failure_2008`, `source`.
 
 Use FIX rows and the `tied_` columns. Groups:
@@ -111,6 +113,8 @@ minimum (116 mm) at dE +0.50, dN -1.25, within 0.3 m of the ties; the CORS-10 al
 gives 193 mm.
 
 ## Result: RTK (tied) minus the lidar surfaces, FIX points, mm [median, NMAD, n]
+
+(The figures show the negative, lidar minus RTK, so that the misfit reads as the lidar's.)
 
 | group | base | vs 2021 lidar (gen2) | vs 2008 lidar (gen1) |
 |---|---|---|---|
