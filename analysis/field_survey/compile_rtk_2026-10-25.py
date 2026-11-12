@@ -8,8 +8,13 @@ Andy, 2026-11-11: "Can you build an accurate data set of ground elevations from 
 SOURCES (data/field/2026-10-25/raw/, copied from the Canvas submissions; student-facing
 names kept so the provenance is traceable):
   rover_RS3_8243D2AFB94BDAE3_hillslope_T3a_T3b_T3c.csv   Emlid Flow CSV, 24 pts
-  rover_hillslope_T4a_T4b_from_docx_table.csv                   parsed from T4a's
-        F07 .docx table (E, N, ellipsoid h, base, time, RMS); the raw export was not uploaded
+  rover_RS3_82434D3F6234D057_hillslope_T4a_T4b.csv              Emlid Flow CSV, 29 pts
+        (T4b's Canvas submission elba_20261025.csv, received 2026-11-12): a SECOND
+        Reach RS3, antenna height 2.134 m like T3a's, CS "NAD83(HARN) / UTM zone 15N".
+        It matches T4a's F07 .docx table (rover_hillslope_T4a_T4b_from_docx_table.csv,
+        the source until 2026-11-12) to the millimeter on every point and adds device, serial,
+        antenna height, solution status, tilt, samples and the base columns; points 24, 25 and 28
+        have no base columns in the export (link dropped) and are assigned to B by time.
   rover_RSplus_8243CA7256E53180_floodplain_T1a_T1b.xlsx     Emlid Flow export, 63 pts
   rover_RSplus_824350D44A583F7B_floodplain_T2a.csv              Emlid Flow CSV from the
         shared Google Sheet, 100 pts
@@ -85,12 +90,14 @@ for _, r in d.iterrows():
     rows.append(dict(group="hillslope_RS3", people="T3a, T3b, T3c", device=r["Device type"], serial=r["Device serial number"], point=int(r["Name"]),
                      lon=r["Longitude"], lat=r["Latitude"], h_ell_m=r["Ellipsoidal height"], elev_app_m=r["Elevation"], antenna_m=r["Antenna height"], status=r["Solution status"],
                      rms_e=r["Easting RMS"], rms_n=r["Northing RMS"], rms_v=r["Elevation RMS"], t_start=r["Averaging start"], base=base_label(r["Base longitude"]), baseline_m=r["Baseline"], tilt_deg=r.get("Tilt angle", np.nan), source="rover_RS3_8243D2AFB94BDAE3_hillslope_T3a_T3b_T3c.csv"))
-# 2. T4a / T4b, from the docx table (UTM, ellipsoid h, base label, HH:MM CDT)
-d = pd.read_csv(f"{RAW}/rover_hillslope_T4a_T4b_from_docx_table.csv")
+# 2. T4a / T4b / T3a / T3b / T3c (metadata_T4b_T4a_hillslope.csv), a second Reach RS3, the parallel
+#    traverse ~19 m from T3a's. The Flow export (2026-11-12) replaces the .docx table, which it reproduces to
+#    the millimeter; three points carry no base columns and get their base by time below.
+d = pd.read_csv(f"{RAW}/rover_RS3_82434D3F6234D057_hillslope_T4a_T4b.csv")
 for _, r in d.iterrows():
-    lon, lat = to_ll.transform(r.Easting, r.Northing)
-    rows.append(dict(group="hillslope_T4a", people="T4a, T4b", device="Reach (model not in the table)", serial="", point=int(r.Pt), lon=lon, lat=lat, h_ell_m=r.Ellipsoidal_height, elev_app_m=np.nan, antenna_m=np.nan,
-                     status="FIX (table lists RMS only; status not exported)", rms_e=r.Lateral_RMS, rms_n=np.nan, rms_v=r.Vertical_RMS, t_start=f"2026-10-25 {r.Time_CDT} CDT", base={"B1": "B1", "B": "B"}.get(str(r.Base).strip(), "none recorded"), baseline_m=np.nan, tilt_deg=np.nan, source="rover_hillslope_T4a_T4b_from_docx_table.csv"))
+    rows.append(dict(group="hillslope_T4a", people="T4a, T4b, T3a, T3b, T3c", device=r["Device type"], serial=str(r["Device serial number"]).upper(), point=int(r["Name"]),
+                     lon=r["Longitude"], lat=r["Latitude"], h_ell_m=r["Ellipsoidal height"], elev_app_m=r["Elevation"], antenna_m=r["Antenna height"], status=r["Solution status"],
+                     rms_e=r["Easting RMS"], rms_n=r["Northing RMS"], rms_v=r["Elevation RMS"], t_start=r["Averaging start"], base=base_label(r["Base longitude"]), baseline_m=r["Baseline"], tilt_deg=r.get("Tilt angle", np.nan), source="rover_RS3_82434D3F6234D057_hillslope_T4a_T4b.csv"))
 # 3. T1a / T1b, Reach RS+, floodplain field
 d = pd.read_excel(f"{RAW}/rover_RSplus_8243CA7256E53180_floodplain_T1a_T1b.xlsx").dropna(subset=["Point"])
 for _, r in d.iterrows():

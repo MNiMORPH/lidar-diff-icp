@@ -1,12 +1,12 @@
 ANTENNA-HEIGHT CHECK: exported antenna height minus the model's offset = implied pole height, one row per distinct exported value; a rover that differs from the others is flagged, not corrected:
-                  group                         device           serial  antenna_m   n  offset_m  implied_pole_m                                       flag
-       benchmark_DR9925                      Reach RS2 824377FA5B116E0F      2.134   2     0.134           2.000                                           
-floodplain_CORS_Wickert                     Reach RS2+ 8243408af8ece061      2.134  17     0.134           2.000                                           
-    floodplain_RSplus_A                      Reach RS+ 8243CA7256E53180      2.086   1     0.065           2.021 DIFFERS from the others' 2.000 m by +21 mm
-    floodplain_RSplus_A                      Reach RS+ 8243CA7256E53180      2.134  62     0.065           2.069 DIFFERS from the others' 2.000 m by +69 mm
-    floodplain_RSplus_B                      Reach RS+ 824350D44A583F7B      2.065 100     0.065           2.000                                           
-        hillslope_T4a Reach (model not in the table)                         NaN  29       NaN             NaN              antenna or model not exported
-          hillslope_RS3                      Reach RS3 8243D2AFB94BDAE3      2.134  24     0.134           2.000                                           
+                  group     device           serial  antenna_m   n  offset_m  implied_pole_m                                       flag
+       benchmark_DR9925  Reach RS2 824377FA5B116E0F      2.134   2     0.134           2.000                                           
+floodplain_CORS_Wickert Reach RS2+ 8243408af8ece061      2.134  17     0.134           2.000                                           
+    floodplain_RSplus_A  Reach RS+ 8243CA7256E53180      2.086   1     0.065           2.021 DIFFERS from the others' 2.000 m by +21 mm
+    floodplain_RSplus_A  Reach RS+ 8243CA7256E53180      2.134  62     0.065           2.069 DIFFERS from the others' 2.000 m by +69 mm
+    floodplain_RSplus_B  Reach RS+ 824350D44A583F7B      2.065 100     0.065           2.000                                           
+        hillslope_T4a  Reach RS3 82434D3F6234D057      2.134  29     0.134           2.000                                           
+          hillslope_RS3  Reach RS3 8243D2AFB94BDAE3      2.134  24     0.134           2.000                                           
 POLE-HEIGHT CORRECTION APPLIED, m added to h_ell_tied_m, by group [min, max, n]:
                            min    max  count
 group                                       
@@ -16,8 +16,8 @@ floodplain_RSplus_A      0.021  0.069     63
 floodplain_RSplus_B      0.000  0.000    100
 hillslope_T4a          0.000  0.000     29
 hillslope_RS3            0.000  0.000     24
-base assigned by time on 28 points whose export had no base columns: [{'group': 'hillslope_RS3', 'point': 23, 't_hhmm': '15:11', 'base': 'B'}, {'group': 'hillslope_RS3', 'point': 24, 't_hhmm': '15:12', 'base': 'B'}, {'group': 'hillslope_T4a', 'point': 9, 't_hhmm': '14:44', 'base': 'B'}, {'group': 'hillslope_T4a', 'point': 10, 't_hhmm': '14:45', 'base': 'B'}, {'group': 'hillslope_T4a', 'point': 11, 't_hhmm': '14:47', 'base': 'B'}, {'group': 'hillslope_T4a', 'point': 12, 't_hhmm': '14:49', 'base': 'B'}, {'group': 'hillslope_T4a', 'point': 13, 't_hhmm': '14:53', 'base': 'B'}, {'group': 'hillslope_T4a', 'point': 14, 't_hhmm': '14:56', 'base': 'B'}, {'group': 'hillslope_T4a', 'point': 15, 't_hhmm': '14:57', 'base': 'B'}, {'group': 'hillslope_T4a', 'point': 16, 't_hhmm': '14:58', 'base': 'B'}, {'group': 'hillslope_T4a', 'point': 17, 't_hhmm': '15:00', 'base': 'B'}, {'group': 'hillslope_T4a', 'point': 18, 't_hhmm': '15:02', 'base': 'B'}, {'group': 'hillslope_T4a', 'point': 19, 't_hhmm': '15:04', 'base': 'B'}, {'group': 'hillslope_T4a', 'point': 20, 't_hhmm': '15:07', 'base': 'B'}, {'group': 'hillslope_T4a', 'point': 21, 't_hhmm': '15:09', 'base': 'B'}, {'group': 'hillslope_T4a', 'point': 22, 't_hhmm': '15:11', 'base': 'B'}, {'group': 'hillslope_T4a', 'point': 23, 't_hhmm': '15:13', 'base': 'B'}, {'group': 'hillslope_T4a', 'point': 24, 't_hhmm': '15:16', 'base': 'B'}, {'group': 'hillslope_T4a', 'point': 25, 't_hhmm': '15:20', 'base': 'B'}, {'group': 'hillslope_T4a', 'point': 26, 't_hhmm': '15:21', 'base': 'B'}, {'group': 'hillslope_T4a', 'point': 27, 't_hhmm': '15:22', 'base': 'B'}, {'group': 'hillslope_T4a', 'point': 28, 't_hhmm': '15:31', 'base': 'B'}, {'group': 'hillslope_T4a', 'point': 29, 't_hhmm': '15:34', 'base': 'B'}, {'group': 'floodplain_RSplus_A', 'point': 16, 't_hhmm': '14:49', 'base': 'B'}, {'group': 'floodplain_RSplus_A', 'point': 17, 't_hhmm': '14:50', 'base': 'B'}, {'group': 'floodplain_RSplus_A', 'point': 19, 't_hhmm': '14:52', 'base': 'B'}, {'group': 'floodplain_RSplus_A', 'point': 20, 't_hhmm': '14:53', 'base': 'B'}, {'group': 'floodplain_RSplus_A', 'point': 52, 't_hhmm': '15:43', 'base': 'B'}]
-DROPPED 15 points corrected from B1 (a student's receiver, not the class base): [{'group': 'hillslope_RS3', 'point': 1, 't_hhmm': '13:24', 'status': 'FIX'}, {'group': 'hillslope_RS3', 'point': 2, 't_hhmm': '13:25', 'status': 'FIX'}, {'group': 'hillslope_RS3', 'point': 3, 't_hhmm': '13:25', 'status': 'FIX'}, {'group': 'hillslope_RS3', 'point': 4, 't_hhmm': '13:26', 'status': 'FIX'}, {'group': 'hillslope_RS3', 'point': 5, 't_hhmm': '13:27', 'status': 'FIX'}, {'group': 'hillslope_RS3', 'point': 6, 't_hhmm': '13:28', 'status': 'FIX'}, {'group': 'hillslope_T4a', 'point': 1, 't_hhmm': '13:20', 'status': 'FIX (table lists RMS only; status not exported)'}, {'group': 'hillslope_T4a', 'point': 2, 't_hhmm': '13:20', 'status': 'FIX (table lists RMS only; status not exported)'}, {'group': 'hillslope_T4a', 'point': 3, 't_hhmm': '13:21', 'status': 'FIX (table lists RMS only; status not exported)'}, {'group': 'hillslope_T4a', 'point': 4, 't_hhmm': '13:24', 'status': 'FIX (table lists RMS only; status not exported)'}, {'group': 'hillslope_T4a', 'point': 5, 't_hhmm': '13:25', 'status': 'FIX (table lists RMS only; status not exported)'}, {'group': 'hillslope_T4a', 'point': 6, 't_hhmm': '13:26', 'status': 'FIX (table lists RMS only; status not exported)'}, {'group': 'hillslope_T4a', 'point': 7, 't_hhmm': '13:26', 'status': 'FIX (table lists RMS only; status not exported)'}, {'group': 'hillslope_T4a', 'point': 8, 't_hhmm': '13:28', 'status': 'FIX (table lists RMS only; status not exported)'}, {'group': 'floodplain_RSplus_A', 'point': 1, 't_hhmm': '13:27', 'status': 'FLOAT'}]
+base assigned by time on 10 points whose export had no base columns: [{'group': 'hillslope_RS3', 'point': 23, 't_hhmm': '15:11', 'base': 'B'}, {'group': 'hillslope_RS3', 'point': 24, 't_hhmm': '15:12', 'base': 'B'}, {'group': 'hillslope_T4a', 'point': 24, 't_hhmm': '15:16', 'base': 'B'}, {'group': 'hillslope_T4a', 'point': 25, 't_hhmm': '15:20', 'base': 'B'}, {'group': 'hillslope_T4a', 'point': 28, 't_hhmm': '15:31', 'base': 'B'}, {'group': 'floodplain_RSplus_A', 'point': 16, 't_hhmm': '14:49', 'base': 'B'}, {'group': 'floodplain_RSplus_A', 'point': 17, 't_hhmm': '14:50', 'base': 'B'}, {'group': 'floodplain_RSplus_A', 'point': 19, 't_hhmm': '14:52', 'base': 'B'}, {'group': 'floodplain_RSplus_A', 'point': 20, 't_hhmm': '14:53', 'base': 'B'}, {'group': 'floodplain_RSplus_A', 'point': 52, 't_hhmm': '15:43', 'base': 'B'}]
+DROPPED 15 points corrected from B1 (a student's receiver, not the class base): [{'group': 'hillslope_RS3', 'point': 1, 't_hhmm': '13:24', 'status': 'FIX'}, {'group': 'hillslope_RS3', 'point': 2, 't_hhmm': '13:25', 'status': 'FIX'}, {'group': 'hillslope_RS3', 'point': 3, 't_hhmm': '13:25', 'status': 'FIX'}, {'group': 'hillslope_RS3', 'point': 4, 't_hhmm': '13:26', 'status': 'FIX'}, {'group': 'hillslope_RS3', 'point': 5, 't_hhmm': '13:27', 'status': 'FIX'}, {'group': 'hillslope_RS3', 'point': 6, 't_hhmm': '13:28', 'status': 'FIX'}, {'group': 'hillslope_T4a', 'point': 1, 't_hhmm': '13:20', 'status': 'FIX'}, {'group': 'hillslope_T4a', 'point': 2, 't_hhmm': '13:20', 'status': 'FIX'}, {'group': 'hillslope_T4a', 'point': 3, 't_hhmm': '13:21', 'status': 'FIX'}, {'group': 'hillslope_T4a', 'point': 4, 't_hhmm': '13:24', 'status': 'FIX'}, {'group': 'hillslope_T4a', 'point': 5, 't_hhmm': '13:25', 'status': 'FIX'}, {'group': 'hillslope_T4a', 'point': 6, 't_hhmm': '13:26', 'status': 'FIX'}, {'group': 'hillslope_T4a', 'point': 7, 't_hhmm': '13:26', 'status': 'FIX'}, {'group': 'hillslope_T4a', 'point': 8, 't_hhmm': '13:28', 'status': 'FIX'}, {'group': 'floodplain_RSplus_A', 'point': 1, 't_hhmm': '13:27', 'status': 'FLOAT'}]
 B vertical, benchmark: DR9925 measured [189.202, 189.21] m vs published 188.669 m -> B reads +0.537 m  [ADOPTED, Andy 2026-11-11: trust the reference point]
 B HORIZONTAL TIE, benchmark: published DR9925 E 579636.942 N 4885872.102 (datasheet UTM 579636.942 / 4885872.102) minus measured E 579636.171 N 4885873.214 -> B shifted by dE +0.771 m, dN -1.112 m  [ADOPTED]; CORS unshifted
 CHECK, CORS 11 pair: horizontal CORS minus T1a dE +0.802 dN -1.123 (benchmark minus pair dE -0.031 dN +0.011); vertical T1a 63 (188.569 exported +0.069 pole correction) minus CORS 11 (188.096) = +0.542 m, benchmark minus pair -5 mm (was +64 before the pole correction)
@@ -40,7 +40,7 @@ FITTED TABLE data/field/2026-10-25/rtk_points_all_fitted.csv: shift dE -0.05 dN 
     floodplain_CORS_Wickert     -8    34   17
     floodplain_RSplus_A        +28    50   32
     floodplain_RSplus_B         -2    31   98
-    hillslope_T4a           -108   115   21
+    hillslope_T4a           -108   114   21
     hillslope_RS3               -7   143   18
   FIX points, 2008 lidar minus shifted RTK, mm [median, NMAD, n]:
     benchmark_DR9925           -78     6    2
@@ -59,7 +59,7 @@ floodplain_RSplus_A      B     FIX       32
                                SINGL      4
 floodplain_RSplus_B      B     FIX       98
                                FLOAT      2
-hillslope_T4a          B     FIX (     21
+hillslope_T4a          B     FIX       21
 hillslope_RS3            B     FIX       18
 
 FIX points, RTK NAVD88 minus gen2 (2021) ground, mm, by group and base [median, NMAD, n]:
@@ -67,7 +67,7 @@ FIX points, RTK NAVD88 minus gen2 (2021) ground, mm, by group and base [median, 
   floodplain_CORS_Wickert CORS               -122      33    17
   floodplain_RSplus_A    B                  +309      50    32
   floodplain_RSplus_B    B                  +408      31    98
-  hillslope_T4a        B                  +535     115    21
+  hillslope_T4a        B                  +535     116    21
   hillslope_RS3          B                  +439     162    18
 
 AFTER THE TIE (FIX points): tied NAVD88 minus gen2, mm, by group and base [median, NMAD, n]:
@@ -75,7 +75,7 @@ AFTER THE TIE (FIX points): tied NAVD88 minus gen2, mm, by group and base [media
   floodplain_CORS_Wickert CORS               -122      33    17
   floodplain_RSplus_A    B                  -159      50    32
   floodplain_RSplus_B    B                  -129      31    98
-  hillslope_T4a        B                    -2     115    21
+  hillslope_T4a        B                    -2     116    21
   hillslope_RS3          B                   -98     162    18
 
 AFTER THE TIE (FIX points): tied NAVD88 minus gen1 (2008) ground, mm, by group and base [median, NMAD, n]:
