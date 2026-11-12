@@ -380,6 +380,22 @@ against a topo shoe resting on it on the other, which gives T3a's sign: T3a's gr
 surface difference between the two traverses that the 2021 lowveg proxy does not see. The first
 two can be settled by asking the teams; the third by re-occupying both lines with one rover.
 
+**Were the teams at different heights on the hill (Andy, 2026-11-12)? Yes, and it confounds the team
+difference.** The lines are not parallel traverses of the same ground: T4a's 21 FIX points span
+223-303 m NAVD88 with 14 above 275 m (upper slope and crest), 3 in 245-275 m and 4 at the toe below
+245 m; T3a's 18 span 244-273 m with 17 in 245-275 m (mid-slope). 2021 lidar minus RTK by
+position (median, NMAD, n, mm): T4a upper -10, 82, 14; T4a mid +12, 75, 3; T4a toe +101, 136,
+4; RS3 mid +102, 157, 17; RS3 toe -28 (1 point). T4a's near-zero median is an upper-slope number
+and T3a's +100 a mid-slope one; T4a's toe reads like the floodplain. In the shared band T4a
+has three points and RS3 minus T4a is +87 mm, bootstrap p16-p84 -23 to +133, 95 % -91 to +165 mm,
+a quarter of the draws at or below zero: three points cannot separate "team" from "position". Within
+each team the residual does not trend with elevation (Theil-Sen -1.6 mm/m, 95 % -4.7 to +2.6, and
+-0.5, -22.4 to +12.8), so a position effect would be a step between mid-slope and upper slope, not a
+gradient; slope (31-33 deg) and lowveg_gen2 (0.20-0.21) are alike across the classes. This corrects
+the paragraph above that called the lines parallel with nothing measurable between them: slope was
+alike, elevation was not. The one-rover re-occupation should cover the mid-slope and the upper slope
+with the same pole tip.
+
 Both groups minimize at the same lateral shift, 0.35 m west (upslope on this east-facing bluff) of
 the tied positions, and the shift halves T4a's spread; at that shift the two groups differ by
 about 110 mm in level, as they do with no shift, so the RS3-T4a difference is vertical and not
