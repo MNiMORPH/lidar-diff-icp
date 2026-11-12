@@ -36,7 +36,7 @@ residual after that shift, and `tie_source` names the shift. The main table is u
 | group | people | device | n | where |
 |---|---|---|---|---|
 | hillslope_RS3 | T3a, T3b, T3c | Reach RS3 | 18 (24 logged; 6 under B1 dropped) | bluff west of the road, up and north |
-| hillslope_T4a | T4a, T4b | Reach | 21 (29 logged; 8 under B1 dropped) | same bluff, parallel traverse (table from the F07 .docx; raw export not uploaded) |
+| hillslope_T4a | T4a, T4b, T3a, T3b, T3c | Reach RS3 (a second unit) | 21 (29 logged; 8 under B1 dropped) | same bluff, parallel traverse (Flow export from T4b's Canvas submission, received 2026-11-12; it reproduces the F07 .docx table to the millimeter) |
 | floodplain_RSplus_A | T1a, T1b | Reach RS+ | 62 (63 logged; 1 under B1 dropped) | the field east of the road (R1-v140), loop to the north; 30 FLOAT/SINGLE where the link dropped |
 | floodplain_RSplus_B | T2a (+ group) | Reach RS+ | 100 | the same field, a tighter loop |
 | floodplain_CORS_Wickert | Wickert | Reach RS2+, MnDOT CORS | 17 | SW corner of the same field |
@@ -102,7 +102,8 @@ with the corrected T1a 63, becomes +0.542 m, 5 mm from the benchmark. The compil
 "checking antenna heights seems a necessary thing in all cases"): exported antenna height
 minus the model's offset, one row per distinct value, flagged where it differs from the
 others' 2.000 m pole; T1a's one B1-era point carried 2.086 m (+21 mm), the 62 B points
-2.134 m (+69 mm); T4a's table exports no antenna height or model.
+2.134 m (+69 mm); T4a's export (received 2026-11-12) carries 2.134 m on a Reach RS3, the same
+entry as T3a's RS3, so no correction applies to either hillslope rover.
 
 **Frame (fixed 2026-11-11).** The lidar grids are NAD83(2011) UTM 15N (3DEP; the pipeline's
 "EPSG:26915" labels the same meters). The compile had projected lon/lat with EPSG:26915,
@@ -208,9 +209,9 @@ east-facing part of the face. The RS3 export records pole tilt (median 2.4 deg) 
 not track it (correlation +0.05). Vegetation: the RS3 line sits in more 2021 low vegetation
 (lowveg_gen2 0.215 vs 0.163), but within each group the misfit falls with vegetation (correlation
 -0.41 and -0.35) and the group term with vegetation held fixed is +87 mm, so the 2021 proxy does
-not explain it. Andy's notes say both groups used the same pole and the same model; the RS3 export
-carries antenna height 2.134 m (a 2.000 m pole entry) and T4a's table carries none, which is the
-one entry still unverified.
+not explain it. Andy's notes say both groups used the same pole and the same model; both exports
+carry antenna height 2.134 m (a 2.000 m pole entry) on a Reach RS3 (T4a's export arrived
+2026-11-12; see "T4a's export" below).
 
 **One or more translations (Andy, 2026-11-11), `analysis/field_survey/fit_hillslope_offsets_by_group.py`.**
 For each group and for both pooled, the lateral shift of the TIED points that minimizes the NMAD of
@@ -357,6 +358,27 @@ T4a's sign and size exactly; a 1.9 m pole entered as 2.0 on the RS3 fits T3a's. 
 pointer: the acquisition's vegetated checkpoints read +103 mm, and before the fitted offset T3a's
 forest-floor traverse read +98 and T4a's +2, so T3a's is the one that looks like the rest of the
 survey. The Flow export from T4a's unit (device, serial, antenna height) decides it.
+
+**T4a's export (received 2026-11-12, `raw/rover_RS3_82434D3F6234D057_hillslope_T4a_T4b.csv`).**
+It excludes every entry-side explanation above. T4a's team ran a second Reach RS3 (serial
+82434D3F6234D057 against T3a's 8243D2AFB94BDAE3) with antenna height 2.134 m, the same 2.000 m
+pole entry as T3a's, so neither rover's entered height differs from the other's and the
+compile's antenna check now passes both. Both exports carry base B at the same coordinates
+(E 580148.161 N 4885379.597 h 191.032) and the same coordinate-system label, NAD83(HARN) / UTM 15N
+(the base's entered frame; T3a's adds "+ NAVD88 height" for its Elevation column). An RTK rover
+reports base position plus baseline, so the two teams share whatever datum error the base carries,
+and the benchmark tie removes it from both at once: a datum error cannot separate the teams. The
+export also confirms the B1 assignment of T4a 1-8 from the base columns rather than from time,
+and shows 26-sample averages on every point but the first (1 sample). Three points (24, 25, 28)
+have no base columns, and 25 re-occupied 22 nine minutes later within 6 mm in height. Tilt is
+logged: median 4.6 deg, maximum 14.1 over the 29 points, against T3a's 2.0 and 5.8 over 24; with the RS3's tilt
+compensation the exported position is the pole tip, and without it 4.6 deg on a 2 m pole is 6 mm
+of height, so tilt does not carry 100 mm either way. What remains, as hypotheses: a physical
+difference at the pole tip (a pointed tip through ~0.1 m of fresh leaf litter on one traverse
+against a topo shoe resting on it on the other, which gives T3a's sign: T3a's ground reads
+0.1 m below the lidar surface and T4a's on it), a pole not fully extended on one unit, or a
+surface difference between the two traverses that the 2021 lowveg proxy does not see. The first
+two can be settled by asking the teams; the third by re-occupying both lines with one rover.
 
 Both groups minimize at the same lateral shift, 0.35 m west (upslope on this east-facing bluff) of
 the tied positions, and the shift halves T4a's spread; at that shift the two groups differ by
