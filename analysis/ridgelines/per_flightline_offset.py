@@ -68,7 +68,7 @@ bnds = cj["bounds"]; res = cj.get("res_m") or cj.get("res")
 nx = round((bnds[2] - bnds[0]) / res); ny = round((bnds[3] - bnds[1]) / res)
 dff = pd.read_parquet(f"{TILE}/beam_offset_table.parquet")           # full order == cached LAS
 ing = dff.in_grid.to_numpy()
-xy = laspy.read("data/csf_cache/elba.las")
+xy = laspy.read("data/csf_cache/elba.laz")
 b0, bsh, delta = lateral_sensitivity(
     dff.cell.to_numpy()[ing], np.asarray(xy.x)[ing], np.asarray(xy.y)[ing],
     dff.scan_angle.to_numpy()[ing], dff.point_source_id.to_numpy()[ing], dff.d_mm.to_numpy()[ing],

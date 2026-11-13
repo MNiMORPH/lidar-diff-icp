@@ -32,7 +32,7 @@ from scipy.ndimage import distance_transform_edt
 NY, NX = 700, 508
 X0, Y0 = 577492.8, 4882737.6
 RES = 5.0
-CSF = "data/csf_cache/elba.las"
+CSF = "data/csf_cache/elba.laz"
 GEN1 = "data/before/4342-29-64.laz"
 D = "data/derived/elba_fulldensity/"
 rng = np.random.default_rng(0)

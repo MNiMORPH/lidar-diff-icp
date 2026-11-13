@@ -85,7 +85,7 @@ at q2* = 0.199, with enough leverage to set an exponent. Binned uniformly it spl
 
 ## Inputs
 
-- **gen1**: `beam_offset_table.parquet` (ground from `data/csf_cache/elba.las`), per-cell
+- **gen1**: `beam_offset_table.parquet` (ground from `data/csf_cache/elba.laz`), per-cell
   MEDIAN of `d_mm_corr` -- the four registration terms (geoid, lateral, swath, drift)
   applied per return. q1 fixed at 0.50.
 - **gen2**: per-cell near-ground column of the vendor class-2 returns,

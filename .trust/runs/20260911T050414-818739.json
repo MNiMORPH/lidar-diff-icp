@@ -1,0 +1,107 @@
+{
+ "question": "After our full correction chain, does the gen1-to-gen2 offset still organise by FLIGHT LINE on stable ground -- DeLong's flightline-streak question, asked with millions of returns instead of 14 marks?",
+ "started": "2026-09-11T05:04:14+02:00",
+ "argv": [
+  "ground_control/dense_line_structure.py",
+  "--tile",
+  "elba_fulldensity",
+  "--out",
+  "/tmp/claude-1000/-home-awickert-projects-lidar-diff-icp/fcf38646-c462-4fe8-b23f-2d07528a329b/scratchpad/dense_line_elba.json"
+ ],
+ "seconds": 0.5,
+ "cwd": "/home/awickert/projects/lidar-diff-icp",
+ "inputs": [
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elba_fulldensity/beam_offset_table.parquet",
+   "role": "per-return gen1 CSF ground offset to the gen2 surface, with the four registration terms and point_source_id per return; supplies BOTH the raw d_mm and the corrected d_mm_corr for the SAME returns",
+   "bytes": 306565273,
+   "mtime": "2026-09-02T06:17:12",
+   "digest": "7ff14143f176"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elba_fulldensity/floodplain_mask.npy",
+   "role": "the pipeline's floodplain mask, cut by ELEVATION; stands in for DeLong's 100 m stream buffer",
+   "bytes": 355728,
+   "mtime": "2026-09-01T21:47:16",
+   "digest": "ab2e518432c7"
+  }
+ ],
+ "params": [
+  {
+   "name": "slope_max_deg",
+   "value": "3.0",
+   "src": "MINE",
+   "why": "DeLong et al. (2022) s4.4: they mask likely-real change by 'areas with slope >3 deg' before interpolating the stable residual. VERIFIED verbatim in the extracted text, not relayed. Marked MINE, not 'repo', because a published constant has no category in this harness and adopting it was my choice -- but the VALUE is checkable in the paper rather than invented. Its effect on the kept count is printed as its own mask"
+  },
+  {
+   "name": "dz_max_mm",
+   "value": "700.0",
+   "src": "MINE",
+   "why": "DeLong's companion cut, same sentence: 'DoD values >0.7 m in flat areas'. Same verification and same reasoning as slope_max_deg. Note it is applied to the RAW d_mm, so the same returns are kept for the before and after columns and the comparison is like with like"
+  },
+  {
+   "name": "floodplain",
+   "value": "'pipeline floodplain_mask.npy (elevation-cut)'",
+   "src": "MINE",
+   "why": "DeLong buffer streams by 100 m so real low-slope deposition is not absorbed into 'stable'. We substitute the pipeline's own elevation-cut floodplain mask, because flow routing is unreliable on flats. A SUBSTITUTION for their buffer, not a reproduction of it"
+  },
+  {
+   "name": "tile",
+   "value": "'elba_fulldensity'",
+   "src": "MINE",
+   "why": "the tile carrying a built beam_offset_table; chosen for availability, not by any property of its answer"
+  }
+ ],
+ "masks": [
+  {
+   "name": "in_grid",
+   "kept": 6771479,
+   "total": 6771612,
+   "frac": 0.9999803591818315,
+   "defn": "return falls inside the product grid",
+   "warn": true
+  },
+  {
+   "name": "slope_le_3deg",
+   "kept": 1562081,
+   "total": 6771612,
+   "frac": 0.2306808186883714,
+   "defn": "DeLong: local slope <= 3.0 deg",
+   "warn": false
+  },
+  {
+   "name": "dz_le_0p7m",
+   "kept": 1549197,
+   "total": 6771612,
+   "frac": 0.22877816980653942,
+   "defn": "DeLong: |raw dz| <= 700.0 mm, on top of the slope cut",
+   "warn": false
+  },
+  {
+   "name": "stable",
+   "kept": 1072025,
+   "total": 6771612,
+   "frac": 0.1583116398281532,
+   "defn": "DeLong stable ground: in grid, slope <= 3 deg, |raw dz| <= 0.7 m, and NOT floodplain (elevation-cut, standing in for their 100 m stream buffer)",
+   "warn": false
+  }
+ ],
+ "columns": {
+  "point_source_id": "gen1 flight line, unitless",
+  "n": "stable returns on that line, count",
+  "raw_mm": "mean d_mm -- gen1 CSF ground minus the gen2 surface BEFORE our corrections, mm",
+  "corr_mm": "mean d_mm_corr -- the SAME returns AFTER geoid, lateral, swath and drift, mm",
+  "swath_mm": "mean VERTICAL EFFECT of the swath transform on that line's returns, mm. NOT a per-line constant: align_swaths solves (dx, dy, dz), and the horizontal part drags each return across sloped ground, so this varies return to return (on line 136 it takes 173009 distinct values, sd 62.1 mm). Its MEAN therefore depends on which returns are selected",
+  "drift_mm": "mean of the per-swath along-track drift spline, mm",
+  "between_line_sd": "sd over the LINE MEANS, ddof=1, mm. No per-return SE is quoted: returns within a line are strongly spatially correlated, so one would understate by orders of magnitude"
+ },
+ "notes": [],
+ "headline": "1,072,025 stable returns on 4 lines; between-line sd of the line means 47.55 -> 28.80 mm after our corrections (mark-based ceiling was 56.1 mm)",
+ "unasked": [
+  "slope_max_deg",
+  "dz_max_mm",
+  "floodplain",
+  "tile"
+ ],
+ "session": ""
+}

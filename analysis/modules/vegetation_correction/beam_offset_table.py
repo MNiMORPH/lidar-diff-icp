@@ -31,7 +31,7 @@ from lidar_diff_icp import registration as reg
 
 import os, json
 TILE = sys.argv[1] if len(sys.argv) > 1 else "data/derived/elba_fulldensity"
-LAS  = sys.argv[2] if len(sys.argv) > 2 else "data/csf_cache/elba.las"
+LAS  = sys.argv[2] if len(sys.argv) > 2 else "data/csf_cache/elba.laz"
 def _grid(tile):           # (NY, NX, RES) from tile meta/corrections (cell = iy*NX+ix, C-order)
     for fn in ("meta.json", "corrections_geoid.json", "corrections.json"):
         p = f"{tile}/{fn}"

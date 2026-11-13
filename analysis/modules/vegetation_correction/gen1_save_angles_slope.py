@@ -24,7 +24,7 @@ without them is allowed and often right, but it has to be stated:
     --without all                                    run with none of the optional strata
 
     env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/modules/vegetation_correction/gen1_save_angles_slope.py \
-        [tile=elba_fulldensity] [csf=data/csf_cache/elba.las] [--without ...]
+        [tile=elba_fulldensity] [csf=data/csf_cache/elba.laz] [--without ...]
 """
 import sys, os, json, numpy as np, laspy, math
 from scipy.ndimage import distance_transform_edt
@@ -41,7 +41,7 @@ for _a in _it:
     else:
         _argv.append(_a)
 TILE = _argv[0] if len(_argv) > 0 else "elba_fulldensity"
-CSF  = _argv[1] if len(_argv) > 1 else "data/csf_cache/elba.las"
+CSF  = _argv[1] if len(_argv) > 1 else "data/csf_cache/elba.laz"
 D = f"data/derived/{TILE}"
 
 def _grid(tile):                                        # (X0,Y0,NX,NY,RES) from tile meta/corrections

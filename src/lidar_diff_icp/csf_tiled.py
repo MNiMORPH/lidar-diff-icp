@@ -24,7 +24,7 @@ matter of ``--src``/``--out``; ``--nx``/``--ny`` size the memory peak only.
 
     env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python -m lidar_diff_icp.csf_tiled
     env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python -m lidar_diff_icp.csf_tiled \
-        --src data/before/4342-28-64.laz --out data/csf_cache/4342-28-64.las --nx 2 --ny 2
+        --src data/before/4342-28-64.laz --out data/csf_cache/4342-28-64.laz --nx 2 --ny 2
 """
 import argparse
 import os
@@ -150,7 +150,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--src", default="data/before/elbaext_gen1_merged.laz")
-    ap.add_argument("--out", default="data/csf_cache/elbaext.las")
+    ap.add_argument("--out", default="data/csf_cache/elbaext.laz")
     ap.add_argument("--nx", type=int, default=3,
                     help="tile columns. 3x3 -> ~2.5M pts/tile incl. halo on elbaext. 2x2 "
                          "(~5.4M) ran to completion but PDAL CSF costs ~1 kB/point, and its "

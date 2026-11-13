@@ -14,7 +14,7 @@ elbaext is a tile directory, not a registered Site (sites.py has six; this is a 
 so its inputs are named here rather than resolved from a Site record:
     gen1   data/before/elbaext_gen1_merged.laz   (the hand-picked field subset merge)
     gen2   data/after/3dep2021_fulldensity.laz
-    CSF    data/csf_cache/elbaext.las            (reused; ~460 s per tile otherwise)
+    CSF    data/csf_cache/elbaext.laz            (reused; ~460 s per tile otherwise)
 
 Writes to data/derived/elbaext_independent and data/derived/elbaext_delong. The existing
 data/derived/elbaext is NOT touched -- it was built on pre-fork code and is the historical
@@ -42,7 +42,7 @@ _META = json.load(open("data/derived/elbaext/meta.json"))
 BOUNDS = tuple(_META["bounds"])
 GEN1 = _META["before"]
 GEN2 = _META["after"]
-CSF_CACHE = "data/csf_cache/elbaext.las"
+CSF_CACHE = "data/csf_cache/elbaext.laz"
 PROJECT = "lidar_semn2008"
 
 #: Everything both routes share. Taken from data/derived/elbaext/corrections.json so this

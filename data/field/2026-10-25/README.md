@@ -146,7 +146,7 @@ no-2008-ground-return mask (`penetration_failure` is 0 at every blank point) and
 cloud is not empty there: in the 67 x 29-cell window around the traverse the blank cells hold a
 median of 17 raw 2008 returns per 5 m cell (15 last returns), the same as the 16 (15) in the
 cells that have a value. What is empty is the CSF ground selection: the cached CSF ground
-(`data/csf_cache/4342-29-64.las`, rigidness 1, PDAL defaults otherwise) holds a median of 0
+(`data/csf_cache/4342-29-64.laz`, rigidness 1, PDAL defaults otherwise) holds a median of 0
 points in the blank cells against 11-16 in the finite ones, and the blank fraction of the tile
 climbs with the 2021 slope: 4 % at 0-5 deg, 15 % at 15-20, 30 % at 20-25, 47 % at 25-30, 64 %
 at 30-35 and 79 % above 35 deg. The cloth does not drape the bluff. What it keeps is NOT the low tail:

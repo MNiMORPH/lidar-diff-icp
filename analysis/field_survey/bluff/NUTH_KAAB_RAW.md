@@ -229,7 +229,7 @@ corrections.json: swath_frame=star zero_line=135
 grid 699x507 res 5.0 bounds [577495.0, 4882740.0, 580030.0, 4886235.0]; floodplain cells 38152
 raw cloud /home/awickert/projects/lidar-diff-icp/data/before/4342-29-64.laz: 7728747 returns, 7254886 last returns, read in 2.3 s
   last returns per swath: {135: 525918, 136: 2555164, 137: 2703087, 138: 1470717}
-csf cache /home/awickert/projects/lidar-diff-icp/data/csf_cache/4342-29-64.las: 5996805 points (all class 2), read in 0.2 s
+csf cache /home/awickert/projects/lidar-diff-icp/data/csf_cache/4342-29-64.laz: 5996805 points (all class 2), read in 0.2 s
 
 === STEP 2: Nuth & Kaab fits (slope > 15 deg, non-floodplain) ===
 primary reference: Zref(z_after_differenced, slope-normal median); sensitivity reference: Z21(z_after, horizontal median)

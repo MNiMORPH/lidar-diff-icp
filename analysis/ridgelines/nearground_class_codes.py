@@ -20,7 +20,7 @@ from scipy.ndimage import distance_transform_edt
 ap = argparse.ArgumentParser()
 ap.add_argument("--tile", default="data/derived/elba_fulldensity")
 ap.add_argument("--gen2", default="data/after/3dep2021_fulldensity.laz")
-ap.add_argument("--gen1-csf", default="data/csf_cache/elba.las")
+ap.add_argument("--gen1-csf", default="data/csf_cache/elba.laz")
 ap.add_argument("--chunk", type=int, default=3_000_000)
 A = ap.parse_args()
 

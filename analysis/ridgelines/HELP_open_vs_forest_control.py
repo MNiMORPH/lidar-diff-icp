@@ -34,15 +34,15 @@ from scipy.ndimage import distance_transform_edt
 
 _ap = argparse.ArgumentParser()
 _ap.add_argument("--tile", default="elba_fulldensity")
-_ap.add_argument("--csf",  default=None, help="CSF ground cache (default data/csf_cache/<tile>.las)")
+_ap.add_argument("--csf",  default=None, help="CSF ground cache (default data/csf_cache/<tile>.laz)")
 _ap.add_argument("--gen1", default=None, help="raw gen1 cloud for the ABOVE-GROUND FRACTION cover proxy")
 _A = _ap.parse_args()
 TILE = os.path.basename(_A.tile.rstrip("/"))
 D = f"data/derived/{TILE}/"
-_DEF_CSF = {"elba_fulldensity": "data/csf_cache/elba.las"}
+_DEF_CSF = {"elba_fulldensity": "data/csf_cache/elba.laz"}
 _DEF_G1  = {"elba_fulldensity": "data/before/4342-29-64.laz",
             "elbaext":          "data/before/elbaext_gen1_merged.laz"}
-CSF  = _A.csf  or _DEF_CSF.get(TILE, f"data/csf_cache/{TILE}.las")
+CSF  = _A.csf  or _DEF_CSF.get(TILE, f"data/csf_cache/{TILE}.laz")
 GEN1 = _A.gen1 or _DEF_G1.get(TILE)
 if GEN1 is None:
     raise SystemExit(f"no default gen1 cloud for tile {TILE}; pass --gen1")

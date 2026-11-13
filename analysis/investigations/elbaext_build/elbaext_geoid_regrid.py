@@ -36,7 +36,7 @@ G = (_a + _b * (_cx_x - _cx_e) / 1000.0 + _c * (_cy_x - _cy_e) / 1000.0, _b, _c)
 print(f"shared geoid plane (elba's, re-centred on elbaext): const {G[0]*1000:+.3f} mm, "
       f"tilt ({G[1]*1000:+.3f},{G[2]*1000:+.3f}) mm/km")
 r = difference_dem(BEFORE, AFTER, BOUNDS, res=RES, ground="slope_normal", ground_source="csf",
-    after_ground="class2", stream=False, robust_stable=True, csf_cache="data/csf_cache/elbaext.las",
+    after_ground="class2", stream=False, robust_stable=True, csf_cache="data/csf_cache/elbaext.laz",
     tie="reference", geoid_datum=G)
 O = "data/derived/elbaext/"
 np.save(O+"dod_geoid.npy", r["dod"]); np.save(O+"lod_geoid.npy", r["lod"])

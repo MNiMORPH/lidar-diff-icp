@@ -6,7 +6,7 @@
 **Runs:**
 
     env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python src/lidar_diff_icp/csf_tiled.py \
-        --src data/before/4342-28-64.laz --out data/csf_cache/4342-28-64.las --nx 2 --ny 2
+        --src data/before/4342-28-64.laz --out data/csf_cache/4342-28-64.laz --nx 2 --ny 2
     env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python analysis/crossline_fit.py
 
 **Read, not redone:** `analysis/SWATH_DEGENERACY_BREAKING.md` (which found the line and ranked
@@ -47,7 +47,7 @@ per-line `c_s` correction is not the object to build.
 
 `src/lidar_diff_icp/csf_tiled.py`, 2×2 tiles with the standard 150 m halo, calling
 `ground.classify_ground_csf` at its repo defaults (rigidness 1, everything else PDAL's own).
-Nothing retuned. **6,941,881 class-2 ground points** written to `data/csf_cache/4342-28-64.las`.
+Nothing retuned. **6,941,881 class-2 ground points** written to `data/csf_cache/4342-28-64.laz`.
 
 | psid | n_raw | vendor frac2 | vendor frac12 | n_csf | n_csf_last | csf_rate | pts/m² |
 |---|---|---|---|---|---|---|---|
@@ -71,7 +71,7 @@ returning it; `tests/test_crossline_fit.py` builds a zero-angle LAS and requires
 `core |= (gx >= cx1)`, a whole half-plane, so every tile in the last column claimed the
 `x.max()` point. Measured on the real elbaext cloud with its shipped 3×3 tiling: the old rule
 double-claims **8 of 17,354,919** points, the new rule claims every point exactly once. Real,
-and small enough that `data/csf_cache/elbaext.las` does not need rebuilding. (Separately
+and small enough that `data/csf_cache/elbaext.laz` does not need rebuilding. (Separately
 measured so the two are not confused: **7.23%** of the raw `elbaext_gen1_merged.laz` returns and
 **7.02%** of `4342-28-64.laz` are exact duplicates in `(x,y,z,gps_time,psid)` in the vendor
 delivery itself. That is upstream of everything here.)

@@ -22,7 +22,7 @@ from lidar_diff_icp.ground import classify_ground_csf, find_pdal
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--copc", default="data/after/3dep2021_fulldensity.copc.laz")
-ap.add_argument("--out", default="data/csf_cache/elba_gen2_patch.las")
+ap.add_argument("--out", default="data/csf_cache/elba_gen2_patch.laz")
 ap.add_argument("--x0", type=float, default=577592.8)
 ap.add_argument("--y0", type=float, default=4884537.6)
 ap.add_argument("--size", type=float, default=400.0)

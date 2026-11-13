@@ -6,7 +6,7 @@ Script: `analysis/field_survey/bluff/local_cloud_check_rtk.py`
 Outputs: `data/derived/4342-29-64/bluff_check/local/`
 Inputs: RTK `data/field/2026-10-25/rtk_points_all.csv` (status FIX*, group hillslope*, 39 rows);
 gen2 class-2 `data/after/valley/4342-29-64_3dep_class2.laz`; gen1 raw `data/before/4342-29-64.laz`;
-gen1 CSF ground `data/csf_cache/4342-29-64.las`; shifts `data/derived/4342-29-64/corrections.json`.
+gen1 CSF ground `data/csf_cache/4342-29-64.laz`; shifts `data/derived/4342-29-64/corrections.json`.
 
 ## Sign convention and what the product actually applied (verified in code)
 

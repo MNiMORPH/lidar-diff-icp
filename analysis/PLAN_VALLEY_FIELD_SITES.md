@@ -105,7 +105,7 @@ fetch full, write class 2, keep full only if Andy wants gen2 histograms later (D
 **Budgets on the shared laptop** (`machine-memory-gentle-processing.md`). At the time of
 writing `free -h` showed 35 of 46 GB RAM in use and swap FULL (8.0 GB used, 48 KB free):
 nothing heavy should start until that clears. Disk: 191 GB free. Per tile: gen1 22 MB, gen2
-class-2 0.25 GB (full 0.8), CSF cache 0.21-0.25 GB (`data/csf_cache/whitewater.las` 211 MB),
+class-2 0.25 GB (full 0.8), CSF cache 0.21-0.25 GB (`data/csf_cache/whitewater.laz` 211 MB),
 derived products 0.37 GB with the beam table (`data/derived/whitewater`) and 0.67 GB at
 elbaext of which `beam_offset_table.parquet` is 541 MB. Whole valley, 71 tiles, keeping
 class-2 gen2 and the beam tables: ~1.6 + 18 + 16 + 26 = ~60 GB; with full-density gen2 kept,
@@ -154,7 +154,7 @@ rebuild (analysis scripts only, not in the pipeline).
 **Gentle scheduling.** One tile at a time, no overlapping point-cloud jobs; `free -h` before
 each tile, stop if swap fills; an overnight serial loop with a per-tile log that skips
 tiles whose products exist (the workflow's STALE/OK state); CSF to
-`data/csf_cache/<tile>.las` so a crash resumes without re-classifying; delete the EPT node
+`data/csf_cache/<tile>.laz` so a crash resumes without re-classifying; delete the EPT node
 cache per tile once the LAS is written; the 29 public-land tiles first (section 6).
 
 ### 3a. D1 implementation: the Clubb floodplain on the official DEM (set up 2026-10-20)

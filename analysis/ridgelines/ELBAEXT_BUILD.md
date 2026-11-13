@@ -70,7 +70,7 @@ tile (7.7M pts) fit; elbaext did not. No cache was written on failure (no corrup
 spatially local (cloth relaxes on a 1 m grid, edge reach a few cells), so the gen1 cloud
 was classified in a **2×2 grid (~4.3–5.0M pts/tile) with a 150 m overlap halo**, keeping
 each tile's CORE (verified to partition every point exactly once) and concatenating the
-class-2 ground into `data/csf_cache/elbaext.las`. Peak RAM stayed ~14 GB free. Because
+class-2 ground into `data/csf_cache/elbaext.laz`. Peak RAM stayed ~14 GB free. Because
 `difference_dem` loads an existing `csf_cache` and SKIPS CSF, the subsequent regrid runs
 the identical fulldensity recipe with no library change.
 
@@ -84,7 +84,7 @@ the identical fulldensity recipe with no library change.
 difference_dem(BEFORE, AFTER, BOUNDS,
     res=5.0, ground="slope_normal", ground_source="csf",
     after_ground="class2", stream=True, robust_stable=True,
-    csf_cache="data/csf_cache/elbaext.las")
+    csf_cache="data/csf_cache/elbaext.laz")
 ```
 
 Defaults in effect (unchanged from fulldensity): `ground_q=0.50`, `along_track_drift=True`,
@@ -159,4 +159,4 @@ plus `stable.npy` and `meta.json`.)
   `4342-28-63.laz` — the 5 newly fetched gen1 tiles.
 - `data/after/elbaext_3dep_fulldensity.laz` — full-density 3DEP pull (415.08M pts).
 - `data/after/elbaext_3dep_fd_class2.laz` — gen2 class-2 ground (131.99M pts).
-- `data/csf_cache/elbaext.las` — tiled-CSF gen1 ground cache (15.61M class-2 pts).
+- `data/csf_cache/elbaext.laz` — tiled-CSF gen1 ground cache (15.61M class-2 pts).

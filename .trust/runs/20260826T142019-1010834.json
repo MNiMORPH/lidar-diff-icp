@@ -22,7 +22,7 @@
    "digest": "d014cef67453"
   },
   {
-   "path": "/home/awickert/projects/lidar-diff-icp/data/csf_cache/elba_gen2_patch.las",
+   "path": "/home/awickert/projects/lidar-diff-icp/data/csf_cache/elba_gen2_patch.laz",
    "role": "gen2 returns classified by OUR CSF, same parameters as gen1",
    "bytes": 54491307,
    "mtime": "2026-08-26T03:06:08",

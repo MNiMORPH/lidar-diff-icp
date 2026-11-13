@@ -19,7 +19,7 @@ ANSWERS := analysis/answers
 $(ANSWERS)/gen2_csf_vs_vendor.md: analysis/ridgelines/gen2_csf_compare.py \
                                   $(TILE)/z_after.npy \
                                   $(TILE)/canopy_cover_pfs.npy \
-                                  data/csf_cache/elba_gen2_patch.las
+                                  data/csf_cache/elba_gen2_patch.laz
 	@mkdir -p $(@D)
 	env -u PROJ_DATA -u GDAL_DATA $(PY) $< --tile $(TILE) | tee $@.stdout
 	@echo "stdout captured to $@.stdout -- paste it into the Measurement section of $@"

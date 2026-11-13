@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CSF CLOTH ground returns (data/csf_cache/elba.las), pooled into NEAR-NADIR (|angle|<=2 deg)
+"""CSF CLOTH ground returns (data/csf_cache/elba.laz), pooled into NEAR-NADIR (|angle|<=2 deg)
 and OBLIQUE (|angle|>=8 deg). In CORE forest, show histograms of forest-floor elevation
 (slope-normal d vs the gen2 bare-earth plane) for the two return populations.
 
@@ -12,7 +12,7 @@ from scipy.ndimage import distance_transform_edt
 import matplotlib; matplotlib.use("Agg"); import matplotlib.pyplot as plt
 
 NY,NX=700,508; X0,Y0=577492.8,4882737.6; RES=5.0
-CSF="data/csf_cache/elba.las"; CHUNK=5_000_000
+CSF="data/csf_cache/elba.laz"; CHUNK=5_000_000
 Zg=np.load("data/derived/elba_fulldensity/z_after.npy"); Zf=Zg.copy(); m=~np.isfinite(Zf)
 if m.any(): Zf=Zf[tuple(distance_transform_edt(m,return_distances=False,return_indices=True))]
 gy,gx=np.gradient(Zf,RES); cosd=1.0/np.sqrt(1.0+gx*gx+gy*gy)

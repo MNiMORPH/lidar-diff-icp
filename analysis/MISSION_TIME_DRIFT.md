@@ -124,7 +124,7 @@ fit. Carlton is worth revisiting on its own; it is not enough to carry the other
 `analysis/mission_time_drift_fit.py` fits **F(t) = a + b·t** per axis to the saved
 per-swath constants. It fits to the saved constants rather than re-running
 `align_swaths`, because five of the seven sites were aligned on a CSF-classified cloud
-whose cache (`data/csf_cache/<site>.las`) no longer exists, and `coregister_swaths`
+whose cache (`data/csf_cache/<site>.laz`) no longer exists, and `coregister_swaths`
 excludes classes (5, 6, 9) which CSF overwrites. A re-run on the vendor classification
 would be a different method, and the two models would no longer be compared the same way.
 Fitting to the constants keeps the method identical and makes the residual directly the

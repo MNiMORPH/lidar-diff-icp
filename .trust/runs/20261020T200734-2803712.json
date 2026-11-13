@@ -1,0 +1,122 @@
+{
+ "question": "Where on tile 4342-29-59 does the gen1 return shape carry the Elba-fitted fingerprint of the standing herbaceous sward?",
+ "started": "2026-10-20T20:07:32+02:00",
+ "argv": [
+  "analysis/rcg/fingerprint_apply.py",
+  "--tile",
+  "data/derived/4342-29-59"
+ ],
+ "seconds": 2.4,
+ "cwd": "/home/awickert/projects/lidar-diff-icp",
+ "inputs": [
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/rcg/fingerprint_lda.json",
+   "role": "the fitted LDA: feature names, standardisation mean/std, coef, intercept; fitted by fingerprint_fit.py",
+   "bytes": 4435,
+   "mtime": "2026-10-20T09:46:36",
+   "digest": "2e76e0378862"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/4342-29-59/corrections.json",
+   "role": "grid geometry: bounds and res_m",
+   "bytes": 2838,
+   "mtime": "2026-10-20T20:06:30",
+   "digest": "dd15181bcad5"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/4342-29-59/floodplain_mask_clubb.npy",
+   "role": "Clubb (lsdtt-valley-metrics) floodplain mask, USED AS THE DOMAIN because it is present",
+   "bytes": 353316,
+   "mtime": "2026-10-20T20:07:31",
+   "digest": "c8556677fb3d"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/4342-29-59/slope.npy",
+   "role": "slope, degrees; domain keeps <= slope-max",
+   "bytes": 2825632,
+   "mtime": "2026-10-20T20:06:31",
+   "digest": "fef48404a028"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/4342-29-59/beam_offset_table.parquet",
+   "role": "gen1 CSF ground returns: cell, d_mm_corr (mm above the slope-normal gen2 surface, corrected), in_grid",
+   "bytes": 243776147,
+   "mtime": "2026-10-20T20:06:49",
+   "digest": "5464703ce0d8"
+  }
+ ],
+ "params": [
+  {
+   "name": "slope_max_deg",
+   "value": "2.0",
+   "src": "repo",
+   "why": ""
+  },
+  {
+   "name": "min_pooled_returns",
+   "value": "30",
+   "src": "repo",
+   "why": ""
+  },
+  {
+   "name": "require_own_return",
+   "value": "True",
+   "src": "repo",
+   "why": ""
+  },
+  {
+   "name": "bins",
+   "value": "'20 mm over [-1500, 1500] mm, 150 bins; 3x3 pooled'",
+   "src": "repo",
+   "why": ""
+  },
+  {
+   "name": "features",
+   "value": "['lo_w', 'hi_w', 'mode_med', 'bowley', 'peak', 'tail_L', 'tail_mass', 'low_mass']",
+   "src": "repo",
+   "why": ""
+  },
+  {
+   "name": "model_training",
+   "value": "'data/derived/elbaext_delong_star_nosurf; n 12135; AUC CV 0.708, resub 0.810; git a9c80110beae'",
+   "src": "repo",
+   "why": ""
+  }
+ ],
+ "masks": [
+  {
+   "name": "floodplain",
+   "kept": 26916,
+   "total": 353188,
+   "frac": 0.07620870471250439,
+   "defn": "floodplain_mask_clubb.npy == True",
+   "warn": false
+  },
+  {
+   "name": "domain",
+   "kept": 22518,
+   "total": 353188,
+   "frac": 0.06375641301516473,
+   "defn": "floodplain & slope <= 2 deg (return_shape.py's flat, minus its finite-DoD and gen2-open conditions, which need files this tile need not have)",
+   "warn": false
+  }
+ ],
+ "columns": {
+  "lo_w": "p50 - p10 of the pooled gen1 return heights, mm (lower width)",
+  "hi_w": "p90 - p50, mm (upper width)",
+  "mode_med": "half-sample mode (hsm_from_hist, middle-of-ties) - p50, mm",
+  "bowley": "(p75 + p25 - 2 p50) / max(p75 - p25, 20 mm) (Bowley skew, dimensionless)",
+  "peak": "share of pooled returns within +/-50 mm of the mode",
+  "tail_L": "mean of (h - mode - 100 mm) over returns above mode + 100 mm (e-folding length of the upper tail), mm",
+  "tail_mass": "share of pooled returns above mode + 100 mm",
+  "low_mass": "share of pooled returns below mode - 100 mm",
+  "score": "LDA decision function on the standardised shape features, dimensionless; > 0 leans towards the imagery class",
+  "p": "1 / (1 + exp(-score)), the LDA's class-1 posterior under its fitted priors (dimensionless)",
+  "what": "row label of the summary quantity",
+  "value": "the summary quantity, count or dimensionless score as the row label says"
+ },
+ "notes": [],
+ "headline": "22097 cells scored; 108 with p > 0.5",
+ "unasked": [],
+ "session": ""
+}

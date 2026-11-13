@@ -4,7 +4,7 @@ on evidence, with the per-swath constants the pipeline uses now.
 
 The comparison is deliberately made against the SAVED per-swath constants themselves,
 not against a re-run of ``align_swaths``. Five of the seven sites were aligned on a
-CSF-classified cloud whose cache (``data/csf_cache/<site>.las``) no longer exists, and
+CSF-classified cloud whose cache (``data/csf_cache/<site>.laz``) no longer exists, and
 ``coregister_swaths`` excludes classes (5, 6, 9) -- which CSF overwrites. Re-running on
 the vendor classification would produce different numbers, so the two models would no
 longer be compared the same way. Fitting F(t) TO the saved constants keeps the method

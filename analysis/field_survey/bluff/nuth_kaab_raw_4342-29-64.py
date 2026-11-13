@@ -38,7 +38,7 @@ DER = f"{ROOT}/data/derived/{TILE}"
 OUT = f"{DER}/bluff_check"
 REPORT = f"{ROOT}/analysis/field_survey/bluff/NUTH_KAAB_RAW.md"
 RAW = f"{ROOT}/data/before/{TILE}.laz"
-CSF = f"{ROOT}/data/csf_cache/{TILE}.las"
+CSF = f"{ROOT}/data/csf_cache/{TILE}.laz"
 
 SLOPE_MIN_DEG = 15.0          # Andy's band edge (brief); his to change
 NBINS = 36                    # brief

@@ -289,7 +289,7 @@ Andy's instruction: run the chain on Carlton, EXCLUDING the forest-elevation adj
 which was fitted to gen2 undergrowth at Elba and is phenology-specific. So `q2_fit`,
 `dod_cover`, `lod_cover` and `cover_calibration` were out of scope, and with them
 `gen1_angles` and `beam_table`, which in this graph feed only those -- and which could not
-have run regardless, since `data/csf_cache/carlton.las` does not exist.
+have run regardless, since `data/csf_cache/carlton.laz` does not exist.
 
 **Five steps, all succeeded, every script unmodified on a tile it had never seen:**
 

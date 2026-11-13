@@ -11,7 +11,7 @@ import numpy as np, laspy
 from scipy.ndimage import distance_transform_edt
 
 NY,NX=700,508; X0,Y0=577492.8,4882737.6; RES=5.0
-CSF="data/csf_cache/elba.las"; GEN1="data/before/4342-29-64.laz"; GEN2="data/after/3dep2021_fulldensity.laz"; CHUNK=5_000_000
+CSF="data/csf_cache/elba.laz"; GEN1="data/before/4342-29-64.laz"; GEN2="data/after/3dep2021_fulldensity.laz"; CHUNK=5_000_000
 Zg=np.load("data/derived/elba_fulldensity/z_after.npy"); Zf=Zg.copy(); m=~np.isfinite(Zf)
 if m.any(): Zf=Zf[tuple(distance_transform_edt(m,return_distances=False,return_indices=True))]
 gy,gx=np.gradient(Zf,RES); cosd=1.0/np.sqrt(1.0+gx*gx+gy*gy)

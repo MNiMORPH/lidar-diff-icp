@@ -1,0 +1,76 @@
+{
+ "question": "Does the bridge (z_delivered - z_ours) organise by FLIGHT LINE, or scatter within a line as much as between lines?",
+ "started": "2026-09-11T04:40:13+02:00",
+ "argv": [
+  "ground_control/bridge_by_line.py",
+  "--bridge",
+  "/tmp/claude-1000/-home-awickert-projects-lidar-diff-icp/fcf38646-c462-4fe8-b23f-2d07528a329b/scratchpad/cmp_csf.json",
+  "--assign",
+  "ground_control/products/gen1_datum_by_returns_elba.json",
+  "--out",
+  "/tmp/claude-1000/-home-awickert-projects-lidar-diff-icp/fcf38646-c462-4fe8-b23f-2d07528a329b/scratchpad/bridge_by_line_peek.json"
+ ],
+ "seconds": 6.5,
+ "cwd": "/home/awickert/projects/lidar-diff-icp",
+ "inputs": [
+  {
+   "path": "/tmp/claude-1000/-home-awickert-projects-lidar-diff-icp/fcf38646-c462-4fe8-b23f-2d07528a329b/scratchpad/cmp_csf.json",
+   "role": "bridge per mark; supplies bridge_mm, the quantity being grouped",
+   "bytes": 32280,
+   "mtime": "2026-09-11T01:51:23",
+   "digest": "d0cc5dfc3a2a"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/ground_control/products/gen1_datum_by_returns_elba.json",
+   "role": "the DOMINANT flight line per mark, from an earlier assign_line_from_returns run; supplies the GROUPING only, never a value",
+   "bytes": 1647,
+   "mtime": "2026-08-31T16:30:49",
+   "digest": "46aabb54a9c6"
+  }
+ ],
+ "params": [
+  {
+   "name": "population",
+   "value": "'marks that already carry a dominant line'",
+   "src": "MINE",
+   "why": "NOT a random sample and NOT chosen by value: it is whichever marks an earlier analysis assigned. The bridge records carry only the line SET in the window (most marks see two lines), which cannot group. Stated because it bounds what this can conclude, and it excludes every unassigned mark"
+  },
+  {
+   "name": "grouping",
+   "value": "'dominant line, as assigned'",
+   "src": "repo",
+   "why": "taken as given from the assignment run; this script does no assignment"
+  },
+  {
+   "name": "outlier_rule",
+   "value": "'NONE APPLIED'",
+   "src": "andy",
+   "why": "no mark cut. Every group size and per-line mean is printed so a result driven by one group or one mark is visible without cutting it"
+  }
+ ],
+ "masks": [
+  {
+   "name": "assigned_and_bridged",
+   "kept": 14,
+   "total": 88,
+   "frac": 0.1590909090909091,
+   "defn": "marks carrying BOTH a dominant line and a bridge. 74 bridged marks have no assignment and are NOT counted here; 0 assigned marks have no bridge",
+   "warn": false
+  }
+ ],
+ "columns": {
+  "line": "gen1 point_source_id, the flight line, unitless",
+  "n": "marks on that line",
+  "mean_mm": "mean bridge on that line, mm",
+  "sd_mm": "sd of bridge WITHIN that line, ddof=1, mm; nan for a singleton",
+  "F": "one-way ANOVA MS_between / MS_within of bridge_mm by line. Large F = lines differ from each other by more than marks differ within a line",
+  "tightest_group_perm_p": "P that ANY line looks as internally consistent as the tightest one does, under permutation of the line labels across the same group sizes. Pays for the fact that the tightest group was picked after looking",
+  "ICC1": "(MS_b - MS_w) / (MS_b + (k-1) MS_w), k = mean group size. The fraction of bridge variance that is BETWEEN lines. Can go negative, which means no between-line structure at all; reported as computed"
+ },
+ "notes": [],
+ "headline": "n=14 marks on 5 lines; between-line sd 37.8 vs within-line 99.2 mm; F(4,9)=0.308 p=0.8656; ICC(1)=-0.328",
+ "unasked": [
+  "population"
+ ],
+ "session": ""
+}

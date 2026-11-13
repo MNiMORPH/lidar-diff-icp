@@ -297,11 +297,11 @@ def fit_pair(g, *, controls=False):
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--cross-las", default="data/csf_cache/4342-28-64.las",
+    ap.add_argument("--cross-las", default="data/csf_cache/4342-28-64.laz",
                     help="CSF ground of the cross-line tile (src/lidar_diff_icp/csf_tiled.py)")
     ap.add_argument("--cross-raw", default="data/before/4342-28-64.laz",
                     help="the raw tile, read only for the per-line class census of Sec 1")
-    ap.add_argument("--valid-las", default="data/csf_cache/elbaext.las",
+    ap.add_argument("--valid-las", default="data/csf_cache/elbaext.laz",
                     help="CSF ground of a tile that ALSO has a beam_offset_table, so the two "
                          "estimators can be compared on the same N-S pairs")
     ap.add_argument("--valid-tile", default="data/derived/elbaext")

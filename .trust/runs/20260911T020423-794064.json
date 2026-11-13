@@ -1,0 +1,105 @@
+{
+ "question": "Do the 2008 control marks prefer the VENDOR's delivered ground surface, our CSF reconstruction, or our class-2 reconstruction -- and does the answer depend on land cover?",
+ "started": "2026-09-11T02:04:23+02:00",
+ "argv": [
+  "ground_control/compare_ground_sources.py",
+  "--csf",
+  "/tmp/claude-1000/-home-awickert-projects-lidar-diff-icp/fcf38646-c462-4fe8-b23f-2d07528a329b/scratchpad/cmp_csf.json",
+  "--class2",
+  "/tmp/claude-1000/-home-awickert-projects-lidar-diff-icp/fcf38646-c462-4fe8-b23f-2d07528a329b/scratchpad/cmp_class2.json",
+  "--project",
+  "lidar_semn2008",
+  "--out",
+  "/tmp/claude-1000/-home-awickert-projects-lidar-diff-icp/fcf38646-c462-4fe8-b23f-2d07528a329b/scratchpad/cmp_three_surfaces.json"
+ ],
+ "seconds": 0.0,
+ "cwd": "/home/awickert/projects/lidar-diff-icp",
+ "inputs": [
+  {
+   "path": "/tmp/claude-1000/-home-awickert-projects-lidar-diff-icp/fcf38646-c462-4fe8-b23f-2d07528a329b/scratchpad/cmp_csf.json",
+   "role": "bridge arm with ground_source=csf; supplies bridge_mm per mark",
+   "bytes": 32280,
+   "mtime": "2026-09-11T01:51:23",
+   "digest": "d0cc5dfc3a2a"
+  },
+  {
+   "path": "/tmp/claude-1000/-home-awickert-projects-lidar-diff-icp/fcf38646-c462-4fe8-b23f-2d07528a329b/scratchpad/cmp_class2.json",
+   "role": "bridge arm with ground_source=class2; IDENTICAL in every other parameter, so the arms differ only in ground selection",
+   "bytes": 32039,
+   "mtime": "2026-09-11T02:01:20",
+   "digest": "e8aec9f29b52"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/src/lidar_diff_icp/groundtruth/data/mn_dnr_2008_control_semn.csv",
+   "role": "gen1's own 2008 control; dnr_error_m is the REPORT's own Control Z - Surface Z against the DELIVERED surface",
+   "bytes": 313278,
+   "mtime": "2026-08-31T16:30:49",
+   "digest": "9792fcd677e7"
+  }
+ ],
+ "params": [
+  {
+   "name": "ground_source",
+   "value": "'csf vs class2'",
+   "src": "andy",
+   "why": "THE variable under test. Andy: 'CSF might be better than the vendor's surface.' Every other parameter is held identical"
+  },
+  {
+   "name": "covers",
+   "value": "('L1O', 'L2T', 'L3B', 'L4F', 'L5U')",
+   "src": "MINE",
+   "why": "widened from the standing open-ground-only datum rule SO THAT the canopy case is visible -- a vendor classifier's hard cases are vegetated, and an L1O-only comparison cannot see them. A GROUPING here, not a filter: every mark in both arms is reported"
+  },
+  {
+   "name": "csf_half_width_m",
+   "value": "300.0",
+   "src": "MINE",
+   "why": "CSF window half-width; wide enough that the cloth is not dominated by a crop edge. Crops the class2 arm IDENTICALLY, so the windows match"
+  },
+  {
+   "name": "radii_m",
+   "value": "(10.0, 12.5, 15.0, 20.0)",
+   "src": "MINE",
+   "why": "order-2 fit radius, swept not chosen; a 5 m grid needs 6+ cells to fill one, which sets the floor. Identical in both arms"
+  },
+  {
+   "name": "lateral_nuth_kaab",
+   "value": "'NOT applied'",
+   "src": "MINE",
+   "why": "gen1->gen2 registration, needing gen2 which is not on disk away from Elba; measured effect on a tie 10.0 mm. It applies EQUALLY to both arms so it CANCELS in the csf-vs-class2 contrast, and remains in each arm's offset against the marks"
+  },
+  {
+   "name": "outlier_rule",
+   "value": "'NONE APPLIED'",
+   "src": "andy",
+   "why": "no mark is cut. Skew and the extremes are printed so the decision of whether to cut, and where, stays Andy's"
+  }
+ ],
+ "masks": [
+  {
+   "name": "paired",
+   "kept": 88,
+   "total": 88,
+   "frac": 1.0,
+   "defn": "marks present in BOTH arms AND carrying the report's own dnr_error_m. 0 absent from the class2 arm, 0 carry no dnr_error_m; both counts are reported, never silently dropped",
+   "warn": true
+  }
+ ],
+ "columns": {
+  "offset_vendor_mm": "surveyed - z_delivered = dnr_error_m*1000; the DNR's own number against the DELIVERED class-2 surface. Positive = the surface reads LOW at the mark",
+  "offset_csf_mm": "surveyed - z_ours(csf) = offset_vendor + bridge_csf, mm",
+  "offset_class2_mm": "surveyed - z_ours(class2) = offset_vendor + bridge_class2, mm",
+  "z_class2_minus_z_csf_mm": "bridge_csf - bridge_class2, mm. The ground-source contrast with nothing else in it. Positive = the class-2 surface sits ABOVE the CSF surface",
+  "sd": "sample standard deviation over marks, ddof=1, mm -- the NON-absorbable part. A constant mean offset is a datum constant and is removed downstream; scatter is not",
+  "nmad": "1.4826 * median absolute deviation, mm; shown beside sd so a difference driven by one mark is visible without cutting it"
+ },
+ "notes": [],
+ "headline": "n=88 paired marks; sd of the offset about its own mean: vendor 100.0, csf 11946.2, class2 11952.7 mm; ground-source contrast (z_class2-z_csf) +1.6 +/- 43.7 mm",
+ "unasked": [
+  "covers",
+  "csf_half_width_m",
+  "radii_m",
+  "lateral_nuth_kaab"
+ ],
+ "session": ""
+}

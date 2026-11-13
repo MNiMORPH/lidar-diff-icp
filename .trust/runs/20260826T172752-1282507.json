@@ -15,14 +15,14 @@
    "digest": "24646accb38c"
   },
   {
-   "path": "/home/awickert/projects/lidar-diff-icp/data/csf_cache/4342-28-64.las",
+   "path": "/home/awickert/projects/lidar-diff-icp/data/csf_cache/4342-28-64.laz",
    "role": "our CSF ground (class 2) for that tile, from analysis/slope_bias/csf_tiled.py at classify_ground_csf defaults",
    "bytes": 249908091,
    "mtime": "2026-08-26T17:14:01",
    "digest": "c3adfbb20eb2"
   },
   {
-   "path": "/home/awickert/projects/lidar-diff-icp/data/csf_cache/elbaext.las",
+   "path": "/home/awickert/projects/lidar-diff-icp/data/csf_cache/elbaext.laz",
    "role": "our CSF ground for elbaext -- the same cache the elbaext pipeline product was built from",
    "bytes": 560937651,
    "mtime": "2026-08-25T15:29:33",

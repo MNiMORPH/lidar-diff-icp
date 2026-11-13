@@ -20,7 +20,7 @@ from lidar_diff_icp.refcells import reference_cells
 ap = argparse.ArgumentParser()
 ap.add_argument("--tile", default="data/derived/elba_fulldensity")
 ap.add_argument("--raw", default="data/before/4342-29-64.laz")
-ap.add_argument("--csf", default="data/csf_cache/elba.las")
+ap.add_argument("--csf", default="data/csf_cache/elba.laz")
 ap.add_argument("--min-pts", type=int, default=3)
 A = ap.parse_args()
 

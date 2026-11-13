@@ -59,8 +59,8 @@ from lidar_diff_icp import coreg, io
 from lidar_diff_icp.swathdiff import _median_grid
 from trust.provenance import Run
 
-TILES = {"elba_fulldensity": "data/csf_cache/elba.las",
-         "elbaext": "data/csf_cache/elbaext.las"}
+TILES = {"elba_fulldensity": "data/csf_cache/elba.laz",
+         "elbaext": "data/csf_cache/elbaext.laz"}
 JSON_PRECISION_M = 5e-5      # corrections.json writes the shifts rounded to 4 decimals (m)
 REPRO_TOL_M = 1e-3           # see R.param("reproduction tolerance") -- declared, not silent
 

@@ -21,7 +21,7 @@ PER TILE, resumable (every stage is skipped when its product exists):
             the same arithmetic as analysis/ept_coverage_check.py, recorded never judged.
   5. base   pipeline.difference_dem with the Elba SHARED kwargs, route delong, swath_frame
             star, correction_surface False (= data/derived/elbaext_delong_star_nosurf),
-            CSF cached at data/csf_cache/<tile>.las; detect_change_standard; every
+            CSF cached at data/csf_cache/<tile>.laz; detect_change_standard; every
             product saved as run_all_sites saves it. VALLEY TOP per tile: the 95th
             percentile of the official DEM over the Clubb corridor floodplain cells WITHIN
             500 m OF THE WHITEWATER CENTRELINES inside the tile (MINE, D1 detail; Elba's
@@ -78,7 +78,7 @@ ap.add_argument("--stop-after", default=None, choices=["gen1", "gen2", "base", "
 ap.add_argument("--workers", type=int, default=8, help="3DEP download workers (16 is the script default; 8 is gentler on the shared laptop)")
 A = ap.parse_args()
 T = A.tile; D = f"data/derived/{T}"; os.makedirs(D, exist_ok=True); os.makedirs("data/after/valley", exist_ok=True)
-GEN1 = f"data/before/{T}.laz"; FULL = f"data/after/valley/{T}_3dep_full.laz"; CLS2 = f"data/after/valley/{T}_3dep_class2.laz"; CSF = f"data/csf_cache/{T}.las"
+GEN1 = f"data/before/{T}.laz"; FULL = f"data/after/valley/{T}_3dep_full.laz"; CLS2 = f"data/after/valley/{T}_3dep_class2.laz"; CSF = f"data/csf_cache/{T}.laz"
 LOG = f"{D}/valley_run.json"; log = json.load(open(LOG)) if os.path.exists(LOG) else {"tile": T, "stages": {}}
 def stamp(stage, t0, **kw):
     log["stages"][stage] = dict(seconds=round(time.time() - t0, 1), when=time.strftime("%Y-%m-%dT%H:%M:%S"), **kw); json.dump(log, open(LOG, "w"), indent=1)

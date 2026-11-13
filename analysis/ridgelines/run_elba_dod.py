@@ -24,7 +24,7 @@ r = difference_dem(
     "data/before/4342-29-64.laz", "data/after/3dep2021_fd_class2.laz",
     (577492.8, 4882737.6, 580032.8, 4886237.6),
     res=5.0, ground="slope_normal", ground_source="csf", after_ground="class2",
-    stream=False, robust_stable=True, csf_cache="data/csf_cache/elba.las",
+    stream=False, robust_stable=True, csf_cache="data/csf_cache/elba.laz",
     tie="reference",              # geoid-difference datum after the lateral shift
     geoid_datum=None,             # AUTO-COMPUTE from the PROJ geoid grids (no hardcode)
     along_track_drift=True,

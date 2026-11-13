@@ -3,7 +3,7 @@
 Run 2026-08-26, elba (`data/derived/elba_fulldensity`).
 
 ## Inputs
-- **gen1**: `beam_offset_table.parquet` (ground from `data/csf_cache/elba.las`, CSF
+- **gen1**: `beam_offset_table.parquet` (ground from `data/csf_cache/elba.laz`, CSF
   rigidness 1 / threshold 1.5), per-cell **median** of `d_mm_corr` — i.e. the four
   registration terms (geoid, lateral, swath, drift) applied per return. q1 fixed at 0.50.
 - **gen2**: per-cell near-ground column of the **vendor class-2** returns,

@@ -10,7 +10,7 @@
 Both solved on the SAME edge set, so the only difference is the weighting.
 
     env -u PROJ_DATA -u GDAL_DATA ./lidar-icp/bin/python \
-        analysis/swath_network_weighting.py --csf data/csf_cache/battlecreek.las
+        analysis/swath_network_weighting.py --csf data/csf_cache/battlecreek.laz
 """
 import argparse
 

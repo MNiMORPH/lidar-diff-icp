@@ -17,7 +17,7 @@ from trust.provenance import Run
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--tile", default="data/derived/elba_fulldensity")
-ap.add_argument("--csf", default="data/csf_cache/elba_gen2_patch.las")
+ap.add_argument("--csf", default="data/csf_cache/elba_gen2_patch.laz")
 ap.add_argument("--min-pts", type=int, default=5)
 A = ap.parse_args()
 

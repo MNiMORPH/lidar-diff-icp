@@ -264,8 +264,8 @@ a different product.
 already has is a CSF ground cache:
 
 ```
-data/csf_cache/4342-28-64.las            pts=      6941881 fmt=7 x[577455,579992] y[4886209,4889709]
-data/csf_cache/elbaext.las               pts=     15581591 fmt=7 x[575450,580043] y[4882050,4886400]
+data/csf_cache/4342-28-64.laz            pts=      6941881 fmt=7 x[577455,579992] y[4886209,4889709]
+data/csf_cache/elbaext.laz               pts=     15581591 fmt=7 x[575450,580043] y[4882050,4886400]
 ```
 
 and `4342-28-64.las` is class-2-ground-only with the cross line intact — counted directly:

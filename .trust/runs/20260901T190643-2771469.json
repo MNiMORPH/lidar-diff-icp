@@ -15,7 +15,7 @@
    "digest": "4993c49a3fd4"
   },
   {
-   "path": "/home/awickert/projects/lidar-diff-icp/data/csf_cache/elba.las",
+   "path": "/home/awickert/projects/lidar-diff-icp/data/csf_cache/elba.laz",
    "role": "gen1 2008 cloud with PDAL CSF ground classification, cached by pipeline.difference_dem (ground_source='csf'), raw coordinates",
    "bytes": 243778407,
    "mtime": "2026-08-21T11:50:43",
@@ -29,7 +29,7 @@
    "digest": "c90d89d5655c"
   },
   {
-   "path": "/home/awickert/projects/lidar-diff-icp/data/csf_cache/elbaext.las",
+   "path": "/home/awickert/projects/lidar-diff-icp/data/csf_cache/elbaext.laz",
    "role": "gen1 2008 cloud with PDAL CSF ground classification, cached by pipeline.difference_dem (ground_source='csf'), raw coordinates",
    "bytes": 560937651,
    "mtime": "2026-08-25T15:29:33",

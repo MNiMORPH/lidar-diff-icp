@@ -20,7 +20,7 @@ from lidar_diff_icp.ground import classify_ground_csf
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--src", default="data/before/4342-29-64.laz")
-ap.add_argument("--out", default="data/csf_cache/elba_gen1_pdaldefaults.las")
+ap.add_argument("--out", default="data/csf_cache/elba_gen1_pdaldefaults.laz")
 ap.add_argument("--nx", type=int, default=2)
 ap.add_argument("--ny", type=int, default=2)
 ap.add_argument("--overlap", type=float, default=150.0)

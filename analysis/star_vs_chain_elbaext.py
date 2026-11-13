@@ -9,7 +9,7 @@ whole point, and the thing this session kept getting wrong by comparing numbers 
 different estimators on different populations.
 
     ./lidar-icp/bin/python analysis/star_vs_chain_elbaext.py \
-        --tile elbaext_delong --csf data/csf_cache/elbaext.las --valley-top-m 230.0
+        --tile elbaext_delong --csf data/csf_cache/elbaext.laz --valley-top-m 230.0
 """
 import argparse
 import json

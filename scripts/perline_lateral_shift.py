@@ -33,7 +33,7 @@ sees them.
 The script REPORTS. It changes no product and no pipeline code.
 
     ./lidar-icp/bin/python scripts/perline_lateral_shift.py --tile elbaext_delong \
-        --csf data/csf_cache/elbaext.las
+        --csf data/csf_cache/elbaext.laz
 """
 import argparse
 import json

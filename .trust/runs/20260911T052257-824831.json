@@ -1,0 +1,107 @@
+{
+ "question": "Out of sample, which removes more of the SPATIAL stable-ground residual: our per-swath along-track drift spline, or DeLong's IDW correction surface?",
+ "started": "2026-09-11T05:22:32+02:00",
+ "argv": [
+  "ground_control/drift_vs_correction_surface.py",
+  "--tile",
+  "elba_fulldensity",
+  "--out",
+  "/tmp/claude-1000/-home-awickert-projects-lidar-diff-icp/fcf38646-c462-4fe8-b23f-2d07528a329b/scratchpad/drift_vs_cs.json"
+ ],
+ "seconds": 25.5,
+ "cwd": "/home/awickert/projects/lidar-diff-icp",
+ "inputs": [
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elba_fulldensity/beam_offset_table.parquet",
+   "role": "per-return offsets with every correction term separable, so any combination of routes can be rebuilt from the SAME returns",
+   "bytes": 306565273,
+   "mtime": "2026-09-02T06:17:12",
+   "digest": "7ff14143f176"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elba_fulldensity/floodplain_mask.npy",
+   "role": "elevation-cut floodplain mask; stands in for DeLong's 100 m stream buffer",
+   "bytes": 355728,
+   "mtime": "2026-09-01T21:47:16",
+   "digest": "ab2e518432c7"
+  },
+  {
+   "path": "/home/awickert/projects/lidar-diff-icp/data/derived/elba_fulldensity/corrections.json",
+   "role": "grid geometry (res, origin) for the correction surface",
+   "bytes": 18784,
+   "mtime": "2026-09-01T19:50:04",
+   "digest": "12d30e8143bf"
+  }
+ ],
+ "params": [
+  {
+   "name": "block_m",
+   "value": "(100.0, 200.0, 400.0, 800.0, 1600.0)",
+   "src": "MINE",
+   "why": "SWEPT, never chosen: held-out blocks smaller than the correlation length let an IDW score its own neighbours, larger ones starve it, so a single value would BE the answer. Excludes no data at any size -- every cell is held out exactly once per size"
+  },
+  {
+   "name": "folds",
+   "value": "5",
+   "src": "MINE",
+   "why": "k-fold over whole blocks. Every cell is predicted exactly once from a model that never saw its block; nothing is discarded"
+  },
+  {
+   "name": "seed",
+   "value": "20260911",
+   "src": "MINE",
+   "why": "fixed so the fold assignment reproduces"
+  },
+  {
+   "name": "radius_m",
+   "value": "400.0",
+   "src": "repo",
+   "why": "coreg.correction_surface's own default and DeLong's 400 m; the honest reach of the interpolation, beyond which it injects error"
+  },
+  {
+   "name": "slope_max_deg",
+   "value": "3.0",
+   "src": "MINE",
+   "why": "DeLong s4.4 'areas with slope >3 deg', verified verbatim in the extracted text. MINE because a published constant has no category here and adopting it was my choice; the value is checkable in the paper"
+  },
+  {
+   "name": "dz_max_mm",
+   "value": "700.0",
+   "src": "MINE",
+   "why": "DeLong's companion cut, 'DoD values >0.7 m in flat areas'. Applied to the RAW d_mm so the identical returns serve every route"
+  },
+  {
+   "name": "tile",
+   "value": "'elba_fulldensity'",
+   "src": "MINE",
+   "why": "the tile with a built table; not chosen by its answer"
+  }
+ ],
+ "masks": [
+  {
+   "name": "stable",
+   "kept": 1072025,
+   "total": 6771612,
+   "frac": 0.1583116398281532,
+   "defn": "in grid, slope <= 3.0 deg, |raw dz| <= 700.0 mm, not floodplain -- DeLong's definition with their stream buffer substituted",
+   "warn": false
+  }
+ ],
+ "columns": {
+  "route": "base = geoid+lateral+swath (shared); ours = base+drift spline; delong = base+IDW correction surface",
+  "oos_sd": "sd of the held-out stable cell residual, ddof=1, mm",
+  "oos_nmad": "1.4826*MAD of the same, mm -- robust twin of oos_sd",
+  "skill": "1 - var(route)/var(base) on held-out cells. Positive = better than doing nothing. NEGATIVE MEANS IT INJECTS ERROR"
+ },
+ "notes": [],
+ "headline": "100 m: ours skill +0.160 vs delong -1.462; 200 m: ours skill +0.142 vs delong -1.348; 400 m: ours skill +0.087 vs delong -1.270; 800 m: ours skill -57.803 vs delong -1.004; 1600 m: ours skill -60.797 vs delong -0.200",
+ "unasked": [
+  "block_m",
+  "folds",
+  "seed",
+  "slope_max_deg",
+  "dz_max_mm",
+  "tile"
+ ],
+ "session": ""
+}

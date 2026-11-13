@@ -16,7 +16,7 @@
    "digest": "24646accb38c"
   },
   {
-   "path": "/home/awickert/projects/lidar-diff-icp/data/csf_cache/4342-28-64.las",
+   "path": "/home/awickert/projects/lidar-diff-icp/data/csf_cache/4342-28-64.laz",
    "role": "our CSF ground (class 2) for that tile, from analysis/slope_bias/csf_tiled.py at classify_ground_csf defaults",
    "bytes": 249908091,
    "mtime": "2026-08-26T17:14:01",
