@@ -551,13 +551,21 @@ def register_gen1(before_laz, bounds, res, *, ground_source="csf", csf_pdal=None
     import os as _os, shutil as _sh
     _csf_tmp = None
     if ground_source == "csf":
+        # The cache was renamed .las -> .laz on 2026-11-13 (compressed in place, 11x smaller; laspy
+        # reads either). A caller still naming the other extension finds the file that exists.
+        if csf_cache and not _os.path.exists(csf_cache):
+            _twin = csf_cache[:-4] + (".laz" if csf_cache.endswith(".las") else ".las")
+            if csf_cache.endswith((".las", ".laz")) and _os.path.exists(_twin): csf_cache = _twin
         if csf_cache and _os.path.exists(csf_cache):
             before_laz = csf_cache                       # reuse the archived raw CSF
         else:
             _tmp = classify_ground_csf(before_laz, pdal=csf_pdal)
             if csf_cache:                                # archive the raw CSF, keep it
                 _os.makedirs(_os.path.dirname(csf_cache) or ".", exist_ok=True)
-                _sh.move(_tmp, csf_cache)
+                if csf_cache.endswith(".laz"):           # PDAL wrote LAS; archive compressed
+                    laspy.read(_tmp).write(csf_cache)
+                else:
+                    _sh.move(_tmp, csf_cache)
                 _sh.rmtree(_os.path.dirname(_tmp), ignore_errors=True)
                 before_laz = csf_cache
             else:
