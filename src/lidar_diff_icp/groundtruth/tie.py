@@ -364,12 +364,20 @@ def csf_ground_near(tile_path, easting, northing, half_width, *, pdal=None, cach
         del f, sub, x, y
         out = os.path.join(tmp, "ground.las")
         if cache_dir:
+            # Cached boxes are LAZ since 2026-11-13 (compressed in place, ~11x smaller); a box
+            # still cached under the older .las name is read as it is.
             os.makedirs(cache_dir, exist_ok=True)
-            out = os.path.join(cache_dir,
-                               f"{os.path.basename(str(tile_path))}_"
-                               f"{easting:.0f}_{northing:.0f}_{half_width:.0f}_csf.las")
+            stem = os.path.join(cache_dir,
+                                f"{os.path.basename(str(tile_path))}_"
+                                f"{easting:.0f}_{northing:.0f}_{half_width:.0f}_csf")
+            out = stem + ".laz" if not os.path.exists(stem + ".las") else stem + ".las"
         if not (cache_dir and os.path.exists(out)):
-            classify_ground_csf(crop, out, pdal=pdal, **csf_kwargs)
+            if out.endswith(".laz"):                 # PDAL writes LAS; store it compressed
+                tmp_out = os.path.join(tmp, "ground.las")
+                classify_ground_csf(crop, tmp_out, pdal=pdal, **csf_kwargs)
+                laspy.read(tmp_out).write(out)
+            else:
+                classify_ground_csf(crop, out, pdal=pdal, **csf_kwargs)
         g = laspy.read(out)
         return GroundReturns(np.asarray(g.x), np.asarray(g.y), np.asarray(g.z),
                              scan_angle_deg(g),
