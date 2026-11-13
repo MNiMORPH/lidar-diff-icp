@@ -47,7 +47,7 @@ class Site:
 
     @property
     def csf_cache(self) -> str:
-        return os.path.join(self.csf_root, f"{self.name}.las")
+        return os.path.join(self.csf_root, f"{self.name}.laz")
 
 
 SITES: dict[str, Site] = {

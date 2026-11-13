@@ -11,7 +11,7 @@ def test_a_site_carries_its_own_identity():
     concept."""
     s = site("elba")
     assert s.tile_dir == "data/derived/elba"
-    assert s.csf_cache == "data/csf_cache/elba.las"
+    assert s.csf_cache == "data/csf_cache/elba.laz"
     assert s.valley_top == "registry"
 
 
@@ -36,7 +36,7 @@ def test_the_record_is_immutable():
 
 def test_paths_derive_from_the_name_rather_than_being_repeated():
     s = Site("demo", "a.laz", "b.laz", "histogram")
-    assert s.tile_dir.endswith("demo") and s.csf_cache.endswith("demo.las")
+    assert s.tile_dir.endswith("demo") and s.csf_cache.endswith("demo.laz")
 
 
 def test_every_site_streams_so_the_calibrated_route_is_available_everywhere():
