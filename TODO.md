@@ -367,7 +367,7 @@ which was drift toward the cover-based adjustment that was explicitly excluded f
 ## Six sites re-run onto the geoid datum, 2026-09-02
 
 Andy's instruction after the Carlton run exposed that only `elba_fulldensity` was on the
-current datum. Snapshot first: `data/derived/_parabola_era_snapshot/` (383 MB, all six,
+current datum. Snapshot first: `data/derived/_parabola_era_snapshot/` (DELETED 2026-11-13, disk full, no script read it; 383 MB, all six,
 with a README recording why the old products cannot simply be corrected).
 
 **Why re-running was the only option.** The parabola fits `dx`, `dy` AND `dz`, and the
