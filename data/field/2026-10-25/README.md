@@ -495,3 +495,10 @@ does not see. So the pair separates "T4a reads 100 mm high" from "T4a reads 67 m
 something like 70 mm of combined noise and terrain, roughly 2 sigma: a constant of +100 mm is disfavored, not
 excluded, and a constant of a few tens of millimeters would be invisible here. The sentence above that no
 constant can do both is corrected to that.
+
+**Andy's reading (2026-11-17).** The lot points (T4a 1-3, 13:20-13:21) were the students' separate tests on flat
+ground by the vehicles, nearby but not replicating one another; the teams then went onto the hill. "These
+measurements are likely all to be trusted": the hillslope points stand as measured, and the ~100 mm between the
+two lines is taken as a property of the ground they occupied (litter under the tip, or a true mid-slope versus
+upper-slope difference), not of the instruments. The one-rover re-occupation of both lines, mid-slope and upper
+slope with the same tip, is the measurement that resolves which.
