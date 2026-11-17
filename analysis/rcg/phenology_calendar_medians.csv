@@ -1,0 +1,15 @@
+species,phenophase,n,doy_p25,doy_median,doy_p75,doy_min,doy_max
+reed canary grass,first growth,12,103.75,111.5,116.0,95,207
+reed canary grass,open flowers,12,154.75,165.5,175.25,153,234
+reed canary grass,ripe fruits,13,171.0,185.0,210.0,53,291
+smooth brome,first growth,9,103.0,110.0,111.0,92,127
+smooth brome,open flowers,9,162.0,169.0,179.0,153,234
+smooth brome,ripe fruits,8,171.25,178.0,190.25,153,207
+big bluestem,first growth,25,112.0,133.0,141.0,77,262
+big bluestem,open flowers,19,200.0,207.0,221.0,184,256
+big bluestem,ripe fruits,16,241.5,259.5,271.0,9,288
+common buckthorn,first growth,39,95.5,107.0,118.0,55,136
+common buckthorn,open flowers,15,138.5,147.0,157.0,97,184
+common buckthorn,ripe fruits,37,219.0,236.0,272.0,21,361
+common buckthorn,colored leaves,28,259.25,288.0,303.0,97,320
+common buckthorn,falling leaves,26,264.5,290.5,308.5,50,320

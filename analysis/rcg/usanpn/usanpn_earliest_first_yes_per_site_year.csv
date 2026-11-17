@@ -1,0 +1,705 @@
+common_name,species_id,phenophase,site_id,state,latitude,longitude,year,earliest_first_yes_doy,numdays_since_prior_no
+big bluestem,129,All leaves withered (herbaceous and grasses),1572,MN,44.59,-93.0,2009,283,36
+big bluestem,129,Flower heads (grasses/sedges),5753,MN,45.57,-95.82,2016,217,15
+big bluestem,129,Flower heads (grasses/sedges),6695,MN,44.72,-94.3,2012,205,5
+big bluestem,129,Flower heads (grasses/sedges),6695,MN,44.72,-94.3,2013,206,14
+big bluestem,129,Flower heads (grasses/sedges),18834,MN,44.01,-96.33,2014,220,7
+big bluestem,129,Flower heads (grasses/sedges),18834,MN,44.01,-96.33,2015,198,63
+big bluestem,129,Flower heads (grasses/sedges),18834,MN,44.01,-96.33,2016,204,7
+big bluestem,129,Flower heads (grasses/sedges),21525,IA,41.6,-93.63,2015,251,-9999
+big bluestem,129,Flower heads (grasses/sedges),21527,IA,41.59,-93.28,2015,256,-9999
+big bluestem,129,Flower heads (grasses/sedges),22627,WI,44.94,-92.73,2016,194,71
+big bluestem,129,Flower heads (grasses/sedges),22911,MN,47.0,-94.69,2016,194,7
+big bluestem,129,Flower heads (grasses/sedges),22911,MN,47.0,-94.69,2017,194,8
+big bluestem,129,Flower heads (grasses/sedges),22911,MN,47.0,-94.69,2018,201,22
+big bluestem,129,Flower heads (grasses/sedges),22911,MN,47.0,-94.69,2019,226,27
+big bluestem,129,Flower heads (grasses/sedges),24198,IA,41.78,-93.78,2018,305,-9999
+big bluestem,129,Flower heads (grasses/sedges),24936,MN,46.96,-94.68,2017,194,8
+big bluestem,129,Flower heads (grasses/sedges),31817,IA,41.79,-93.43,2018,298,9
+big bluestem,129,Flower heads (grasses/sedges),40218,MN,44.74,-95.45,2020,256,-9999
+big bluestem,129,Flower heads (grasses/sedges),43627,MN,44.45,-93.16,2021,224,3
+big bluestem,129,Flower heads (grasses/sedges),43627,MN,44.45,-93.16,2023,215,6
+big bluestem,129,Flower heads (grasses/sedges),48459,MN,45.29,-94.95,2022,201,-9999
+big bluestem,129,Flower heads (grasses/sedges),49688,MN,44.74,-93.6,2023,210,-9999
+big bluestem,129,Flower heads (grasses/sedges),49688,MN,44.74,-93.6,2024,196,1
+big bluestem,129,Flower heads (grasses/sedges),49688,MN,44.74,-93.6,2025,188,1
+big bluestem,129,Flower heads (grasses/sedges),49688,MN,44.74,-93.6,2026,207,1
+big bluestem,129,Fruits,6695,MN,44.72,-94.3,2012,219,8
+big bluestem,129,Fruits,6695,MN,44.72,-94.3,2013,242,11
+big bluestem,129,Fruits,18834,MN,44.01,-96.33,2014,241,14
+big bluestem,129,Fruits,18834,MN,44.01,-96.33,2015,205,7
+big bluestem,129,Fruits,18834,MN,44.01,-96.33,2016,218,7
+big bluestem,129,Fruits,18834,MN,44.01,-96.33,2017,223,301
+big bluestem,129,Fruits,21525,IA,41.6,-93.63,2016,250,314
+big bluestem,129,Fruits,21526,IA,41.57,-93.66,2015,305,-9999
+big bluestem,129,Fruits,21527,IA,41.59,-93.28,2015,258,2
+big bluestem,129,Fruits,21527,IA,41.59,-93.28,2016,271,368
+big bluestem,129,Fruits,22911,MN,47.0,-94.69,2016,222,8
+big bluestem,129,Fruits,22911,MN,47.0,-94.69,2017,220,7
+big bluestem,129,Fruits,24936,MN,46.96,-94.68,2017,227,-9999
+big bluestem,129,Fruits,40218,MN,44.74,-95.45,2020,256,-9999
+big bluestem,129,Fruits,43627,MN,44.45,-93.16,2021,265,16
+big bluestem,129,Fruits,43627,MN,44.45,-93.16,2023,256,25
+big bluestem,129,Fruits,49688,MN,44.74,-93.6,2023,220,-9999
+big bluestem,129,Fruits,49688,MN,44.74,-93.6,2024,213,3
+big bluestem,129,Fruits,49688,MN,44.74,-93.6,2025,205,1
+big bluestem,129,Fruits,49688,MN,44.74,-93.6,2026,9,1
+big bluestem,129,Initial growth (grasses/sedges),754,IA,42.2,-91.65,2009,130,4
+big bluestem,129,Initial growth (grasses/sedges),1037,WI,45.8,-92.37,2009,120,-9999
+big bluestem,129,Initial growth (grasses/sedges),1176,WI,43.16,-90.56,2009,128,-9999
+big bluestem,129,Initial growth (grasses/sedges),1545,WI,42.53,-89.21,2009,133,8
+big bluestem,129,Initial growth (grasses/sedges),1572,MN,44.59,-93.0,2009,142,-9999
+big bluestem,129,Initial growth (grasses/sedges),1572,MN,44.59,-93.0,2010,136,218
+big bluestem,129,Initial growth (grasses/sedges),1572,MN,44.59,-93.0,2011,141,8
+big bluestem,129,Initial growth (grasses/sedges),6600,WI,43.07,-87.9,2012,95,17
+big bluestem,129,Initial growth (grasses/sedges),6695,MN,44.72,-94.3,2012,124,8
+big bluestem,129,Initial growth (grasses/sedges),6695,MN,44.72,-94.3,2013,123,217
+big bluestem,129,Initial growth (grasses/sedges),6695,MN,44.72,-94.3,2014,142,18
+big bluestem,129,Initial growth (grasses/sedges),10620,MN,44.93,-93.25,2013,133,8
+big bluestem,129,Initial growth (grasses/sedges),18834,MN,44.01,-96.33,2014,161,22
+big bluestem,129,Initial growth (grasses/sedges),21525,IA,41.6,-93.63,2016,250,314
+big bluestem,129,Initial growth (grasses/sedges),21527,IA,41.59,-93.28,2015,256,-9999
+big bluestem,129,Initial growth (grasses/sedges),22627,WI,44.94,-92.73,2016,123,-9999
+big bluestem,129,Initial growth (grasses/sedges),22911,MN,47.0,-94.69,2016,153,-9999
+big bluestem,129,Initial growth (grasses/sedges),22911,MN,47.0,-94.69,2018,137,13
+big bluestem,129,Initial growth (grasses/sedges),26035,WI,44.93,-91.75,2017,77,-9999
+big bluestem,129,Initial growth (grasses/sedges),31060,MN,44.72,-93.29,2018,188,-9999
+big bluestem,129,Initial growth (grasses/sedges),31817,IA,41.79,-93.43,2018,298,-9999
+big bluestem,129,Initial growth (grasses/sedges),40218,MN,44.74,-95.45,2020,262,-9999
+big bluestem,129,Initial growth (grasses/sedges),43627,MN,44.45,-93.16,2021,96,2
+big bluestem,129,Initial growth (grasses/sedges),43627,MN,44.45,-93.16,2022,135,2
+big bluestem,129,Initial growth (grasses/sedges),43627,MN,44.45,-93.16,2023,133,2
+big bluestem,129,Initial growth (grasses/sedges),49688,MN,44.74,-93.6,2023,112,-9999
+big bluestem,129,Initial growth (grasses/sedges),49688,MN,44.74,-93.6,2024,79,3
+big bluestem,129,Initial growth (grasses/sedges),49688,MN,44.74,-93.6,2025,105,1
+big bluestem,129,Initial growth (grasses/sedges),49688,MN,44.74,-93.6,2026,85,4
+big bluestem,129,Leaves (grasses),754,IA,42.2,-91.65,2009,135,5
+big bluestem,129,Leaves (grasses),1037,WI,45.8,-92.37,2009,125,-9999
+big bluestem,129,Leaves (grasses),1572,MN,44.59,-93.0,2009,142,-9999
+big bluestem,129,Leaves (grasses),1572,MN,44.59,-93.0,2010,157,21
+big bluestem,129,Leaves (grasses),1572,MN,44.59,-93.0,2011,141,8
+big bluestem,129,Leaves (grasses),5753,MN,45.57,-95.82,2011,168,-9999
+big bluestem,129,Leaves (grasses),5753,MN,45.57,-95.82,2016,250,25
+big bluestem,129,Leaves (grasses),6600,WI,43.07,-87.9,2012,99,4
+big bluestem,129,Leaves (grasses),6695,MN,44.72,-94.3,2012,129,5
+big bluestem,129,Leaves (grasses),6695,MN,44.72,-94.3,2013,123,217
+big bluestem,129,Leaves (grasses),6695,MN,44.72,-94.3,2014,142,18
+big bluestem,129,Leaves (grasses),10620,MN,44.93,-93.25,2013,133,8
+big bluestem,129,Leaves (grasses),18834,MN,44.01,-96.33,2014,206,45
+big bluestem,129,Leaves (grasses),18834,MN,44.01,-96.33,2015,198,63
+big bluestem,129,Leaves (grasses),18834,MN,44.01,-96.33,2016,193,87
+big bluestem,129,Leaves (grasses),18834,MN,44.01,-96.33,2017,223,301
+big bluestem,129,Leaves (grasses),21525,IA,41.6,-93.63,2015,251,-9999
+big bluestem,129,Leaves (grasses),21525,IA,41.6,-93.63,2016,302,3
+big bluestem,129,Leaves (grasses),21527,IA,41.59,-93.28,2015,256,-9999
+big bluestem,129,Leaves (grasses),22911,MN,47.0,-94.69,2016,153,-9999
+big bluestem,129,Leaves (grasses),22911,MN,47.0,-94.69,2017,170,201
+big bluestem,129,Leaves (grasses),22911,MN,47.0,-94.69,2018,165,21
+big bluestem,129,Leaves (grasses),22911,MN,47.0,-94.69,2019,168,262
+big bluestem,129,Leaves (grasses),24198,IA,41.78,-93.78,2018,305,-9999
+big bluestem,129,Leaves (grasses),24936,MN,46.96,-94.68,2017,172,-9999
+big bluestem,129,Leaves (grasses),24936,MN,46.96,-94.68,2018,173,248
+big bluestem,129,Leaves (grasses),31060,MN,44.72,-93.29,2018,188,-9999
+big bluestem,129,Leaves (grasses),31817,IA,41.79,-93.43,2018,298,9
+big bluestem,129,Leaves (grasses),32192,IA,41.55,-93.48,2018,275,-9999
+big bluestem,129,Leaves (grasses),40218,MN,44.74,-95.45,2020,262,-9999
+big bluestem,129,Leaves (grasses),43627,MN,44.45,-93.16,2021,129,3
+big bluestem,129,Leaves (grasses),43627,MN,44.45,-93.16,2022,140,2
+big bluestem,129,Leaves (grasses),43627,MN,44.45,-93.16,2023,137,2
+big bluestem,129,Leaves (grasses),48459,MN,45.29,-94.95,2022,201,-9999
+big bluestem,129,Leaves (grasses),49688,MN,44.74,-93.6,2023,112,-9999
+big bluestem,129,Leaves (grasses),49688,MN,44.74,-93.6,2024,143,38
+big bluestem,129,Leaves (grasses),49688,MN,44.74,-93.6,2025,137,2
+big bluestem,129,Leaves (grasses),49688,MN,44.74,-93.6,2026,121,1
+big bluestem,129,Open flowers (grasses/sedges),754,IA,42.2,-91.65,2009,245,115
+big bluestem,129,Open flowers (grasses/sedges),1037,WI,45.8,-92.37,2009,184,-9999
+big bluestem,129,Open flowers (grasses/sedges),1572,MN,44.59,-93.0,2009,192,22
+big bluestem,129,Open flowers (grasses/sedges),5753,MN,45.57,-95.82,2016,217,8
+big bluestem,129,Open flowers (grasses/sedges),6695,MN,44.72,-94.3,2012,211,6
+big bluestem,129,Open flowers (grasses/sedges),6695,MN,44.72,-94.3,2013,250,8
+big bluestem,129,Open flowers (grasses/sedges),18834,MN,44.01,-96.33,2014,220,7
+big bluestem,129,Open flowers (grasses/sedges),18834,MN,44.01,-96.33,2015,205,7
+big bluestem,129,Open flowers (grasses/sedges),18834,MN,44.01,-96.33,2016,204,7
+big bluestem,129,Open flowers (grasses/sedges),21525,IA,41.6,-93.63,2015,251,-9999
+big bluestem,129,Open flowers (grasses/sedges),21527,IA,41.59,-93.28,2015,256,-9999
+big bluestem,129,Open flowers (grasses/sedges),22911,MN,47.0,-94.69,2016,207,7
+big bluestem,129,Open flowers (grasses/sedges),22911,MN,47.0,-94.69,2017,194,225
+big bluestem,129,Open flowers (grasses/sedges),22911,MN,47.0,-94.69,2018,222,21
+big bluestem,129,Open flowers (grasses/sedges),31817,IA,41.79,-93.43,2018,305,7
+big bluestem,129,Open flowers (grasses/sedges),40218,MN,44.74,-95.45,2020,256,-9999
+big bluestem,129,Open flowers (grasses/sedges),43627,MN,44.45,-93.16,2021,229,2
+big bluestem,129,Open flowers (grasses/sedges),43627,MN,44.45,-93.16,2023,231,16
+big bluestem,129,Open flowers (grasses/sedges),48459,MN,45.29,-94.95,2022,201,-9999
+big bluestem,129,Open flowers (grasses/sedges),49688,MN,44.74,-93.6,2023,210,-9999
+big bluestem,129,Open flowers (grasses/sedges),49688,MN,44.74,-93.6,2024,196,1
+big bluestem,129,Open flowers (grasses/sedges),49688,MN,44.74,-93.6,2025,199,1
+big bluestem,129,Open flowers (grasses/sedges),49688,MN,44.74,-93.6,2026,207,1
+big bluestem,129,Pollen release (flowers),6695,MN,44.72,-94.3,2012,211,6
+big bluestem,129,Pollen release (flowers),6695,MN,44.72,-94.3,2013,242,11
+big bluestem,129,Pollen release (flowers),18834,MN,44.01,-96.33,2015,205,7
+big bluestem,129,Pollen release (flowers),18834,MN,44.01,-96.33,2016,204,7
+big bluestem,129,Pollen release (flowers),21525,IA,41.6,-93.63,2015,253,2
+big bluestem,129,Pollen release (flowers),21526,IA,41.57,-93.66,2015,305,-9999
+big bluestem,129,Pollen release (flowers),21527,IA,41.59,-93.28,2015,258,2
+big bluestem,129,Pollen release (flowers),21527,IA,41.59,-93.28,2016,271,368
+big bluestem,129,Pollen release (flowers),22911,MN,47.0,-94.69,2016,207,7
+big bluestem,129,Pollen release (flowers),22911,MN,47.0,-94.69,2017,208,7
+big bluestem,129,Pollen release (flowers),22911,MN,47.0,-94.69,2018,222,360
+big bluestem,129,Pollen release (flowers),40218,MN,44.74,-95.45,2020,256,-9999
+big bluestem,129,Pollen release (flowers),48459,MN,45.29,-94.95,2022,201,-9999
+big bluestem,129,Pollen release (flowers),49688,MN,44.74,-93.6,2023,220,-9999
+big bluestem,129,Pollen release (flowers),49688,MN,44.74,-93.6,2024,239,3
+big bluestem,129,Pollen release (flowers),49688,MN,44.74,-93.6,2025,204,1
+big bluestem,129,Recent fruit or seed drop,6695,MN,44.72,-94.3,2012,240,5
+big bluestem,129,Recent fruit or seed drop,6695,MN,44.72,-94.3,2013,261,11
+big bluestem,129,Recent fruit or seed drop,18834,MN,44.01,-96.33,2014,297,22
+big bluestem,129,Recent fruit or seed drop,18834,MN,44.01,-96.33,2015,261,7
+big bluestem,129,Recent fruit or seed drop,18834,MN,44.01,-96.33,2016,288,14
+big bluestem,129,Recent fruit or seed drop,18834,MN,44.01,-96.33,2017,258,7
+big bluestem,129,Recent fruit or seed drop,21525,IA,41.6,-93.63,2016,302,3
+big bluestem,129,Recent fruit or seed drop,21526,IA,41.57,-93.66,2015,305,-9999
+big bluestem,129,Recent fruit or seed drop,21527,IA,41.59,-93.28,2016,271,378
+big bluestem,129,Recent fruit or seed drop,22911,MN,47.0,-94.69,2016,243,8
+big bluestem,129,Recent fruit or seed drop,22911,MN,47.0,-94.69,2018,271,15
+big bluestem,129,Recent fruit or seed drop,24936,MN,46.96,-94.68,2017,270,-9999
+big bluestem,129,Recent fruit or seed drop,31817,IA,41.79,-93.43,2018,305,7
+big bluestem,129,Recent fruit or seed drop,40218,MN,44.74,-95.45,2020,256,-9999
+big bluestem,129,Recent fruit or seed drop,43627,MN,44.45,-93.16,2021,282,11
+big bluestem,129,Recent fruit or seed drop,43627,MN,44.45,-93.16,2023,269,38
+big bluestem,129,Recent fruit or seed drop,49688,MN,44.74,-93.6,2022,288,-9999
+big bluestem,129,Recent fruit or seed drop,49688,MN,44.74,-93.6,2024,280,4
+big bluestem,129,Recent fruit or seed drop,49688,MN,44.74,-93.6,2025,289,4
+big bluestem,129,Recent fruit or seed drop,49688,MN,44.74,-93.6,2026,9,1
+big bluestem,129,Ripe fruits,6695,MN,44.72,-94.3,2012,226,7
+big bluestem,129,Ripe fruits,6695,MN,44.72,-94.3,2013,261,11
+big bluestem,129,Ripe fruits,18834,MN,44.01,-96.33,2014,267,12
+big bluestem,129,Ripe fruits,18834,MN,44.01,-96.33,2015,254,7
+big bluestem,129,Ripe fruits,18834,MN,44.01,-96.33,2016,274,14
+big bluestem,129,Ripe fruits,18834,MN,44.01,-96.33,2017,258,7
+big bluestem,129,Ripe fruits,21525,IA,41.6,-93.63,2015,253,2
+big bluestem,129,Ripe fruits,21525,IA,41.6,-93.63,2016,250,314
+big bluestem,129,Ripe fruits,21526,IA,41.57,-93.66,2015,305,-9999
+big bluestem,129,Ripe fruits,21527,IA,41.59,-93.28,2015,258,2
+big bluestem,129,Ripe fruits,21527,IA,41.59,-93.28,2016,271,368
+big bluestem,129,Ripe fruits,22911,MN,47.0,-94.69,2016,243,8
+big bluestem,129,Ripe fruits,22911,MN,47.0,-94.69,2017,227,7
+big bluestem,129,Ripe fruits,24936,MN,46.96,-94.68,2017,270,-9999
+big bluestem,129,Ripe fruits,40218,MN,44.74,-95.45,2020,256,-9999
+big bluestem,129,Ripe fruits,43627,MN,44.45,-93.16,2021,276,11
+big bluestem,129,Ripe fruits,49688,MN,44.74,-93.6,2022,288,-9999
+big bluestem,129,Ripe fruits,49688,MN,44.74,-93.6,2023,237,2
+big bluestem,129,Ripe fruits,49688,MN,44.74,-93.6,2024,266,7
+big bluestem,129,Ripe fruits,49688,MN,44.74,-93.6,2025,276,1
+big bluestem,129,Ripe fruits,49688,MN,44.74,-93.6,2026,9,1
+big bluestem,129,Ripe seeds (grasses),1037,WI,45.8,-92.37,2009,211,-9999
+big bluestem,129,Ripe seeds (grasses),1572,MN,44.59,-93.0,2009,240,48
+smooth brome,1441,Flower heads (grasses/sedges),5754,MN,45.62,-95.88,2016,165,-9999
+smooth brome,1441,Flower heads (grasses/sedges),25568,MN,45.14,-93.31,2017,131,4
+smooth brome,1441,Flower heads (grasses/sedges),25568,MN,45.14,-93.31,2018,126,6
+smooth brome,1441,Flower heads (grasses/sedges),25568,MN,45.14,-93.31,2019,167,17
+smooth brome,1441,Flower heads (grasses/sedges),25568,MN,45.14,-93.31,2020,183,238
+smooth brome,1441,Flower heads (grasses/sedges),25568,MN,45.14,-93.31,2021,145,12
+smooth brome,1441,Flower heads (grasses/sedges),25568,MN,45.14,-93.31,2022,131,7
+smooth brome,1441,Flower heads (grasses/sedges),25568,MN,45.14,-93.31,2023,134,14
+smooth brome,1441,Flower heads (grasses/sedges),25568,MN,45.14,-93.31,2024,151,5
+smooth brome,1441,Flower heads (grasses/sedges),25568,MN,45.14,-93.31,2025,156,35
+smooth brome,1441,Flower heads (grasses/sedges),25568,MN,45.14,-93.31,2026,171,76
+smooth brome,1441,Fruits,25568,MN,45.14,-93.31,2017,166,17
+smooth brome,1441,Fruits,25568,MN,45.14,-93.31,2018,203,21
+smooth brome,1441,Fruits,25568,MN,45.14,-93.31,2019,176,2
+smooth brome,1441,Fruits,25568,MN,45.14,-93.31,2020,278,7
+smooth brome,1441,Fruits,25568,MN,45.14,-93.31,2021,170,6
+smooth brome,1441,Fruits,25568,MN,45.14,-93.31,2022,166,3
+smooth brome,1441,Fruits,25568,MN,45.14,-93.31,2023,155,2
+smooth brome,1441,Fruits,25568,MN,45.14,-93.31,2024,146,6
+smooth brome,1441,Fruits,25568,MN,45.14,-93.31,2025,194,11
+smooth brome,1441,Fruits,25568,MN,45.14,-93.31,2026,171,76
+smooth brome,1441,Initial growth (grasses/sedges),25568,MN,45.14,-93.31,2017,127,-9999
+smooth brome,1441,Initial growth (grasses/sedges),25568,MN,45.14,-93.31,2018,111,9
+smooth brome,1441,Initial growth (grasses/sedges),25568,MN,45.14,-93.31,2019,110,20
+smooth brome,1441,Initial growth (grasses/sedges),25568,MN,45.14,-93.31,2021,92,131
+smooth brome,1441,Initial growth (grasses/sedges),25568,MN,45.14,-93.31,2022,121,5
+smooth brome,1441,Initial growth (grasses/sedges),25568,MN,45.14,-93.31,2023,111,159
+smooth brome,1441,Initial growth (grasses/sedges),25568,MN,45.14,-93.31,2024,104,150
+smooth brome,1441,Initial growth (grasses/sedges),25568,MN,45.14,-93.31,2025,103,147
+smooth brome,1441,Initial growth (grasses/sedges),25568,MN,45.14,-93.31,2026,95,139
+smooth brome,1441,Leaves (grasses),5753,MN,45.57,-95.82,2016,225,-9999
+smooth brome,1441,Leaves (grasses),5754,MN,45.62,-95.88,2016,165,-9999
+smooth brome,1441,Leaves (grasses),25568,MN,45.14,-93.31,2017,127,-9999
+smooth brome,1441,Leaves (grasses),25568,MN,45.14,-93.31,2018,111,9
+smooth brome,1441,Leaves (grasses),25568,MN,45.14,-93.31,2019,110,20
+smooth brome,1441,Leaves (grasses),25568,MN,45.14,-93.31,2020,204,3
+smooth brome,1441,Leaves (grasses),25568,MN,45.14,-93.31,2021,128,6
+smooth brome,1441,Leaves (grasses),25568,MN,45.14,-93.31,2022,124,3
+smooth brome,1441,Leaves (grasses),25568,MN,45.14,-93.31,2023,134,14
+smooth brome,1441,Leaves (grasses),25568,MN,45.14,-93.31,2024,124,3
+smooth brome,1441,Leaves (grasses),25568,MN,45.14,-93.31,2025,109,6
+smooth brome,1441,Leaves (grasses),25568,MN,45.14,-93.31,2026,171,76
+smooth brome,1441,Open flowers (grasses/sedges),25568,MN,45.14,-93.31,2017,166,17
+smooth brome,1441,Open flowers (grasses/sedges),25568,MN,45.14,-93.31,2018,174,3
+smooth brome,1441,Open flowers (grasses/sedges),25568,MN,45.14,-93.31,2019,179,3
+smooth brome,1441,Open flowers (grasses/sedges),25568,MN,45.14,-93.31,2020,186,3
+smooth brome,1441,Open flowers (grasses/sedges),25568,MN,45.14,-93.31,2021,162,17
+smooth brome,1441,Open flowers (grasses/sedges),25568,MN,45.14,-93.31,2022,169,3
+smooth brome,1441,Open flowers (grasses/sedges),25568,MN,45.14,-93.31,2023,161,6
+smooth brome,1441,Open flowers (grasses/sedges),25568,MN,45.14,-93.31,2024,153,2
+smooth brome,1441,Open flowers (grasses/sedges),25568,MN,45.14,-93.31,2025,234,12
+smooth brome,1441,Pollen release (flowers),25568,MN,45.14,-93.31,2017,166,17
+smooth brome,1441,Pollen release (flowers),25568,MN,45.14,-93.31,2018,174,3
+smooth brome,1441,Pollen release (flowers),25568,MN,45.14,-93.31,2020,201,4
+smooth brome,1441,Pollen release (flowers),25568,MN,45.14,-93.31,2022,169,3
+smooth brome,1441,Pollen release (flowers),25568,MN,45.14,-93.31,2023,166,3
+smooth brome,1441,Pollen release (flowers),25568,MN,45.14,-93.31,2024,168,2
+smooth brome,1441,Pollen release (flowers),25568,MN,45.14,-93.31,2025,234,12
+smooth brome,1441,Recent fruit or seed drop,25568,MN,45.14,-93.31,2017,230,20
+smooth brome,1441,Recent fruit or seed drop,25568,MN,45.14,-93.31,2018,189,7
+smooth brome,1441,Recent fruit or seed drop,25568,MN,45.14,-93.31,2020,251,1
+smooth brome,1441,Recent fruit or seed drop,25568,MN,45.14,-93.31,2021,218,10
+smooth brome,1441,Recent fruit or seed drop,25568,MN,45.14,-93.31,2022,226,19
+smooth brome,1441,Recent fruit or seed drop,25568,MN,45.14,-93.31,2023,196,6
+smooth brome,1441,Recent fruit or seed drop,25568,MN,45.14,-93.31,2024,185,9
+smooth brome,1441,Recent fruit or seed drop,25568,MN,45.14,-93.31,2025,211,3
+smooth brome,1441,Ripe fruits,25568,MN,45.14,-93.31,2017,166,17
+smooth brome,1441,Ripe fruits,25568,MN,45.14,-93.31,2018,189,7
+smooth brome,1441,Ripe fruits,25568,MN,45.14,-93.31,2019,176,2
+smooth brome,1441,Ripe fruits,25568,MN,45.14,-93.31,2021,173,3
+smooth brome,1441,Ripe fruits,25568,MN,45.14,-93.31,2022,207,2
+smooth brome,1441,Ripe fruits,25568,MN,45.14,-93.31,2023,180,1
+smooth brome,1441,Ripe fruits,25568,MN,45.14,-93.31,2024,153,2
+smooth brome,1441,Ripe fruits,25568,MN,45.14,-93.31,2025,194,11
+common buckthorn,89,>=50% of leaves colored (deciduous),2535,WI,42.78,-87.85,2010,323,-9999
+common buckthorn,89,>=75% of full leaf size (deciduous),2535,WI,42.78,-87.85,2010,323,-9999
+common buckthorn,89,All leaves colored (deciduous),2535,WI,42.78,-87.85,2010,323,-9999
+common buckthorn,89,Breaking leaf buds,2535,WI,42.78,-87.85,2010,111,-9999
+common buckthorn,89,Breaking leaf buds,6600,WI,43.07,-87.9,2012,92,14
+common buckthorn,89,Breaking leaf buds,17680,MN,44.92,-92.79,2016,109,6
+common buckthorn,89,Breaking leaf buds,17680,MN,44.92,-92.79,2017,111,36
+common buckthorn,89,Breaking leaf buds,17680,MN,44.92,-92.79,2018,127,6
+common buckthorn,89,Breaking leaf buds,20617,WI,43.13,-89.38,2017,101,158
+common buckthorn,89,Breaking leaf buds,21289,MN,44.72,-93.4,2016,98,8
+common buckthorn,89,Breaking leaf buds,23676,MN,47.0,-94.7,2017,118,8
+common buckthorn,89,Breaking leaf buds,23676,MN,47.0,-94.7,2018,136,10
+common buckthorn,89,Breaking leaf buds,23676,MN,47.0,-94.7,2019,135,184
+common buckthorn,89,Breaking leaf buds,24692,MN,44.85,-93.23,2017,97,5
+common buckthorn,89,Breaking leaf buds,24692,MN,44.85,-93.23,2018,125,208
+common buckthorn,89,Breaking leaf buds,24692,MN,44.85,-93.23,2019,109,4
+common buckthorn,89,Breaking leaf buds,25568,MN,45.14,-93.31,2017,112,-9999
+common buckthorn,89,Breaking leaf buds,25568,MN,45.14,-93.31,2018,120,8
+common buckthorn,89,Breaking leaf buds,25568,MN,45.14,-93.31,2019,116,6
+common buckthorn,89,Breaking leaf buds,25568,MN,45.14,-93.31,2021,95,3
+common buckthorn,89,Breaking leaf buds,25568,MN,45.14,-93.31,2022,91,136
+common buckthorn,89,Breaking leaf buds,25568,MN,45.14,-93.31,2023,105,7
+common buckthorn,89,Breaking leaf buds,25568,MN,45.14,-93.31,2024,120,9
+common buckthorn,89,Breaking leaf buds,25568,MN,45.14,-93.31,2025,109,6
+common buckthorn,89,Breaking leaf buds,26201,MN,44.86,-93.22,2019,115,-9999
+common buckthorn,89,Breaking leaf buds,26201,MN,44.86,-93.22,2020,107,7
+common buckthorn,89,Breaking leaf buds,26201,MN,44.86,-93.22,2021,98,5
+common buckthorn,89,Breaking leaf buds,26484,WI,45.02,-92.68,2017,96,-9999
+common buckthorn,89,Breaking leaf buds,26602,MN,44.72,-93.63,2019,118,15
+common buckthorn,89,Breaking leaf buds,26694,MN,44.46,-93.19,2017,92,18
+common buckthorn,89,Breaking leaf buds,45182,MN,45.06,-93.16,2022,67,7
+common buckthorn,89,Breaking leaf buds,45195,MN,45.06,-93.16,2022,66,7
+common buckthorn,89,Breaking leaf buds,46298,WI,42.96,-88.36,2022,97,-9999
+common buckthorn,89,Breaking leaf buds,46299,WI,42.96,-88.36,2022,97,-9999
+common buckthorn,89,Breaking leaf buds,48096,MN,44.81,-93.13,2022,132,-9999
+common buckthorn,89,Breaking leaf buds,48228,MN,47.24,-93.51,2022,133,-9999
+common buckthorn,89,Breaking leaf buds,50745,WI,43.44,-88.02,2023,55,-9999
+common buckthorn,89,Breaking leaf buds,53707,WI,43.08,-87.89,2024,124,93
+common buckthorn,89,Breaking leaf buds,54344,MN,44.07,-91.68,2024,100,20
+common buckthorn,89,Breaking leaf buds,54344,MN,44.07,-91.68,2025,87,6
+common buckthorn,89,Breaking leaf buds,54344,MN,44.07,-91.68,2026,88,6
+common buckthorn,89,Breaking leaf buds,56812,WI,42.62,-87.82,2025,88,-9999
+common buckthorn,89,Colored leaves,12572,WI,43.66,-91.22,2013,320,-9999
+common buckthorn,89,Colored leaves,17680,MN,44.92,-92.79,2015,309,-9999
+common buckthorn,89,Colored leaves,17680,MN,44.92,-92.79,2016,307,16
+common buckthorn,89,Colored leaves,17680,MN,44.92,-92.79,2017,303,7
+common buckthorn,89,Colored leaves,22959,MN,45.0,-93.13,2016,311,229
+common buckthorn,89,Colored leaves,23676,MN,47.0,-94.7,2016,315,6
+common buckthorn,89,Colored leaves,23676,MN,47.0,-94.7,2017,295,4
+common buckthorn,89,Colored leaves,23676,MN,47.0,-94.7,2019,303,12
+common buckthorn,89,Colored leaves,24692,MN,44.85,-93.23,2018,238,13
+common buckthorn,89,Colored leaves,24692,MN,44.85,-93.23,2019,140,7
+common buckthorn,89,Colored leaves,25568,MN,45.14,-93.31,2020,207,3
+common buckthorn,89,Colored leaves,25568,MN,45.14,-93.31,2021,286,3
+common buckthorn,89,Colored leaves,25568,MN,45.14,-93.31,2022,298,23
+common buckthorn,89,Colored leaves,25568,MN,45.14,-93.31,2023,225,7
+common buckthorn,89,Colored leaves,25568,MN,45.14,-93.31,2024,280,7
+common buckthorn,89,Colored leaves,25568,MN,45.14,-93.31,2025,299,14
+common buckthorn,89,Colored leaves,26201,MN,44.86,-93.22,2019,290,49
+common buckthorn,89,Colored leaves,26602,MN,44.72,-93.63,2019,271,13
+common buckthorn,89,Colored leaves,32246,MN,44.15,-94.01,2018,300,-9999
+common buckthorn,89,Colored leaves,40498,WI,43.01,-88.12,2020,262,-9999
+common buckthorn,89,Colored leaves,41364,WI,45.11,-92.67,2020,273,-9999
+common buckthorn,89,Colored leaves,41982,WI,44.85,-92.63,2020,297,7
+common buckthorn,89,Colored leaves,45195,MN,45.06,-93.16,2021,251,1
+common buckthorn,89,Colored leaves,46298,WI,42.96,-88.36,2022,97,-9999
+common buckthorn,89,Colored leaves,48096,MN,44.81,-93.13,2022,136,4
+common buckthorn,89,Colored leaves,52822,MN,44.83,-93.33,2023,269,7
+common buckthorn,89,Colored leaves,54344,MN,44.07,-91.68,2025,309,8
+common buckthorn,89,Colored leaves,60758,MN,44.83,-93.33,2026,264,-9999
+common buckthorn,89,Early season leaf expansion,17680,MN,44.92,-92.79,2016,112,3
+common buckthorn,89,Early season leaf expansion,17680,MN,44.92,-92.79,2017,118,7
+common buckthorn,89,Early season leaf expansion,17680,MN,44.92,-92.79,2018,127,6
+common buckthorn,89,Early season leaf expansion,20243,MN,44.92,-92.79,2019,137,380
+common buckthorn,89,Early season leaf expansion,20617,WI,43.13,-89.38,2017,115,172
+common buckthorn,89,Early season leaf expansion,23676,MN,47.0,-94.7,2017,125,165
+common buckthorn,89,Early season leaf expansion,23676,MN,47.0,-94.7,2019,148,197
+common buckthorn,89,Early season leaf expansion,24692,MN,44.85,-93.23,2017,128,14
+common buckthorn,89,Early season leaf expansion,24692,MN,44.85,-93.23,2018,130,3
+common buckthorn,89,Early season leaf expansion,24692,MN,44.85,-93.23,2019,119,1
+common buckthorn,89,Early season leaf expansion,25568,MN,45.14,-93.31,2017,112,-9999
+common buckthorn,89,Early season leaf expansion,25568,MN,45.14,-93.31,2018,126,6
+common buckthorn,89,Early season leaf expansion,25568,MN,45.14,-93.31,2019,116,6
+common buckthorn,89,Early season leaf expansion,25568,MN,45.14,-93.31,2020,197,11
+common buckthorn,89,Early season leaf expansion,25568,MN,45.14,-93.31,2021,98,3
+common buckthorn,89,Early season leaf expansion,25568,MN,45.14,-93.31,2022,131,7
+common buckthorn,89,Early season leaf expansion,25568,MN,45.14,-93.31,2023,134,11
+common buckthorn,89,Early season leaf expansion,25568,MN,45.14,-93.31,2024,120,9
+common buckthorn,89,Early season leaf expansion,25568,MN,45.14,-93.31,2025,121,11
+common buckthorn,89,Early season leaf expansion,25568,MN,45.14,-93.31,2026,174,3
+common buckthorn,89,Early season leaf expansion,26201,MN,44.86,-93.22,2019,143,13
+common buckthorn,89,Early season leaf expansion,26201,MN,44.86,-93.22,2020,128,14
+common buckthorn,89,Early season leaf expansion,26201,MN,44.86,-93.22,2021,105,7
+common buckthorn,89,Early season leaf expansion,26602,MN,44.72,-93.63,2019,124,6
+common buckthorn,89,Early season leaf expansion,32246,MN,44.15,-94.01,2018,300,-9999
+common buckthorn,89,Early season leaf expansion,45172,MN,45.06,-93.16,2021,256,-9999
+common buckthorn,89,Early season leaf expansion,45195,MN,45.06,-93.16,2021,250,-9999
+common buckthorn,89,Early season leaf expansion,46298,WI,42.96,-88.36,2022,97,-9999
+common buckthorn,89,Early season leaf expansion,48096,MN,44.81,-93.13,2022,136,-9999
+common buckthorn,89,Early season leaf expansion,48527,IA,41.2,-95.91,2022,198,-9999
+common buckthorn,89,Early season leaf expansion,53707,WI,43.08,-87.89,2024,124,93
+common buckthorn,89,Early season leaf expansion,54344,MN,44.07,-91.68,2025,106,7
+common buckthorn,89,Early season leaf expansion,54344,MN,44.07,-91.68,2026,105,9
+common buckthorn,89,Falling leaves,12572,WI,43.66,-91.22,2013,320,-9999
+common buckthorn,89,Falling leaves,17680,MN,44.92,-92.79,2015,309,-9999
+common buckthorn,89,Falling leaves,17680,MN,44.92,-92.79,2016,307,16
+common buckthorn,89,Falling leaves,22959,MN,45.0,-93.13,2016,311,229
+common buckthorn,89,Falling leaves,23676,MN,47.0,-94.7,2016,309,8
+common buckthorn,89,Falling leaves,24692,MN,44.85,-93.23,2018,260,7
+common buckthorn,89,Falling leaves,25568,MN,45.14,-93.31,2018,290,22
+common buckthorn,89,Falling leaves,25568,MN,45.14,-93.31,2019,310,5
+common buckthorn,89,Falling leaves,25568,MN,45.14,-93.31,2020,222,4
+common buckthorn,89,Falling leaves,25568,MN,45.14,-93.31,2021,304,6
+common buckthorn,89,Falling leaves,25568,MN,45.14,-93.31,2022,302,4
+common buckthorn,89,Falling leaves,25568,MN,45.14,-93.31,2023,282,1
+common buckthorn,89,Falling leaves,25568,MN,45.14,-93.31,2024,282,2
+common buckthorn,89,Falling leaves,25568,MN,45.14,-93.31,2025,299,14
+common buckthorn,89,Falling leaves,25568,MN,45.14,-93.31,2026,183,9
+common buckthorn,89,Falling leaves,26201,MN,44.86,-93.22,2019,290,49
+common buckthorn,89,Falling leaves,26602,MN,44.72,-93.63,2019,299,16
+common buckthorn,89,Falling leaves,40498,WI,43.01,-88.12,2020,266,-9999
+common buckthorn,89,Falling leaves,41982,WI,44.85,-92.63,2020,318,7
+common buckthorn,89,Falling leaves,42643,MN,44.66,-93.16,2021,50,-9999
+common buckthorn,89,Falling leaves,45172,MN,45.06,-93.16,2021,256,-9999
+common buckthorn,89,Falling leaves,45195,MN,45.06,-93.16,2021,269,4
+common buckthorn,89,Falling leaves,46298,WI,42.96,-88.36,2022,97,-9999
+common buckthorn,89,Falling leaves,52822,MN,44.83,-93.33,2023,291,15
+common buckthorn,89,Falling leaves,54344,MN,44.07,-91.68,2025,309,8
+common buckthorn,89,Falling leaves,60758,MN,44.83,-93.33,2026,264,-9999
+common buckthorn,89,Flowers or flower buds,17680,MN,44.92,-92.79,2016,133,3
+common buckthorn,89,Flowers or flower buds,23676,MN,47.0,-94.7,2017,139,5
+common buckthorn,89,Flowers or flower buds,23676,MN,47.0,-94.7,2018,143,3
+common buckthorn,89,Flowers or flower buds,23676,MN,47.0,-94.7,2019,148,197
+common buckthorn,89,Flowers or flower buds,24692,MN,44.85,-93.23,2018,141,11
+common buckthorn,89,Flowers or flower buds,24692,MN,44.85,-93.23,2019,122,1
+common buckthorn,89,Flowers or flower buds,25568,MN,45.14,-93.31,2017,131,4
+common buckthorn,89,Flowers or flower buds,25568,MN,45.14,-93.31,2018,136,10
+common buckthorn,89,Flowers or flower buds,25568,MN,45.14,-93.31,2019,150,2
+common buckthorn,89,Flowers or flower buds,25568,MN,45.14,-93.31,2021,128,6
+common buckthorn,89,Flowers or flower buds,25568,MN,45.14,-93.31,2022,139,2
+common buckthorn,89,Flowers or flower buds,25568,MN,45.14,-93.31,2023,145,3
+common buckthorn,89,Flowers or flower buds,25568,MN,45.14,-93.31,2024,139,7
+common buckthorn,89,Flowers or flower buds,26201,MN,44.86,-93.22,2019,149,6
+common buckthorn,89,Flowers or flower buds,26201,MN,44.86,-93.22,2021,154,8
+common buckthorn,89,Flowers or flower buds,26602,MN,44.72,-93.63,2019,145,7
+common buckthorn,89,Flowers or flower buds,26694,MN,44.46,-93.19,2017,102,10
+common buckthorn,89,Flowers or flower buds,45182,MN,45.06,-93.16,2022,88,4
+common buckthorn,89,Flowers or flower buds,45195,MN,45.06,-93.16,2022,80,14
+common buckthorn,89,Flowers or flower buds,46298,WI,42.96,-88.36,2022,97,-9999
+common buckthorn,89,Flowers or flower buds,54344,MN,44.07,-91.68,2024,180,100
+common buckthorn,89,Flowers or flower buds,54344,MN,44.07,-91.68,2025,142,8
+common buckthorn,89,Flowers or flower buds,56812,WI,42.62,-87.82,2025,107,8
+common buckthorn,89,Fruits,17680,MN,44.92,-92.79,2016,155,14
+common buckthorn,89,Fruits,17680,MN,44.92,-92.79,2017,272,137
+common buckthorn,89,Fruits,17680,MN,44.92,-92.79,2018,275,137
+common buckthorn,89,Fruits,17680,MN,44.92,-92.79,2021,281,1094
+common buckthorn,89,Fruits,20617,WI,43.13,-89.38,2016,309,-9999
+common buckthorn,89,Fruits,21184,MN,45.01,-93.36,2015,189,-9999
+common buckthorn,89,Fruits,22959,MN,45.0,-93.13,2016,311,229
+common buckthorn,89,Fruits,23676,MN,47.0,-94.7,2016,287,-9999
+common buckthorn,89,Fruits,23676,MN,47.0,-94.7,2017,190,13
+common buckthorn,89,Fruits,23676,MN,47.0,-94.7,2019,173,9
+common buckthorn,89,Fruits,24692,MN,44.85,-93.23,2016,294,-9999
+common buckthorn,89,Fruits,24692,MN,44.85,-93.23,2017,170,14
+common buckthorn,89,Fruits,24692,MN,44.85,-93.23,2018,151,21
+common buckthorn,89,Fruits,24692,MN,44.85,-93.23,2019,154,5
+common buckthorn,89,Fruits,25104,WI,42.64,-87.83,2017,21,-9999
+common buckthorn,89,Fruits,25568,MN,45.14,-93.31,2017,200,16
+common buckthorn,89,Fruits,25568,MN,45.14,-93.31,2018,168,7
+common buckthorn,89,Fruits,25568,MN,45.14,-93.31,2019,167,17
+common buckthorn,89,Fruits,25568,MN,45.14,-93.31,2020,207,3
+common buckthorn,89,Fruits,25568,MN,45.14,-93.31,2021,170,6
+common buckthorn,89,Fruits,25568,MN,45.14,-93.31,2022,163,6
+common buckthorn,89,Fruits,25568,MN,45.14,-93.31,2023,155,2
+common buckthorn,89,Fruits,25568,MN,45.14,-93.31,2024,153,2
+common buckthorn,89,Fruits,25568,MN,45.14,-93.31,2025,194,11
+common buckthorn,89,Fruits,26201,MN,44.86,-93.22,2019,184,13
+common buckthorn,89,Fruits,26201,MN,44.86,-93.22,2020,198,7
+common buckthorn,89,Fruits,26201,MN,44.86,-93.22,2021,168,7
+common buckthorn,89,Fruits,26602,MN,44.72,-93.63,2019,172,5
+common buckthorn,89,Fruits,41109,WI,44.85,-92.62,2020,275,-9999
+common buckthorn,89,Fruits,41982,WI,44.85,-92.63,2020,263,-9999
+common buckthorn,89,Fruits,45182,MN,45.06,-93.16,2021,243,-9999
+common buckthorn,89,Fruits,45195,MN,45.06,-93.16,2021,250,-9999
+common buckthorn,89,Fruits,45329,MN,44.81,-93.13,2021,274,-9999
+common buckthorn,89,Fruits,46298,WI,42.96,-88.36,2022,97,-9999
+common buckthorn,89,Fruits,46299,WI,42.96,-88.36,2022,97,-9999
+common buckthorn,89,Fruits,48527,IA,41.2,-95.91,2022,198,-9999
+common buckthorn,89,Fruits,50745,WI,43.44,-88.02,2023,55,-9999
+common buckthorn,89,Fruits,52822,MN,44.83,-93.33,2023,262,-9999
+common buckthorn,89,Fruits,53707,WI,43.08,-87.89,2023,361,-9999
+common buckthorn,89,Fruits,54344,MN,44.07,-91.68,2024,180,100
+common buckthorn,89,Fruits,54344,MN,44.07,-91.68,2025,218,7
+common buckthorn,89,Fruits,54344,MN,44.07,-91.68,2026,147,8
+common buckthorn,89,Fruits,60758,MN,44.83,-93.33,2026,264,-9999
+common buckthorn,89,Leaves,2535,WI,42.78,-87.85,2010,323,-9999
+common buckthorn,89,Leaves,12572,WI,43.66,-91.22,2013,320,-9999
+common buckthorn,89,Leaves,17680,MN,44.92,-92.79,2015,309,-9999
+common buckthorn,89,Leaves,17680,MN,44.92,-92.79,2016,112,3
+common buckthorn,89,Leaves,17680,MN,44.92,-92.79,2017,118,7
+common buckthorn,89,Leaves,17680,MN,44.92,-92.79,2018,127,6
+common buckthorn,89,Leaves,20243,MN,44.92,-92.79,2019,137,380
+common buckthorn,89,Leaves,20617,WI,43.13,-89.38,2016,309,-9999
+common buckthorn,89,Leaves,21184,MN,45.01,-93.36,2015,189,-9999
+common buckthorn,89,Leaves,21289,MN,44.72,-93.4,2016,111,6
+common buckthorn,89,Leaves,22959,MN,45.0,-93.13,2016,311,229
+common buckthorn,89,Leaves,23676,MN,47.0,-94.7,2016,287,-9999
+common buckthorn,89,Leaves,23676,MN,47.0,-94.7,2017,122,4
+common buckthorn,89,Leaves,23676,MN,47.0,-94.7,2018,136,179
+common buckthorn,89,Leaves,23676,MN,47.0,-94.7,2019,148,8
+common buckthorn,89,Leaves,24692,MN,44.85,-93.23,2016,294,-9999
+common buckthorn,89,Leaves,24692,MN,44.85,-93.23,2017,110,8
+common buckthorn,89,Leaves,24692,MN,44.85,-93.23,2018,130,3
+common buckthorn,89,Leaves,24692,MN,44.85,-93.23,2019,118,1
+common buckthorn,89,Leaves,25568,MN,45.14,-93.31,2017,127,15
+common buckthorn,89,Leaves,25568,MN,45.14,-93.31,2018,126,6
+common buckthorn,89,Leaves,25568,MN,45.14,-93.31,2019,116,6
+common buckthorn,89,Leaves,25568,MN,45.14,-93.31,2020,204,3
+common buckthorn,89,Leaves,25568,MN,45.14,-93.31,2021,98,3
+common buckthorn,89,Leaves,25568,MN,45.14,-93.31,2022,121,2
+common buckthorn,89,Leaves,25568,MN,45.14,-93.31,2023,123,3
+common buckthorn,89,Leaves,25568,MN,45.14,-93.31,2024,120,9
+common buckthorn,89,Leaves,25568,MN,45.14,-93.31,2025,121,11
+common buckthorn,89,Leaves,25568,MN,45.14,-93.31,2026,171,76
+common buckthorn,89,Leaves,26201,MN,44.86,-93.22,2019,121,6
+common buckthorn,89,Leaves,26201,MN,44.86,-93.22,2020,121,7
+common buckthorn,89,Leaves,26201,MN,44.86,-93.22,2021,98,5
+common buckthorn,89,Leaves,26602,MN,44.72,-93.63,2019,118,15
+common buckthorn,89,Leaves,32246,MN,44.15,-94.01,2018,300,-9999
+common buckthorn,89,Leaves,40498,WI,43.01,-88.12,2020,262,-9999
+common buckthorn,89,Leaves,41109,WI,44.85,-92.62,2020,275,-9999
+common buckthorn,89,Leaves,41364,WI,45.11,-92.67,2020,273,-9999
+common buckthorn,89,Leaves,41982,WI,44.85,-92.63,2020,263,-9999
+common buckthorn,89,Leaves,42643,MN,44.66,-93.16,2021,50,-9999
+common buckthorn,89,Leaves,45172,MN,45.06,-93.16,2021,256,-9999
+common buckthorn,89,Leaves,45182,MN,45.06,-93.16,2021,243,-9999
+common buckthorn,89,Leaves,45195,MN,45.06,-93.16,2021,250,-9999
+common buckthorn,89,Leaves,45329,MN,44.81,-93.13,2021,274,-9999
+common buckthorn,89,Leaves,46298,WI,42.96,-88.36,2022,97,-9999
+common buckthorn,89,Leaves,48096,MN,44.81,-93.13,2022,132,-9999
+common buckthorn,89,Leaves,48527,IA,41.2,-95.91,2022,198,-9999
+common buckthorn,89,Leaves,52822,MN,44.83,-93.33,2023,262,-9999
+common buckthorn,89,Leaves,53707,WI,43.08,-87.89,2024,124,93
+common buckthorn,89,Leaves,54344,MN,44.07,-91.68,2024,100,20
+common buckthorn,89,Leaves,54344,MN,44.07,-91.68,2025,106,7
+common buckthorn,89,Leaves,54344,MN,44.07,-91.68,2026,105,9
+common buckthorn,89,Leaves,60758,MN,44.83,-93.33,2026,264,-9999
+common buckthorn,89,Open flowers,17680,MN,44.92,-92.79,2016,138,5
+common buckthorn,89,Open flowers,23676,MN,47.0,-94.7,2017,155,5
+common buckthorn,89,Open flowers,23676,MN,47.0,-94.7,2018,147,4
+common buckthorn,89,Open flowers,23676,MN,47.0,-94.7,2019,159,4
+common buckthorn,89,Open flowers,24692,MN,44.85,-93.23,2018,141,11
+common buckthorn,89,Open flowers,24692,MN,44.85,-93.23,2019,148,7
+common buckthorn,89,Open flowers,25568,MN,45.14,-93.31,2017,184,5
+common buckthorn,89,Open flowers,25568,MN,45.14,-93.31,2018,147,7
+common buckthorn,89,Open flowers,25568,MN,45.14,-93.31,2019,150,2
+common buckthorn,89,Open flowers,25568,MN,45.14,-93.31,2022,163,6
+common buckthorn,89,Open flowers,25568,MN,45.14,-93.31,2024,139,7
+common buckthorn,89,Open flowers,26694,MN,44.46,-93.19,2017,123,21
+common buckthorn,89,Open flowers,46298,WI,42.96,-88.36,2022,97,-9999
+common buckthorn,89,Open flowers,54344,MN,44.07,-91.68,2024,180,100
+common buckthorn,89,Open flowers,54344,MN,44.07,-91.68,2026,132,7
+common buckthorn,89,Recent fruit or seed drop,17680,MN,44.92,-92.79,2017,272,137
+common buckthorn,89,Recent fruit or seed drop,17680,MN,44.92,-92.79,2018,275,137
+common buckthorn,89,Recent fruit or seed drop,20617,WI,43.13,-89.38,2016,309,-9999
+common buckthorn,89,Recent fruit or seed drop,23676,MN,47.0,-94.7,2016,287,-9999
+common buckthorn,89,Recent fruit or seed drop,23676,MN,47.0,-94.7,2017,300,37
+common buckthorn,89,Recent fruit or seed drop,23676,MN,47.0,-94.7,2019,291,28
+common buckthorn,89,Recent fruit or seed drop,24692,MN,44.85,-93.23,2018,260,7
+common buckthorn,89,Recent fruit or seed drop,24692,MN,44.85,-93.23,2019,248,9
+common buckthorn,89,Recent fruit or seed drop,25104,WI,42.64,-87.83,2017,21,-9999
+common buckthorn,89,Recent fruit or seed drop,25568,MN,45.14,-93.31,2018,266,13
+common buckthorn,89,Recent fruit or seed drop,25568,MN,45.14,-93.31,2019,310,5
+common buckthorn,89,Recent fruit or seed drop,25568,MN,45.14,-93.31,2020,299,7
+common buckthorn,89,Recent fruit or seed drop,25568,MN,45.14,-93.31,2021,238,3
+common buckthorn,89,Recent fruit or seed drop,25568,MN,45.14,-93.31,2022,275,5
+common buckthorn,89,Recent fruit or seed drop,25568,MN,45.14,-93.31,2023,281,8
+common buckthorn,89,Recent fruit or seed drop,25568,MN,45.14,-93.31,2024,259,6
+common buckthorn,89,Recent fruit or seed drop,25568,MN,45.14,-93.31,2025,271,8
+common buckthorn,89,Recent fruit or seed drop,26201,MN,44.86,-93.22,2020,239,11
+common buckthorn,89,Recent fruit or seed drop,26201,MN,44.86,-93.22,2021,266,13
+common buckthorn,89,Recent fruit or seed drop,26602,MN,44.72,-93.63,2019,258,7
+common buckthorn,89,Recent fruit or seed drop,41982,WI,44.85,-92.63,2020,283,7
+common buckthorn,89,Recent fruit or seed drop,45182,MN,45.06,-93.16,2021,264,14
+common buckthorn,89,Recent fruit or seed drop,45195,MN,45.06,-93.16,2021,263,8
+common buckthorn,89,Recent fruit or seed drop,46298,WI,42.96,-88.36,2022,97,-9999
+common buckthorn,89,Recent fruit or seed drop,46299,WI,42.96,-88.36,2022,97,-9999
+common buckthorn,89,Recent fruit or seed drop,50745,WI,43.44,-88.02,2023,55,-9999
+common buckthorn,89,Recent fruit or seed drop,53707,WI,43.08,-87.89,2023,361,-9999
+common buckthorn,89,Recent fruit or seed drop,54344,MN,44.07,-91.68,2025,275,50
+common buckthorn,89,Ripe fruits,2535,WI,42.78,-87.85,2010,323,-9999
+common buckthorn,89,Ripe fruits,17680,MN,44.92,-92.79,2016,291,126
+common buckthorn,89,Ripe fruits,17680,MN,44.92,-92.79,2017,272,137
+common buckthorn,89,Ripe fruits,17680,MN,44.92,-92.79,2018,275,137
+common buckthorn,89,Ripe fruits,17680,MN,44.92,-92.79,2021,281,1094
+common buckthorn,89,Ripe fruits,20617,WI,43.13,-89.38,2016,309,-9999
+common buckthorn,89,Ripe fruits,22959,MN,45.0,-93.13,2016,311,229
+common buckthorn,89,Ripe fruits,23676,MN,47.0,-94.7,2016,287,-9999
+common buckthorn,89,Ripe fruits,23676,MN,47.0,-94.7,2017,250,21
+common buckthorn,89,Ripe fruits,23676,MN,47.0,-94.7,2018,230,6
+common buckthorn,89,Ripe fruits,23676,MN,47.0,-94.7,2019,247,12
+common buckthorn,89,Ripe fruits,24692,MN,44.85,-93.23,2016,294,-9999
+common buckthorn,89,Ripe fruits,24692,MN,44.85,-93.23,2017,224,15
+common buckthorn,89,Ripe fruits,24692,MN,44.85,-93.23,2018,225,14
+common buckthorn,89,Ripe fruits,24692,MN,44.85,-93.23,2019,231,6
+common buckthorn,89,Ripe fruits,25104,WI,42.64,-87.83,2017,21,-9999
+common buckthorn,89,Ripe fruits,25568,MN,45.14,-93.31,2018,234,23
+common buckthorn,89,Ripe fruits,25568,MN,45.14,-93.31,2019,236,5
+common buckthorn,89,Ripe fruits,25568,MN,45.14,-93.31,2020,222,4
+common buckthorn,89,Ripe fruits,25568,MN,45.14,-93.31,2021,199,1
+common buckthorn,89,Ripe fruits,25568,MN,45.14,-93.31,2022,205,1
+common buckthorn,89,Ripe fruits,25568,MN,45.14,-93.31,2023,204,8
+common buckthorn,89,Ripe fruits,25568,MN,45.14,-93.31,2024,236,21
+common buckthorn,89,Ripe fruits,25568,MN,45.14,-93.31,2025,194,11
+common buckthorn,89,Ripe fruits,26201,MN,44.86,-93.22,2019,213,7
+common buckthorn,89,Ripe fruits,26201,MN,44.86,-93.22,2020,219,8
+common buckthorn,89,Ripe fruits,26201,MN,44.86,-93.22,2021,232,8
+common buckthorn,89,Ripe fruits,26602,MN,44.72,-93.63,2019,230,9
+common buckthorn,89,Ripe fruits,41982,WI,44.85,-92.63,2020,263,-9999
+common buckthorn,89,Ripe fruits,45182,MN,45.06,-93.16,2021,243,-9999
+common buckthorn,89,Ripe fruits,45195,MN,45.06,-93.16,2021,250,-9999
+common buckthorn,89,Ripe fruits,46298,WI,42.96,-88.36,2022,97,-9999
+common buckthorn,89,Ripe fruits,50745,WI,43.44,-88.02,2023,55,-9999
+common buckthorn,89,Ripe fruits,52822,MN,44.83,-93.33,2023,262,-9999
+common buckthorn,89,Ripe fruits,53707,WI,43.08,-87.89,2023,361,-9999
+common buckthorn,89,Ripe fruits,54344,MN,44.07,-91.68,2025,218,7
+common buckthorn,89,Ripe fruits,60758,MN,44.83,-93.33,2026,264,-9999
+reed canarygrass,960,Flower heads (grasses/sedges),25568,MN,45.14,-93.31,2017,149,10
+reed canarygrass,960,Flower heads (grasses/sedges),25568,MN,45.14,-93.31,2018,154,3
+reed canarygrass,960,Flower heads (grasses/sedges),25568,MN,45.14,-93.31,2019,167,17
+reed canarygrass,960,Flower heads (grasses/sedges),25568,MN,45.14,-93.31,2020,183,238
+reed canarygrass,960,Flower heads (grasses/sedges),25568,MN,45.14,-93.31,2021,162,17
+reed canarygrass,960,Flower heads (grasses/sedges),25568,MN,45.14,-93.31,2022,163,6
+reed canarygrass,960,Flower heads (grasses/sedges),25568,MN,45.14,-93.31,2023,149,4
+reed canarygrass,960,Flower heads (grasses/sedges),25568,MN,45.14,-93.31,2024,146,6
+reed canarygrass,960,Flower heads (grasses/sedges),25568,MN,45.14,-93.31,2025,156,35
+reed canarygrass,960,Flower heads (grasses/sedges),48721,IA,41.56,-91.61,2022,238,-9999
+reed canarygrass,960,Flower heads (grasses/sedges),49688,MN,44.74,-93.6,2023,175,-9999
+reed canarygrass,960,Flower heads (grasses/sedges),49688,MN,44.74,-93.6,2025,153,1
+reed canarygrass,960,Flower heads (grasses/sedges),49688,MN,44.74,-93.6,2026,170,265
+reed canarygrass,960,Fruits,25568,MN,45.14,-93.31,2017,165,16
+reed canarygrass,960,Fruits,25568,MN,45.14,-93.31,2018,171,3
+reed canarygrass,960,Fruits,25568,MN,45.14,-93.31,2019,210,8
+reed canarygrass,960,Fruits,25568,MN,45.14,-93.31,2020,222,4
+reed canarygrass,960,Fruits,25568,MN,45.14,-93.31,2021,173,3
+reed canarygrass,960,Fruits,25568,MN,45.14,-93.31,2022,185,8
+reed canarygrass,960,Fruits,25568,MN,45.14,-93.31,2023,155,2
+reed canarygrass,960,Fruits,25568,MN,45.14,-93.31,2024,153,2
+reed canarygrass,960,Fruits,25568,MN,45.14,-93.31,2025,208,14
+reed canarygrass,960,Fruits,25568,MN,45.14,-93.31,2026,171,76
+reed canarygrass,960,Fruits,49688,MN,44.74,-93.6,2023,189,-9999
+reed canarygrass,960,Fruits,49688,MN,44.74,-93.6,2025,53,2
+reed canarygrass,960,Fruits,49688,MN,44.74,-93.6,2026,176,1
+reed canarygrass,960,Initial growth (grasses/sedges),20617,WI,43.13,-89.38,2018,116,-9999
+reed canarygrass,960,Initial growth (grasses/sedges),25568,MN,45.14,-93.31,2017,112,-9999
+reed canarygrass,960,Initial growth (grasses/sedges),25568,MN,45.14,-93.31,2018,111,9
+reed canarygrass,960,Initial growth (grasses/sedges),25568,MN,45.14,-93.31,2019,116,6
+reed canarygrass,960,Initial growth (grasses/sedges),25568,MN,45.14,-93.31,2020,207,3
+reed canarygrass,960,Initial growth (grasses/sedges),25568,MN,45.14,-93.31,2021,101,3
+reed canarygrass,960,Initial growth (grasses/sedges),25568,MN,45.14,-93.31,2022,121,5
+reed canarygrass,960,Initial growth (grasses/sedges),25568,MN,45.14,-93.31,2023,111,159
+reed canarygrass,960,Initial growth (grasses/sedges),25568,MN,45.14,-93.31,2024,104,150
+reed canarygrass,960,Initial growth (grasses/sedges),25568,MN,45.14,-93.31,2025,103,147
+reed canarygrass,960,Initial growth (grasses/sedges),25568,MN,45.14,-93.31,2026,95,139
+reed canarygrass,960,Initial growth (grasses/sedges),48721,IA,41.56,-91.61,2022,238,-9999
+reed canarygrass,960,Initial growth (grasses/sedges),49688,MN,44.74,-93.6,2025,116,1
+reed canarygrass,960,Leaves (grasses),20617,WI,43.13,-89.38,2018,116,-9999
+reed canarygrass,960,Leaves (grasses),25568,MN,45.14,-93.31,2017,127,15
+reed canarygrass,960,Leaves (grasses),25568,MN,45.14,-93.31,2018,111,9
+reed canarygrass,960,Leaves (grasses),25568,MN,45.14,-93.31,2019,116,6
+reed canarygrass,960,Leaves (grasses),25568,MN,45.14,-93.31,2020,215,7
+reed canarygrass,960,Leaves (grasses),25568,MN,45.14,-93.31,2021,128,6
+reed canarygrass,960,Leaves (grasses),25568,MN,45.14,-93.31,2022,124,3
+reed canarygrass,960,Leaves (grasses),25568,MN,45.14,-93.31,2023,134,11
+reed canarygrass,960,Leaves (grasses),25568,MN,45.14,-93.31,2024,126,2
+reed canarygrass,960,Leaves (grasses),25568,MN,45.14,-93.31,2025,121,11
+reed canarygrass,960,Leaves (grasses),25568,MN,45.14,-93.31,2026,171,76
+reed canarygrass,960,Leaves (grasses),48721,IA,41.56,-91.61,2022,238,-9999
+reed canarygrass,960,Leaves (grasses),49688,MN,44.74,-93.6,2023,175,-9999
+reed canarygrass,960,Leaves (grasses),49688,MN,44.74,-93.6,2024,198,93
+reed canarygrass,960,Leaves (grasses),49688,MN,44.74,-93.6,2025,153,1
+reed canarygrass,960,Leaves (grasses),49688,MN,44.74,-93.6,2026,252,2
+reed canarygrass,960,Leaves (grasses),52924,MN,45.17,-93.28,2023,282,-9999
+reed canarygrass,960,Open flowers (grasses/sedges),25568,MN,45.14,-93.31,2017,176,8
+reed canarygrass,960,Open flowers (grasses/sedges),25568,MN,45.14,-93.31,2018,154,3
+reed canarygrass,960,Open flowers (grasses/sedges),25568,MN,45.14,-93.31,2019,167,17
+reed canarygrass,960,Open flowers (grasses/sedges),25568,MN,45.14,-93.31,2020,186,3
+reed canarygrass,960,Open flowers (grasses/sedges),25568,MN,45.14,-93.31,2021,164,2
+reed canarygrass,960,Open flowers (grasses/sedges),25568,MN,45.14,-93.31,2022,163,6
+reed canarygrass,960,Open flowers (grasses/sedges),25568,MN,45.14,-93.31,2023,155,2
+reed canarygrass,960,Open flowers (grasses/sedges),25568,MN,45.14,-93.31,2024,153,2
+reed canarygrass,960,Open flowers (grasses/sedges),25568,MN,45.14,-93.31,2025,234,12
+reed canarygrass,960,Open flowers (grasses/sedges),48721,IA,41.56,-91.61,2022,238,-9999
+reed canarygrass,960,Open flowers (grasses/sedges),49688,MN,44.74,-93.6,2023,175,-9999
+reed canarygrass,960,Open flowers (grasses/sedges),49688,MN,44.74,-93.6,2025,153,1
+reed canarygrass,960,Open flowers (grasses/sedges),49688,MN,44.74,-93.6,2026,170,265
+reed canarygrass,960,Pollen release (flowers),25568,MN,45.14,-93.31,2017,230,20
+reed canarygrass,960,Pollen release (flowers),25568,MN,45.14,-93.31,2018,176,2
+reed canarygrass,960,Pollen release (flowers),25568,MN,45.14,-93.31,2019,176,2
+reed canarygrass,960,Pollen release (flowers),25568,MN,45.14,-93.31,2020,201,15
+reed canarygrass,960,Pollen release (flowers),25568,MN,45.14,-93.31,2021,206,7
+reed canarygrass,960,Pollen release (flowers),25568,MN,45.14,-93.31,2022,163,6
+reed canarygrass,960,Pollen release (flowers),25568,MN,45.14,-93.31,2023,155,2
+reed canarygrass,960,Pollen release (flowers),25568,MN,45.14,-93.31,2024,195,3
+reed canarygrass,960,Pollen release (flowers),25568,MN,45.14,-93.31,2025,159,3
+reed canarygrass,960,Pollen release (flowers),49688,MN,44.74,-93.6,2025,157,1
+reed canarygrass,960,Recent fruit or seed drop,25568,MN,45.14,-93.31,2018,174,3
+reed canarygrass,960,Recent fruit or seed drop,25568,MN,45.14,-93.31,2019,210,8
+reed canarygrass,960,Recent fruit or seed drop,25568,MN,45.14,-93.31,2020,218,3
+reed canarygrass,960,Recent fruit or seed drop,25568,MN,45.14,-93.31,2021,170,6
+reed canarygrass,960,Recent fruit or seed drop,25568,MN,45.14,-93.31,2022,226,19
+reed canarygrass,960,Recent fruit or seed drop,25568,MN,45.14,-93.31,2023,155,2
+reed canarygrass,960,Recent fruit or seed drop,25568,MN,45.14,-93.31,2024,185,9
+reed canarygrass,960,Recent fruit or seed drop,25568,MN,45.14,-93.31,2025,194,11
+reed canarygrass,960,Recent fruit or seed drop,25568,MN,45.14,-93.31,2026,208,25
+reed canarygrass,960,Recent fruit or seed drop,49688,MN,44.74,-93.6,2022,291,-9999
+reed canarygrass,960,Recent fruit or seed drop,49688,MN,44.74,-93.6,2023,247,2
+reed canarygrass,960,Recent fruit or seed drop,49688,MN,44.74,-93.6,2026,235,1
+reed canarygrass,960,Ripe fruits,25568,MN,45.14,-93.31,2017,166,1
+reed canarygrass,960,Ripe fruits,25568,MN,45.14,-93.31,2018,171,3
+reed canarygrass,960,Ripe fruits,25568,MN,45.14,-93.31,2019,210,8
+reed canarygrass,960,Ripe fruits,25568,MN,45.14,-93.31,2020,222,4
+reed canarygrass,960,Ripe fruits,25568,MN,45.14,-93.31,2021,173,3
+reed canarygrass,960,Ripe fruits,25568,MN,45.14,-93.31,2022,185,8
+reed canarygrass,960,Ripe fruits,25568,MN,45.14,-93.31,2023,155,2
+reed canarygrass,960,Ripe fruits,25568,MN,45.14,-93.31,2024,185,9
+reed canarygrass,960,Ripe fruits,25568,MN,45.14,-93.31,2025,194,11
+reed canarygrass,960,Ripe fruits,25568,MN,45.14,-93.31,2026,171,76
+reed canarygrass,960,Ripe fruits,49688,MN,44.74,-93.6,2022,291,-9999
+reed canarygrass,960,Ripe fruits,49688,MN,44.74,-93.6,2025,53,2
+reed canarygrass,960,Ripe fruits,49688,MN,44.74,-93.6,2026,220,10
+Kentucky bluegrass,971,Flower heads (grasses/sedges),5753,MN,45.57,-95.82,2016,158,-9999
+Kentucky bluegrass,971,Initial growth (grasses/sedges),29934,MN,47.49,-94.88,2018,121,28
+Kentucky bluegrass,971,Leaves (grasses),5753,MN,45.57,-95.82,2016,158,-9999
+Kentucky bluegrass,971,Leaves (grasses),29934,MN,47.49,-94.88,2018,121,7
+Kentucky bluegrass,971,Open flowers (grasses/sedges),5753,MN,45.57,-95.82,2016,158,-9999
