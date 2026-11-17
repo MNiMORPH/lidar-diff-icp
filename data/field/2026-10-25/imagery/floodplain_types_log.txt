@@ -1,0 +1,62 @@
+A1 Sentinel-2 S2C_MSIL2A_20261017T170311_R069_T15TWJ_20261017T202312 | floodplain-mask pixels in the 3 km box: 9154
+  cluster median reflectance (x1e-4) per band ['B02', 'B03', 'B04', 'B05', 'B06', 'B07', 'B08', 'B8A', 'B11', 'B12'] and NDVI, NDRE, NDMI; pixel count:
+   0: [1173, 1342, 1338, 1665, 2121, 2265, 2450, 2525, 2807, 2085]  NDVI 0.29 NDRE 0.21 NDMI -0.07  n 2991
+   1: [2284, 2797, 3070, 3034, 3497, 3628, 4379, 3959, 4102, 3143]  NDVI 0.18 NDRE 0.13 NDMI 0.03  n 385
+   2: [1296, 1737, 1399, 2400, 4353, 4747, 5180, 5075, 3251, 2132]  NDVI 0.57 NDRE 0.36 NDMI 0.23  n 793
+   3: [1470, 1704, 1878, 2262, 2829, 2974, 3089, 3278, 3604, 2757]  NDVI 0.24 NDRE 0.18 NDMI -0.08  n 906
+   4: [1240, 1451, 1435, 1857, 2504, 2699, 2918, 2983, 3086, 2267]  NDVI 0.34 NDRE 0.23 NDMI -0.03  n 2778
+   5: [1275, 1594, 1450, 2143, 3394, 3701, 4063, 4021, 3278, 2258]  NDVI 0.47 NDRE 0.30 NDMI 0.11  n 1301
+
+s2_oct2026_k6: points per cluster and lidar minus RTK by cluster (mm; raw median, rover-median-removed median, n):
+  cluster 2: n  52  r21  +121 / rel   -8   r08  +338 / rel  -17 (n08 51)  rovers {'RS+ B': 46, 'RS+ A': 4, 'CORS': 2}
+  cluster 3: n   3  r21  +152 / rel   -7   r08  +233 / rel   +1 (n08 3)  rovers {'RS+ A': 3}
+  cluster 4: n   8  r21  +164 / rel  +24   r08  +187 / rel  -85 (n08 8)  rovers {'RS+ A': 4, 'RS+ B': 4}
+  cluster 5: n  84  r21  +144 / rel  +11   r08  +362 / rel  +31 (n08 64)  rovers {'RS+ B': 48, 'RS+ A': 21, 'CORS': 15}
+  Kruskal-Wallis across clusters with n >= 5: r21_rel p 0.045; r08_rel p 0.000
+  wrote data/field/2026-10-25/imagery/floodplain_types_s2_oct2026_k6.png
+
+A2 four-date stack ['S2C_MSIL2A_20260410T165841_R069_T15TWJ_20260410T221619', 'S2B_MSIL2A_20260714T165849_R069_T15TWJ_20260714T204816', 'S2C_MSIL2A_20260808T165851_R069_T15TWJ_20260808T220309', 'S2C_MSIL2A_20261017T170311_R069_T15TWJ_20261017T202312'] | pixels: 9154
+  cluster NDVI per date (Apr 10, Jul 14, Aug 8, Oct 17) from median bands; pixel count:
+   0: NDVI [0.2, 0.6, 0.6, 0.36]  n 2261
+   1: NDVI [0.2, 0.64, 0.64, 0.57]  n 826
+   2: NDVI [0.16, 0.44, 0.47, 0.27]  n 505
+   3: NDVI [0.11, 0.22, 0.27, 0.17]  n 358
+   4: NDVI [0.18, 0.61, 0.63, 0.42]  n 1679
+   5: NDVI [0.21, 0.58, 0.57, 0.3]  n 3525
+
+s2_4dates_k6: points per cluster and lidar minus RTK by cluster (mm; raw median, rover-median-removed median, n):
+  cluster 0: n   3  r21  +144 / rel  -15   r08   +72 / rel -222 (n08 2)  rovers {'RS+ A': 2, 'RS+ B': 1}
+  cluster 1: n  85  r21  +129 / rel   -0   r08  +348 / rel   -3 (n08 83)  rovers {'RS+ B': 70, 'RS+ A': 13, 'CORS': 2}
+  cluster 2: n   1  r21  +157 / rel   -2   r08  +233 / rel   +1 (n08 1)  rovers {'RS+ A': 1}
+  cluster 4: n  58  r21  +140 / rel   +8   r08  +345 / rel  +31 (n08 40)  rovers {'RS+ B': 27, 'RS+ A': 16, 'CORS': 15}
+  Kruskal-Wallis across clusters with n >= 5: r21_rel p 0.355; r08_rel p 0.121
+  wrote data/field/2026-10-25/imagery/floodplain_types_s2_4dates_k6.png
+
+B NAIP 2021-08-15 (2 tiles, pixel 0.6 m): cluster median DN [R,G,B,NIR], NDVI(DN), share of chip:
+   0: [99, 127, 90, 159]  NDVI +0.23  29 %
+   1: [51, 60, 65, 61]  NDVI +0.09  18 %
+   2: [165, 164, 127, 143]  NDVI -0.07  22 %
+   3: [103, 103, 91, 63]  NDVI -0.24  6 %
+   4: [75, 98, 77, 122]  NDVI +0.24  26 %
+
+naip_2021_k5: points per cluster and lidar minus RTK by cluster (mm; raw median, rover-median-removed median, n):
+  cluster 0: n  15  r21  +160 / rel  +20   r08  +186 / rel  -38 (n08 11)  rovers {'RS+ A': 8, 'CORS': 4, 'RS+ B': 3}
+  cluster 1: n  21  r21  +166 / rel  +28   r08  +407 / rel  +50 (n08 17)  rovers {'RS+ B': 12, 'RS+ A': 7, 'CORS': 2}
+  cluster 2: n  85  r21  +121 / rel   -9   r08  +345 / rel   -8 (n08 76)  rovers {'RS+ B': 67, 'RS+ A': 11, 'CORS': 7}
+  cluster 3: n  12  r21  +146 / rel  +17   r08  +434 / rel  +77 (n08 12)  rovers {'RS+ B': 12}
+  cluster 4: n  14  r21  +173 / rel  +23   r08  +190 / rel  -32 (n08 10)  rovers {'RS+ A': 6, 'RS+ B': 4, 'CORS': 4}
+  Kruskal-Wallis across clusters with n >= 5: r21_rel p 0.001; r08_rel p 0.049
+  wrote data/field/2026-10-25/imagery/floodplain_types_naip_2021_k5.png
+
+B NAIP 2025-09-29 (2 tiles, pixel 0.6 m): cluster median DN [R,G,B,NIR], NDVI(DN), share of chip:
+   0: [144, 156, 111, 220]  NDVI +0.21  40 %
+   1: [81, 83, 82, 174]  NDVI +0.36  19 %
+   2: [229, 224, 212, 226]  NDVI -0.01  2 %
+   3: [55, 59, 77, 89]  NDVI +0.24  9 %
+   4: [117, 125, 98, 203]  NDVI +0.27  31 %
+
+naip_2025_k5: points per cluster and lidar minus RTK by cluster (mm; raw median, rover-median-removed median, n):
+  cluster 0: n 110  r21  +137 / rel   +6   r08  +337 / rel   -1 (n08 90)  rovers {'RS+ B': 67, 'RS+ A': 26, 'CORS': 17}
+  cluster 4: n  37  r21  +128 / rel   -7   r08  +355 / rel  +21 (n08 36)  rovers {'RS+ B': 31, 'RS+ A': 6}
+  Kruskal-Wallis across clusters with n >= 5: r21_rel p 0.207; r08_rel p 0.336
+  wrote data/field/2026-10-25/imagery/floodplain_types_naip_2025_k5.png

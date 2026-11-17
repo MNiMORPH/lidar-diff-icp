@@ -611,3 +611,61 @@ real change and (1) and (3) are not; the ground truth cannot separate them on it
 both a cause of (1) in 2008 and a consequence of (2) since. What would: the 2008 point cloud's own return-height
 distribution at these 147 points (the 2008 standing canopy directly, as the bluff check did with last returns), and
 the November-2008 flight date for swath 137/138 against the Landsat curve.
+
+## Plant types from multispectral imagery, and lidar minus RTK by type (2026-11-18)
+
+Andy: "whether plant types might correlate with the offset between 2021 lidar, 2008 lidar, and the RTK GNSS
+points." Two sources of classes: (A) the project's own October spectral class from the reed-canary-grass work
+(`analysis/RCG_PHENOLOGY.md` sections P and Q: "NE-like" = spectrally like the NE reference patch in that year's
+October scene, two-class maximum likelihood on all bands, mapped by imagery alone, no field truth), read at the
+points from `data/derived/elbaext_delong_star_nosurf/rcg/nelike_p_*.tif`, with the 2024 Sentinel-2 and 2008 Landsat
+phenology metrics of the same work; (B) fresh unsupervised classes, Wisconsin-style (all bands, one scene, k-means,
+k MINE), `analysis/field_survey/floodplain_types_2026-10-25.py`: Sentinel-2 2026-10-17 ten bands k = 6 over the
+floodplain mask within 1.5 km, the same on a four-date stack (April, July, August, October 2026), and NAIP
+2021-08-15 and 2025-09-29 four bands k = 5 within the field. Log `imagery/floodplain_types_log.txt`; tables
+`imagery/floodplain_types_*_clusters.csv`, `floodplain_types_points.csv`; maps `imagery/floodplain_types_*.png`,
+`imagery/floodplain_nelike_class_r08.png`.
+
+**The survey field is the reed-canary-grass work's reference ground.** The parking lot named in section P
+(E 579979 N 4885340) is the south end of this field. By the project's class the field is NE-like in 2021 (135 of 147
+points, p median 1.00) and in 2025 (142 of 147), and HALF of it was NE-like in October 2008: 97 of 147 points, all of
+T2a's loop on the north and center of the field (88 % of his points) and none of the CORS corner, a third of
+T1a's. The class boundary of 2008 runs through the field between the southwest corner and the rest.
+
+**Lidar minus RTK by the October-2008 class (raw, mm):** 2008 lidar inside the class **+358** (n 96), outside
+**+200** (n 30), difference +158 mm, Mann-Whitney p 1.5e-06; 2021 lidar inside +129 (n 97), outside +143 (n 50),
+difference -14 mm, p 0.25. Within one rover, where the class contrast is not confounded with the rover's tie:
+T1a in +274 (n 10) vs out +200 (n 12), +74 mm, p 0.11; T2a in +359 (n 86) vs out +288 (n 12), +71 mm,
+p 0.09; the 2021 contrasts within rover are -11 and -7 mm. The pipeline's own DoD at the points is -234 inside the
+class and -60 outside: the floodplain "erosion" of the difference map on this field is the 2008 sward. This is a free
+prediction met: section Q had measured the class-level 2008 offset at 100-120 mm from the lidar alone, and the
+ground truth, which the class never saw, finds 158 mm pooled and 71-74 mm within rover between the same two parts
+of the field. The 2008 October class is correlated with the raw 2008 residual at Spearman +0.41 (p < 1e-4, n 126).
+
+**By the 2024 phenology metrics (Spearman with the rover-median-removed residuals, n 126):** r08 rises with
+greenness retained into October (+0.36, p < 0.001), with the senescence day (+0.43), with mid-October NDVI (+0.34),
+late-October NDVI (+0.38) and summer NDVI (+0.30), and does not follow early-April NDVI (+0.03) or the green-up ratio
+(-0.03); r21 follows none of them beyond -0.23 (April NDVI, p 0.01). Against the 2008 Landsat metrics r08 falls with
+2008 summer NDVI (-0.44), October 2008 NDVI (-0.35) and spring 2008 NDVI (-0.27), all at 30 m.
+
+**By the fresh clusters.** Sentinel-2 October 2026, k = 6: the points fall in four clusters; Kruskal-Wallis across
+them r08_rel p < 0.001, r21_rel p 0.045; the least green cluster at the points (NDVI 0.34, 8 points of both RS+
+rovers) has r08 +187 raw, -85 relative, against +338 to +362 in the two green clusters (NDVI 0.47 and 0.57, 52 and
+84 points, relative -17 and +31). The four-date stack separates the points into two phenology classes that do not
+differ (r08_rel p 0.12). NAIP August 2021, k = 5 within the field (p 0.049 for r08_rel, 0.001 for r21_rel): the two
+dark classes (the swale and the shrubs, NDVI 0.09 and -0.24 in digital numbers; 21 and 12 points) have r08 +407 and
++434 raw (+50, +77 relative); the two green regrowth classes (NDVI 0.23-0.24; 15 and 14 points) +186 and +190
+(-38, -32); the bright cut-hay class (85 points) +345 (-8). r21 is 20-28 mm higher relative over the green and
+dark classes than over the cut hay (-9). NAIP September 2025 splits the points into two classes that do not differ.
+
+**Reading (hypotheses, kept apart from the numbers).** The 2021 lidar's decimeter does not care what grows where;
+its only structure is 20-30 mm more over the green regrowth and the wet, shrubby swale than over cut hay. The 2008
+lidar's offset is a map of the November-2008 standing dead sward: tallest where October 2008 imagery saw the bright
+dense sward (the project's class), where the ground is wettest and darkest today (the swale), and where the sward
+stays green latest today, and shortest on the southwest corner and the patches that regrow green after the cut.
+Late retention of greenness with a weak early-April signal is a pattern the literature agent now running should
+place: a dense cool-season sward with a thick thatch can hide its own early shoots from a satellite while staying
+green into November, and that is one reading; a warm-season or forb-dominated patch is another. None of the imagery
+names the species; it says that the part of this field that the imagery marked as a distinct sward in October 2008
+is the part where the 2008 lidar surface sits 70-160 mm higher above today's ground, and that the 2021 lidar does
+not see the difference.
