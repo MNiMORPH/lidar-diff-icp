@@ -539,3 +539,10 @@ side the 2021 lidar reads high on (its vegetated checkpoints are +103 mm), and a
 line in late October 2026 is a floor of fresh litter, the surface a pole tip goes into. Neither image can see
 litter depth, and a 10 m pixel after leaf fall mixes shrubs, late-holding oaks and the floor; the re-occupation is
 still the test.
+
+**Decision (Andy, 2026-11-17): "We have no independent reason to think that they did it wrong and T4a answered
+all of my questions competently. I would take the data as they are."** The hillslope points of both teams stand
+as measured, without correction or exclusion; the pole-change question is dropped; the two lines are two samples
+of the bluff, mid-slope (T3a, 2021 lidar about 100 mm above the surveyed ground) and upper slope (T4a, on
+the ground), and the difference between them is a property of the ground they occupied. Open: which property,
+to be settled by the one-rover re-occupation when the site can be revisited.
