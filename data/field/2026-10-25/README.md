@@ -546,3 +546,11 @@ as measured, without correction or exclusion; the pole-change question is droppe
 of the bluff, mid-slope (T3a, 2021 lidar about 100 mm above the surveyed ground) and upper slope (T4a, on
 the ground), and the difference between them is a property of the ground they occupied. Open: which property,
 to be settled by the one-rover re-occupation when the site can be revisited.
+
+**Figures regenerated 2026-11-17** from the current `rtk_points_all.csv` (tied, pole-corrected, T4a's export
+wired in; the data taken as they are, no fitted shift): `figures/rtk_2026-10-25_{diffmap,pdf,profiles_misfit}_2026-11-17.png`
+(`pdf` also as `.pdf`). Group medians and NMADs printed by the density script, 2021 lidar minus RTK, mm: RS+ B
+128.6, 31.4 (n 98); RS+ A 158.7, 49.9 (32); CORS 121.6, 33.0 (17); T3a RS3 98.3, 161.7 (18); T4a 1.7, 115.8
+(21); against 2008: RS+ B 356.6, 80.6 (98); RS+ A 232.2, 102.0 (22); CORS 144.6, 57.4 (6); T4a -49.6 (5);
+T3a -103.0 (1). Identical to the 2026-11-12 compile's table above; the `_polecorr` figures of 2026-11-11
+differ from these only by the four 1 mm coordinate changes of T4a's own export.
