@@ -452,7 +452,7 @@ and +1.60 (se 37.72) for T3a against the expected 1 (off) or 0 (on), because the
 1-46 mm under 100-160 mm of scatter. The horizontal part is the larger unknown: on the 30 deg bluff T4a's
 leans of 0.07-0.44 m could move the lidar reading by up to 124 mm (median of the per-point bounds, max 278)
 in an unknown direction if uncompensated, T3a's by 54 (max 129); the scatter does not track that bound
-(Spearman rho of |residual| on the bound: see the log), and T3a's line, with the smaller leans, has the
+(Spearman rho of |residual from the team median| on the bound: T4a -0.43, p 0.05, n 21; T3a -0.37, p 0.13, n 18, the WRONG sign for uncompensated leans, which would make the scatter grow with the bound), and T3a's line, with the smaller leans, has the
 larger NMAD. Reading: the hypothesis would resolve the B1 pair exactly and leave the bluff gap untouched, so
 the sign flip between the toe and the bluff is NOT evidence against the pole unless T4a's unit had
 compensation on; the bluff points themselves cannot say, and the unit's Flow project can.
