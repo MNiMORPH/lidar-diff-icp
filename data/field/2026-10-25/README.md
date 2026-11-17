@@ -476,3 +476,22 @@ band, so team and position are still confounded). The hypotheses standing after 
 evidence: (1) a surface or litter difference between mid-slope and upper slope, the tip mechanism included;
 (2) a pole change between the B1 and B sessions. The one-rover re-occupation of both lines, mid-slope and
 upper slope with the same tip, decides (1); a question to both teams decides (2).
+
+**How close in space and time was the B1 pair, and could B1 have been moving (Andy, 2026-11-17)?** T4a 4 and
+T3a 1 are 2.93 m apart (dE -1.052, dN +2.733 m) on 1.1-1.4 deg ground; each is a 5.0 s average of 26
+samples, the windows start 1.8 s apart and overlap for 3.2 s; both FIX, PDOP 1.5 and 1.3, the same 7 GPS,
+6 GLONASS and 6 Galileo satellites, baselines 93.8 and 92.6 m. B1 was a student's rover set as a base, so it
+may have been carried while broadcasting. Its broadcast position is the same to full export precision on every
+one of the 14 B1 points in both files (lon -92.00038215, lat 44.11685493, h 187.878): the coordinates it sent
+did not update, so a carried base puts the antenna's displacement from that fixed point into every rover
+position as a common error that cancels in rover minus rover, up to what the base moved in the 1.8 s between the
+two windows. The flat-ground points of the B1 session show no drift the pair could be blamed on: lidar minus
+RTK on the five points under 2 deg of slope is 2.622, 2.611, 2.650 (the lot, 13:20:48-13:21:06), 2.672 (T4a 4,
+13:24:47) and 2.605 m (T3a 1, 13:24:45), a 67 mm range over four minutes that includes the pair itself.
+The same five points show the pair's real uncertainty, which the paragraph above understates: T4a 2 and T4a
+3, 0.08 m apart and 8 s apart on the same lot gravel, differ by 39 mm in height with the same lidar under both;
+the rovers' own RMS are 26 and 30 mm; and the 2.93 m between the two tips can hold microtopography the 5 m grid
+does not see. So the pair separates "T4a reads 100 mm high" from "T4a reads 67 mm low" by 167 mm against
+something like 70 mm of combined noise and terrain, roughly 2 sigma: a constant of +100 mm is disfavored, not
+excluded, and a constant of a few tens of millimeters would be invisible here. The sentence above that no
+constant can do both is corrected to that.
