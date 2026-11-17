@@ -1,0 +1,65 @@
+INPUT: data/field/2026-10-25/rtk_points_all.csv (tied, antenna-checked), hillslope FIX points; tilt_deg from the RS3 exports.
+COLUMNS: vcorr_m = 2.134*(1-cos tilt), the tip's height above the exported ground IF uncompensated; lateral_m = 2.134*sin tilt;
+         l21mr_mm = 2021 lidar minus RTK as compiled; l21mr_tiltoff_mm = the same after raising the RTK ground by vcorr;
+         hbound_mm = lateral_m * tan(slope at the point), the largest vertical effect the unrecorded lean direction could have.
+
+          group  point  tilt_deg  vcorr_m  lateral_m  slope_deg  hbound_mm  l21mr_mm  l21mr_tiltoff_mm
+  hillslope_RS3      7       1.2    0.000      0.045     28.604     24.370   -27.931           -28.399
+  hillslope_RS3      8       4.0    0.005      0.149     27.572     77.728   142.444           137.246
+  hillslope_RS3      9       4.4    0.006      0.164     30.243     95.449   -18.022           -24.312
+  hillslope_RS3     10       2.4    0.002      0.089     30.081     51.763  1619.114          1617.242
+  hillslope_RS3     11       0.6    0.000      0.022     29.203     12.491   109.506           109.389
+  hillslope_RS3     12       1.7    0.001      0.063     30.315     37.016   102.441           101.502
+  hillslope_RS3     13       2.6    0.002      0.097     35.565     69.216   147.054           144.857
+  hillslope_RS3     14       2.7    0.002      0.101     37.479     77.077    94.205            91.836
+  hillslope_RS3     15       2.4    0.002      0.089     34.213     60.760    34.332            32.460
+  hillslope_RS3     16       2.5    0.002      0.093     31.039     56.017    -3.514            -5.545
+  hillslope_RS3     17       2.1    0.001      0.078     34.083     52.910   -26.284           -27.717
+  hillslope_RS3     18       0.9    0.000      0.034     31.306     20.385   223.149           222.885
+  hillslope_RS3     19       5.8    0.011      0.216     30.925    129.195    81.082            70.158
+  hillslope_RS3     20       1.4    0.001      0.052     30.925     31.235   364.358           363.721
+  hillslope_RS3     21       4.0    0.005      0.149     34.477    102.222   220.664           215.466
+  hillslope_RS3     22       3.8    0.005      0.141     34.990     98.994   125.001           120.310
+  hillslope_RS3     23       1.4    0.001      0.052     33.552     34.578  -110.360          -110.997
+  hillslope_RS3     24       1.5    0.001      0.056     33.552     37.047  -641.860          -642.591
+hillslope_T4a      9      10.1    0.033      0.374     18.695    126.631    79.798            46.728
+hillslope_T4a     10      11.9    0.046      0.440     29.935    253.387  -116.125          -161.987
+hillslope_T4a     11       3.4    0.004      0.127     27.470     65.800   124.894           121.138
+hillslope_T4a     12       4.2    0.006      0.156     30.508     92.091   -39.108           -44.839
+hillslope_T4a     13      11.9    0.046      0.440     32.243    277.574    11.744           -34.118
+hillslope_T4a     14       4.3    0.006      0.160     28.294     86.130   -65.965           -71.972
+hillslope_T4a     15      11.6    0.044      0.429     28.558    233.547     1.673           -41.914
+hillslope_T4a     16       6.9    0.015      0.256     34.252    174.570     0.644           -14.812
+hillslope_T4a     17       6.7    0.015      0.249     35.237    175.873    41.198            26.624
+hillslope_T4a     18       4.4    0.006      0.164     37.034    123.523  -152.409          -158.698
+hillslope_T4a     19       4.8    0.007      0.179     34.907    124.604  -213.646          -221.130
+hillslope_T4a     20       5.2    0.009      0.193     33.682    128.898   -54.104           -62.887
+hillslope_T4a     21       1.8    0.001      0.067     32.674     42.990   -19.682           -20.735
+hillslope_T4a     22       7.5    0.018      0.279     33.226    182.452    44.683            26.427
+hillslope_T4a     23       2.0    0.001      0.074     26.285     36.785  -520.339          -521.639
+hillslope_T4a     24       6.6    0.014      0.245     14.601     63.894   132.336           118.194
+hillslope_T4a     25       3.5    0.004      0.130     33.226     85.335   218.523           214.542
+hillslope_T4a     26       5.7    0.011      0.212     33.325    139.358  -137.874          -148.426
+hillslope_T4a     27       2.2    0.002      0.082     33.521     54.265    30.563            28.990
+hillslope_T4a     28       4.6    0.007      0.171     26.141     83.996   263.237           256.363
+hillslope_T4a     29       4.3    0.006      0.160      5.983     16.769   121.990           115.983
+
+BLUFF LINES, 2021 lidar minus RTK, FIX, mm [median, NMAD, n]:
+  hillslope_T4a  as compiled     +2,  116, 21 | tilt-off hypothesis    -21,  100 | tilt median 4.8 max 11.9 deg | vcorr median 7 max 46 mm | hbound median 124 max 278 mm
+  hillslope_RS3    as compiled    +98,  162, 18 | tilt-off hypothesis    +97,  164 | tilt median 2.4 max 5.8 deg | vcorr median 2 max 11 mm | hbound median 54 max 129 mm
+  RS3 (T3a) minus T4a, medians: as compiled +97 mm; tilt-off hypothesis +117 mm
+
+REGRESSION of lidar-minus-RTK (mm) on the predicted vertical correction (mm), per team (slope ~ +1 if uncompensated, ~0 if compensated; OLS and Theil-Sen):
+  hillslope_T4a  OLS slope +0.66 (se 2.58, r +0.06, n 21); Theil-Sen +0.56 (95 % -5.32 to +5.39); vcorr range 1-46 mm
+  hillslope_RS3    OLS slope +1.60 (se 37.72, r +0.01, n 18); Theil-Sen +6.25 (95 % -27.54 to +46.43); vcorr range 0-11 mm
+
+B1 PAIR (both rovers under the same base; from b1_rover_pair.csv):
+  T4a 4: tilt 14.1 deg, vcorr +64 mm, lateral 0.52 m on 1.4 deg ground (hbound 13 mm); exported ell. h 185.465 -> tilt-off tip 185.529
+  T3a 1: tilt 1.8 deg, vcorr +1 mm, lateral 0.07 m on 1.1 deg ground (hbound 1 mm); exported ell. h 185.511 -> tilt-off tip 185.512
+  T4a minus T3a on the same ground (RTK dh minus lidar dz +21 mm): as exported -67 mm; tilt-off hypothesis -4 mm
+
+READING: under the tilt-off hypothesis the B1 pair closes if 'after' is near 0 while the bluff gap changes by the difference of the teams' median vcorr; the regression slopes say which hypothesis the bluff data themselves prefer.
+
+SCATTER vs the lean bound: if uncompensated, |residual from the team median| should grow with hbound (Spearman, per team):
+  hillslope_T4a  rho -0.43, p 0.05, n 21
+  hillslope_RS3    rho -0.37, p 0.13, n 18

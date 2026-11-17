@@ -437,3 +437,22 @@ the shift, T3a 3 / T4a 6 (7.3 m, 23 deg) +32 / +42, T3a 4 / T4a 8 (3.5 m but 1.3
 20 deg) +224 / +185; the raw-to-shifted spread is the terrain correction's uncertainty. Lidar minus RTK at
 these B1 points is +1.8 to +2.7 m, B1's own height error, the same for both rovers. What would settle the pair:
 whether T4a's unit had tilt compensation on (ask T4b or T4a; the Flow project on that unit records it).
+
+**Test: what if the RS3 exports were NOT tilt-compensated (Andy, 2026-11-17)?**
+`analysis/field_survey/tilt_uncompensated_test_2026-10-25.py`, log `tilt_uncompensated_test_log.txt`. The
+export is treated as (phase center) minus a vertical 2.134 m, so the tip would be 2.134 x (1 - cos tilt) higher
+than the exported ground and 2.134 x sin(tilt) away horizontally in a lean direction the export does not
+record. Vertical part, 2021 lidar minus RTK [median, NMAD, n, mm]: T4a +2, 116, 21 as compiled and -21, 100
+under the hypothesis (tilt median 4.8 deg, correction median 7 mm, max 46); T3a +98, 162, 18 and +97, 164
+(tilt median 2.4 deg, correction median 2 mm, max 11); the team gap goes from +97 to +117 mm, i.e. the
+hypothesis widens it by 20 mm and cannot be the bluff difference. The B1 pair closes under it: T4a 4's 64 mm
+and T3a 1's 1 mm turn -67 mm into **-4 mm** on the same ground. The bluff data cannot tell the two
+hypotheses apart: regressing lidar minus RTK on the predicted correction gives slopes +0.66 (se 2.58) for T4a
+and +1.60 (se 37.72) for T3a against the expected 1 (off) or 0 (on), because the corrections span only
+1-46 mm under 100-160 mm of scatter. The horizontal part is the larger unknown: on the 30 deg bluff T4a's
+leans of 0.07-0.44 m could move the lidar reading by up to 124 mm (median of the per-point bounds, max 278)
+in an unknown direction if uncompensated, T3a's by 54 (max 129); the scatter does not track that bound
+(Spearman rho of |residual| on the bound: see the log), and T3a's line, with the smaller leans, has the
+larger NMAD. Reading: the hypothesis would resolve the B1 pair exactly and leave the bluff gap untouched, so
+the sign flip between the toe and the bluff is NOT evidence against the pole unless T4a's unit had
+compensation on; the bluff points themselves cannot say, and the unit's Flow project can.
