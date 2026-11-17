@@ -1,0 +1,140 @@
+INPUT floodplain FIX points: 147 {'RS+ B': 98, 'RS+ A': 32, 'CORS': 17}
+COLUMNS: r21_mm / r08_mm = 2021 / 2008 lidar minus tied RTK; *_rel = minus the rover's median (structure only)
+gen1_spread_mm at the points: median 255, p10 182, p90 395, NaN 24
+
+NAIP years over the field: ['2010', '2013', '2015', '2017', '2019', '2021', '2023', '2025']
+  2010 ['2010-07-02']: pixel 1.0 m; NDVI at points median 0.209 (p10 -0.188, p90 0.247); field-chip median 0.168
+  2013 ['2013-07-05', '2013-07-18']: pixel 1.0 m; NDVI at points median 0.377 (p10 0.302, p90 0.421); field-chip median 0.390
+  2015 ['2015-10-14', '2015-11-03']: pixel 1.0 m; NDVI at points median 0.148 (p10 0.083, p90 0.232); field-chip median 0.138
+  2017 ['2017-10-04', '2017-10-16']: pixel 1.0 m; NDVI at points median 0.133 (p10 -0.009, p90 0.267); field-chip median 0.113
+  2019 ['2019-08-27']: pixel 0.6 m; NDVI at points median -0.212 (p10 -0.349, p90 -0.085); field-chip median -0.146
+  2021 ['2021-08-15']: pixel 0.6 m; NDVI at points median -0.071 (p10 -0.235, p90 0.111); field-chip median 0.026
+  2023 ['2023-07-02']: pixel 0.3 m; NDVI at points median -0.067 (p10 -0.144, p90 0.175); field-chip median 0.121
+  2025 ['2025-09-28', '2025-09-29']: pixel 0.6 m; NDVI at points median 0.240 (p10 0.194, p90 0.304); field-chip median 0.229
+
+Sentinel-2 around the 2021 lidar flight (2021-05-01) (2021-04-15..2021-05-20): 2 scenes with cloud < 40 %
+  2021-05-01 cloud  36.4 %: NDVI at points median 0.694 (p10 0.466, p90 0.745), clear 147/147
+  2021-05-11 cloud   1.7 %: NDVI at points median 0.817 (p10 0.518, p90 0.858), clear 147/147
+
+Sentinel-2 summer 2021 (2021-07-01..2021-08-31): 6 scenes with cloud < 40 %
+  2021-07-05 cloud  10.0 %: NDVI at points median 0.869 (p10 0.823, p90 0.882), clear 147/147
+  2021-07-20 cloud  32.6 %: clear at only 3 points, skipped
+  2021-07-25 cloud  19.7 %: NDVI at points median 0.575 (p10 0.459, p90 0.795), clear 147/147
+  2021-08-04 cloud   2.2 %: NDVI at points median 0.556 (p10 0.450, p90 0.773), clear 147/147
+  2021-08-14 cloud   3.6 %: NDVI at points median 0.601 (p10 0.499, p90 0.786), clear 147/147
+  2021-08-19 cloud  10.4 %: NDVI at points median 0.555 (p10 0.444, p90 0.682), clear 147/147
+
+Sentinel-2 April 2026 (2026-04-01..2026-05-05): 3 scenes with cloud < 40 %
+  2026-04-05 cloud   2.5 %: NDVI at points median 0.200 (p10 0.153, p90 0.227), clear 147/147
+  2026-04-10 cloud   5.8 %: NDVI at points median 0.203 (p10 0.159, p90 0.233), clear 147/147
+  2026-04-20 cloud  12.3 %: NDVI at points median 0.241 (p10 0.169, p90 0.353), clear 147/147
+
+Sentinel-2 around the survey (2026-10-10..2026-11-10): 6 scenes with cloud < 40 %
+  2026-10-12 cloud  34.7 %: clear at only 0 points, skipped
+  2026-10-17 cloud   0.4 %: NDVI at points median 0.489 (p10 0.390, p90 0.591), clear 147/147
+  2026-10-22 cloud   2.2 %: NDVI at points median 0.445 (p10 0.347, p90 0.542), clear 147/147
+  2026-11-01 cloud   5.2 %: NDVI at points median 0.425 (p10 0.318, p90 0.522), clear 147/147
+  2026-11-06 cloud  13.2 %: clear at only 0 points, skipped
+  2026-11-08 cloud   2.9 %: NDVI at points median 0.416 (p10 0.324, p90 0.510), clear 147/147
+
+Landsat C2 L2 (30 m), median NDVI over clear pixels of the field box, by scene:
+  2008-04-04 landsat-5    NDVI median 0.202 over 160/160 clear pixels
+  2008-04-20 landsat-5    NDVI median 0.152 over 32/160 clear pixels
+  2008-05-06 landsat-5    NDVI median 0.439 over 160/160 clear pixels
+  2008-05-14 landsat-7    NDVI median 0.617 over 160/160 clear pixels
+  2008-05-22 landsat-5    NDVI median 0.678 over 160/160 clear pixels
+  2008-06-15 landsat-7    NDVI median 0.881 over 127/160 clear pixels
+  2008-06-23 landsat-5    NDVI median 0.843 over 160/160 clear pixels
+  2008-07-01 landsat-7    NDVI median 0.854 over 160/160 clear pixels
+  2008-07-09 landsat-5    NDVI median 0.830 over 23/160 clear pixels
+  2008-08-02 landsat-7    NDVI median 0.852 over 160/160 clear pixels
+  2008-08-10 landsat-5    NDVI median 0.792 over 160/160 clear pixels
+  2008-08-18 landsat-7    NDVI median 0.818 over 153/160 clear pixels
+  2008-08-26 landsat-5    NDVI median 0.762 over 160/160 clear pixels
+  2008-09-03 landsat-7    NDVI median 0.733 over 127/160 clear pixels
+  2008-09-19 landsat-7    NDVI median 0.739 over 125/160 clear pixels
+  2008-10-21 landsat-7    NDVI median 0.490 over 160/160 clear pixels
+  2008-10-29 landsat-5    NDVI median 0.415 over 160/160 clear pixels
+  2008-11-22 landsat-7    NDVI median 0.218 over 52/160 clear pixels
+  2021-04-16 landsat-7    NDVI median 0.368 over 77/160 clear pixels
+  2021-05-11 landsat-7    NDVI median 0.702 over 28/160 clear pixels
+  2021-05-11 landsat-7    NDVI median 0.705 over 30/160 clear pixels
+  2021-05-18 landsat-7    NDVI median 0.663 over 60/160 clear pixels
+  2021-06-03 landsat-7    NDVI median 0.776 over 133/160 clear pixels
+  2021-06-12 landsat-7    NDVI median 0.892 over 75/160 clear pixels
+  2021-06-12 landsat-7    NDVI median 0.893 over 74/160 clear pixels
+  2021-06-19 landsat-7    NDVI median 0.890 over 160/160 clear pixels
+  2021-07-05 landsat-7    NDVI median 0.893 over 160/160 clear pixels
+  2021-07-13 landsat-8    NDVI median 0.900 over 160/160 clear pixels
+  2021-07-29 landsat-8    NDVI median 0.776 over 160/160 clear pixels
+  2021-08-14 landsat-8    NDVI median 0.748 over 160/160 clear pixels
+  2021-08-15 landsat-7    NDVI median 0.740 over 146/160 clear pixels
+  2021-08-15 landsat-7    NDVI median 0.738 over 145/160 clear pixels
+  2021-08-22 landsat-7    NDVI median 0.713 over 132/160 clear pixels
+  2021-08-30 landsat-8    NDVI median 0.724 over 160/160 clear pixels
+  2021-09-07 landsat-7    NDVI median 0.605 over 122/160 clear pixels
+  2021-09-15 landsat-8    NDVI median 0.713 over 160/160 clear pixels
+  2021-09-23 landsat-7    NDVI median 0.669 over 160/160 clear pixels
+  2021-10-09 landsat-7    NDVI median 0.545 over 160/160 clear pixels
+  2021-10-17 landsat-8    NDVI median 0.543 over 160/160 clear pixels
+  2021-10-18 landsat-7    NDVI median 0.557 over 23/160 clear pixels
+  2021-10-18 landsat-7    NDVI median 0.564 over 21/160 clear pixels
+  2021-10-25 landsat-7    NDVI median 0.475 over 160/160 clear pixels
+  2021-11-02 landsat-8    NDVI median 0.444 over 124/160 clear pixels
+  2021-11-03 landsat-7    NDVI median 0.398 over 146/160 clear pixels
+  2021-11-06 landsat-9    NDVI median 0.444 over 160/160 clear pixels
+  2021-12-12 landsat-9    NDVI median 0.021 over 160/160 clear pixels
+
+SPEARMAN of lidar minus RTK with each covariate: per rover, and pooled after removing each rover's median (rho, p, n):
+ r21_mm:
+   lowveg_gen2      pooled-rel +0.03 (p 0.676, n 147) | CORS +0.23 (p 0.38, n 17); RS+ A +0.06 (p 0.73, n 32); RS+ B +0.00 (p 0.99, n 98)
+   gen1_spread_mm   pooled-rel +0.07 (p 0.473, n 123) | RS+ A +0.12 (p 0.61, n 20); RS+ B +0.05 (p 0.65, n 97)
+   naip_2010        pooled-rel +0.04 (p 0.645, n 147) | CORS +0.07 (p 0.80, n 17); RS+ A -0.20 (p 0.27, n 32); RS+ B +0.18 (p 0.08, n 98)
+   naip_2013        pooled-rel +0.08 (p 0.349, n 147) | CORS -0.19 (p 0.46, n 17); RS+ A +0.19 (p 0.31, n 32); RS+ B +0.08 (p 0.42, n 98)
+   naip_2015        pooled-rel +0.12 (p 0.141, n 147) | CORS -0.21 (p 0.41, n 17); RS+ A +0.25 (p 0.16, n 32); RS+ B +0.18 (p 0.08, n 98)
+   naip_2017        pooled-rel -0.05 (p 0.531, n 147) | CORS -0.22 (p 0.39, n 17); RS+ A -0.04 (p 0.84, n 32); RS+ B -0.01 (p 0.95, n 98)
+   naip_2019        pooled-rel -0.04 (p 0.598, n 147) | CORS +0.32 (p 0.22, n 17); RS+ A +0.09 (p 0.62, n 32); RS+ B -0.13 (p 0.19, n 98)
+   naip_2021        pooled-rel -0.00 (p 0.970, n 147) | CORS +0.55 (p 0.02, n 17); RS+ A +0.11 (p 0.55, n 32); RS+ B -0.15 (p 0.15, n 98)
+   naip_2023        pooled-rel +0.23 (p 0.006, n 147) | CORS +0.13 (p 0.63, n 17); RS+ A +0.15 (p 0.41, n 32); RS+ B +0.29 (p 0.00, n 98)
+   naip_2025        pooled-rel -0.15 (p 0.073, n 147) | CORS -0.09 (p 0.74, n 17); RS+ A -0.01 (p 0.98, n 32); RS+ B -0.23 (p 0.02, n 98)
+   s2_2021-05-01    pooled-rel -0.19 (p 0.023, n 147) | CORS -0.65 (p 0.00, n 17); RS+ A -0.23 (p 0.21, n 32); RS+ B -0.19 (p 0.06, n 98)
+   s2_2021-05-11    pooled-rel -0.01 (p 0.948, n 147) | CORS -0.58 (p 0.01, n 17); RS+ A -0.10 (p 0.59, n 32); RS+ B +0.10 (p 0.31, n 98)
+   s2_2021-07-05    pooled-rel +0.19 (p 0.020, n 147) | CORS +0.32 (p 0.21, n 17); RS+ A -0.11 (p 0.55, n 32); RS+ B +0.29 (p 0.00, n 98)
+   s2_2021-07-25    pooled-rel +0.19 (p 0.021, n 147) | CORS -0.01 (p 0.98, n 17); RS+ A +0.17 (p 0.36, n 32); RS+ B +0.30 (p 0.00, n 98)
+   s2_2021-08-04    pooled-rel +0.14 (p 0.087, n 147) | CORS +0.54 (p 0.02, n 17); RS+ A +0.16 (p 0.38, n 32); RS+ B +0.19 (p 0.06, n 98)
+   s2_2021-08-14    pooled-rel +0.12 (p 0.163, n 147) | CORS +0.12 (p 0.65, n 17); RS+ A +0.07 (p 0.69, n 32); RS+ B +0.19 (p 0.07, n 98)
+   s2_2021-08-19    pooled-rel +0.15 (p 0.068, n 147) | CORS +0.50 (p 0.04, n 17); RS+ A +0.32 (p 0.07, n 32); RS+ B +0.16 (p 0.11, n 98)
+   s2_2026-04-05    pooled-rel -0.13 (p 0.128, n 147) | CORS -0.23 (p 0.37, n 17); RS+ A +0.03 (p 0.87, n 32); RS+ B -0.18 (p 0.08, n 98)
+   s2_2026-04-10    pooled-rel -0.13 (p 0.116, n 147) | CORS +0.02 (p 0.93, n 17); RS+ A +0.00 (p 0.98, n 32); RS+ B -0.19 (p 0.06, n 98)
+   s2_2026-04-20    pooled-rel -0.13 (p 0.109, n 147) | CORS -0.17 (p 0.52, n 17); RS+ A -0.05 (p 0.78, n 32); RS+ B -0.16 (p 0.11, n 98)
+   s2_2026-10-17    pooled-rel -0.07 (p 0.371, n 147) | CORS +0.06 (p 0.82, n 17); RS+ A -0.08 (p 0.66, n 32); RS+ B -0.11 (p 0.27, n 98)
+   s2_2026-10-22    pooled-rel -0.08 (p 0.336, n 147) | CORS +0.02 (p 0.95, n 17); RS+ A -0.05 (p 0.80, n 32); RS+ B -0.11 (p 0.30, n 98)
+   s2_2026-11-01    pooled-rel -0.02 (p 0.778, n 147) | CORS +0.36 (p 0.15, n 17); RS+ A -0.06 (p 0.74, n 32); RS+ B -0.06 (p 0.57, n 98)
+   s2_2026-11-08    pooled-rel -0.00 (p 0.965, n 147) | CORS +0.27 (p 0.29, n 17); RS+ A -0.01 (p 0.97, n 32); RS+ B -0.04 (p 0.68, n 98)
+ r08_mm:
+   lowveg_gen2      pooled-rel -0.18 (p 0.038, n 126) | RS+ A -0.21 (p 0.34, n 22); RS+ B -0.22 (p 0.03, n 98)
+   gen1_spread_mm   pooled-rel +0.26 (p 0.004, n 123) | RS+ A +0.50 (p 0.03, n 20); RS+ B +0.17 (p 0.09, n 97)
+   naip_2010        pooled-rel +0.15 (p 0.099, n 126) | RS+ A +0.19 (p 0.38, n 22); RS+ B +0.13 (p 0.20, n 98)
+   naip_2013        pooled-rel -0.23 (p 0.010, n 126) | RS+ A -0.25 (p 0.27, n 22); RS+ B -0.26 (p 0.01, n 98)
+   naip_2015        pooled-rel +0.14 (p 0.106, n 126) | RS+ A +0.25 (p 0.27, n 22); RS+ B +0.14 (p 0.18, n 98)
+   naip_2017        pooled-rel +0.18 (p 0.047, n 126) | RS+ A +0.26 (p 0.24, n 22); RS+ B +0.14 (p 0.17, n 98)
+   naip_2019        pooled-rel -0.34 (p 0.000, n 126) | RS+ A -0.46 (p 0.03, n 22); RS+ B -0.36 (p 0.00, n 98)
+   naip_2021        pooled-rel -0.33 (p 0.000, n 126) | RS+ A -0.53 (p 0.01, n 22); RS+ B -0.34 (p 0.00, n 98)
+   naip_2023        pooled-rel -0.18 (p 0.043, n 126) | RS+ A -0.41 (p 0.06, n 22); RS+ B -0.13 (p 0.20, n 98)
+   naip_2025        pooled-rel +0.08 (p 0.352, n 126) | RS+ A +0.39 (p 0.08, n 22); RS+ B -0.00 (p 1.00, n 98)
+   s2_2021-05-01    pooled-rel -0.12 (p 0.167, n 126) | RS+ A +0.25 (p 0.27, n 22); RS+ B -0.23 (p 0.02, n 98)
+   s2_2021-05-11    pooled-rel +0.09 (p 0.335, n 126) | RS+ A +0.30 (p 0.17, n 22); RS+ B +0.07 (p 0.48, n 98)
+   s2_2021-07-05    pooled-rel +0.19 (p 0.034, n 126) | RS+ A +0.26 (p 0.24, n 22); RS+ B +0.16 (p 0.11, n 98)
+   s2_2021-07-25    pooled-rel -0.03 (p 0.742, n 126) | RS+ A -0.39 (p 0.07, n 22); RS+ B +0.06 (p 0.58, n 98)
+   s2_2021-08-04    pooled-rel -0.16 (p 0.075, n 126) | RS+ A -0.45 (p 0.04, n 22); RS+ B -0.12 (p 0.24, n 98)
+   s2_2021-08-14    pooled-rel -0.15 (p 0.092, n 126) | RS+ A -0.44 (p 0.04, n 22); RS+ B -0.11 (p 0.28, n 98)
+   s2_2021-08-19    pooled-rel -0.19 (p 0.037, n 126) | RS+ A -0.29 (p 0.19, n 22); RS+ B -0.19 (p 0.06, n 98)
+   s2_2026-04-05    pooled-rel -0.37 (p 0.000, n 126) | RS+ A -0.44 (p 0.04, n 22); RS+ B -0.37 (p 0.00, n 98)
+   s2_2026-04-10    pooled-rel -0.40 (p 0.000, n 126) | RS+ A -0.46 (p 0.03, n 22); RS+ B -0.41 (p 0.00, n 98)
+   s2_2026-04-20    pooled-rel -0.40 (p 0.000, n 126) | RS+ A -0.49 (p 0.02, n 22); RS+ B -0.40 (p 0.00, n 98)
+   s2_2026-10-17    pooled-rel -0.21 (p 0.017, n 126) | RS+ A -0.21 (p 0.35, n 22); RS+ B -0.20 (p 0.04, n 98)
+   s2_2026-10-22    pooled-rel -0.22 (p 0.015, n 126) | RS+ A -0.25 (p 0.27, n 22); RS+ B -0.19 (p 0.06, n 98)
+   s2_2026-11-01    pooled-rel -0.18 (p 0.042, n 126) | RS+ A -0.21 (p 0.34, n 22); RS+ B -0.14 (p 0.18, n 98)
+   s2_2026-11-08    pooled-rel -0.16 (p 0.066, n 126) | RS+ A -0.19 (p 0.39, n 22); RS+ B -0.09 (p 0.36, n 98)
+wrote data/field/2026-10-25/imagery/floodplain_naip_years.png
+wrote data/field/2026-10-25/imagery/floodplain_residual_map_naip2021.png

@@ -554,3 +554,60 @@ wired in; the data taken as they are, no fitted shift): `figures/rtk_2026-10-25_
 (21); against 2008: RS+ B 356.6, 80.6 (98); RS+ A 232.2, 102.0 (22); CORS 144.6, 57.4 (6); T4a -49.6 (5);
 T3a -103.0 (1). Identical to the 2026-11-12 compile's table above; the `_polecorr` figures of 2026-11-11
 differ from these only by the four 1 mm coordinate changes of T4a's own export.
+
+## The floodplain field: land cover, its history, and the point-to-point structure of lidar minus RTK (2026-11-18)
+
+`analysis/field_survey/floodplain_cover_2026-10-25.py`, log `imagery/floodplain_log.txt`, per-point table
+`imagery/floodplain_points_covariates.csv`, figures `imagery/floodplain_naip_years.png` (NAIP, eight years, the 147
+FIX points as dots) and `imagery/floodplain_residual_map_naip2021.png` (points colored by 2021 and 2008 lidar minus
+RTK on the August 2021 color-infrared). Covariates per point: lowveg_gen2; gen1_spread_mm (the 2008 per-cell return
+spread, nearest 5 m cell); NAIP NDVI within 3 m for 2010, 2013, 2015, 2017, 2019, 2021, 2023, 2025 (digital numbers,
+relative within a date only: the August 2021 NAIP gives the field -0.07 where Sentinel-2 a day earlier gives 0.60);
+Sentinel-2 NDVI per clear scene around the 2021 flight, in summer 2021, April 2026 and around the survey; Landsat
+field medians through 2008 and 2021. Structure is compared after removing each rover's median.
+
+**The field.** A perennial grass field the whole time, never a row crop: Landsat 2008 greens up by early May (NDVI
+0.20 on 4 April, 0.44 on 6 May, 0.68 on 22 May, 0.84-0.88 in June-August), which a corn or soybean field cannot do,
+and the NAIP of July 2010 and July 2013 shows a uniform sward with no rows. It is hayed or mown in some years (pale
+in August 2019, August 2021 and July 2023) and left standing in others; a wet swale with shrubs runs along its west
+margin beside the road, dark in every image, and T2a's outbound line follows its edge; shrub clumps have spread
+over the east half between 2010 and 2025, outside the survey lines. The autumn phenology is the same in all three
+years that matter: Landsat 0.49 on 21 October 2008, 0.42 on 29 October, 0.22 on 22 November 2008 (the 2008 lidar
+was flown in November); 0.48 on 25 October 2021, 0.40-0.44 in early November 2021; Sentinel-2 0.49 on 17 October
+2026, 0.45 on 22 October, 0.42 on 1 November, 0.42 on 8 November, around the survey. Summer 2021 Sentinel-2 at the
+points 0.87 on 5 July falling to 0.56-0.60 in August (hayed); 1 May 2021, the lidar day, 0.69 (p10 0.47, p90 0.75),
+11 May 0.82.
+
+**Structure of the 2021 residual: none that the cover explains.** r21 (2021 lidar minus RTK) has p10-p90 85-180 mm
+on T2a's 98 points. After removing the rover medians its Spearman correlation with every covariate is small and
+inconsistent in sign: |rho| <= 0.23 over 24 covariates, the largest being NAIP 2023 +0.23 and the 1 May 2021
+Sentinel-2 scene -0.19 (opposite signs for greenness); with the surveyed elevation -0.08 (p 0.32). The 2021 surface
+sits a uniform 0.12-0.16 m above the ground on this field regardless of where in it the point is.
+
+**Structure of the 2008 residual: real, and it follows today's greenness, the 2008 return spread and the
+microtopography.** r08 (2008 lidar minus RTK) has p10-p90 237-488 mm on the same 98 points, a quarter of a meter of
+range across one field. After removing the rover medians: Spearman with gen1_spread_mm +0.26 (p 0.004, n 123), with
+the surveyed elevation -0.31 (p < 0.001), with April 2026 Sentinel-2 NDVI -0.37 to -0.40 (p < 0.001, three scenes),
+with NAIP August 2019 and August 2021 -0.34 and -0.33 (p < 0.001), with the October-November 2026 scenes -0.16 to
+-0.22. The April greenness survives holding the 2008 spread fixed (partial -0.41) or the elevation fixed (-0.44), and
+the spread survives holding greenness fixed (+0.23). Theil-Sen slopes: -1131 mm per unit April NDVI (95 % -1646 to
+-671), which over the field's p10-p90 span of 0.091 is -103 mm; +0.29 mm per mm of 2008 spread (0.10 to 0.48), 61 mm
+over its 214 mm span; -91 mm per m of elevation (-145 to -32), -78 mm over the field's 0.86 m of relief. By April-2026
+greenness terciles (my cut, for the look): least green third r08_rel +36 mm, middle +1, greenest -35. The two
+residuals share structure: Spearman r21_rel vs r08_rel +0.47 (p < 0.001, n 126), Theil-Sen 0.22 mm of r21 per mm of
+r08 (0.14 to 0.29).
+
+**Reading (hypotheses, separate from the numbers above).** The 2021 lidar's decimeter on this field is a flat offset,
+the vegetated-surface response of a green-up sward, with no cover-dependent structure left at the 3-10 m scale. The
+2008 lidar's 0.36 m is not flat: where the field is lowest, and where it greens earliest today and is greenest in
+late summer, the November-2008 surface sits 70-100 mm closer to today's ground. Three mechanisms fit the signs:
+(1) the November-2008 senesced sward was shorter or more lodged in the low, wet, productive parts of the field and
+taller on the drier parts, so the 2008 surface varied with the standing dead canopy (the 2008 return spread carries
+part of this, +0.23 with greenness held fixed, but not the greenness part); (2) the low spots have aggraded since
+2008, floodplain deposition filling the swales, which raises today's ground under exactly the points that green
+first, and the 70-100 mm would be 18 years of fine sediment; (3) the 5 m grids smooth microrelief that the pole tip
+resolves, which puts the same sign into both epochs, and the shared 0.47 between r21 and r08 is that part. (2) is
+real change and (1) and (3) are not; the ground truth cannot separate them on its own, because today's greenness is
+both a cause of (1) in 2008 and a consequence of (2) since. What would: the 2008 point cloud's own return-height
+distribution at these 147 points (the 2008 standing canopy directly, as the bluff check did with last returns), and
+the November-2008 flight date for swath 137/138 against the Landsat curve.
