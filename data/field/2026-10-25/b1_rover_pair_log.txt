@@ -1,0 +1,28 @@
+geoid check (an arbitrary nearby lon/lat, 188.669 ell): 218.752 (expect ~218.7 if GEOID18 loaded)
+       team  Name                  Averaging start Solution status  Samples           E            N  Ellipsoidal height   navd88  z21_raw  l21mr_raw  l21mr_Bshift   slope  lowveg
+0     T4a     1  2026-10-25 13:20:48.2 UTC-05:00             FIX        1  579982.472  4885330.620             185.922  216.004  218.626      2.622         2.619   0.620   0.000
+1     T4a     2  2026-10-25 13:20:58.0 UTC-05:00             FIX       26  579982.395  4885330.707             185.933  216.015  218.626      2.611         2.609   0.621   0.001
+2     T4a     3  2026-10-25 13:21:06.0 UTC-05:00             FIX       26  579982.326  4885330.744             185.894  215.976  218.626      2.650         2.648   0.621   0.001
+3     T4a     4  2026-10-25 13:24:47.2 UTC-05:00             FIX       26  579892.628  4885342.131             185.465  215.546  218.218      2.672         2.659   1.405   0.016
+4     T4a     5  2026-10-25 13:25:30.6 UTC-05:00             FIX       26  579882.736  4885351.224             186.502  216.583  219.072      2.489         2.366   8.491   0.209
+5     T4a     6  2026-10-25 13:26:08.6 UTC-05:00             FIX       26  579870.056  4885357.052             190.646  220.726  223.031      2.304         1.785  22.821   0.123
+6     T4a     7  2026-10-25 13:26:38.8 UTC-05:00             FIX       26  579865.942  4885361.470             193.659  223.739  225.683      1.943         1.371  25.047   0.225
+7     T4a     8  2026-10-25 13:28:04.4 UTC-05:00             FIX       26  579854.124  4885359.037             197.021  227.101  229.368      2.267         1.857  19.727   0.186
+29  T3a     1  2026-10-25 13:24:45.4 UTC-05:00             FIX       26  579893.680  4885339.398             185.511  215.592  218.197      2.605         2.590   1.054   0.112
+30  T3a     2  2026-10-25 13:25:28.2 UTC-05:00             FIX       26  579877.584  4885344.887             186.974  217.055  219.487      2.433         2.232  10.585   0.302
+31  T3a     3  2026-10-25 13:25:59.8 UTC-05:00             FIX       26  579866.399  4885350.743             190.772  220.852  223.188      2.336         1.827  23.042   0.217
+32  T3a     4  2026-10-25 13:26:34.2 UTC-05:00             FIX       26  579856.148  4885356.202             195.710  225.790  228.281      2.491         2.042  21.212   0.157
+33  T3a     5  2026-10-25 13:27:27.0 UTC-05:00             FIX       26  579844.141  4885366.956             201.169  231.249  233.332      2.083         1.732  18.373   0.057
+34  T3a     6  2026-10-25 13:28:16.2 UTC-05:00             FIX       26  579834.457  4885370.127             206.296  236.376  238.204      1.828         1.111  30.065   0.263
+
+team medians of 2021 lidar minus RTK (mm), B1 points, n:
+  T4a    raw +2550  Bshift +2487  n=8  (excluding the 3 lot points 579982 E: raw +2304 Bshift +1857 n=5)
+  T3a  raw +2384  Bshift +1934  n=6  (excluding the 3 lot points 579982 E: raw +2384 Bshift +1934 n=6)
+
+nearest cross-team pairs (B1 points): distance, time gap, RTK dh (T4a-T3a), lidar dz at the two spots, dh-dz = rover difference on the same ground:
+  T3a 1 / T4a 4:  2.93 m,    +2 s, dh    -46 mm, lidar dz raw    +21 / Bshift    +24, dh-dz raw   -67 / Bshift   -70 mm;  l21-RTK: T3a +2605 T4a +2672
+  T3a 2 / T4a 5:  8.17 m,    +2 s, dh   -472 mm, lidar dz raw   -416 / Bshift   -338, dh-dz raw   -56 / Bshift  -134 mm;  l21-RTK: T3a +2433 T4a +2489
+  T3a 3 / T4a 6:  7.29 m,    +9 s, dh   -126 mm, lidar dz raw   -158 / Bshift   -168, dh-dz raw   +32 / Bshift   +42 mm;  l21-RTK: T3a +2336 T4a +2304
+  T3a 4 / T4a 8:  3.48 m,   +90 s, dh  +1311 mm, lidar dz raw  +1087 / Bshift  +1126, dh-dz raw  +224 / Bshift  +185 mm;  l21-RTK: T3a +2491 T4a +2267
+  T3a 5 / T4a 8: 12.74 m,   +37 s, dh  -4148 mm, lidar dz raw  -3964 / Bshift  -4023, dh-dz raw  -184 / Bshift  -125 mm;  l21-RTK: T3a +2083 T4a +2267
+  T3a 6 / T4a 8: 22.58 m,   -12 s, dh  -9275 mm, lidar dz raw  -8836 / Bshift  -8529, dh-dz raw  -439 / Bshift  -746 mm;  l21-RTK: T3a +1828 T4a +2267

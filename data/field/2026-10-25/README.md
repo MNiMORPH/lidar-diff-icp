@@ -412,3 +412,28 @@ dZ per m of dE). At the benchmark tie's horizontal (+0.771, -1.112) the hillslop
 is -0.503 against the tie's -0.537, i.e. the tied ground 34 mm below the 2021 surface; at the
 pole pair's (+0.802, -1.123) it is -0.515 against the pair's -0.473, 42 mm above. The fit's
 dE-dZ degeneracy is why the bluff cannot choose between the two ties on its own.
+
+**Were the two RS3 rovers ever on the same ground (Andy, 2026-11-17)? Once, under B1, and the one pair is
+confounded by tilt.** No point in the table is shared: the closest T4a-T3a pair on the bluff is 2.70 m
+apart, and neither RS3 came within 3 m of any other rover's point. But between 13:24 and 13:28 CDT both teams
+walked the toe of the hill side by side under B1 (T4a 4-8, T3a 1-5, logged within 2-90 s of each other),
+and B1's position error is common to both rovers, so rover minus rover is valid there even though the points
+are dropped from the table (`analysis/field_survey/b1_rover_pair_2026-10-25.py`, log `b1_rover_pair_log.txt`;
+the 2021 lidar is read at the raw position and, as a sensitivity, at the position shifted by B's tie, since
+B1's own error is unknown). T4a 4 and T3a 1: 2.93 m apart, 2 s apart, both FIX with 26 samples, on
+1 deg ground; T4a's height minus T3a's is -46 mm, the lidar says T4a's spot is 21 mm higher, so
+T4a's rover reads **67 mm LOW** against T3a's on the same ground (rover vertical RMS 0.026 and 0.030
+m), the OPPOSITE sign to the bluff, where T4a reads ~100 mm high. A constant pole or antenna difference
+would carry one sign everywhere, so taken at face value the pair argues against the pole and for a
+ground-dependent effect. It cannot be taken at face value: T4a 4 carries the export's largest tilt,
+14.1 deg, and if the RS3's tilt compensation was not active a 14.1 deg lean on 2.134 m puts the computed
+ground 2.134 x (1 - cos 14.1 deg) = 64 mm below the tip, which is the 67 mm. Both RS3 exports carry a
+populated Tilt angle column and the RS+/RS2/RS2+ exports carry none; Emlid staff on the community forum say
+the column is written "for points collected with tilt" and that such coordinates "are already
+tilt-compensated", which suggests the IMU was engaged but is not a statement about this unit's setting
+(Emlid's docs pages on the export format were not reachable 2026-11-17). The next pairs are too far apart to
+help: T3a 2 / T4a 5 (8.2 m, 8-11 deg, T4a 5 tilt 4.3 deg) gives T4a -56 mm raw and -134 mm with
+the shift, T3a 3 / T4a 6 (7.3 m, 23 deg) +32 / +42, T3a 4 / T4a 8 (3.5 m but 1.3 m of relief at
+20 deg) +224 / +185; the raw-to-shifted spread is the terrain correction's uncertainty. Lidar minus RTK at
+these B1 points is +1.8 to +2.7 m, B1's own height error, the same for both rovers. What would settle the pair:
+whether T4a's unit had tilt compensation on (ask T4b or T4a; the Flow project on that unit records it).
