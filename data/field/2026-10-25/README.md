@@ -455,4 +455,8 @@ in an unknown direction if uncompensated, T3a's by 54 (max 129); the scatter doe
 (Spearman rho of |residual from the team median| on the bound: T4a -0.43, p 0.05, n 21; T3a -0.37, p 0.13, n 18, the WRONG sign for uncompensated leans, which would make the scatter grow with the bound), and T3a's line, with the smaller leans, has the
 larger NMAD. Reading: the hypothesis would resolve the B1 pair exactly and leave the bluff gap untouched, so
 the sign flip between the toe and the bluff is NOT evidence against the pole unless T4a's unit had
-compensation on; the bluff points themselves cannot say, and the unit's Flow project can.
+compensation on; the bluff points themselves cannot say, and the unit's Flow project can. Pole handling, from the exports (2026-11-17): T3a's 24 points median 2.0 deg, p25-p75 1.4-2.6, max
+5.8, one point over 5 deg; T4a's 29 points median 4.6, p25-p75 3.4-6.9, max 14.1, thirteen over 5 deg and five
+over 10. T3a's team held the pole vertical; T4a's let it lean, as one does when the receiver is expected to
+correct it, and (Andy, 2026-11-17) T4a's line was the high, steep part of the hillslope where a vertical pole is
+hard to hold. The behavior reads as compensation on for T4a's unit; the setting itself is still to be asked for.
