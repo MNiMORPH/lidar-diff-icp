@@ -460,3 +460,19 @@ compensation on; the bluff points themselves cannot say, and the unit's Flow pro
 over 10. T3a's team held the pole vertical; T4a's let it lean, as one does when the receiver is expected to
 correct it, and (Andy, 2026-11-17) T4a's line was the high, steep part of the hillslope where a vertical pole is
 hard to hold. The behavior reads as compensation on for T4a's unit; the setting itself is still to be asked for.
+
+**T4a's answer (2026-11-17): "We used one of the blue 2 m poles, and we turned on tilt compensation."** So
+the exported RS3 coordinates are the pole tip, the tilt-off hypothesis above is excluded, and the B1 pair stands:
+on the flat toe, same base and same two seconds, T4a's rover read **67 mm LOW** against T3a's (rover
+vertical RMS 0.026 and 0.030 m, plus whatever microtopography lies in the 2.93 m between the two tips, which the
+5 m lidar grid cannot resolve; the grid itself puts T4a's spot 21 mm higher). On the bluff T4a reads ~100 mm
+HIGH against T3a. Both teams carried the same 2 m pole and the same receiver model with the same 2.134 m
+entry, and no constant, a pole length, an antenna offset or a base datum, can read low at the toe and high on
+the bluff. The one way a constant survives is a pole re-extended between 13:28 and 14:44, when the base was
+replaced; the teams have not been asked. What the gap can still be is in the ground: the pointed tip through
+fresh litter on one line against a tip, or a shoe, resting on it on the other, or a true surface difference
+between T3a's mid-slope and T4a's upper slope (the two lines share only three points in one elevation
+band, so team and position are still confounded). The hypotheses standing after this, in the order of the
+evidence: (1) a surface or litter difference between mid-slope and upper slope, the tip mechanism included;
+(2) a pole change between the B1 and B sessions. The one-rover re-occupation of both lines, mid-slope and
+upper slope with the same tip, decides (1); a question to both teams decides (2).
