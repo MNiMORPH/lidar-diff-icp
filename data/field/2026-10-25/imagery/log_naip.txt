@@ -1,0 +1,18 @@
+2015-11-03 crs EPSG:26915 pixel 1.0 m, chip (4, 440, 440) from 1 tile(s)
+  wrote data/field/2026-10-25/imagery/naip_2015-11-03_rgb.png
+  wrote data/field/2026-10-25/imagery/naip_2015-11-03_cir.png
+2017-10-16 crs EPSG:26915 pixel 1.0 m, chip (4, 440, 440) from 1 tile(s)
+  wrote data/field/2026-10-25/imagery/naip_2017-10-16_rgb.png
+  wrote data/field/2026-10-25/imagery/naip_2017-10-16_cir.png
+2021-08-15 crs EPSG:26915 pixel 0.6 m, chip (4, 733, 733) from 2 tile(s)
+  wrote data/field/2026-10-25/imagery/naip_2021-08-15_rgb.png
+  wrote data/field/2026-10-25/imagery/naip_2021-08-15_cir.png
+2025-09-29 crs EPSG:26915 pixel 0.6 m, chip (4, 733, 733) from 2 tile(s)
+  wrote data/field/2026-10-25/imagery/naip_2025-09-29_rgb.png
+  wrote data/field/2026-10-25/imagery/naip_2025-09-29_cir.png
+
+NAIP NDVI within 3 m of each point, median by team and position [n points]:
+  2015-11-03: T4a mid 0.110 [3] | T4a toe 0.171 [4] | T4a upper 0.068 [14] | T3a mid 0.095 [17] | T3a toe 0.304 [1] || T4a upper minus T3a mid -0.027, Mann-Whitney p 0.439
+  2017-10-16: T4a mid -0.047 [3] | T4a toe 0.094 [4] | T4a upper 0.153 [14] | T3a mid 0.112 [17] | T3a toe 0.077 [1] || T4a upper minus T3a mid +0.041, Mann-Whitney p 0.677
+  2021-08-15: T4a mid 0.160 [3] | T4a toe 0.183 [4] | T4a upper 0.209 [14] | T3a mid 0.315 [17] | T3a toe 0.044 [1] || T4a upper minus T3a mid -0.105, Mann-Whitney p 0.002
+  2025-09-29: T4a mid 0.221 [3] | T4a toe 0.325 [4] | T4a upper 0.270 [14] | T3a mid 0.315 [17] | T3a toe 0.309 [1] || T4a upper minus T3a mid -0.045, Mann-Whitney p 0.796

@@ -502,3 +502,40 @@ measurements are likely all to be trusted": the hillslope points stand as measur
 two lines is taken as a property of the ground they occupied (litter under the tip, or a true mid-slope versus
 upper-slope difference), not of the instruments. The one-rover re-occupation of both lines, mid-slope and upper
 slope with the same tip, is the measurement that resolves which.
+
+**What the surfaces under the two lines look like from above (Andy, 2026-11-17: "look on satellite imagery to
+characterize the surfaces").** Scripts `analysis/field_survey/surface_from_imagery_2026-10-25.py` (Sentinel-2
+L2A, 10 m, Planetary Computer, the access path of mn-3dep-audit; NDVI at every hillslope FIX point for every clear
+scene in three windows), `surface_from_imagery_extra_2026-10-25.py` (per-point test) and `naip_chips_2026-10-25.py`
+(NAIP 0.6-1 m aerial chips with the tied points drawn, and NDVI within 3 m of each point); outputs and logs in
+`imagery/`. Positions as above: upper > 275 m NAVD88 (T4a, 14 points), mid 245-275 (T3a, 17), toe < 245.
+
+Sentinel-2 NDVI, median over the points, T4a upper vs T3a mid, with the per-point Mann-Whitney p: spring
+leaf-off 2026-04-05 0.238 vs 0.233 (p 0.17), 04-10 0.218 vs 0.218 (0.51), 04-20 0.251 vs 0.241 (0.02); summer
+2026-07-14 0.608 vs 0.622 (0.10), 07-29 0.567 vs 0.581 (0.13), 08-03 0.574 vs 0.585 (0.12), 08-08 0.609 vs 0.634
+(0.08); around the survey, canopy mostly down, 2026-10-17 0.372 vs 0.303 (0.49), 10-22 0.298 vs 0.255 (0.57),
+11-01 0.273 vs 0.223 (**0.004**), 11-08 0.250 vs 0.222 (0.06). In summer and in April the two lines are the same
+to 0.01-0.02 (T3a's a shade greener in summer); after leaf fall T4a's upper slope keeps 0.03-0.07 more
+NDVI than T3a's mid-slope. T4a's toe (4 points, the grass by the road) is the greenest class in autumn,
+0.35-0.41.
+
+NAIP NDVI within 3 m of each point (uncalibrated digital numbers, so relative only), T4a upper vs T3a mid:
+2015-11-03 (leaf-off) 0.068 vs 0.095 (p 0.44); 2017-10-16 0.153 vs 0.112 (0.68); **2021-08-15, the lidar year,
+0.209 vs 0.315 (p 0.002)**; 2025-09-29 0.270 vs 0.315 (0.80). At the scale of the lines, T3a's mid-slope sat
+under a greener canopy in the August of the lidar year; the two autumn flights see no difference between the
+lines, and both see the bare-canopy forest floor as gray-brown.
+
+The chips (`imagery/naip_*_rgb.png`, `_cir.png`): both lines lie inside one closed deciduous stand on the
+east-facing bluff, 100 m west of the road, 20-40 m apart; neither crosses an opening, a conifer patch or a
+distinct stand. The conifers of the area are a band along the crest road to the north and scattered dark crowns
+in the northwest, outside both lines. In the November 2015 image the floor between the bare crowns is gray-brown
+litter under both lines, with light-gray patches west of and along T4a's upper line (bare ground, rock or
+light trunks; not resolvable at 1 m) that do not appear along T3a's.
+
+Measurement first: from above, the two lines are the same forest; the two differences that reach significance are
+T3a's greener canopy at 3 m in August 2021 and T4a's greener floor at 10 m after leaf fall in 2026. As
+hypotheses, both point the same way as the residuals: more canopy over T3a's line in the lidar year is the
+side the 2021 lidar reads high on (its vegetated checkpoints are +103 mm), and a browner floor under T3a's
+line in late October 2026 is a floor of fresh litter, the surface a pole tip goes into. Neither image can see
+litter depth, and a 10 m pixel after leaf fall mixes shrubs, late-holding oaks and the floor; the re-occupation is
+still the test.

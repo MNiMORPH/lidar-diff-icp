@@ -1,0 +1,18 @@
+T4a upper (n 14) vs T3a mid (n 17), per-point NDVI: median, p16-p84, Mann-Whitney p
+  leafoff_spring_2026  2026-04-05  T4a upper 0.238 (0.221-0.253)  T3a mid 0.233 (0.205-0.251)  diff +0.005  p 0.171
+  leafoff_spring_2026  2026-04-10  T4a upper 0.218 (0.198-0.241)  T3a mid 0.218 (0.193-0.232)  diff +0.000  p 0.512
+  leafoff_spring_2026  2026-04-20  T4a upper 0.251 (0.242-0.265)  T3a mid 0.241 (0.230-0.250)  diff +0.010  p 0.018
+  summer_2026          2026-07-14  T4a upper 0.608 (0.552-0.617)  T3a mid 0.622 (0.577-0.640)  diff -0.014  p 0.099
+  summer_2026          2026-07-29  T4a upper 0.567 (0.503-0.582)  T3a mid 0.581 (0.540-0.613)  diff -0.013  p 0.126
+  summer_2026          2026-08-03  T4a upper 0.574 (0.499-0.581)  T3a mid 0.585 (0.541-0.607)  diff -0.012  p 0.117
+  summer_2026          2026-08-08  T4a upper 0.609 (0.529-0.622)  T3a mid 0.634 (0.586-0.652)  diff -0.025  p 0.084
+  survey_2026-10-25    2026-10-17  T4a upper 0.372 (0.324-0.430)  T3a mid 0.303 (0.251-0.452)  diff +0.069  p 0.487
+  survey_2026-10-25    2026-10-22  T4a upper 0.298 (0.272-0.352)  T3a mid 0.255 (0.221-0.373)  diff +0.043  p 0.565
+  survey_2026-10-25    2026-11-01  T4a upper 0.273 (0.253-0.284)  T3a mid 0.223 (0.202-0.269)  diff +0.049  p 0.004
+  survey_2026-10-25    2026-11-08  T4a upper 0.250 (0.236-0.286)  T3a mid 0.222 (0.206-0.260)  diff +0.029  p 0.059
+wrote data/field/2026-10-25/imagery/naip_2015-11-03_rgb.png
+wrote data/field/2026-10-25/imagery/naip_2015-11-03_cir.png
+wrote data/field/2026-10-25/imagery/naip_2017-10-16_rgb.png
+wrote data/field/2026-10-25/imagery/naip_2017-10-16_cir.png
+wrote data/field/2026-10-25/imagery/naip_2021-08-15_rgb.png
+wrote data/field/2026-10-25/imagery/naip_2021-08-15_cir.png

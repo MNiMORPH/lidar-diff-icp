@@ -1,0 +1,47 @@
+INPUT rtk_points_all.csv hillslope FIX points: 39 | bbox [-92.00782, 44.11461, -91.99781, 44.12179]
+
+survey_2026-10-25: 6 Sentinel-2 L2A scenes with cloud < 40 %
+  2026-10-12 cloud  34.7 %  clear at 0/39 points
+  2026-10-17 cloud   0.4 %  clear at 39/39 points | T4a mid 0.262 (n 3) | T4a toe 0.406 (n 4) | T4a upper 0.372 (n 14) | T3a mid 0.303 (n 17) | T3a toe 0.307 (n 1)
+  2026-10-22 cloud   2.2 %  clear at 39/39 points | T4a mid 0.234 (n 3) | T4a toe 0.353 (n 4) | T4a upper 0.298 (n 14) | T3a mid 0.255 (n 17) | T3a toe 0.281 (n 1)
+  2026-11-01 cloud   5.2 %  clear at 39/39 points | T4a mid 0.198 (n 3) | T4a toe 0.365 (n 4) | T4a upper 0.273 (n 14) | T3a mid 0.223 (n 17) | T3a toe 0.274 (n 1)
+  2026-11-06 cloud  13.2 %  clear at 0/39 points
+  2026-11-08 cloud   2.9 %  clear at 39/39 points | T4a mid 0.216 (n 3) | T4a toe 0.379 (n 4) | T4a upper 0.250 (n 14) | T3a mid 0.222 (n 17) | T3a toe 0.282 (n 1)
+
+leafoff_spring_2026: 3 Sentinel-2 L2A scenes with cloud < 40 %
+  2026-04-05 cloud   2.5 %  clear at 39/39 points | T4a mid 0.219 (n 3) | T4a toe 0.325 (n 4) | T4a upper 0.238 (n 14) | T3a mid 0.233 (n 17) | T3a toe 0.297 (n 1)
+  2026-04-10 cloud   5.8 %  clear at 39/39 points | T4a mid 0.211 (n 3) | T4a toe 0.302 (n 4) | T4a upper 0.218 (n 14) | T3a mid 0.218 (n 17) | T3a toe 0.284 (n 1)
+  2026-04-20 cloud  12.3 %  clear at 39/39 points | T4a mid 0.227 (n 3) | T4a toe 0.336 (n 4) | T4a upper 0.251 (n 14) | T3a mid 0.241 (n 17) | T3a toe 0.313 (n 1)
+
+summer_2026: 7 Sentinel-2 L2A scenes with cloud < 40 %
+  2026-07-11 cloud  16.2 %  clear at 11/39 points
+  2026-07-14 cloud   0.0 %  clear at 39/39 points | T4a mid 0.568 (n 3) | T4a toe 0.564 (n 4) | T4a upper 0.608 (n 14) | T3a mid 0.622 (n 17) | T3a toe 0.503 (n 1)
+  2026-07-19 cloud  26.0 %  clear at 13/39 points
+  2026-07-24 cloud  37.3 %  clear at 0/39 points
+  2026-07-29 cloud  15.8 %  clear at 39/39 points | T4a mid 0.521 (n 3) | T4a toe 0.555 (n 4) | T4a upper 0.567 (n 14) | T3a mid 0.581 (n 17) | T3a toe 0.473 (n 1)
+  2026-08-03 cloud  11.8 %  clear at 39/39 points | T4a mid 0.520 (n 3) | T4a toe 0.534 (n 4) | T4a upper 0.574 (n 14) | T3a mid 0.585 (n 17) | T3a toe 0.448 (n 1)
+  2026-08-08 cloud   0.0 %  clear at 39/39 points | T4a mid 0.538 (n 3) | T4a toe 0.583 (n 4) | T4a upper 0.609 (n 14) | T3a mid 0.634 (n 17) | T3a toe 0.492 (n 1)
+
+PER-SCENE SUMMARY, median NDVI by team and position, clear pixels only, scenes clear at >= half the points:
+team                            T4a               T3a       
+pos                               mid    toe  upper     mid    toe
+window              date                                          
+leafoff_spring_2026 2026-04-05  0.219  0.325  0.238   0.233  0.297
+                    2026-04-10  0.211  0.302  0.218   0.218  0.284
+                    2026-04-20  0.227  0.336  0.251   0.241  0.313
+summer_2026         2026-07-11  0.568  0.579    NaN   0.592  0.518
+                    2026-07-14  0.568  0.564  0.608   0.622  0.503
+                    2026-07-19    NaN    NaN  0.537   0.570    NaN
+                    2026-07-29  0.521  0.555  0.567   0.581  0.473
+                    2026-08-03  0.520  0.534  0.574   0.585  0.448
+                    2026-08-08  0.538  0.583  0.609   0.634  0.492
+survey_2026-10-25   2026-10-17  0.262  0.406  0.372   0.303  0.307
+                    2026-10-22  0.234  0.353  0.298   0.255  0.281
+                    2026-11-01  0.198  0.365  0.273   0.223  0.274
+                    2026-11-08  0.216  0.379  0.250   0.222  0.282
+
+NAIP items over the lines: 23: ['2010-07-02', '2013-07-05', '2013-07-18', '2015-10-14', '2015-11-03', '2017-10-04', '2017-10-16', '2019-08-27', '2021-08-15', '2023-07-02', '2025-09-28', '2025-09-29']
+  wrote data/field/2026-10-25/imagery/naip_2025-09-28_rgb.png
+  wrote data/field/2026-10-25/imagery/naip_2025-09-28_cir.png
+  wrote data/field/2026-10-25/imagery/naip_2025-09-29_rgb.png
+  wrote data/field/2026-10-25/imagery/naip_2025-09-29_cir.png
