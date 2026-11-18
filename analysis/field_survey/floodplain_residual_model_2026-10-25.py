@@ -76,7 +76,7 @@ def layer5(name, dirs=None):
         sub = np.asarray(a[i0:i1, j0:j1], float); ii, jj2 = np.indices(sub.shape); vals.append(sub.ravel()); gys.append((B5[3] - (i0 + ii + 0.5) * res5).ravel()); gxs.append((B5[0] + (j0 + jj2 + 0.5) * res5).ravel())
     return grid_mean(np.concatenate(vals), np.concatenate(gxs), np.concatenate(gys))
 js = json.load(open(f"{S}/corrections.json")); SITE = {S: (js["bounds"], float(js.get("res") or js.get("res_m")))}
-feat["z_after_m"] = layer5("z_after.npy"); feat["gen1_spread_mm"] = layer5("gen1_spread_mm.npy"); feat["lowveg_gen2"] = layer5("lowveg_grid.npy"); fpm = layer5("floodplain_mask.npy", SITE) > 0.5
+feat["z_after_m"] = layer5("z_after.npy"); feat["gen1_spread_mm"] = layer5("gen1_spread_mm.npy"); feat["lowveg_gen2"] = layer5("lowveg_grid.npy"); fpm = (layer5("floodplain_mask.npy", SITE) > 0.5) | (layer5("floodplain_mask_clubb.npy") > 0.5)   # union of the site geometric mask and the tiles Clubb mask (the field is Clubb floodplain, not geometric)
 for name in ("nelike_p_ls_20081029", "nelike_p_s2_20211018", "nelike_p_s2_20251002", "metric_retained", "metric_senesc_doy", "metric_ndvi_oct", "metric_ndvi_apr"):
     with rasterio.open(f"{R}/{name}.tif") as src: v = np.array([x[0] for x in src.sample(zip(X.ravel(), Y.ravel()))], float).reshape(X.shape); v[v == src.nodata] = np.nan if src.nodata is not None else v
     feat[name] = v
@@ -135,11 +135,12 @@ for target in ("r08", "r21"):
     _, _, pm = cv_score(models[best[0]] if best[3] == "multi" else (lambda: TS()), Xm if best[3] == "multi" else D[[best[0]]].values, y, blocks)
     pd.DataFrame(dict(E=D.E, N=D.N, rover=D.rover, observed=y, cv_predicted=pm)).to_csv(f"{OUT}/floodplain_model_{target}_cv.csv", index=False)
     pred_fp = np.where(fpm, pred, np.nan)
-    with rasterio.open(f"{OUT}/floodplain_model_{target}_pred.tif", "w", driver="GTiff", height=len(ys), width=len(xs), count=1, dtype="float32", crs="EPSG:26915", transform=from_origin(E0 - HALF, N0 + HALF, RES, RES), nodata=np.nan) as dst: dst.write(pred_fp.astype("float32"), 1)
+    for suffix, arr in (("pred", pred_fp), ("pred_fullbox", pred)):
+        with rasterio.open(f"{OUT}/floodplain_model_{target}_{suffix}.tif", "w", driver="GTiff", height=len(ys), width=len(xs), count=1, dtype="float32", crs="EPSG:26915", transform=from_origin(E0 - HALF, N0 + HALF, RES, RES), nodata=np.nan) as dst: dst.write(np.asarray(arr, "float32"), 1)
     vmax = 600 if target == "r08" else 250
     fig, axs = plt.subplots(1, 2, figsize=(13, 6.5), gridspec_kw=dict(width_ratios=[1.15, 1]))
     ax = axs[0]; im = ax.imshow(pred_fp, extent=[xs[0] - RES / 2, xs[-1] + RES / 2, ys[-1] - RES / 2, ys[0] + RES / 2], cmap=cmc.bam_r, vmin=-vmax, vmax=vmax, interpolation="nearest")
     ax.scatter(D.E, D.N, c=y, cmap=cmc.bam_r, vmin=-vmax, vmax=vmax, s=14, edgecolors="k", linewidths=0.3); ax.set_xlim(E0 - 320, E0 + 320); ax.set_ylim(N0 - 320, N0 + 320); ax.set_xticks([]); ax.set_yticks([])
-    plt.colorbar(im, ax=ax, shrink=0.7, label=f"{'2008' if target == 'r08' else '2021'} lidar minus RTK (mm): map = {best[0]} prediction, points = observed")
+    plt.colorbar(im, ax=ax, shrink=0.7, label=f"{'2008' if target == 'r08' else '2021'} lidar minus RTK (mm)")
     ax = axs[1]; ax.scatter(pm, y, s=12, c=[{"CORS": "k", "RS+ A": "#e69f00", "RS+ B": "#0072b2"}[r] for r in D.rover]); lim = [min(pm.min(), y.min()) - 20, max(pm.max(), y.max()) + 20]; ax.plot(lim, lim, color="#999", lw=0.8); ax.set_xlabel("blocked-CV prediction (mm)"); ax.set_ylabel("observed (mm)"); ax.set_aspect("equal")
     fig.savefig(f"{OUT}/floodplain_model_{target}.png", dpi=140, bbox_inches="tight"); plt.close(fig); print("   wrote", f"{OUT}/floodplain_model_{target}.png", "and _pred.tif")

@@ -6,7 +6,7 @@ NAIP 2019-08 4 tiles
 NAIP 2021-08 4 tiles
 NAIP 2025-09 2 tiles
 5 m tiles covering the box: {'4342-29-64': [577495.0, 4882740.0, 580030.0, 4886235.0], '4358-29-01': [579995.0, 4882770.0, 582535.0, 4886265.0]}
-features: 65 grid (120, 120) floodplain pixels 4521
+features: 65 grid (120, 120) floodplain pixels 6638
 
 ==== TARGET r08: n 126, features 64, blocks 16, target NMAD 119 mm, sd 117
 single features, Spearman and blocked-CV R^2 of a Theil-Sen line, top 12:

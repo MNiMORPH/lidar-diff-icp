@@ -696,3 +696,7 @@ What the product is and is not: it explains about a third of the 2008 residual's
 elevation (the low parts of the field carry the larger 2008 residual), then the late-summer greenness and
 red-edge of 2021 and the April-2026 greenness, with the October-2008 spectral class contributing after those. The
 2021 residual has no spatial structure that any of these layers can predict, which is the flat decimeter again.
+The map is also written unmasked over the whole 1.2 km box (`floodplain_model_r08_pred_fullbox.tif`,
+`floodplain_model_r08_fullbox.png`, the union of the site's geometric and the tiles' Clubb floodplain masks drawn
+as a line) because neither mask covers the north half of the surveyed field at 10 m; outside the open floodplain
+the model is extrapolating into forest and should be read as nothing more than that.
