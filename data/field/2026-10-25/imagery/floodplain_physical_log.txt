@@ -1,0 +1,73 @@
+valley-floor plane over 8077 floodplain pixels (2682 within 1 m after 3 robust passes): slope 8.73 m/km towards 55 deg (azimuth of descent)
+COLUMNS floodplain_physical_points.csv: z_plane_m (m), z_local_m (m), slope_deg (deg), dist_upland_m (m), ndvi_apr26 (index), ndvi_may21 (index), ndvi_aug21 (index), ndvi_oct26 (index), ndre_aug21 (index), ndmi_aug21 (index), vis_may21 (refl), d_ndvi_spring (index), d_ndvi_autumn (index) ; r08/r21 = lidar minus tied RTK (mm); *_rel = minus the rover median
+terms at the points (p10 / p50 / p90):
+   z_plane_m           -1.728    -1.467    -1.187 m
+   z_local_m           -0.293    -0.090    +0.037 m
+   slope_deg           +0.167    +0.466    +1.749 deg
+   dist_upland_m      +67.082   +84.853  +136.015 m
+   ndvi_apr26          +0.160    +0.204    +0.236 index
+   ndvi_may21          +0.478    +0.693    +0.746 index
+   ndvi_aug21          +0.501    +0.604    +0.779 index
+   ndvi_oct26          +0.395    +0.489    +0.591 index
+   ndre_aug21          +0.326    +0.402    +0.531 index
+   ndmi_aug21          -0.010    +0.126    +0.217 index
+   vis_may21           +0.062    +0.076    +0.087 refl
+   d_ndvi_spring       -0.203    -0.060    +0.165 index
+   d_ndvi_autumn       -0.337    -0.173    +0.088 index
+
+==== TARGET r08: n 126, blocks 16, target NMAD 119 mm, sd 117
+single terms, Spearman and blocked-CV R^2 of OLS:
+   within-rover Spearman (T2a RS+ B n 98, T1a RS+ A n 22): {'z_plane_m': (-0.37, -0.16), 'z_local_m': (-0.4, -0.66), 'slope_deg': (0.23, 0.48), 'dist_upland_m': (-0.18, -0.58), 'ndvi_apr26': (-0.38, -0.31), 'ndvi_may21': (-0.14, 0.26), 'ndvi_aug21': (-0.05, -0.32), 'ndvi_oct26': (-0.18, -0.21), 'ndre_aug21': (0.01, -0.49), 'ndmi_aug21': (0.03, -0.31), 'vis_may21': (0.42, 0.38), 'd_ndvi_spring': (0.13, -0.29), 'd_ndvi_autumn': (0.0, 0.22)}
+   dist_upland_m    rho -0.42  CV R2 +0.212  CV NMAD 103
+   z_local_m        rho -0.52  CV R2 +0.149  CV NMAD 101
+   vis_may21        rho +0.46  CV R2 +0.097  CV NMAD 103
+   ndre_aug21       rho -0.33  CV R2 +0.070  CV NMAD 107
+   ndvi_aug21       rho -0.32  CV R2 +0.047  CV NMAD 119
+   ndvi_apr26       rho -0.27  CV R2 -0.008  CV NMAD 108
+   ndmi_aug21       rho -0.24  CV R2 -0.008  CV NMAD 109
+   slope_deg        rho +0.33  CV R2 -0.022  CV NMAD 108
+   d_ndvi_autumn    rho +0.24  CV R2 -0.041  CV NMAD 132
+   d_ndvi_spring    rho -0.13  CV R2 -0.071  CV NMAD 127
+   z_plane_m        rho -0.21  CV R2 -0.074  CV NMAD 117
+   ndvi_may21       rho +0.01  CV R2 -0.092  CV NMAD 109
+   ndvi_oct26       rho -0.07  CV R2 -0.125  CV NMAD 115
+   [rover-median removed] step 1: add vis_may21        -> CV R2 +0.056  CV NMAD 79
+   [rover-median removed] step 2: add ndvi_apr26       -> CV R2 +0.152  CV NMAD 85
+   [rover-median removed] step 3: add z_local_m        -> CV R2 +0.142  CV NMAD 91   (gain < 0.01, stop)
+   within-rover structure equation: r08_rel (mm) = -84 +4017 x vis_may21 [refl] -1068 x ndvi_apr26 [index] ; blocked-CV R2 +0.148
+   [raw target] step 1: add dist_upland_m    -> CV R2 +0.200  CV NMAD 101
+   [raw target] step 2: add z_local_m        -> CV R2 +0.225  CV NMAD 98
+   [raw target] step 3: add z_plane_m        -> CV R2 +0.250  CV NMAD 92
+   [raw target] step 4: add ndvi_apr26       -> CV R2 +0.294  CV NMAD 95
+EQUATION for r08 (OLS, n 126): r08 (mm) = +1076 (se 120) -2.058 (se 0.53) x dist_upland_m [m] -305.9 (se 83) x z_local_m [m] +235.3 (se 54) x z_plane_m [m] -1308 (se 2.9e+02) x ndvi_apr26 [index]
+   fit R2 0.426, blocked-CV R2 +0.267, CV NMAD 98 mm against target NMAD 119; residual by rover (median, NMAD): {'CORS': (-30, 6), 'RS+ A': (-19, 95), 'RS+ B': (-16, 91)}
+   effect of each term across its p10-p90 at the points (mm): {'dist_upland_m': -97, 'z_local_m': -108, 'z_plane_m': 148, 'ndvi_apr26': -116}
+   same terms on the rover-median-removed target: blocked-CV R2 +0.035, CV NMAD 87 against 81
+   wrote data/field/2026-10-25/imagery/floodplain_physical_r08.png _pred.tif, _pred_fullbox.tif, _cv.csv
+
+==== TARGET r21: n 147, blocks 18, target NMAD 38 mm, sd 53
+single terms, Spearman and blocked-CV R^2 of OLS:
+   within-rover Spearman (T2a RS+ B n 98, T1a RS+ A n 32): {'z_plane_m': (-0.05, 0.06), 'z_local_m': (0.05, 0.0), 'slope_deg': (0.0, 0.3), 'dist_upland_m': (0.23, 0.06), 'ndvi_apr26': (-0.12, 0.0), 'ndvi_may21': (-0.1, -0.1), 'ndvi_aug21': (0.24, 0.17), 'ndvi_oct26': (-0.11, -0.07), 'ndre_aug21': (0.29, 0.14), 'ndmi_aug21': (0.16, -0.27), 'vis_may21': (0.06, -0.17), 'd_ndvi_spring': (0.23, 0.2), 'd_ndvi_autumn': (-0.15, -0.26)}
+   ndre_aug21       rho +0.28  CV R2 +0.028  CV NMAD 40
+   ndvi_aug21       rho +0.25  CV R2 +0.012  CV NMAD 41
+   d_ndvi_spring    rho +0.26  CV R2 -0.014  CV NMAD 43
+   ndmi_aug21       rho +0.15  CV R2 -0.025  CV NMAD 43
+   d_ndvi_autumn    rho -0.21  CV R2 -0.025  CV NMAD 42
+   slope_deg        rho +0.03  CV R2 -0.031  CV NMAD 40
+   ndvi_may21       rho -0.16  CV R2 -0.044  CV NMAD 42
+   ndvi_oct26       rho -0.09  CV R2 -0.049  CV NMAD 39
+   z_local_m        rho +0.06  CV R2 -0.052  CV NMAD 41
+   z_plane_m        rho -0.09  CV R2 -0.066  CV NMAD 40
+   vis_may21        rho -0.05  CV R2 -0.074  CV NMAD 39
+   dist_upland_m    rho +0.18  CV R2 -0.077  CV NMAD 43
+   ndvi_apr26       rho -0.12  CV R2 -0.112  CV NMAD 40
+   [rover-median removed] step 1: add ndre_aug21       -> CV R2 -0.020  CV NMAD 38
+   [rover-median removed] step 2: add ndvi_may21       -> CV R2 -0.025  CV NMAD 38   (gain < 0.01, stop)
+   within-rover structure equation: r21_rel (mm) = -45 +114.2 x ndre_aug21 [index] ; blocked-CV R2 -0.020
+   [raw target] step 1: add ndre_aug21       -> CV R2 +0.031  CV NMAD 39
+   [raw target] step 2: add z_local_m        -> CV R2 +0.023  CV NMAD 41   (gain < 0.01, stop)
+EQUATION for r21 (OLS, n 147): r21 (mm) = +62 (se 23) +177.3 (se 53) x ndre_aug21 [index]
+   fit R2 0.072, blocked-CV R2 +0.025, CV NMAD 39 mm against target NMAD 38; residual by rover (median, NMAD): {'CORS': (-33, 23), 'RS+ A': (3, 53), 'RS+ B': (-1, 30)}
+   effect of each term across its p10-p90 at the points (mm): {'ndre_aug21': 36}
+   same terms on the rover-median-removed target: blocked-CV R2 -0.012, CV NMAD 38 against 34
+   wrote data/field/2026-10-25/imagery/floodplain_physical_r21.png _pred.tif, _pred_fullbox.tif, _cv.csv
