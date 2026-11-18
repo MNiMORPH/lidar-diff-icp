@@ -71,9 +71,12 @@ def layer5(name, dirs=None):
     vals = []; gxs = []; gys = []
     for d, (B5, res5) in (dirs or TILES).items():
         if not os.path.exists(f"{d}/{name}"): continue
-        a = np.load(f"{d}/{name}", mmap_mode="r"); i0 = max(int((B5[3] - (N0 + HALF)) / res5), 0); i1 = min(int((B5[3] - (N0 - HALF)) / res5) + 1, a.shape[0]); j0 = max(int(((E0 - HALF) - B5[0]) / res5), 0); j1 = min(int(((E0 + HALF) - B5[0]) / res5) + 1, a.shape[1])
+        # the tile arrays are stored BOTTOM-UP (row 0 = south, as compile_rtk's sample() and viz.py read them); the first
+        # run indexed them top-down and so put the elevation of the mirror location into the feature stack (62 of the 126
+        # field points read 234-250 m against an RTK ground of 217-218 m) -- fixed 2026-11-18
+        a = np.load(f"{d}/{name}", mmap_mode="r"); i0 = max(int(((N0 - HALF) - B5[1]) / res5), 0); i1 = min(int(((N0 + HALF) - B5[1]) / res5) + 1, a.shape[0]); j0 = max(int(((E0 - HALF) - B5[0]) / res5), 0); j1 = min(int(((E0 + HALF) - B5[0]) / res5) + 1, a.shape[1])
         if i1 <= i0 or j1 <= j0: continue
-        sub = np.asarray(a[i0:i1, j0:j1], float); ii, jj2 = np.indices(sub.shape); vals.append(sub.ravel()); gys.append((B5[3] - (i0 + ii + 0.5) * res5).ravel()); gxs.append((B5[0] + (j0 + jj2 + 0.5) * res5).ravel())
+        sub = np.asarray(a[i0:i1, j0:j1], float); ii, jj2 = np.indices(sub.shape); vals.append(sub.ravel()); gys.append((B5[1] + (i0 + ii + 0.5) * res5).ravel()); gxs.append((B5[0] + (j0 + jj2 + 0.5) * res5).ravel())
     return grid_mean(np.concatenate(vals), np.concatenate(gxs), np.concatenate(gys))
 js = json.load(open(f"{S}/corrections.json")); SITE = {S: (js["bounds"], float(js.get("res") or js.get("res_m")))}
 feat["z_after_m"] = layer5("z_after.npy"); feat["gen1_spread_mm"] = layer5("gen1_spread_mm.npy"); feat["lowveg_gen2"] = layer5("lowveg_grid.npy"); fpm = (layer5("floodplain_mask.npy", SITE) > 0.5) | (layer5("floodplain_mask_clubb.npy") > 0.5)   # union of the site geometric mask and the tiles Clubb mask (the field is Clubb floodplain, not geometric)
@@ -84,7 +87,8 @@ names = list(feat); stack = np.stack([feat[k] for k in names]); print("features:
 np.savez_compressed(f"{OUT}/floodplain_model_features.npz", names=np.array(names), stack=stack.astype("float32"), xs=xs, ys=ys, fpm=fpm)
 # ---- sample at the points
 jx = np.clip(((F.easting_tied.values - (E0 - HALF)) / RES).astype(int), 0, len(xs) - 1); iy = np.clip(((N0 + HALF - F.northing_tied.values) / RES).astype(int), 0, len(ys) - 1)
-P = pd.DataFrame(stack[:, iy, jx].T, columns=names); P["r08"] = F.r08_mm.values; P["r21"] = F.r21_mm.values; P["E"] = F.easting_tied.values; P["N"] = F.northing_tied.values; P["rover"] = F.rover.values
+P = pd.DataFrame(stack[:, iy, jx].T, columns=names); _dz = P.z_after_m.values - F.gen2_z_m.values; print("CHECK 10 m z_after at the points minus compile gen2_z_m (bilinear 5 m): median %+.2f m, max |.| %.2f m (a mis-indexed mosaic gives tens of m)" % (np.nanmedian(_dz), np.nanmax(np.abs(_dz)))); assert np.nanmax(np.abs(_dz)) < 2.0, "tile layer mis-indexed"
+P["r08"] = F.r08_mm.values; P["r21"] = F.r21_mm.values; P["E"] = F.easting_tied.values; P["N"] = F.northing_tied.values; P["rover"] = F.rover.values
 P.to_csv(f"{OUT}/floodplain_model_points.csv", index=False)
 # ---- blocked CV
 BLOCK = 40.0; rng = np.random.default_rng(0)
