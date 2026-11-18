@@ -680,23 +680,75 @@ reed-canary-grass rasters nelike_p (2008, 2021, 2025) and four 2024 phenology me
 147 (r21) points. Models: Theil-Sen on each single feature; ridge, lasso, random forest, gradient boosting on all.
 Selection by spatially blocked cross-validation, 40 m blocks (MINE), 5 folds, 20 random block assignments.
 
-Results (blocked-CV R^2, CV NMAD against the target's NMAD): **r08** (NMAD 119 mm): best single feature NAIP
-August-2021 NDVI, Spearman -0.47, CV R^2 0.14, NMAD 102; the 2008 October class probability CV R^2 0.10, NMAD 95;
-ridge 0.22, lasso 0.24, random forest 0.36 (NMAD 92), **gradient boosting 0.37 (NMAD 96)**, the product written as
-`imagery/floodplain_model_r08_pred.tif` (EPSG:26915, 10 m, floodplain mask) and `floodplain_model_r08.png` (map and
-CV scatter), CV predictions per point in `floodplain_model_r08_cv.csv`. Importances of the fitted model: 2021 ground
-elevation 0.25, August-2021 Sentinel-2 NDRE 0.10, NAIP August-2021 NDVI 0.09, May-2021 blue 0.05, April-2026 NDVI
-0.05, August-2021 NDMI 0.04, NAIP 2025 NDVI 0.03, the 2008 class 0.03, lowveg_gen2 0.03. **r21** (NMAD 38 mm): no
-feature or model predicts it; best single feature August-2021 NDRE, CV R^2 0.04; every multivariate model has
-negative CV R^2 (-0.06 to -0.10). Its product (`floodplain_model_r21_pred.tif`, the Theil-Sen line on that one
-feature, 156 mm per unit NDRE) is written for completeness and carries no skill.
+Results (blocked-CV R^2, CV NMAD against the target's NMAD; the run of 2026-11-18 after the tile-indexing fix below):
+**r08** (NMAD 119 mm): best single feature the 2021 ground elevation itself, Spearman -0.44, CV R^2 0.20, NMAD 87;
+NAIP August-2021 NDVI -0.47, CV R^2 0.14; the 2008 October class probability CV R^2 0.09, NMAD 97; ridge 0.22,
+lasso 0.23, **random forest 0.32 (NMAD 99)**, gradient boosting 0.31 (NMAD 96); the product is the random forest,
+written as `imagery/floodplain_model_r08_pred.tif` (EPSG:26915, 10 m, floodplain mask) and `floodplain_model_r08.png`
+(map and CV scatter), CV predictions per point in `floodplain_model_r08_cv.csv`. Importances of the fitted model: 2021
+ground elevation 0.31, August-2021 Sentinel-2 NDRE 0.14, the 2008 class 0.08, April-2026 NDVI 0.06, NAIP August-2021
+NDVI 0.06, August-2021 NDMI 0.03, NAIP 2025 NDVI 0.03, May-2021 blue 0.03. **r21** (NMAD 38 mm): no feature or model
+predicts it; best single feature August-2021 NDRE, CV R^2 0.04; every multivariate model has negative CV R^2. Its
+product (`floodplain_model_r21_pred.tif`, the Theil-Sen line on that one feature) is written for completeness and
+carries no skill.
+
+A bug in the first run, found and fixed 2026-11-18 while building the physical model below: the tile arrays
+(`z_after.npy`, `gen1_spread_mm.npy`, `lowveg_grid.npy`, the masks) are stored bottom-up (row 0 = south, as
+`compile_rtk`'s sampler and `viz.py` read them) and the model's mosaic read them top-down, so those four layers in
+the feature stack came from the mirror location in each tile: 62 of the 126 field points carried an "elevation" of
+234-250 m against an RTK ground of 217-218 m. The first run's gradient boosting (CV R^2 0.37, elevation importance
+0.25) was leaning on that flipped layer. The script now asserts that the 10 m elevation at the points agrees with
+the compile's bilinear 5 m value (max difference 0.40 m, median +0.01). The Sentinel-2, NAIP and reed-canary-grass
+rasters were georeferenced reads and were never affected; the per-point `gen1_spread_mm` in
+`floodplain_points_covariates.csv` was read bottom-up and is correct.
 
 What the product is and is not: it explains about a third of the 2008 residual's variance out of sample across
-40 m blocks and reduces the point-to-point scatter from 119 to 92-96 mm; the leading feature is the ground's own
-elevation (the low parts of the field carry the larger 2008 residual), then the late-summer greenness and
-red-edge of 2021 and the April-2026 greenness, with the October-2008 spectral class contributing after those. The
-2021 residual has no spatial structure that any of these layers can predict, which is the flat decimeter again.
-The map is also written unmasked over the whole 1.2 km box (`floodplain_model_r08_pred_fullbox.tif`,
-`floodplain_model_r08_fullbox.png`, the union of the site's geometric and the tiles' Clubb floodplain masks drawn
-as a line) because neither mask covers the north half of the surveyed field at 10 m; outside the open floodplain
-the model is extrapolating into forest and should be read as nothing more than that.
+40 m blocks and reduces the point-to-point scatter from 119 to 96-99 mm; the leading feature is the ground's own
+elevation (the low parts of the field carry the larger 2008 residual), then the late-summer red-edge of 2021, the
+October-2008 spectral class and the April-2026 greenness. The 2021 residual has no spatial structure that any of
+these layers can predict, which is the flat decimeter again. The map is also written unmasked over the whole 1.2 km
+box (`floodplain_model_r08_pred_fullbox.tif`, `floodplain_model_r08_fullbox.png`); outside the open floodplain the
+model is extrapolating into forest and should be read as nothing more than that.
+
+**A physical model instead (Andy, 2026-11-18: "keep it more physical than gradient boosting ... find some combination
+of information from the DEM and Sentinel to explain it").** `analysis/field_survey/floodplain_physical_model_2026-10-25.py`,
+log `imagery/floodplain_physical_log.txt`, per-point terms `imagery/floodplain_physical_points.csv`. Thirteen named
+terms on the same 10 m grid. From the DEM (2021 ground): `z_plane_m`, elevation minus a plane fitted to the box's
+floodplain pixels (8.73 m/km descending towards azimuth 55 deg; 2682 pixels within 1 m after three robust passes),
+i.e. height above the valley-floor trend; `z_local_m`, elevation minus the 150 m floodplain median (swale or
+ridge); `slope_deg`; `dist_upland_m`, distance to the nearest pixel more than 5 m above the plane (the bluff toe).
+From Sentinel-2: NDVI on 2026-04-10, 2021-05-01, 2021-08-14 and 2026-10-17; NDRE and NDMI in August 2021;
+`vis_may21`, the mean visible reflectance on 1 May 2021 (spring brightness, litter); the summer-minus-spring and
+autumn-minus-summer NDVI differences. Model: ordinary least squares, terms added by forward selection on the same
+blocked CV as the data product (40 m blocks, 5 folds x 20 assignments), stopping below a gain of 0.01 in CV R^2
+or at four terms (both MINE), run on the raw r08 and on the rover-median-removed r08 (level is gauge).
+
+At the points the terms span little: z_plane -1.73 to -1.19 m (p10-p90), z_local -0.29 to +0.04 m, distance to the
+upland 67 to 136 m, April-2026 NDVI 0.16 to 0.24, May-2021 visible reflectance 0.062 to 0.087. Within each rover's
+line (T2a n 98, T1a n 22; Spearman) the terms that hold in both are the spring brightness (+0.42, +0.38),
+the local depression (-0.40, -0.66) and the April-2026 NDVI (-0.38, -0.31); the summer indices hold only on
+T1a's line (NDRE +0.01 vs -0.49). The forward selection on the rover-median-removed target picks
+
+    r08_rel (mm) = -84 + 4017 x vis_may21 - 1068 x ndvi_apr26         blocked-CV R^2 0.15, CV NMAD 85 against 81
+
+and on the raw target
+
+    r08 (mm) = +1076 (se 120) - 2.06 (se 0.53) x dist_upland_m - 306 (se 83) x z_local_m + 235 (se 54) x z_plane_m
+               - 1308 (se 290) x ndvi_apr26                           fit R^2 0.43, blocked-CV R^2 0.27, CV NMAD 98 against 119
+
+with each term worth 97-148 mm across its p10-p90 at the points and residual medians by rover of -30 (CORS), -19
+(T1a), -16 (T2a) mm. The same four terms score only 0.035 on the rover-median-removed target: most of what
+the raw equation explains is the level difference between the three lines, which sit at different distances from
+the bluff (medians 158, 95, 80 m) and on different local relief (+0.06, -0.03, -0.13 m), so position and rover are
+confounded on this survey and the raw equation cannot tell them apart. For comparison the data product's random
+forest on 65 features reaches 0.32 out of sample, the lasso 0.23. Products: `imagery/floodplain_physical_r08_pred.tif`
+(floodplain mask) and `_pred_fullbox.tif`, `floodplain_physical_r08.png` (map, CV scatter, one partial-residual panel
+per term), `floodplain_physical_r08_cv.csv`; the same for r21, where no term or pair of terms predicts anything
+(best blocked-CV R^2 0.03 on August-2021 NDRE, negative on the rover-median-removed target). The linear map
+extrapolates hard outside the surveyed field (the distance and plane terms keep growing) and is meaningful only
+near the points.
+
+Measurement, not interpretation: the 2008 lidar sits higher above today's ground where the field was brighter in
+the visible on 1 May 2021, less green on 10 April 2026, locally lower, and nearer the bluff. Whether the first
+three are one thing (a thicker, later-greening sward with more standing litter in the field's low ground) is the
+hypothesis the within-rover equation points at; it is not tested here.
