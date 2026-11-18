@@ -669,3 +669,30 @@ green into November, and that is one reading; a warm-season or forb-dominated pa
 names the species; it says that the part of this field that the imagery marked as a distinct sward in October 2008
 is the part where the 2008 lidar surface sits 70-160 mm higher above today's ground, and that the 2021 lidar does
 not see the difference.
+
+**A data product fitted to the observed spread of lidar minus RTK (Andy, 2026-11-18: "generate a data product that
+best matches the observed spatial spread of LiDAR vs RTK ... any combination of spectral bands and/or other data
+sources").** `analysis/field_survey/floodplain_residual_model_2026-10-25.py`, log `imagery/floodplain_model_log.txt`.
+Features, all rasters on a 10 m grid over a 1.2 km box: Sentinel-2 ten bands plus NDVI, NDRE, NDMI on 2021-05-01,
+2021-08-14, 2026-04-10, 2026-10-17; NAIP NDVI 2019, 2021, 2025 averaged to 10 m; the tiles' z_after (2021 ground
+elevation), gen1_spread_mm and lowveg_grid averaged to 10 m, mosaicked over 4342-29-64 and 4358-29-01; the
+reed-canary-grass rasters nelike_p (2008, 2021, 2025) and four 2024 phenology metrics: 64 features at 126 (r08) and
+147 (r21) points. Models: Theil-Sen on each single feature; ridge, lasso, random forest, gradient boosting on all.
+Selection by spatially blocked cross-validation, 40 m blocks (MINE), 5 folds, 20 random block assignments.
+
+Results (blocked-CV R^2, CV NMAD against the target's NMAD): **r08** (NMAD 119 mm): best single feature NAIP
+August-2021 NDVI, Spearman -0.47, CV R^2 0.14, NMAD 102; the 2008 October class probability CV R^2 0.10, NMAD 95;
+ridge 0.22, lasso 0.24, random forest 0.36 (NMAD 92), **gradient boosting 0.37 (NMAD 96)**, the product written as
+`imagery/floodplain_model_r08_pred.tif` (EPSG:26915, 10 m, floodplain mask) and `floodplain_model_r08.png` (map and
+CV scatter), CV predictions per point in `floodplain_model_r08_cv.csv`. Importances of the fitted model: 2021 ground
+elevation 0.25, August-2021 Sentinel-2 NDRE 0.10, NAIP August-2021 NDVI 0.09, May-2021 blue 0.05, April-2026 NDVI
+0.05, August-2021 NDMI 0.04, NAIP 2025 NDVI 0.03, the 2008 class 0.03, lowveg_gen2 0.03. **r21** (NMAD 38 mm): no
+feature or model predicts it; best single feature August-2021 NDRE, CV R^2 0.04; every multivariate model has
+negative CV R^2 (-0.06 to -0.10). Its product (`floodplain_model_r21_pred.tif`, the Theil-Sen line on that one
+feature, 156 mm per unit NDRE) is written for completeness and carries no skill.
+
+What the product is and is not: it explains about a third of the 2008 residual's variance out of sample across
+40 m blocks and reduces the point-to-point scatter from 119 to 92-96 mm; the leading feature is the ground's own
+elevation (the low parts of the field carry the larger 2008 residual), then the late-summer greenness and
+red-edge of 2021 and the April-2026 greenness, with the October-2008 spectral class contributing after those. The
+2021 residual has no spatial structure that any of these layers can predict, which is the flat decimeter again.

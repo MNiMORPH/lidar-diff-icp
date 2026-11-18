@@ -1,0 +1,55 @@
+S2 S2B_MSIL2A_20210501T165839_R069_T15TWJ_20210502T094756 clear fraction on grid 1.00
+S2 S2A_MSIL2A_20210814T165901_R069_T15TWJ_20210815T042431 clear fraction on grid 1.00
+S2 S2C_MSIL2A_20260410T165841_R069_T15TWJ_20260410T221619 clear fraction on grid 1.00
+S2 S2C_MSIL2A_20261017T170311_R069_T15TWJ_20261017T202312 clear fraction on grid 1.00
+NAIP 2019-08 4 tiles
+NAIP 2021-08 4 tiles
+NAIP 2025-09 2 tiles
+5 m tiles covering the box: {'4342-29-64': [577495.0, 4882740.0, 580030.0, 4886235.0], '4358-29-01': [579995.0, 4882770.0, 582535.0, 4886265.0]}
+features: 65 grid (120, 120) floodplain pixels 4521
+
+==== TARGET r08: n 126, features 64, blocks 16, target NMAD 119 mm, sd 117
+single features, Spearman and blocked-CV R^2 of a Theil-Sen line, top 12:
+   naip_2021-08_NDVI            rho -0.47  CV R2 +0.143  CV NMAD 102
+   naip_2019-08_NDVI            rho -0.40  CV R2 +0.114  CV NMAD 107
+   s2_2021-05-01_B02            rho +0.45  CV R2 +0.104  CV NMAD 104
+   nelike_p_ls_20081029         rho +0.42  CV R2 +0.104  CV NMAD 95
+   s2_2026-04-10_B04            rho +0.37  CV R2 +0.089  CV NMAD 100
+   s2_2021-08-14_NDVI           rho -0.32  CV R2 +0.078  CV NMAD 118
+   s2_2021-05-01_B03            rho +0.43  CV R2 +0.064  CV NMAD 113
+   s2_2021-08-14_NDRE           rho -0.33  CV R2 +0.055  CV NMAD 113
+   s2_2026-04-10_B03            rho +0.30  CV R2 +0.049  CV NMAD 104
+   s2_2021-05-01_B11            rho +0.33  CV R2 +0.046  CV NMAD 108
+   s2_2026-04-10_B02            rho +0.34  CV R2 +0.029  CV NMAD 111
+   s2_2026-04-10_B11            rho +0.31  CV R2 +0.015  CV NMAD 123
+multivariate, blocked CV (40 m blocks, 5 folds x 20 repeats):
+   ridge              CV R2 +0.223  CV NMAD 96 mm
+   lasso              CV R2 +0.243  CV NMAD 96 mm
+   random_forest      CV R2 +0.359  CV NMAD 92 mm
+   gradient_boosting  CV R2 +0.368  CV NMAD 96 mm
+BEST for r08: gradient_boosting (CV R2 +0.368, CV NMAD 96 against target NMAD 119)
+   importances, top 10: [('z_after_m', 0.251), ('s2_2021-08-14_NDRE', 0.097), ('naip_2021-08_NDVI', 0.093), ('s2_2021-05-01_B02', 0.048), ('s2_2026-04-10_NDVI', 0.046), ('s2_2021-08-14_NDMI', 0.039), ('naip_2025-09_NDVI', 0.034), ('nelike_p_ls_20081029', 0.034), ('lowveg_gen2', 0.025), ('s2_2021-05-01_B03', 0.023)]
+   wrote data/field/2026-10-25/imagery/floodplain_model_r08.png and _pred.tif
+
+==== TARGET r21: n 147, features 64, blocks 18, target NMAD 38 mm, sd 53
+single features, Spearman and blocked-CV R^2 of a Theil-Sen line, top 12:
+   s2_2021-08-14_NDRE           rho +0.28  CV R2 +0.042  CV NMAD 41
+   naip_2025-09_NDVI            rho -0.21  CV R2 +0.022  CV NMAD 40
+   s2_2021-08-14_NDVI           rho +0.25  CV R2 +0.004  CV NMAD 40
+   s2_2021-08-14_B04            rho -0.25  CV R2 +0.000  CV NMAD 40
+   s2_2021-05-01_B11            rho -0.22  CV R2 -0.000  CV NMAD 41
+   s2_2026-04-10_B8A            rho -0.18  CV R2 -0.002  CV NMAD 42
+   s2_2021-08-14_B02            rho -0.28  CV R2 -0.003  CV NMAD 39
+   s2_2021-08-14_NDMI           rho +0.15  CV R2 -0.004  CV NMAD 45
+   s2_2021-08-14_B12            rho -0.21  CV R2 -0.004  CV NMAD 41
+   s2_2021-05-01_B8A            rho -0.18  CV R2 -0.009  CV NMAD 41
+   s2_2021-08-14_B03            rho -0.27  CV R2 -0.015  CV NMAD 42
+   s2_2021-08-14_B05            rho -0.23  CV R2 -0.015  CV NMAD 45
+multivariate, blocked CV (40 m blocks, 5 folds x 20 repeats):
+   ridge              CV R2 -0.072  CV NMAD 39 mm
+   lasso              CV R2 -0.061  CV NMAD 40 mm
+   random_forest      CV R2 -0.060  CV NMAD 36 mm
+   gradient_boosting  CV R2 -0.097  CV NMAD 45 mm
+BEST for r21: s2_2021-08-14_NDRE (CV R2 +0.042, CV NMAD 41 against target NMAD 38)
+   Theil-Sen on s2_2021-08-14_NDRE: 156 per unit, intercept 73
+   wrote data/field/2026-10-25/imagery/floodplain_model_r21.png and _pred.tif
