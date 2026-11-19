@@ -7,6 +7,7 @@ the 2008 lidar ground (gen1); one coloured marker per point, red = ground below 
 surface (lidar high), blue = ground above it; a point with no lidar value in that panel is drawn
 as an open gray marker. Colour scale +/-0.5 m, values beyond it saturate (the scale is mine).
 """
+import os
 import io
 import sys
 import urllib.request
@@ -44,4 +45,4 @@ for ax, col, title in ((axs[0], "gen2_minus_rtk_m", "2021 lidar"), (axs[1], "gen
     ax.plot([X0 + 20, X0 + 120], [Y0 + 15, Y0 + 15], "w-", lw=3); ax.text(X0 + 70, Y0 + 22, "100 m", color="white", ha="center", fontsize=9)
 axs[0].legend(loc="upper right", fontsize=8); axs[1].scatter([], [], facecolors="none", edgecolors="0.35", s=40, label="no value"); axs[1].legend(loc="upper right", fontsize=8)
 cb = fig.colorbar(sc, ax=axs, shrink=0.75, pad=0.01, extend="both"); cb.set_label("lidar minus RTK (m)")
-fig.savefig(f"figures/rtk_2026-10-25_diffmap{SUF}.png", dpi=120, bbox_inches="tight"); print(f"figures/rtk_2026-10-25_diffmap{SUF}.png")
+fig.savefig(f"figures/rtk_2026-10-25_diffmap{SUF}.png", dpi=int(os.environ.get("FIGDPI", 120)), bbox_inches="tight"); print(f"figures/rtk_2026-10-25_diffmap{SUF}.png")

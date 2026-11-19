@@ -4,6 +4,7 @@ axis and markers, but the y-axis is each lidar surface minus the tied RTK in mm 
 no medians, no titles (Andy, 2026-11-11). Reads data/field/2026-10-25/rtk_points_all.csv. Optional argv[1] = output-name suffix.
 Writes figures/rtk_2026-10-25_profiles_misfit{SUF}.png
 """
+import os
 import sys
 
 import matplotlib
@@ -30,4 +31,4 @@ for ax, groups in ((axs[0], ["hillslope_RS3", "hillslope_T4a"]), (axs[1], ["floo
         off = d[-1] + 30
     ax.axhline(0, color="black", lw=0.8); ax.set_ylabel("lidar minus RTK (mm)"); ax.legend(fontsize=8, loc="lower right"); ax.grid(alpha=0.3)
 axs[1].set_xlabel("distance along path (m)")
-fig.tight_layout(); fig.savefig(f"figures/rtk_2026-10-25_profiles_misfit{SUF}.png", dpi=110); print(f"figures/rtk_2026-10-25_profiles_misfit{SUF}.png")
+fig.tight_layout(); fig.savefig(f"figures/rtk_2026-10-25_profiles_misfit{SUF}.png", dpi=int(os.environ.get("FIGDPI", 110))); print(f"figures/rtk_2026-10-25_profiles_misfit{SUF}.png")

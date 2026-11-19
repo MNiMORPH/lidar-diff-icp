@@ -7,6 +7,7 @@ columns (minus 2021 lidar gen2, minus 2008 lidar gen1); a Gaussian KDE per group
 rug of the points; median and NMAD per group go to stdout, not the figure. The KDE bandwidth is
 Scott's rule (scipy default); no cut is applied to the residuals.
 """
+import os
 import sys
 
 import matplotlib
@@ -48,4 +49,4 @@ for i, (rk, groups, title) in enumerate(rows):
         ax.set_xlabel(xl); ax.set_ylabel("density (mm$^{-1}$)"); ax.legend(fontsize=7.5, loc="upper left"); ax.grid(alpha=0.25)
 fig.tight_layout()
 for ext in ("png", "pdf"):
-    fig.savefig(f"figures/rtk_2026-10-25_pdf{SUF}.{ext}", dpi=120); print(f"figures/rtk_2026-10-25_pdf{SUF}.{ext}")
+    fig.savefig(f"figures/rtk_2026-10-25_pdf{SUF}.{ext}", dpi=int(os.environ.get("FIGDPI", 120))); print(f"figures/rtk_2026-10-25_pdf{SUF}.{ext}")
