@@ -39,7 +39,7 @@ for ax, col, title in ((axs[0], "gen2_minus_rtk_m", "2021 lidar"), (axs[1], "gen
         ax.scatter(s.easting_tied, s.northing_tied, facecolors="none", edgecolors="0.35", s=40, marker=mk[g], linewidths=0.8)
     for g, s in F[~nan].groupby("group"):
         if g not in mk: continue
-        sc = ax.scatter(s.easting_tied, s.northing_tied, c=s[col], cmap=cmc.bam_r, norm=norm, s=46, marker=mk[g], edgecolors="black", linewidths=0.5, label={'floodplain_RSplus_B': 'RS+ B (T2a)', 'floodplain_RSplus_A': 'RS+ A (T1a)', 'floodplain_CORS_Wickert': 'CORS (Wickert)', 'hillslope_RS3': 'RS3 (T3a)', 'hillslope_T4a': 'T4a', 'benchmark_DR9925': 'DR9925'}[g])
+        sc = ax.scatter(s.easting_tied, s.northing_tied, c=s[col], cmap=cmc.bam_r, norm=norm, s=46, marker=mk[g], edgecolors="black", linewidths=0.5, label={'floodplain_RSplus_B': 'RS+ B (T2a)', 'floodplain_RSplus_A': 'RS+ A (T1a)', 'floodplain_CORS_Wickert': 'CORS (Wickert)', 'hillslope_RS3': 'RS3 (T3a)', 'hillslope_T4a': 'RS3 (T4a)', 'benchmark_DR9925': 'DR9925'}[g])
     ax.set_xlim(X0, X1); ax.set_ylim(Y0, Y1); ax.set_xticks([]); ax.set_yticks([]); ax.set_title(title, fontsize=10)
     ax.plot([X0 + 20, X0 + 120], [Y0 + 15, Y0 + 15], "w-", lw=3); ax.text(X0 + 70, Y0 + 22, "100 m", color="white", ha="center", fontsize=9)
 axs[0].legend(loc="upper right", fontsize=8); axs[1].scatter([], [], facecolors="none", edgecolors="0.35", s=40, label="no value"); axs[1].legend(loc="upper right", fontsize=8)
