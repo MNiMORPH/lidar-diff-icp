@@ -18,6 +18,7 @@ SUF = sys.argv[1] if len(sys.argv) > 1 else ""
 F = P[P.status.str.startswith("FIX") & P.gen2_minus_rtk_m.notna()].copy()
 mk = {"hillslope_RS3": "o", "hillslope_T4a": "s", "floodplain_RSplus_A": "^", "floodplain_RSplus_B": "v", "floodplain_CORS_Wickert": "D"}
 C21, C08 = "#2a78d6", "#e34948"
+LABEL = {"hillslope_RS3": "RS3 (T3a)", "hillslope_T4a": "RS3 (T4a)", "floodplain_RSplus_A": "RS+ A (T1a)", "floodplain_RSplus_B": "RS+ B (T2a)", "floodplain_CORS_Wickert": "CORS (Wickert)"}
 
 fig, axs = plt.subplots(2, 1, figsize=(12, 9))
 for ax, groups in ((axs[0], ["hillslope_RS3", "hillslope_T4a"]), (axs[1], ["floodplain_RSplus_A", "floodplain_RSplus_B", "floodplain_CORS_Wickert"])):
@@ -28,6 +29,7 @@ for ax, groups in ((axs[0], ["hillslope_RS3", "hillslope_T4a"]), (axs[1], ["floo
         ax.scatter(d, m21, c=C21, s=22, marker=mk[g], edgecolors="black", linewidths=0.4, label="2021 lidar" if g == groups[0] else None)
         ok = np.isfinite(m08); ax.scatter(d[ok], m08[ok], c=C08, s=22, marker=mk[g], edgecolors="black", linewidths=0.4, label="2008 lidar" if g == groups[0] else None)
         ax.axvspan(d[0], d[-1], color="0.93" if groups.index(g) % 2 else "white", zorder=0)
+        ax.text(0.5 * (d[0] + d[-1]), 0.98, LABEL[g], transform=ax.get_xaxis_transform(), ha="center", va="top", fontsize=9)   # which rover walked this stretch of the axis (Andy, 2026-11-19)
         off = d[-1] + 30
     ax.axhline(0, color="black", lw=0.8); ax.set_ylabel("lidar minus RTK (mm)"); ax.legend(fontsize=8, loc="lower right"); ax.grid(alpha=0.3)
 axs[1].set_xlabel("distance along path (m)")
