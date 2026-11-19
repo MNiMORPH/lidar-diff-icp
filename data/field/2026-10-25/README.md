@@ -36,7 +36,7 @@ residual after that shift, and `tie_source` names the shift. The main table is u
 | group | people | device | n | where |
 |---|---|---|---|---|
 | hillslope_RS3 | T3a, T3b, T3c | Reach RS3 | 18 (24 logged; 6 under B1 dropped) | bluff west of the road, up and north |
-| hillslope_T4a | T4a, T4b, T3a, T3b, T3c | Reach RS3 (a second unit) | 21 (29 logged; 8 under B1 dropped) | same bluff, parallel traverse (Flow export from T4b's Canvas submission, received 2026-11-12; it reproduces the F07 .docx table to the millimeter) |
+| hillslope_T4a | T4a, T4b (the metadata sheet also lists T3a, T3b, T3c as group members; Andy, 2026-11-19: T3a held the first RS3, T4a and T4b the second together) | Reach RS3 (a second unit) | 21 (29 logged; 8 under B1 dropped) | same bluff, parallel traverse (Flow export from T4b's Canvas submission, received 2026-11-12; it reproduces the F07 .docx table to the millimeter) |
 | floodplain_RSplus_A | T1a, T1b | Reach RS+ | 62 (63 logged; 1 under B1 dropped) | the field east of the road (R1-v140), loop to the north; 30 FLOAT/SINGLE where the link dropped |
 | floodplain_RSplus_B | T2a (+ group) | Reach RS+ | 100 | the same field, a tighter loop |
 | floodplain_CORS_Wickert | Wickert | Reach RS2+, MnDOT CORS | 17 | SW corner of the same field |

@@ -95,7 +95,7 @@ for _, r in d.iterrows():
 #    the millimeter; three points carry no base columns and get their base by time below.
 d = pd.read_csv(f"{RAW}/rover_RS3_82434D3F6234D057_hillslope_T4a_T4b.csv")
 for _, r in d.iterrows():
-    rows.append(dict(group="hillslope_T4a", people="T4a, T4b, T3a, T3b, T3c", device=r["Device type"], serial=str(r["Device serial number"]).upper(), point=int(r["Name"]),
+    rows.append(dict(group="hillslope_T4a", people="T4a, T4b", device=r["Device type"], serial=str(r["Device serial number"]).upper(), point=int(r["Name"]),
                      lon=r["Longitude"], lat=r["Latitude"], h_ell_m=r["Ellipsoidal height"], elev_app_m=r["Elevation"], antenna_m=r["Antenna height"], status=r["Solution status"],
                      rms_e=r["Easting RMS"], rms_n=r["Northing RMS"], rms_v=r["Elevation RMS"], t_start=r["Averaging start"], base=base_label(r["Base longitude"]), baseline_m=r["Baseline"], tilt_deg=r.get("Tilt angle", np.nan), source="rover_RS3_82434D3F6234D057_hillslope_T4a_T4b.csv"))
 # 3. T1a / T1b, Reach RS+, floodplain field
