@@ -78,7 +78,7 @@ verbatim quotations (Optimising, Characterising, artefacts, digitisation) are th
 
 ### F01. Onojeghuo & Blackburn 2011, hyperspectral + LiDAR for reedbeds (Cumbria, UK) -- ABSTRACT LEVEL
 Onojeghuo, A.O., and G.A. Blackburn. 2011. Optimising the use of hyperspectral and LiDAR data for mapping reedbed habitats. Remote Sensing of Environment 115(8): 2025-2034. doi:10.1016/j.rse.2011.04.004
-Airborne hyperspectral + ALS at two Cumbrian sites; target Phragmites reedbeds. Hyperspectral dimensionality reduced by PCA / SSPCA / MNF; SSPCA best. LiDAR used as a canopy-height-model MASK (3 m threshold), which raised reedbed accuracy by about 11 % on the best SSPCA map (abstract wording). LiDAR structure here is a height gate, not a return-shape descriptor. Companion: Onojeghuo & Blackburn 2013, Characterising reedbeds using LiDAR data, IEEE JSTARS 6(2): 935-941 (not yet read).
+Airborne hyperspectral + ALS at two Cumbrian sites; target Phragmites reedbeds. Hyperspectral dimensionality reduced by PCA / SSPCA / MNF; SSPCA best. LiDAR used as a canopy-height-model MASK (3 m threshold), which raised reedbed accuracy by about 11 % on the best SSPCA map (abstract wording). LiDAR structure here is a height gate, not a return-shape descriptor. Companion: Onojeghuo & Blackburn 2013, Characterising reedbeds using LiDAR data, IEEE JSTARS 6(2): 935-941 (not yet read). <!-- spelling: ok (verbatim title) -->
 Meaning for Elba: the one canonical reedbed fusion paper used lidar only as a height mask; Phragmites at 2-4 m is far easier to gate than RCG at 0.6-2 m.
 
 ### F02. Zlinszky et al. 2012, ALS wetland vegetation categories, Lake Balaton -- FULL TEXT READ (pdftotext)
