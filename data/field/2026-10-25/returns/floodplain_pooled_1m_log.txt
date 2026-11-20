@@ -1,0 +1,29 @@
+inputs: <tag>_returns tables in data/field/2026-10-25/returns (benchmark-tied frame; 2008 star frame); rows with radius_1m; FIX points only; lot center (579979.0, 4885340.0) ; near = within 100 m (MINE)
+set              epoch      n points      d_lot m     min     p05     p10  median     p90     p95     max   NMAD  <0.02  <0.05
+RS+ B             2021   5303     98    66-352    -0.110  +0.072  +0.089  +0.137  +0.199  +5.019 +14.221  0.038     67    143
+RS+ B             2008    220     98    66-352    +0.033  +0.132  +0.172  +0.309  +0.519  +0.608  +1.646  0.136      0      3
+RS+ A near lot    2021   2035     21    17-98     +0.018  +0.084  +0.105  +0.222 +11.249 +12.756 +14.906  0.199      1     12
+RS+ A near lot    2008     49     21    17-98     +0.008  +0.008  +0.020  +0.193  +0.465  +4.534 +11.850  0.208      5     14
+RS+ A far         2021    686     11   103-153    -0.027  +0.023  +0.076  +0.164  +4.406 +11.148 +14.284  0.058     26     56
+RS+ A far         2008     23     11   103-153    +0.080  +0.226  +0.235  +0.378  +0.559  +0.559  +0.592  0.187      0      0
+CORS              2021   1127     17    27-68     +0.035  +0.077  +0.092  +0.147  +9.313 +13.782 +14.873  0.073      0      7
+CORS              2008     32     17    27-68     +0.061  +0.089  +0.116  +0.201  +0.749  +0.749  +5.309  0.126      0      0
+vendor classes within 1 m, for reference: {'RS+ B': {2021: {2.0: 2856, 1.0: 2446, 7.0: 1}, 2008: {2.0: 153, 8.0: 46, 9.0: 10, 0.0: 7, 5.0: 4}}, 'RS+ A near lot': {2021: {1.0: 1471, 2.0: 564}, 2008: {2.0: 38, 8.0: 8, 5.0: 3}}, 'RS+ A far': {2021: {2.0: 363, 1.0: 323}, 2008: {2.0: 19, 8.0: 4}}, 'CORS': {2021: {1.0: 779, 2.0: 348}, 2008: {2.0: 26, 8.0: 4, 5.0: 2}}}
+2021, fraction of returns below a height, by set:
+   height           RS+ B  RS+ A near lot       RS+ A far            CORS
+    0.00 m           0.64%           0.00%           1.02%           0.00%
+    0.02 m           1.26%           0.05%           3.79%           0.00%
+    0.05 m           2.70%           0.59%           8.16%           0.62%
+    0.10 m          16.22%           8.70%          12.83%          15.17%
+    0.15 m          63.91%          26.93%          39.07%          53.42%
+    0.20 m          90.02%          45.90%          73.18%          65.31%
+    0.30 m          93.17%          55.04%          79.30%          73.38%
+    0.50 m          93.40%          55.97%          87.03%          79.59%
+    1.00 m          93.59%          55.97%          87.03%          81.10%
+    2.00 m          93.93%          56.51%          87.03%          81.28%
+wrote figures/rtk_2026-10-25_rsplusB_pooled_pdf_1m.png (2021 outside (-0.2, 0.8): 347 of 5303; 2008: 1 of 220)
+wrote figures/rtk_2026-10-25_rsplusB_pooled_pdf_1m_2021.png (outside (-0.1, 0.4): 354 of 5303)
+wrote figures/rtk_2026-10-25_rsplusB_pooled_1m_2021_alltail.png
+wrote figures/rtk_2026-10-25_floodplain_pooled_1m_2021_sets.png
+wrote figures/rtk_2026-10-25_floodplain_pooled_1m_2008_sets.png
+wrote figures/rtk_2026-10-25_floodplain_pooled_1m_2021_sets_linear.png
