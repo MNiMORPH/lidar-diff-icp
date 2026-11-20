@@ -54,4 +54,28 @@ ax.axvline(0, color="0.4", lw=0.8, ls=":"); ax.set_xlim(X2)
 ax.set_xlabel("2021 lidar return minus tied RTK ground (m)"); ax.set_ylabel("probability density (1/m)")
 ax.legend(frameon=False, fontsize=9); ax.spines[["top", "right"]].set_visible(False); fig.tight_layout()
 png2 = "figures/rtk_2026-10-25_rsplusB_pooled_pdf_1m_2021.png"; fig.savefig(png2, dpi=int(os.environ.get("FIGDPI", 200))); say("wrote", png2, f"(range {X2}; 2021 all returns outside it: {int(((sets['2021 all returns'] < X2[0]) | (sets['2021 all returns'] > X2[1])).sum())} of {len(sets['2021 all returns'])})")
+
+# ---- all 2021 returns, canopy tail included (Andy, 2026-11-20: "nonuniform bins if needed, and/or a method for
+# sharing data density more smoothly"). Left: density per meter with bins 0.01 m wide from -0.12 to +0.30 m and then
+# geometric (ratio 1.15) to the top return, on a symlog height axis (linear within 0.3 m) and a log density axis.
+# Right: the empirical cumulative distribution, no bins. Edges and ratio are MINE.
+v_all = sets["2021 all returns"].to_numpy(); v_g = sets["2021 ground (class 2)"].to_numpy()
+edges = np.concatenate([np.arange(-0.12, 0.30, 0.01), 0.30 * 1.15 ** np.arange(0, 40)]); edges = edges[edges <= v_all.max() * 1.15]
+if edges[-1] < v_all.max(): edges = np.append(edges, edges[-1] * 1.15)
+fig, (a1, a2) = plt.subplots(1, 2, figsize=(12, 4.8))
+for v, lw, ls, lab in ((v_all, 1.0, "--", "2021 all returns"), (v_g, 1.8, "-", "2021 ground (class 2)")):
+    c, _ = np.histogram(v, bins=edges); dens = c / (len(v) * np.diff(edges)); dens = np.where(dens > 0, dens, np.nan)
+    a1.stairs(dens, edges, color="#0072b2", lw=lw, ls=ls, label=lab, baseline=None)
+    a2.plot(np.sort(v), np.arange(1, len(v) + 1) / len(v), color="#0072b2", lw=lw, ls=ls, label=lab)
+for ax in (a1, a2):
+    ax.set_xscale("symlog", linthresh=0.3, linscale=2.5); ax.set_xlim(-0.12, edges[-1]); ax.axvline(0, color="0.4", lw=0.8, ls=":")
+    ax.set_xlabel("2021 lidar return minus tied RTK ground (m)"); ax.spines[["top", "right"]].set_visible(False)
+    ax.set_xticks([-0.1, 0, 0.1, 0.2, 0.3, 1, 3, 10]); ax.set_xticklabels(["-0.1", "0", "0.1", "0.2", "0.3", "1", "3", "10"])
+a1.set_yscale("log"); a1.set_ylabel("probability density (1/m)"); a2.set_ylabel("fraction of returns below"); a2.set_ylim(0, 1)
+a1.legend(frameon=False, fontsize=9, loc="upper left"); fig.tight_layout()
+png3 = "figures/rtk_2026-10-25_rsplusB_pooled_1m_2021_alltail.png"; fig.savefig(png3, dpi=int(os.environ.get("FIGDPI", 200))); say("wrote", png3)
+say("2021 within 1 m, fraction of returns below a height (all returns | class 2):")
+for h in (0.0, 0.02, 0.05, 0.10, 0.15, 0.20, 0.30, 0.50, 1.0, 2.0, 5.0):
+    say(f"   {h:5.2f} m  {100 * (v_all < h).mean():6.2f} %  |  {100 * (v_g < h).mean():6.2f} %")
+say(f"   bins: {len(edges) - 1}; widest {np.diff(edges).max():.2f} m, narrowest {np.diff(edges).min():.3f} m; top edge {edges[-1]:.2f} m")
 LOG.close()

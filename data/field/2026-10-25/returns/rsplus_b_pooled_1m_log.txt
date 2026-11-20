@@ -12,3 +12,17 @@ per-point counts within 1 m, median (min-max): 2021 all 54 (25-188) | 2008 all 2
    outside the plotted range (-0.2, 0.8): 2008 all returns: 1 of 222 returns (density normalized over all returns)
 wrote figures/rtk_2026-10-25_rsplusB_pooled_pdf_1m.png
 wrote figures/rtk_2026-10-25_rsplusB_pooled_pdf_1m_2021.png (range (-0.1, 0.4); 2021 all returns outside it: 354 of 5387)
+wrote figures/rtk_2026-10-25_rsplusB_pooled_1m_2021_alltail.png
+2021 within 1 m, fraction of returns below a height (all returns | class 2):
+    0.00 m    0.63 %  |    0.69 %
+    0.02 m    1.24 %  |    1.37 %
+    0.05 m    2.65 %  |    2.95 %
+    0.10 m   15.96 %  |   20.60 %
+    0.15 m   63.00 %  |   72.80 %
+    0.20 m   89.20 %  |   97.22 %
+    0.30 m   92.93 %  |   99.55 %
+    0.50 m   93.50 %  |  100.00 %
+    1.00 m   93.69 %  |  100.00 %
+    2.00 m   94.02 %  |  100.00 %
+    5.00 m   95.04 %  |  100.00 %
+   bins: 70; widest 1.96 m, narrowest 0.010 m; top edge 15.02 m
