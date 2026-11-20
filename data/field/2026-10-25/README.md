@@ -752,3 +752,43 @@ Measurement, not interpretation: the 2008 lidar sits higher above today's ground
 the visible on 1 May 2021, less green on 10 April 2026, locally lower, and nearer the bluff. Whether the first
 three are one thing (a thicker, later-greening sward with more standing litter in the field's low ground) is the
 hypothesis the within-rover equation points at; it is not tested here.
+
+## Every lidar return around the RS+ B points, both epochs (2026-11-20)
+
+`analysis/field_survey/rsplus_b_returns_2026-10-25.py` pulls every return within 5 m of each of the 100 RS+ B
+(T2a) points from the two raw point clouds, `data/before/4342-29-64.laz` (2008, all returns, vendor frame) and
+`data/after/valley/4342-29-64_3dep_full.laz` (2021, all returns, classes 1, 2, 7), and writes one row per
+point-return pair to `returns/rsplus_b_returns_2008.csv` and `returns/rsplus_b_returns_2021.csv.gz`, with booleans
+`radius_1m`, `radius_3m`, `radius_5m`. Each row carries the return's x, y, z, return number and count,
+classification, intensity, scan angle rank, point source id and GPS time, the distance to the point, and `dz_m`, the
+return's z minus the point's tied RTK elevation. The RTK "surface" at a point is that point's own elevation: the
+points are a median 5.8 m apart along the path and the gridded slope there has a median of 0.6 deg, under 3 cm
+across a 3 m radius. For 2008 the table also carries `x_star`, `y_star`, `z_star`, `dist_star_m` and `dz_star_m`,
+the product's frame (the per-swath star shift added to x, y, z, here swath 138 with dz +0.0635 m, and the lateral
+shift added to x, y); the radius flags use the star-frame distance so that they match the product. All 2008 returns
+here are swath 138 and 96.5 % are single returns; the 2021 returns are two swaths (3040, 3041), 68.2 % single.
+`returns/rsplus_b_returns_summary.csv` has, per point, the count and median `dz` within each radius for 2008 (star
+frame), 2021 all returns and 2021 class 2. Log: `returns/rsplus_b_returns_log.txt`.
+
+Counts per point, min / median / max over the 100 points:
+
+| radius | 2008 all | 2021 all | 2021 class 2 |
+|---|---|---|---|
+| 1 m | 1 / 2 / 9 | 25 / 54 / 193 | 16 / 28 / 40 |
+| 3 m | 10 / 20 / 33 | 236 / 491 / 1182 | 203 / 254 / 325 |
+| 5 m | 36 / 55 / 71 | 678 / 1362 / 2825 | 584 / 706 / 892 |
+
+Median over points of the per-point median offset from RTK, m: at 3 m, 2008 (star frame) +0.218, 2021 all returns
++0.006, 2021 class 2 -0.001; at 1 m +0.193 / +0.004 / -0.005; at 5 m +0.217 / +0.007 / -0.004. The product's own
+numbers at these points (CSF ground, 5 m cell, star frame) are +0.224 for 2008 and -0.002 for 2021, so the raw
+returns reproduce the gridded offsets without the gridding. Note that the 2008 raw-frame `dz_m` sits 0.0635 m below
+`dz_star_m` everywhere, the swath constant; the product's frame is the one to compare with the other tables here.
+
+`figures/rtk_2026-10-25_rsplusB_returns_pdf_p17.png` is the PDF of the 3 m returns at point 17, both flights, as
+offsets from the RTK ground (2021 in 0.02 m bins, 2008 in 0.05 m bins with each of its 20 returns ticked below the
+axis; the bin widths and the point are mine: point 17 is the FIX point nearest the RS+ B medians of the product's
+2008 offset and of both 3 m counts). There the 494 returns of 2021 span -0.05 to +0.08 m with the mode on the RTK
+ground; the 20 returns of 2008, all single returns of vendor class 2 or 8, are (star frame, m) -0.043, 0.007,
+0.017, 0.067, 0.077, 0.087, 0.117, 0.167, 0.177, 0.187 (five returns at this one value), 0.237, 0.307 (four) and
+0.347: three within 2 cm of the RTK ground and the rest spread up to 0.35 m above it. Run the script with a point
+number as its first argument for another point.
