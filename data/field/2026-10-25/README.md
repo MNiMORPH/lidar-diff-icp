@@ -761,34 +761,83 @@ hypothesis the within-rover equation points at; it is not tested here.
 point-return pair to `returns/rsplus_b_returns_2008.csv` and `returns/rsplus_b_returns_2021.csv.gz`, with booleans
 `radius_1m`, `radius_3m`, `radius_5m`. Each row carries the return's x, y, z, return number and count,
 classification, intensity, scan angle rank, point source id and GPS time, the distance to the point, and `dz_m`, the
-return's z minus the point's tied RTK elevation. The RTK "surface" at a point is that point's own elevation: the
-points are a median 5.8 m apart along the path and the gridded slope there has a median of 0.6 deg, under 3 cm
-across a 3 m radius. For 2008 the table also carries `x_star`, `y_star`, `z_star`, `dist_star_m` and `dz_star_m`,
-the product's frame (the per-swath star shift added to x, y, z, here swath 138 with dz +0.0635 m, and the lateral
-shift added to x, y); the radius flags use the star-frame distance so that they match the product. All 2008 returns
-here are swath 138 and 96.5 % are single returns; the 2021 returns are two swaths (3040, 3041), 68.2 % single.
-`returns/rsplus_b_returns_summary.csv` has, per point, the count and median `dz` within each radius for 2008 (star
-frame), 2021 all returns and 2021 class 2. Log: `returns/rsplus_b_returns_log.txt`.
+return's z minus the point's tied RTK elevation. **The reference is the benchmark-tied table `rtk_points_all.csv`,
+not `rtk_points_all_fitted.csv`**: the fitted table raises every B point by the whole-set shift dZ +0.13 m, which is
+the lidar's vegetated-surface response, so against it the 2021 lidar sits on zero by construction. The first version
+of this section, written the same morning, used the fitted table and read the 2021 returns as centered on the
+ground; every number below is in the benchmark frame (the script's `RTK_TABLE` environment variable selects another
+table). The RTK "surface" at a point is that point's own elevation: the points are a median 5.8 m apart along the
+path and the gridded slope there has a median of 0.6 deg, under 3 cm across a 3 m radius. For 2008 the table also
+carries `x_star`, `y_star`, `z_star`, `dist_star_m` and `dz_star_m`, the product's frame (the per-swath star shift
+added to x, y, z, here swath 138 with dz +0.0635 m, and the lateral shift added to x, y); the radius flags use the
+star-frame distance so that they match the product. All 2008 returns here are swath 138 and 96.5 % are single
+returns; the 2021 returns are two swaths (3040, 3041), 68.2 % single. `returns/rsplus_b_returns_summary.csv` has,
+per point, the count, median and lowest `dz` within each radius for 2008 (star frame), 2021 all returns and 2021
+class 2. Log: `returns/rsplus_b_returns_log.txt`.
 
 Counts per point, min / median / max over the 100 points:
 
 | radius | 2008 all | 2021 all | 2021 class 2 |
 |---|---|---|---|
-| 1 m | 1 / 2 / 9 | 25 / 54 / 193 | 16 / 28 / 40 |
-| 3 m | 10 / 20 / 33 | 236 / 491 / 1182 | 203 / 254 / 325 |
-| 5 m | 36 / 55 / 71 | 678 / 1362 / 2825 | 584 / 706 / 892 |
+| 1 m | 1 / 2 / 9 | 25 / 54 / 188 | 15 / 28 / 41 |
+| 3 m | 10 / 20 / 33 | 241 / 490 / 1192 | 203 / 255 / 326 |
+| 5 m | 36 / 55 / 72 | 678 / 1362 / 2833 | 585 / 704 / 891 |
 
-Median over points of the per-point median offset from RTK, m: at 3 m, 2008 (star frame) +0.218, 2021 all returns
-+0.006, 2021 class 2 -0.001; at 1 m +0.193 / +0.004 / -0.005; at 5 m +0.217 / +0.007 / -0.004. The product's own
-numbers at these points (CSF ground, 5 m cell, star frame) are +0.224 for 2008 and -0.002 for 2021, so the raw
-returns reproduce the gridded offsets without the gridding. Note that the 2008 raw-frame `dz_m` sits 0.0635 m below
-`dz_star_m` everywhere, the swath constant; the product's frame is the one to compare with the other tables here.
+Median over points of the per-point median offset from the RTK ground, m: at 3 m, 2008 (star frame) +0.350, 2021
+all returns +0.137, 2021 class 2 +0.130; at 1 m +0.318 / +0.136 / +0.126; at 5 m +0.350 / +0.138 / +0.127. The
+product's own numbers at these points (CSF ground, 5 m cell, star frame) are +0.357 for 2008 and +0.129 for 2021,
+so the raw returns reproduce the gridded offsets without the gridding: the vendor's class-2 "ground" IS the return
+population, 0.13 m up. The lowest 2021 return within 3 m of a point sits a median +0.047 m above it
+(`min_dz2021_3m`). Note that the 2008 raw-frame `dz_m` sits 0.0635 m below `dz_star_m` everywhere, the swath
+constant; the product's frame is the one to compare with the other tables here.
 
 `figures/rtk_2026-10-25_rsplusB_returns_pdf_p17.png` is the PDF of the 3 m returns at point 17, both flights, as
 offsets from the RTK ground (2021 in 0.02 m bins, 2008 in 0.05 m bins with each of its 20 returns ticked below the
 axis; the bin widths and the point are mine: point 17 is the FIX point nearest the RS+ B medians of the product's
-2008 offset and of both 3 m counts). There the 494 returns of 2021 span -0.05 to +0.08 m with the mode on the RTK
-ground; the 20 returns of 2008, all single returns of vendor class 2 or 8, are (star frame, m) -0.043, 0.007,
-0.017, 0.067, 0.077, 0.087, 0.117, 0.167, 0.177, 0.187 (five returns at this one value), 0.237, 0.307 (four) and
-0.347: three within 2 cm of the RTK ground and the rest spread up to 0.35 m above it. Run the script with a point
-number as its first argument for another point.
+2008 offset and of both 3 m counts). There the 492 returns of 2021 span +0.08 to +0.21 m, none at the RTK ground;
+the 20 returns of 2008, all single returns of vendor class 2 (16) or 8 (4), are (star frame, m) 0.087, 0.137,
+0.147, 0.197, 0.207, 0.217, 0.247, 0.297, 0.307, 0.317 (five returns at this one value), 0.367, 0.437 (four) and
+0.477. Run the script with a point number as its first argument for another point.
+
+## Registration or vegetation? The bare-ground check (2026-11-20)
+
+The question (Andy): with no 2021 return reaching the surveyed ground, did the 2021 flight think it was higher
+than it was? The proposed test: the early points in the open parking area against the lidar, after making sure of
+them, because a student's receiver ran as a false base before it was caught. `analysis/field_survey/bare_ground_check_2026-10-25.py`
+runs it; outputs and log in `bare_ground/`.
+
+**The false base, from the exports.** Every Emlid export carries the base position per point. Fifteen points
+between 13:20 and 13:28 (T4a 1-8, T3a 1-6, T1a 1) were corrected from B1, whose self-reported position is at the
+lot itself (E 579986.1, N 4885337.5; T4a 1-3 are 7.4-7.8 m from it). B1's position was its own autonomous average:
+in B1's frame the surveyed ground sits 2.58 m below the 2021 lidar, so these points have no absolute use and are
+dropped from the main table (as before). Internally they are consistent: the three lot-edge points and the four
+lower-bluff points (slope under 10 deg; both cuts mine) differ by +0.032 m against the 2021 grid. Where they stand:
+on NAIP 2021 (`bare_ground/lot_map.png`) T4a 1-3 sit at the grassy east edge of the gravel lot, with their raw
+positions uncertain by B1's horizontal error, i.e. meters.
+
+**No tied point stands on the gravel.** The first class-base points near the lot, RS+ A 2-3 (14:40), are under the
+trees at the lot's edge (2021 returns up to +13 to +15 m, class-2 share 14-18 %); RS+ A 4-6 are on grass (lowest
+return +0.05, median +0.13 to +0.17, class-2 plane at the point +0.12 to +0.13 within 1 m); CORS 1-2 (15:50) stand
+60 m east of the lot in grass (lowest +0.05, median +0.16, plane +0.15), CORS 3-4 under trees. The lot was not
+occupied by anyone after the base was fixed.
+
+**The one bare tied surface is the monument.** DR9925 is a flush-set disk on a rod, on a mown roadside 1.4 m from
+a sign post, 5.2 deg of slope in the 5 m grid. The 2021 returns within 1 m of the disk (n 28, 29): lowest
++0.056 / +0.048 m, median +0.076 / +0.068; a plane through the class-2 returns within 1 m evaluated at the disk
++0.084 / +0.076, within 3 m +0.121 / +0.113 (the slope and the sign post widen the 3 m plane); 93 % class 2,
+99 % single returns; the 5 m product +0.100 / +0.092. The 2008 returns within 3 m: median +0.029 / +0.021, lowest
+-0.148 / -0.156.
+
+**The acquisition's own held-out checkpoints answer the registration question directly.** MN_SE_Driftless_2021,
+error = surveyed NAVD 88 minus the delivered LAZ surface (negative = lidar high), whole project: NVA, bare ground,
+n 139, median -0.008 m, mean -0.007; VVA, vegetated, n 99, median -0.091, mean -0.099. Nearest to this site: NVA
+at 6.1 km +0.015, 9.0 km -0.022, 9.5 km +0.023; VVA at 9.5 km -0.019, 9.8 km -0.022. The flight is registered to
+within a centimeter on bare ground across the block, and reads 9-10 cm high under vegetation across the block, which
+is what the floodplain shows here (+0.12 to +0.14) and what the mown roadside shows in smaller measure (+0.05 to
++0.08). Aside, for the 2008 epoch: the DNR's validation point L3B99 (class L3B) lies 114 m from the site, at
+E 580050.7 N 4885346.7, and the 2008 surface there is 0.015 m below the surveyed value.
+
+**Reading (hypothesis, separate from the numbers).** Not a registration error: the returns are from the top of the
+May-2021 sward, 0.13 m above the pole tip, with the vendor's bare checkpoints at -0.008 and vegetated ones at
+-0.091 setting the two ends of the same scale. What is still open at this site is a direct bare-ground occupation:
+nobody logged a tied point on the gravel lot or on the road, and a one-minute FIX on the lot next visit closes it.
