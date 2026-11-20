@@ -851,3 +851,50 @@ E 580050.7 N 4885346.7, and the 2008 surface there is 0.015 m below the surveyed
 May-2021 sward, 0.13 m above the pole tip, with the vendor's bare checkpoints at -0.008 and vegetated ones at
 -0.091 setting the two ends of the same scale. What is still open at this site is a direct bare-ground occupation:
 nobody logged a tied point on the gravel lot or on the road, and a one-minute FIX on the lot next visit closes it.
+
+## The other floodplain rovers, nearer the parking lot (2026-11-20)
+
+Andy: repeat the return-height densities with the floodplain data taken closer to the parking area, likely in
+different vegetation. The extraction script is now general, `analysis/field_survey/floodplain_returns_2026-10-25.py`
+(env `GROUP`), and reads BOTH tiles' clouds, 4342-29-64 and 4358-29-01, since the RS+ A loop and the CORS points
+cross the tile edge; it writes `returns/rsplus_a_returns_*` and `returns/cors_returns_*` beside the RS+ B tables.
+Two things about the tiles came out of that: (1) the two 2021 files were cut from one 3DEP cloud on bounds that
+overlap by 35 m (E 579995-580030), so a return there sits in both files; the script keeps one copy (69,570 duplicates
+dropped in the RS+ B box, 251,512 in the RS+ A box). (2) The two 2008 MN DNR tiles overlap by 42 m (E 579993-580035)
+and partition their returns, no return in both, but in that strip 4342-29-64 holds 1,295 returns against
+4358-29-01's 5,770, so the 4342 product's east edge, where CORS 5-17 and RS+ B 98-100 stand, was built from a
+thinned 2008 cloud. Held as an item for the product; here the second tile fills it in.
+
+`analysis/field_survey/floodplain_pooled_pdf_2026-10-25.py` pools the returns within 1 m, FIX points only, all
+returns, in four sets (the 100 m cut is mine): RS+ B (98 points, 66-352 m from the lot center at E 579979 N 4885340),
+RS+ A near the lot (21 points, 17-98 m), RS+ A far (11 points, 103-153 m), CORS (17 points, 27-68 m). Height above the
+tied RTK ground, m:
+
+| set | epoch | n | median | p10-p90 | NMAD | below +0.05 | above +0.30 |
+|---|---|---|---|---|---|---|---|
+| RS+ B | 2021 | 5303 | +0.137 | +0.089 to +0.199 | 0.038 | 2.7 % | 6.8 % |
+| RS+ A near lot | 2021 | 2035 | +0.222 | +0.105 to +11.2 | 0.199 | 0.6 % | 45.0 % |
+| RS+ A far | 2021 | 686 | +0.164 | +0.076 to +4.41 | 0.058 | 8.2 % | 20.7 % |
+| CORS | 2021 | 1127 | +0.147 | +0.092 to +9.31 | 0.073 | 0.6 % | 26.6 % |
+| RS+ B | 2008 | 220 | +0.309 | +0.172 to +0.519 | 0.136 | 1.4 % | |
+| RS+ A near lot | 2008 | 49 | +0.193 | +0.020 to +0.465 | 0.208 | 28.6 % | |
+| RS+ A far | 2008 | 23 | +0.378 | +0.235 to +0.559 | 0.187 | 0 | |
+| CORS | 2008 | 32 | +0.201 | +0.116 to +0.749 | 0.126 | 0 | |
+
+Figures: `figures/rtk_2026-10-25_floodplain_pooled_1m_2021_sets.png` (symlog density and cumulative curve, as for
+RS+ B), `_2021_sets_linear.png` (1 cm bins, -0.10 to +0.50 m) and `_2008_sets.png` (0.05 m bins in the linear part,
+ratio 1.3, for the small counts; the cumulative panel is the readable one there). In the linear figure the sward
+peaks sit at 0.10-0.12 m for CORS, 0.12-0.14 for RS+ B, 0.16-0.18 for RS+ A near the lot and 0.16-0.20 for RS+ A far,
+which also has a ground bump at +0.02 m holding 8 % of its returns and a second mode at +0.34 m. The near-lot RS+ A
+set and CORS have almost no returns below +0.05 m (0.6 %) and 45 % and 27 % of their returns above +0.30 m, the
+trees at the lot edge and along the CORS line (RS+ A 2-3 and CORS 3-4 stand under canopy, "Registration or
+vegetation?" above). Imagery at the same points (`imagery/floodplain_points_covariates.csv`, medians over the FIX
+points of each set, RS+ B / RS+ A near / RS+ A far / CORS): Sentinel-2 April-2026 NDVI 0.292 / 0.223 / 0.241 / 0.223,
+summer 0.636 / 0.590 / 0.621 / 0.599, October 0.148 / 0.182 / 0.385 / 0.151. The far RS+ A points are the only set
+that stays green into October.
+
+**Reading (hypothesis).** Nearer the lot the sward returned the May-2021 laser from 3-5 cm higher than on the RS+ B
+loop and let less of it through to the soil, and the tree line adds a canopy population that the 1 m radius cannot
+exclude at the first points of each line; the far RS+ A points, greener in autumn, are the one set with a real ground
+mode in 2021. The 2008 sets are 23-49 returns and say little beyond their levels: 0.19-0.20 m near the lot and on the
+CORS line against 0.31-0.38 m on the two loops.
