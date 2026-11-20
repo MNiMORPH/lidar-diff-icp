@@ -27,3 +27,33 @@ wrote figures/rtk_2026-10-25_rsplusB_pooled_1m_2021_alltail.png
 wrote figures/rtk_2026-10-25_floodplain_pooled_1m_2021_sets.png
 wrote figures/rtk_2026-10-25_floodplain_pooled_1m_2008_sets.png
 wrote figures/rtk_2026-10-25_floodplain_pooled_1m_2021_sets_linear.png
+
+LOCATION BINS (from the 2008-offset clustering; MINE as bins): points per bin by rover:
+set                          CORS  RS+ A far  RS+ A near lot  RS+ B
+loc_bin                                                            
+open field                      0          8               6     74
+south zone (lot, tree line)    17          3              15     10
+swale stretch                   0          0               0     14
+bin                            epoch      n points     min     p05     p10  median     p90     p95     max   NMAD  <0.02  <0.05  >0.30
+south zone (lot, tree line)     2021   3480     45  -0.110  +0.057  +0.082  +0.169 +10.247 +12.881 +14.906  0.113     63    138   1169
+south zone (lot, tree line)     2008     98     45  +0.008  +0.020  +0.033  +0.190  +0.518  +0.884 +11.850  0.156      5     17     25
+open field                      2021   4909     88  -0.027  +0.082  +0.094  +0.144  +1.339  +9.190 +14.340  0.042     31     79    550
+open field                      2008    196     88  +0.074  +0.156  +0.177  +0.312  +0.534  +0.595  +0.753  0.129      0      0    116
+swale stretch                   2021    762     14  +0.041  +0.085  +0.094  +0.130  +0.172  +0.179  +0.202  0.030      0      1      0
+swale stretch                   2008     30     14  +0.084  +0.270  +0.275  +0.392  +0.584  +0.636  +0.699  0.113      0      0     24
+2021, fraction of returns below a height, by location bin:
+   height    south zone (lot, tree line)                     open field                  swale stretch
+    0.00 m                          0.98%                          0.14%                          0.00%
+    0.02 m                          1.81%                          0.63%                          0.00%
+    0.05 m                          3.97%                          1.61%                          0.13%
+    0.10 m                         15.66%                         13.16%                         13.78%
+    0.15 m                         43.05%                         56.16%                         72.44%
+    0.20 m                         58.16%                         84.76%                         99.87%
+    0.30 m                         66.41%                         88.80%                        100.00%
+    0.50 m                         69.20%                         89.96%                        100.00%
+    1.00 m                         69.97%                         89.96%                        100.00%
+    2.00 m                         70.37%                         90.30%                        100.00%
+wrote figures/rtk_2026-10-25_floodplain_pooled_1m_2021_bins.png
+wrote figures/rtk_2026-10-25_floodplain_pooled_1m_2008_bins.png
+wrote figures/rtk_2026-10-25_floodplain_pooled_1m_2021_bins_linear.png
+wrote figures/rtk_2026-10-25_floodplain_pooled_1m_2008_bins_linear.png (2 cm bins)

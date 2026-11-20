@@ -17,6 +17,14 @@ Outputs  data/field/2026-10-25/returns/floodplain_pooled_1m.csv (set, point, epo
          figures/rtk_2026-10-25_floodplain_pooled_1m_2021_sets.png   the four sets, 2021, symlog density + ECDF
          figures/rtk_2026-10-25_floodplain_pooled_1m_2021_sets_linear.png  the four sets, 2021, 1 cm bins, -0.10..+0.50 m
          figures/rtk_2026-10-25_floodplain_pooled_1m_2008_sets.png   the four sets, 2008, symlog density + ECDF
+         figures/rtk_2026-10-25_floodplain_pooled_1m_{2021,2008}_bins.png and _2021_bins_linear.png
+             the same by LOCATION bins, which come from the spatially connected clustering of the per-point 2008
+             offset in floodplain_offset_clusters_2026-10-25.py (returns/floodplain_offset_points.csv, cluster_med08_k4):
+             "south zone" = clusters 1 and 2 (the lot end and tree line, N < 4885455; cluster 2 is one CORS point under
+             a tree, merged by place), "swale stretch" = cluster 3 (14 RS+ B points on the west leg, N 4885496-4885579),
+             "open field" = cluster 0 (the rest). The 2021 offset has no spatial structure to cluster on (flat
+             semivariogram); the 2008 offset has, with a range near 60 m, and these are its clusters. Adopting them as
+             bins is a PROPOSAL.
 Bins 0.01 m in the linear figures; in the symlog figures 0.01 m from -0.12 to +0.30 m then geometric (ratio 1.15); the
 height axis is linear within 0.3 m of zero and logarithmic beyond; the density is per meter (count / (n * bin width)).
 All of these are MINE. FIGDPI sets the raster resolution (default 200).
@@ -41,6 +49,14 @@ ra = load("rsplus_a", "floodplain_RSplus_A"); ra["set"] = np.where(ra.d_lot < NE
 rc = load("cors", "floodplain_CORS_Wickert").assign(set="CORS")
 pool = pd.concat([rb, ra, rc], ignore_index=True); pool.to_csv(f"{D}/floodplain_pooled_1m.csv", index=False, float_format="%.4f")
 ORDER = ["RS+ B", "RS+ A near lot", "RS+ A far", "CORS"]; COL = {"RS+ B": "#0072b2", "RS+ A near lot": "#d55e00", "RS+ A far": "#e69f00", "CORS": "k"}
+# location bins from the offset clustering
+OP = pd.read_csv(f"{D}/floodplain_offset_points.csv")[["group", "point", "cluster_med08_k4"]]
+BINNAME = {0: "open field", 1: "south zone (lot, tree line)", 2: "south zone (lot, tree line)", 3: "swale stretch"}
+OP["loc_bin"] = OP.cluster_med08_k4.map(BINNAME)
+for df, g in ((rb, "floodplain_RSplus_B"), (ra, "floodplain_RSplus_A"), (rc, "floodplain_CORS_Wickert")):
+    df["loc_bin"] = df.point.map(OP[OP.group == g].set_index("point").loc_bin)
+BORDER = ["south zone (lot, tree line)", "open field", "swale stretch"]; BCOL = {"south zone (lot, tree line)": "#d55e00", "open field": "#0072b2", "swale stretch": "#009e73"}
+pool = pd.concat([rb, ra, rc], ignore_index=True); pool.to_csv(f"{D}/floodplain_pooled_1m.csv", index=False, float_format="%.4f")
 say("inputs: <tag>_returns tables in", D, "(benchmark-tied frame; 2008 star frame); rows with radius_1m; FIX points only; lot center", LOT, f"; near = within {NEAR:.0f} m (MINE)")
 def nmad(v): return 1.4826 * np.median(np.abs(v - np.median(v)))
 say(f"{'set':16s} {'epoch':>5s} {'n':>6s} {'points':>6s} {'d_lot m':>12s} {'min':>7s} {'p05':>7s} {'p10':>7s} {'median':>7s} {'p90':>7s} {'p95':>7s} {'max':>7s} {'NMAD':>6s} {'<0.02':>6s} {'<0.05':>6s}")
@@ -102,4 +118,32 @@ for st, lw in zip(ORDER, (1.6, 1.6, 1.2, 1.2)):
 ax.axvline(0, color="0.4", lw=0.8, ls=":"); ax.set_xlim(X3); ax.set_xlabel("2021 lidar return minus tied RTK ground (m)"); ax.set_ylabel("probability density (1/m)")
 ax.legend(frameon=False, fontsize=9); ax.spines[["top", "right"]].set_visible(False); fig.tight_layout()
 fig.savefig("figures/rtk_2026-10-25_floodplain_pooled_1m_2021_sets_linear.png", dpi=DPI); plt.close(fig); say("wrote figures/rtk_2026-10-25_floodplain_pooled_1m_2021_sets_linear.png")
+
+# ---- by location bin
+say(f"\nLOCATION BINS (from the 2008-offset clustering; MINE as bins): points per bin by rover:")
+pts = pool.drop_duplicates(["set", "point", "loc_bin"]).groupby(["loc_bin", "set"]).size().unstack(fill_value=0); say(pts.to_string())
+say(f"{'bin':30s} {'epoch':>5s} {'n':>6s} {'points':>6s} {'min':>7s} {'p05':>7s} {'p10':>7s} {'median':>7s} {'p90':>7s} {'p95':>7s} {'max':>7s} {'NMAD':>6s} {'<0.02':>6s} {'<0.05':>6s} {'>0.30':>6s}")
+for bn in BORDER:
+    for ep in (2021, 2008):
+        q = pool[(pool.loc_bin == bn) & (pool.epoch == ep)]; v = q.dz_m
+        say(f"{bn:30s} {ep:5d} {len(v):6d} {q.groupby(['set', 'point']).ngroups:6d} {v.min():+7.3f} {v.quantile(.05):+7.3f} {v.quantile(.1):+7.3f} {v.median():+7.3f} {v.quantile(.9):+7.3f} {v.quantile(.95):+7.3f} {v.max():+7.3f} {nmad(v):6.3f} {int((v < 0.02).sum()):6d} {int((v < 0.05).sum()):6d} {int((v > 0.30).sum()):6d}")
+say("2021, fraction of returns below a height, by location bin:")
+say("   height " + " ".join(f"{bn:>30s}" for bn in BORDER))
+for h in hs:
+    say(f"   {h:5.2f} m " + " ".join(f"{100 * (pool[(pool.loc_bin == bn) & (pool.epoch == 2021)].dz_m < h).mean():29.2f}%" for bn in BORDER))
+for ep, png in ((2021, "figures/rtk_2026-10-25_floodplain_pooled_1m_2021_bins.png"), (2008, "figures/rtk_2026-10-25_floodplain_pooled_1m_2008_bins.png")):
+    ser = [pool[(pool.loc_bin == bn) & (pool.epoch == ep)].dz_m.to_numpy() for bn in BORDER]
+    density_ecdf(ser, [f"{bn} (n {len(v)})" for bn, v in zip(BORDER, ser)], [BCOL[bn] for bn in BORDER], [1.6, 1.6, 1.6], f"{ep} lidar return minus tied RTK ground (m)", png, **({"lin_bin": 0.05, "ratio": 1.3} if ep == 2008 else {}))
+fig, ax = plt.subplots(figsize=(8, 4.6))
+for bn in BORDER:
+    v = pool[(pool.loc_bin == bn) & (pool.epoch == 2021)].dz_m; ax.hist(v, bins=b3, density=True, histtype="step", color=BCOL[bn], lw=1.6, label=f"{bn} (n {len(v)})")
+ax.axvline(0, color="0.4", lw=0.8, ls=":"); ax.set_xlim(X3); ax.set_xlabel("2021 lidar return minus tied RTK ground (m)"); ax.set_ylabel("probability density (1/m)")
+ax.legend(frameon=False, fontsize=9); ax.spines[["top", "right"]].set_visible(False); fig.tight_layout()
+fig.savefig("figures/rtk_2026-10-25_floodplain_pooled_1m_2021_bins_linear.png", dpi=DPI); plt.close(fig); say("wrote figures/rtk_2026-10-25_floodplain_pooled_1m_2021_bins_linear.png")
+fig, ax = plt.subplots(figsize=(8, 4.6)); b4 = np.arange(-0.10, 0.90, 0.02)
+for bn in BORDER:
+    v = pool[(pool.loc_bin == bn) & (pool.epoch == 2008)].dz_m; ax.hist(v, bins=b4, density=True, histtype="step", color=BCOL[bn], lw=1.6, label=f"{bn} (n {len(v)})")
+ax.axvline(0, color="0.4", lw=0.8, ls=":"); ax.set_xlim(-0.10, 0.90); ax.set_xlabel("2008 lidar return minus tied RTK ground (m)"); ax.set_ylabel("probability density (1/m)")
+ax.legend(frameon=False, fontsize=9); ax.spines[["top", "right"]].set_visible(False); fig.tight_layout()
+fig.savefig("figures/rtk_2026-10-25_floodplain_pooled_1m_2008_bins_linear.png", dpi=DPI); plt.close(fig); say("wrote figures/rtk_2026-10-25_floodplain_pooled_1m_2008_bins_linear.png (2 cm bins)")
 LOG.close()
