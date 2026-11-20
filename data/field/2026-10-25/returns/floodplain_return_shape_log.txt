@@ -1,0 +1,88 @@
+points 147; 2021 returns within 3 m per point median 494, sub-canopy (< 0.5 m) median 487; density bins 0.01 m on -0.05..0.45 m
+functional PCA of the per-point densities, variance explained: PC1 39.8 %, PC2 26.6 %, PC3 8.2 %, PC4 7.4 %, PC5 3.7 %
+PC1 loading (density change per unit score) at heights 0.00/0.05/0.10/0.15/0.20/0.25 m: +0.008, +0.072, +0.299, +0.009, -0.289, -0.060
+PC2 loading at the same heights: +0.063, +0.130, +0.069, -0.387, +0.039, +0.054
+
+medians by location bin:
+loc_bin         open field  south zone  swale stretch
+mode_m               0.135       0.135          0.140
+q10                  0.089       0.093          0.084
+q50                  0.137       0.133          0.135
+q90                  0.194       0.194          0.186
+iqr                  0.049       0.050          0.050
+skew                 0.059       0.720          0.142
+kurt                -0.337       1.181         -0.258
+entropy              2.458       2.722          2.645
+ground_share         0.002       0.001          0.000
+canopy_share         0.000       0.233          0.000
+intensity_med     4450.000    2631.500       4409.000
+single_share         0.998       0.462          1.000
+weibull_k            6.226       4.275          5.519
+weibull_lambda       0.210       0.208          0.196
+pc1                 -0.916       1.955          4.433
+pc2                 -0.376       1.025         -4.108
+
+Kruskal-Wallis across the three location bins, p per metric:
+mode_m 0.915; q10 0.509; q50 0.645; q90 0.559; iqr 0.474; skew 2.79e-07; kurt 4.64e-06; entropy 0.0347; ground_share 0.913; canopy_share 1.01e-13; intensity_med 5.34e-09; single_share 1.28e-11; weibull_k 0.0133; weibull_lambda 0.444; pc1 0.644; pc2 0.402;
+
+medians by imagery type cls_naip_2021_k5 (n per type {0.0: 15, 1.0: 21, 2.0: 85, 3.0: 12, 4.0: 14}):
+cls_naip_2021_k5       0.0       1.0       2.0       3.0       4.0
+mode_m               0.155     0.165     0.135     0.110     0.175
+q10                  0.120     0.122     0.084     0.064     0.131
+q50                  0.179     0.162     0.131     0.133     0.183
+q90                  0.253     0.221     0.176     0.250     0.232
+iqr                  0.050     0.050     0.040     0.115     0.050
+skew                 0.720     0.308     0.013     0.711     0.791
+kurt                 1.788     0.070    -0.266    -0.122     1.002
+entropy              2.722     2.606     2.501     3.260     2.571
+ground_share         0.000     0.000     0.006     0.037     0.000
+canopy_share         0.521     0.000     0.000     0.000     0.392
+intensity_med     1020.000  4394.000  4443.000  2074.000  1756.750
+single_share         0.161     0.929     1.000     0.997     0.296
+weibull_k            4.268     6.678     5.785     2.733     5.861
+weibull_lambda       0.254     0.230     0.195     0.215     0.257
+pc1                 -6.938   -11.038     5.545     1.981    -8.742
+pc2                  1.025     1.053    -0.908     8.523     5.112
+Kruskal-Wallis p: mode_m 1.83e-05; q10 8.16e-06; q50 5.18e-06; q90 1.55e-07; iqr 0.00251; skew 5.09e-07; kurt 0.00727; entropy 0.000136; ground_share 0.000603; canopy_share 1.55e-13; intensity_med 1.28e-13; single_share 7.92e-15; weibull_k 0.00158; weibull_lambda 4.66e-07; pc1 3.23e-05; pc2 0.414;
+
+medians by imagery type cls_s2_4dates_k6 (n per type {0.0: 3, 1.0: 85, 2.0: 1, 4.0: 58}):
+cls_s2_4dates_k6       0.0       1.0       2.0       4.0
+mode_m               0.165     0.135     0.175     0.135
+q10                  0.070     0.088     0.114     0.092
+q50                  0.181     0.136     0.174     0.139
+q90                  0.241     0.194     0.244     0.190
+iqr                  0.130     0.050     0.050     0.050
+skew                 0.511     0.188     0.713     0.295
+kurt                 0.152    -0.221     0.808    -0.079
+entropy              3.357     2.606     2.936     2.612
+ground_share         0.027     0.002     0.000     0.001
+canopy_share         0.322     0.000     0.002     0.002
+intensity_med     2106.500  4316.500  3817.500  4066.500
+single_share         0.332     0.998     0.917     0.939
+weibull_k            2.773     5.573     4.590     5.242
+weibull_lambda       0.252     0.204     0.245     0.209
+pc1                 -6.105     0.615   -11.038    -0.475
+pc2                  9.928    -2.464    -1.810     1.066
+Kruskal-Wallis p: mode_m 0.745; q10 0.535; q50 0.685; q90 0.184; iqr 0.282; skew 0.179; kurt 0.735; entropy 0.217; ground_share 0.543; canopy_share 0.00313; intensity_med 0.264; single_share 0.0238; weibull_k 0.541; weibull_lambda 0.666; pc1 0.477; pc2 0.21;
+
+Spearman rho of each shape metric with the imagery metrics (147 points; |rho| > 0.16 is p < 0.05 for n 147):
+                metric_ndvi_apr  metric_ndvi_sum  metric_ndvi_oct  naip_2021  med08_3m_m  gen1_spread_mm
+mode_m                    -0.15             0.02             0.11       0.13        0.16            0.07
+q10                       -0.33             0.01             0.26       0.27        0.17           -0.07
+q50                       -0.25            -0.10             0.14       0.15        0.19            0.06
+q90                       -0.20            -0.34            -0.02      -0.03        0.14            0.25
+iqr                       -0.07            -0.30            -0.07      -0.10       -0.10            0.32
+skew                      -0.52            -0.57             0.05       0.21       -0.30            0.15
+kurt                      -0.32            -0.37            -0.07       0.29       -0.33           -0.09
+entropy                   -0.09            -0.44            -0.17      -0.10       -0.19            0.28
+ground_share               0.25            -0.08            -0.28      -0.23       -0.19            0.08
+canopy_share              -0.67            -0.67             0.10       0.60       -0.43            0.08
+intensity_med              0.44             0.75             0.13      -0.22        0.39           -0.16
+single_share               0.62             0.64            -0.05      -0.52        0.38           -0.09
+weibull_k                  0.07             0.42             0.19       0.10        0.34           -0.23
+weibull_lambda            -0.28            -0.21             0.12       0.10        0.18            0.16
+pc1                        0.24             0.10            -0.18      -0.02       -0.23           -0.07
+pc2                       -0.09            -0.18            -0.04      -0.05       -0.13            0.19
+
+within the open field only (n 88), Spearman with April NDVI: q50 -0.30; iqr -0.08; ground_share +0.30; intensity_med +0.24; weibull_k -0.02; pc1 +0.29; pc2 -0.02;
+wrote figures/rtk_2026-10-25_floodplain_return_shape.png
