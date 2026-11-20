@@ -1,0 +1,53 @@
+inputs: raw Emlid exports in data/field/2026-10-25/raw | tied table data/field/2026-10-25/rtk_points_all.csv (benchmark tie, no fitted shift) | 2021 clouds data/after/valley/{4342-29-64,4358-29-01}_3dep_full.laz | 2008 cloud data/before/4342-29-64.laz + star shifts | checkpoints src/lidar_diff_icp/groundtruth/data/mn_se_driftless_2021_control.csv
+A. 233 logged points; base counts {'B': 191, 'CORS': 17, 'B1': 15, 'none': 10} (none = export lost the base columns); geoid N = h_ell - navd88 from the compile table, -30.082 m
+   B1-era points (the false base, lat 44.11685493, self-reported E 579986.1 N 4885337.5, i.e. AT the lot):
+                   group  point         t status           E            N  baseline_m  slope_deg  lowveg_gen2  d_lot_m  navd88_m  z21_grid_m
+24         hillslope_T4a      1  13:20:48    FIX  579982.472  4885330.620       7.792      0.620        0.000   10.002   216.004     218.630
+25         hillslope_T4a      2  13:20:58    FIX  579982.395  4885330.707       7.727      0.620        0.000    9.894   216.015     218.630
+26         hillslope_T4a      3  13:21:06    FIX  579982.326  4885330.744       7.440      0.620        0.000    9.836   215.976     218.630
+0          hillslope_RS3      1  13:24:45    FIX  579893.680  4885339.398      92.563      1.180        0.216   85.322   215.593     218.210
+27         hillslope_T4a      4  13:24:47    FIX  579892.628  4885342.131      93.761      1.449        0.000   86.398   215.547     218.220
+1          hillslope_RS3      2  13:25:28    FIX  579877.584  4885344.887     108.818      9.378        0.423  101.534   217.056     219.250
+28         hillslope_T4a      5  13:25:30    FIX  579882.736  4885351.224     104.199      9.037        0.165   96.916   216.584     219.155
+2          hillslope_RS3      3  13:25:59    FIX  579866.399  4885350.743     120.621     23.323        0.222  113.112   220.854     222.945
+29         hillslope_T4a      6  13:26:08    FIX  579870.056  4885357.052     117.866     21.705        0.179  110.271   220.728     222.085
+3          hillslope_RS3      4  13:26:34    FIX  579856.148  4885356.202     131.768     21.587        0.062  123.916   225.792     228.100
+30         hillslope_T4a      7  13:26:38    FIX  579865.942  4885361.470     122.686     26.179        0.236  115.079   223.741     225.225
+4          hillslope_RS3      5  13:27:27    FIX  579844.141  4885366.956     146.105     19.078        0.061  137.527   231.251     233.840
+153  floodplain_RSplus_A      1  13:27:45  FLOAT  579980.966  4885335.519       6.316      0.462        0.000    4.893   218.954     218.530
+31         hillslope_T4a      8  13:28:04    FIX  579854.124  4885359.037     134.098     19.748        0.327  126.319   227.103     229.620
+5          hillslope_RS3      6  13:28:16    FIX  579834.457  4885370.127     156.585     30.105        0.051  147.649   236.378     239.790
+B. B1 frame: RTK minus 2021 grid, lot-edge points (d_lot < 15 m, MINE) median -2.626 m (n 3), lower bluff (slope < 10 deg, MINE) -2.594 (n 4); foot minus lot +0.032 m (B1's offset cancels). The B1 frame itself sits -2.58 m from the lidar: B1's autonomous position is wrong by meters, so these points have no absolute use.
+C. returns about each point, m above the point's elevation (benchmark tie; the B1 rows are in B1's frame and only their lidar structure means anything):
+               label            frame  slope_deg  lowveg_gen2  product_gen2_minus_rtk  n21_3m  min21_3m  p10_21_3m  med21_3m  p90_21_3m  cls2_share_3m  single_share_3m  n21_1m  min21_1m  med21_1m  plane_cls2_3m  plane_cls2_1m  n08_3m  med08_3m  min08_3m
+0           DR9925_1            B tie      5.223        0.186                   0.100     256    -0.004      0.026     0.076      0.306          0.930            0.992      28     0.056     0.076          0.121          0.084      30     0.029    -0.148
+1           DR9925_2            B tie      5.223        0.186                   0.092     256    -0.012      0.018     0.068      0.298          0.930            0.992      29     0.048     0.068          0.113          0.076      30     0.021    -0.156
+2             RS+A_2            B tie      0.718        0.007                   0.125    1045     0.057      0.117     4.927     10.797          0.184            0.240     143     0.107     6.187          0.131          0.148      24     0.291     0.031
+3             RS+A_3            B tie      0.447        0.054                   0.181    1301     0.075      0.165     7.825     13.415          0.137            0.094      65     0.125     0.275          0.194          0.227      20     0.209     0.069
+4             RS+A_4            B tie      0.417        0.000                   0.157     494     0.054      0.114     0.174      0.244          0.457            0.917      57     0.074     0.144          0.159          0.131      17     0.248     0.008
+5             RS+A_5            B tie      0.544        0.000                   0.149     492     0.050      0.120     0.160      0.200          0.520            1.000      55     0.080     0.120          0.155          0.116      15     0.174     0.114
+6             RS+A_6            B tie      0.081        0.000                   0.152     520     0.025      0.065     0.125      0.275          0.569            0.773      59     0.075     0.115          0.142          0.117      16     0.484     0.279
+7             RS+B_1            B tie      0.528        0.037                   0.136    1591     0.053      0.143     2.093     10.873          0.229            0.236     152     0.083     0.178          0.168          0.144      15     0.206     0.076
+8             RS+B_2            B tie      0.362        0.000                   0.128     737     0.053      0.113     0.143     11.147          0.399            0.425      88     0.093     0.143          0.130          0.126      16     0.341     0.176
+9             RS+B_3            B tie      0.528        0.068                   0.040     765    -0.110     -0.000     0.070     12.052          0.329            0.305      73    -0.110     0.040          0.032          0.022      13     0.293     0.083
+10           RS+B_17            B tie      0.653        0.000                   0.137     492     0.084      0.104     0.124      0.164          0.593            1.000      54     0.094     0.124          0.126          0.123      16     0.302     0.087
+11            CORS_1             CORS      0.256        0.043                   0.143     558     0.049      0.099     0.159     13.485          0.367            0.421      56     0.119     0.159          0.136          0.147       0       NaN       NaN
+12            CORS_2             CORS      0.256        0.043                   0.142     555     0.048      0.098     0.158     13.464          0.368            0.423      56     0.118     0.158          0.135          0.146       0       NaN       NaN
+13            CORS_3             CORS      0.344        0.267                   0.132     939     0.050      0.140     2.110     14.510          0.144            0.151      63     0.070     0.300          0.146          0.148       0       NaN       NaN
+14            CORS_4             CORS      0.810        0.052                   0.099    1366     0.035      0.070     0.280      6.890          0.215            0.238     128     0.035     0.115          0.091          0.084       0       NaN       NaN
+15            CORS_5             CORS      0.458        0.000                   0.083    1062     0.033      0.073     0.103      0.133          0.414            0.812     118     0.083     0.103          0.090          0.093       0       NaN       NaN
+16            CORS_6             CORS      0.906        0.025                   0.097     984     0.037      0.067     0.127      0.187          0.392            0.996     110     0.087     0.157          0.108          0.124       0       NaN       NaN
+17            CORS_7             CORS      0.906        0.025                   0.084     990    -0.008      0.042     0.102      0.152          0.408            0.996     116     0.062     0.102          0.084          0.085       0       NaN       NaN
+18          RS3-T4_9            B tie     18.695        0.081                   0.080     751    -0.877     -0.487     0.553     12.073          0.312            0.378      64    -0.217     0.143          0.102          0.095      20     0.016    -1.064
+19         RS3-T4_10            B tie     29.935        0.137                  -0.116    1194    -1.681      0.202     6.004      9.407          0.078            0.053     103    -0.721     5.299         -0.122         -0.116      20     2.928    -0.467
+20         RS3-T4_11            B tie     27.470        0.306                   0.125    1112    -1.402     -0.341     6.823     18.296          0.140            0.123     106    -0.162     9.068          0.187          0.211      17    -0.058    -1.418
+21  B1lot_hillslope1  B1 (meters off)      0.620        0.000                     NaN     494     2.396      2.576     2.616      2.656          0.415            0.919      52     2.566     2.606          2.608          2.594      18     2.544     2.489
+22  B1lot_hillslope2  B1 (meters off)      0.620        0.000                     NaN     495     2.385      2.565     2.605      2.645          0.418            0.915      52     2.555     2.595          2.596          2.581      15     2.528     2.478
+23  B1lot_hillslope3  B1 (meters off)      0.620        0.000                     NaN     498     2.424      2.604     2.644      2.674          0.426            0.910      53     2.594     2.634          2.634          2.618      15     2.567     2.517
+D. MN_SE_Driftless_2021 held-out checkpoints, error = surveyed NAVD88 minus delivered lidar (negative = lidar HIGH), whole project:
+   NVA (bare, non-vegetated): n 139, LAZ-surface error median -0.0079 mean -0.0068 m; DEM error median -0.0060 m; nearest to the site 6.1 km, 3 within 10 km
+   VVA (vegetated): n 99, LAZ-surface error median -0.0906 mean -0.0991 m; DEM error median -0.0870 m; nearest to the site 9.5 km, 2 within 10 km
+   within 12 km: 2036_2021_MN NVA 6.1 km error +0.015; 2024_2021_MN NVA 9.0 km error -0.022; 2210_2021_MN NVA 9.5 km error +0.023; 3056_2021_MN VVA 9.5 km error -0.019; 3089_2021_MN VVA 9.8 km error -0.022; 3088_2021_MN VVA 10.7 km error -0.037; 2099_2021_MN NVA 11.5 km error -0.039
+   aside, 2008: the DNR validation point L3B99 (class L3B) is 114 m from the site at E 580050.7 N 4885346.7; 2008 surface minus surveyed -0.015 m
+E. NAIP mn_m_4409264_ne_15_060_20210815 (2021-08-15) fetched for the map
+   wrote data/field/2026-10-25/bare_ground/lot_map.png
