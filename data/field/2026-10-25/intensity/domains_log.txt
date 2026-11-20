@@ -1,0 +1,14 @@
+cells 182400; with returns 179170; tree cells 83458 (46.6 %); floodplain-mask cells 133686
+mean-intensity histogram of non-tree floodplain cells (250-unit bins, counts): 0:0 250:5 500:87 750:102 1000:295 1250:566 1500:1121 1750:2960 2000:2789 2250:2081 2500:2390 2750:2808 3000:3473 3250:4380 3500:5672 3750:7343 4000:10316 4250:16235 4500:16946 4750:4211 5000:211 5250:2 5500:0 5750:0 6000:0 6250:0 6500:0 6750:0
+
+north (N >= 4885480): floodplain cells 74794; tree 26.2 %; non-tree 55182: intensity p10/p50/p90 2430/4310/4716, CV p10/p50/p90 0.057/0.085/0.229; classes of non-tree cells: dark 10.6 %, mid 18.8 %, bright 70.5 %; share of returns above 2 m in non-tree cells median 0.000; highest return in non-tree cells median 0.03 m, p90 0.13
+   non-tree cells with highest return between 0.5 and 3 m (shrub or tall herb layer, not tree): 3.6 %
+
+south (N < 4885480): floodplain cells 58760; tree 51.0 %; non-tree 28811: intensity p10/p50/p90 2137/3840/4506, CV p10/p50/p90 0.067/0.123/0.362; classes of non-tree cells: dark 14.4 %, mid 33.5 %, bright 52.2 %; share of returns above 2 m in non-tree cells median 0.000; highest return in non-tree cells median 0.05 m, p90 1.08
+   non-tree cells with highest return between 0.5 and 3 m (shrub or tall herb layer, not tree): 12.8 %
+
+non-tree cells more than 2 m from any tree cell:
+   north: n 46510; intensity p10/p50/p90 2565/4394/4735; CV p10/p50/p90 0.056/0.080/0.127; dark 9.6 %, mid 12.9 %, bright 77.5 %; top return 0.5-3 m 1.1 %; top return median 0.03 m, p90 0.11
+   south: n 14859; intensity p10/p50/p90 2170/4197/4591; CV p10/p50/p90 0.061/0.086/0.173; dark 11.7 %, mid 16.9 %, bright 71.5 %; top return 0.5-3 m 4.5 %; top return median 0.04 m, p90 0.18
+wrote tree, above2m_share and class GeoTIFFs
+wrote figures/rtk_2026-10-25_floodplain_intensity_domains.png
