@@ -1,0 +1,13 @@
+inputs: data/field/2026-10-25/returns/rsplus_b_returns_2021.csv.gz data/field/2026-10-25/returns/rsplus_b_returns_2008.csv (benchmark-tied frame; 2008 in the product's star frame); rows with radius_1m; dz = return z minus the point's tied RTK elevation
+set                               n points     min     p05     p10  median     p90     p95     max   NMAD  <0.02
+2021 ground (class 2)          2912    100  -0.023  +0.065  +0.083  +0.129  +0.175  +0.189  +0.330  0.034     40
+2021 all returns               5387    100  -0.110  +0.072  +0.090  +0.138  +0.206  +4.851 +14.221  0.038     67
+2008 ground (classes 2, 8)      201     90  +0.033  +0.132  +0.163  +0.309  +0.512  +0.586  +0.706  0.133      0
+2008 all returns                222    100  +0.033  +0.132  +0.173  +0.309  +0.532  +0.606  +1.646  0.136      0
+2021 classes within 1 m: {2: 2912, 1: 2474, 7: 1} | 2008 classes: {2.0: 155, 8.0: 46, 9.0: 10, 0.0: 7, 5.0: 4}
+per-point counts within 1 m, median (min-max): 2021 all 54 (25-188) | 2008 all 2 (1-9); points with no 2008 return within 1 m: 0
+   outside the plotted range (-0.2, 0.8): 2021 ground (class 2): 0 of 2912 returns (density normalized over all returns)
+   outside the plotted range (-0.2, 0.8): 2021 all returns: 347 of 5387 returns (density normalized over all returns)
+   outside the plotted range (-0.2, 0.8): 2008 ground (classes 2, 8): 0 of 201 returns (density normalized over all returns)
+   outside the plotted range (-0.2, 0.8): 2008 all returns: 1 of 222 returns (density normalized over all returns)
+wrote figures/rtk_2026-10-25_rsplusB_pooled_pdf_1m.png
