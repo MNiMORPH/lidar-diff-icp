@@ -799,6 +799,16 @@ the 20 returns of 2008, all single returns of vendor class 2 (16) or 8 (4), are 
 0.147, 0.197, 0.207, 0.217, 0.247, 0.297, 0.307, 0.317 (five returns at this one value), 0.367, 0.437 (four) and
 0.477. Run the script with a point number as its first argument for another point.
 
+**Pooled over the 100 points, returns within 1 m** (`analysis/field_survey/rsplus_b_pooled_pdf_2026-10-25.py`;
+`returns/rsplus_b_pooled_1m.csv`, log alongside; `figures/rtk_2026-10-25_rsplusB_pooled_pdf_1m.png`, 0.01 m bins over
+-0.20 to +0.80 m, both mine; heavy lines the vendor's ground classes, 2021 class 2 and 2008 classes 2 and 8, thin
+dashed lines all returns). Height above the tied RTK ground, m [n, median, p10-p90, NMAD]: 2021 ground 2912 returns,
++0.129, +0.083 to +0.175, 0.034; 2021 all 5387, +0.138, +0.090 to +0.206, 0.038 (347 canopy returns above +0.80 m, up
+to +14.2); 2008 ground 201 returns on 90 points, +0.309, +0.163 to +0.512, 0.133; 2008 all 222, +0.309, +0.173 to
++0.532, 0.136. Returns within 2 cm of the ground: 40 of 2912 in 2021 (class 2), none of 222 in 2008; the lowest 2008
+return within 1 m of any point is +0.033 m. The 2021 population is one peak 3.4 cm wide at 0.13 m; the 2008 population
+is four times wider, with nothing below the 2021 peak's foot.
+
 ## Registration or vegetation? The bare-ground check (2026-11-20)
 
 The question (Andy): with no 2021 return reaching the surveyed ground, did the 2021 flight think it was higher
