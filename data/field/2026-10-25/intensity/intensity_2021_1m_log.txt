@@ -1,7 +1,8 @@
 extent E 579780-580160 N 4885280-4885760, 380 x 480 cells at 1 m; returns 4,259,295; cells with returns 179170 of 182400; returns per cell median 19, p10 9, p90 45
-mean intensity over cells: median 2497, p02 882, p98 4776; SD within cell: median 533, p02 185, p98 1526
+mean intensity over cells: median 2497, p02 882, p98 4776; SD within cell: median 533, p02 185, p98 1526; CV (SD/mean): median 0.321, p02 0.051, p98 0.813
 wrote data/field/2026-10-25/intensity/intensity_2021_1m_mean.tif
 wrote data/field/2026-10-25/intensity/intensity_2021_1m_sd.tif
+wrote data/field/2026-10-25/intensity/intensity_2021_1m_cv.tif
 wrote data/field/2026-10-25/intensity/intensity_2021_1m_count.tif
 wrote data/field/2026-10-25/intensity/intensity_2021_1m_share_swath3040.tif
 wrote figures/rtk_2026-10-25_floodplain_intensity_1m.png

@@ -5,7 +5,7 @@ Clouds: data/after/valley/{4342-29-64,4358-29-01}_3dep_full.laz (the files overl
 are taken from the second file only). Raw intensity, no range, angle or gain correction; the two swaths (3040, 3041)
 are mixed in each cell, so a per-cell swath share is written too. Extent (MINE, argv overrides as E0 E1 N0 N1):
 E 579780-580160, N 4885280-4885760, the floodplain field with a margin, EPSG:6344.
-Outputs  data/field/2026-10-25/intensity/intensity_2021_1m_{mean,sd,count,share_swath3040}.tif
+Outputs  data/field/2026-10-25/intensity/intensity_2021_1m_{mean,sd,cv,count,share_swath3040}.tif  (cv = SD / mean, the coefficient of variation)
          data/field/2026-10-25/intensity/intensity_2021_1m_log.txt
          figures/rtk_2026-10-25_floodplain_intensity_1m.png (mean and SD, survey points as small dots)
 """
@@ -33,16 +33,17 @@ n = acc["n"].reshape(ny, nx)
 with np.errstate(invalid="ignore", divide="ignore"):
     mean = (acc["s"] / acc["n"]).reshape(ny, nx); sd = np.sqrt(np.maximum(acc["s2"] / acc["n"] - (acc["s"] / acc["n"]) ** 2, 0)).reshape(ny, nx); share = (acc["n3040"] / acc["n"]).reshape(ny, nx)
 mean[n == 0] = np.nan; sd[n == 0] = np.nan; share[n == 0] = np.nan; sd[n < 2] = np.nan
+cv = sd / mean   # coefficient of variation: the SD normalized by the mean (Andy, 2026-11-20), dimensionless
 say(f"extent E {E0:.0f}-{E1:.0f} N {N0:.0f}-{N1:.0f}, {nx} x {ny} cells at {RES:.0f} m; returns {n_all:,}; cells with returns {int((n > 0).sum())} of {nx * ny}; returns per cell median {np.median(n[n > 0]):.0f}, p10 {np.percentile(n[n > 0], 10):.0f}, p90 {np.percentile(n[n > 0], 90):.0f}")
-say(f"mean intensity over cells: median {np.nanmedian(mean):.0f}, p02 {np.nanpercentile(mean, 2):.0f}, p98 {np.nanpercentile(mean, 98):.0f}; SD within cell: median {np.nanmedian(sd):.0f}, p02 {np.nanpercentile(sd, 2):.0f}, p98 {np.nanpercentile(sd, 98):.0f}")
+say(f"mean intensity over cells: median {np.nanmedian(mean):.0f}, p02 {np.nanpercentile(mean, 2):.0f}, p98 {np.nanpercentile(mean, 98):.0f}; SD within cell: median {np.nanmedian(sd):.0f}, p02 {np.nanpercentile(sd, 2):.0f}, p98 {np.nanpercentile(sd, 98):.0f}; CV (SD/mean): median {np.nanmedian(cv):.3f}, p02 {np.nanpercentile(cv, 2):.3f}, p98 {np.nanpercentile(cv, 98):.3f}")
 tr = from_origin(E0, N1, RES, RES); prof = dict(driver="GTiff", height=ny, width=nx, count=1, crs="EPSG:6344", transform=tr, compress="deflate")
-for name, a, dt, nod in (("mean", mean, "float32", -9999.0), ("sd", sd, "float32", -9999.0), ("count", n, "int32", 0), ("share_swath3040", share, "float32", -9999.0)):
+for name, a, dt, nod in (("mean", mean, "float32", -9999.0), ("sd", sd, "float32", -9999.0), ("cv", cv, "float32", -9999.0), ("count", n, "int32", 0), ("share_swath3040", share, "float32", -9999.0)):
     with rasterio.open(f"{OUT}/intensity_2021_1m_{name}.tif", "w", dtype=dt, nodata=nod, **prof) as dst:
         dst.write(np.where(np.isfinite(a), a, nod).astype(dt), 1)
     say(f"wrote {OUT}/intensity_2021_1m_{name}.tif")
 P = pd.read_csv("data/field/2026-10-25/rtk_points_all.csv"); F = P[P.group.str.startswith("floodplain") & (P.status == "FIX")]
-fig, axs = plt.subplots(1, 2, figsize=(14, 8)); ext = (E0, E1, N0, N1)
-for ax, a, lab, cm, lim in ((axs[0], mean, "mean intensity of all 2021 returns per 1 m cell", "gray", (np.nanpercentile(mean, 2), np.nanpercentile(mean, 98))), (axs[1], sd, "standard deviation of intensity per 1 m cell", "magma", (0, np.nanpercentile(sd, 98)))):
+fig, axs = plt.subplots(1, 3, figsize=(20, 7.6)); ext = (E0, E1, N0, N1)
+for ax, a, lab, cm, lim in ((axs[0], mean, "mean intensity of all 2021 returns per 1 m cell", "gray", (np.nanpercentile(mean, 2), np.nanpercentile(mean, 98))), (axs[1], sd, "standard deviation of intensity per 1 m cell", "magma", (0, np.nanpercentile(sd, 98))), (axs[2], cv, "coefficient of variation (SD / mean) per 1 m cell", "magma", (0, np.nanpercentile(cv, 98)))):
     im = ax.imshow(a, extent=ext, cmap=cm, vmin=lim[0], vmax=lim[1]); plt.colorbar(im, ax=ax, shrink=0.6, label=lab); ax.plot(F.easting_tied, F.northing_tied, ".", color="#d55e00", ms=2); ax.set_aspect("equal"); ax.tick_params(labelsize=7)
 fig.tight_layout(); fig.savefig("figures/rtk_2026-10-25_floodplain_intensity_1m.png", dpi=int(os.environ.get("FIGDPI", 170))); say("wrote figures/rtk_2026-10-25_floodplain_intensity_1m.png")
 LOG.close()
