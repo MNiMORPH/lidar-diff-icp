@@ -1,0 +1,16 @@
+1,129,045 returns in the points' box; gps_time precision in the file: smallest nonzero step between sorted times 7.15e-07 s
+pulses in the box 860,637; returns per pulse from the record: 1: 58.6 %, 2: 19.8 %, 3: 15.1 %, 4: 5.4 %, 5: 0.9 %, 6: 0.1 %, 7: 0.0 %; pulses whose returns all appear in the box 96.9 %
+
+sward (102 points): returns 46654; number_of_returns share 1: 98.0 %, 2: 1.6 %, 3: 0.4 %, 4: 0.1 %, 5: 0.0 %
+   pulses 46575; pulses with >1 return on record 1.8 %
+   multi-return pulses fully seen: 766; gaps between consecutive returns: min 0.63 m, p01 0.63, p05 1.16, p10 1.43, median 2.07, p90 6.20 m; gaps under 0.5 m 0, under 1.0 m 4, under 2.0 m 37
+   returns within 5 cm of the ground: 2889 (6.19 % of returns): single 99 %, last-of-several 1 %, earlier-of-several 0 %
+   last-of-several returns: 836, height above ground median +0.141 m, p10 +0.067; within 5 cm of ground 2.6 %
+   pulse density: median over points of pulses within 3 m / 28.27 m^2 = 17.3 pulses/m^2; returns/m^2 17.3
+
+tree edge (45 points): returns 36904; number_of_returns share 1: 30.0 %, 2: 34.0 %, 3: 25.9 %, 4: 8.5 %, 5: 1.5 %, 6: 0.2 %
+   pulses 28576; pulses with >1 return on record 61.2 %
+   multi-return pulses fully seen: 16586; gaps between consecutive returns: min 0.11 m, p01 0.53, p05 0.82, p10 1.01, median 3.04, p90 8.84 m; gaps under 0.5 m 67, under 1.0 m 780, under 2.0 m 2736
+   returns within 5 cm of the ground: 1314 (3.56 % of returns): single 57 %, last-of-several 43 %, earlier-of-several 0 %
+   last-of-several returns: 11076, height above ground median +0.167 m, p10 +0.080; within 5 cm of ground 5.1 %
+   pulse density: median over points of pulses within 3 m / 28.27 m^2 = 21.6 pulses/m^2; returns/m^2 27.1
