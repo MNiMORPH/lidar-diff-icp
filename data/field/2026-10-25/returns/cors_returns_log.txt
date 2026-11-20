@@ -1,0 +1,33 @@
+inputs: data/field/2026-10-25/rtk_points_all.csv | 2008 data/before/<tile>.laz (all returns, raw vendor frame) | 2021 data/after/valley/<tile>_3dep_full.laz (all returns) | tiles ['4342-29-64', '4358-29-01']
+CORS points: 17 (status {'FIX': 17}); device ['Reach RS2+']; tiles at the points ['4358-29-01', '4342-29-64']
+bbox with 5.0 m pad: E 579993.8-580048.4, N 4885352.0-4885385.9
+2008 product frame, tile 4342-29-64: star shifts ADDED to x,y,z per point_source_id {'135': [-0.1695, 0.0798, 0.0806], '136': [-0.1281, -0.0733, 0.0727], '137': [-0.1106, -0.1265, 0.066], '138': [0.1579, 0.084, 0.0635]}; lateral shift ADDED to x,y [-0.0373, -0.0338]
+2008 product frame, tile 4358-29-01: star shifts ADDED to x,y,z per point_source_id {'138': [-0.1488, -0.0868, 0.0766], '139': [-0.1555, -0.0502, 0.0485], '140': [-0.116, -0.073, 0.0283], '141': [0.0569, 0.0138, 0.0568]}; lateral shift ADDED to x,y [0.0026, -0.0156]
+data/before/4342-29-64.laz: 197 returns in bbox of 7,728,747 in file (2 s); classification {2: 145, 5: 28, 8: 24}; point_source_id [138]
+data/before/4358-29-01.laz: 949 returns in bbox of 7,690,083 in file (2 s); classification {0: 1, 2: 742, 5: 121, 8: 85}; point_source_id [138]
+2008 raw: 1146 returns in bbox, rn==nr 92.4%, single 83.8%
+wrote data/field/2026-10-25/returns/cors_returns_2008.csv: 1001 point-return pairs (radius flags from the STAR-frame distance; dz_m is raw vendor z minus RTK, dz_star_m is the product's frame)
+data/after/valley/4342-29-64_3dep_full.laz: 34,042 returns in bbox of 182,148,262 in file (11 s); classification {1: 24929, 2: 9112, 7: 1}; point_source_id [3040, 3041]
+data/after/valley/4358-29-01_3dep_full.laz: 52,760 returns in bbox of 180,418,034 in file (11 s); classification {1: 39376, 2: 13381, 7: 3}; point_source_id [3040, 3041]
+2021: 32,456 duplicate returns in the tile overlap dropped, 54,346 kept
+2021: rn==nr 59.6%, single 32.9%
+wrote data/field/2026-10-25/returns/cors_returns_2021.csv.gz: 34629 point-return pairs (gzipped; pandas reads it directly)
+wrote data/field/2026-10-25/returns/cors_returns_summary.csv
+counts per point (min / median / max over the 17 points):
+   n2008_1m               1 /     2 /     5
+   n2021_1m              49 /    56 /   176
+   n2021_class2_1m        8 /    21 /    30
+   n2008_3m              16 /    21 /    30
+   n2021_3m             492 /   555 /  1274
+   n2021_class2_3m      135 /   213 /   253
+   n2008_5m              48 /    56 /    71
+   n2021_5m            1375 /  1974 /  2936
+   n2021_class2_5m      419 /   594 /   682
+median over the 17 FIX points of the per-point median offset from RTK (m):
+   1 m: 2008 star +0.185  2021 all +0.131  2021 class2 +0.121
+   3 m: 2008 star +0.173  2021 all +0.137  2021 class2 +0.121
+   5 m: 2008 star +0.193  2021 all +0.161  2021 class2 +0.119
+check: 2008 product gen1_minus_rtk (CSF ground, 5 m cell, star frame) median +0.145; 2021 product gen2_minus_rtk median +0.122
+representative point: 10 (MINE: FIX point nearest the CORS medians of product gen1_minus_rtk, n2008_3m and n2021_3m, equally weighted in sd units; override with argv[1]); product gen1_minus_rtk +nan, n2008_3m 21, n2021_3m 515, median dz 2008 star +0.217, 2021 +0.131
+PDF data: 2008 n 21 range +0.08..+0.52; 2021 n 515 range +0.06..+9.46 (bins 0.02 m for 2021, 0.05 m for 2008, MINE)
+wrote figures/rtk_2026-10-25_cors_returns_pdf_p10.png

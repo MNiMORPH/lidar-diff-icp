@@ -1,13 +1,17 @@
-inputs: data/field/2026-10-25/rtk_points_all.csv | data/before/4342-29-64.laz (2008 all returns, raw vendor frame) | data/after/valley/4342-29-64_3dep_full.laz (2021 all returns) | data/derived/4342-29-64/corrections.json
-RS+ B points: 100 (status {'FIX': 98, 'FLOAT': 2}); device ['Reach RS+']; all tiles ['4342-29-64']
+inputs: data/field/2026-10-25/rtk_points_all.csv | 2008 data/before/<tile>.laz (all returns, raw vendor frame) | 2021 data/after/valley/<tile>_3dep_full.laz (all returns) | tiles ['4342-29-64', '4358-29-01']
+RS+ B points: 100 (status {'FIX': 98, 'FLOAT': 2}); device ['Reach RS+']; tiles at the points ['4342-29-64']
 bbox with 5.0 m pad: E 579891.6-580005.8, N 4885397.1-4885686.8
-2008 product frame: star shifts ADDED to x,y,z per point_source_id {'135': [-0.1695, 0.0798, 0.0806], '136': [-0.1281, -0.0733, 0.0727], '137': [-0.1106, -0.1265, 0.066], '138': [0.1579, 0.084, 0.0635]}; lateral shift ADDED to x,y [-0.0373, -0.0338]
+2008 product frame, tile 4342-29-64: star shifts ADDED to x,y,z per point_source_id {'135': [-0.1695, 0.0798, 0.0806], '136': [-0.1281, -0.0733, 0.0727], '137': [-0.1106, -0.1265, 0.066], '138': [0.1579, 0.084, 0.0635]}; lateral shift ADDED to x,y [-0.0373, -0.0338]
+2008 product frame, tile 4358-29-01: star shifts ADDED to x,y,z per point_source_id {'138': [-0.1488, -0.0868, 0.0766], '139': [-0.1555, -0.0502, 0.0485], '140': [-0.116, -0.073, 0.0283], '141': [0.0569, 0.0138, 0.0568]}; lateral shift ADDED to x,y [0.0026, -0.0156]
 data/before/4342-29-64.laz: 18,277 returns in bbox of 7,728,747 in file (2 s); classification {0: 118, 2: 14618, 5: 746, 8: 2233, 9: 562}; point_source_id [138]
-2008 raw: 18277 returns, rn==nr 98.4%, single 96.5%
-wrote data/field/2026-10-25/returns/rsplus_b_returns_2008.csv: 5587 point-return pairs (radius flags from the STAR-frame distance; dz_m is raw vendor z minus RTK, dz_star_m is the product's frame)
-data/after/valley/4342-29-64_3dep_full.laz: 656,145 returns in bbox of 182,148,262 in file (9 s); classification {1: 369548, 2: 286573, 7: 24}; point_source_id [3040, 3041]
+data/before/4358-29-01.laz: 759 returns in bbox of 7,690,083 in file (2 s); classification {0: 1, 2: 594, 5: 68, 8: 96}; point_source_id [138]
+2008 raw: 19036 returns in bbox, rn==nr 98.2%, single 96.2%
+wrote data/field/2026-10-25/returns/rsplus_b_returns_2008.csv: 5602 point-return pairs (radius flags from the STAR-frame distance; dz_m is raw vendor z minus RTK, dz_star_m is the product's frame)
+data/after/valley/4342-29-64_3dep_full.laz: 656,145 returns in bbox of 182,148,262 in file (10 s); classification {1: 369548, 2: 286573, 7: 24}; point_source_id [3040, 3041]
+data/after/valley/4358-29-01_3dep_full.laz: 69,570 returns in bbox of 180,418,034 in file (9 s); classification {1: 42108, 2: 27458, 7: 4}; point_source_id [3040, 3041]
+2021: 69,570 duplicate returns in the tile overlap dropped, 656,145 kept
 2021: rn==nr 81.1%, single 68.2%
-wrote data/field/2026-10-25/returns/rsplus_b_returns_2021.csv.gz: 137392 point-return pairs (gzipped, 2.3 MB against 15 MB plain; pandas reads it directly)
+wrote data/field/2026-10-25/returns/rsplus_b_returns_2021.csv.gz: 137392 point-return pairs (gzipped; pandas reads it directly)
 wrote data/field/2026-10-25/returns/rsplus_b_returns_summary.csv
 counts per point (min / median / max over the 100 points):
    n2008_1m               1 /     2 /     9
@@ -16,13 +20,13 @@ counts per point (min / median / max over the 100 points):
    n2008_3m              10 /    20 /    33
    n2021_3m             241 /   490 /  1192
    n2021_class2_3m      203 /   255 /   326
-   n2008_5m              36 /    55 /    72
+   n2008_5m              39 /    55 /    72
    n2021_5m             678 /  1362 /  2833
    n2021_class2_5m      585 /   704 /   891
-median over points of the per-point median offset from RTK (m):
+median over the 98 FIX points of the per-point median offset from RTK (m):
    1 m: 2008 star +0.318  2021 all +0.136  2021 class2 +0.126
-   3 m: 2008 star +0.350  2021 all +0.137  2021 class2 +0.130
-   5 m: 2008 star +0.350  2021 all +0.138  2021 class2 +0.127
+   3 m: 2008 star +0.350  2021 all +0.136  2021 class2 +0.129
+   5 m: 2008 star +0.347  2021 all +0.137  2021 class2 +0.126
 check: 2008 product gen1_minus_rtk (CSF ground, 5 m cell, star frame) median +0.357; 2021 product gen2_minus_rtk median +0.129
 representative point: 17 (MINE: FIX point nearest the RS+ B medians of product gen1_minus_rtk, n2008_3m and n2021_3m, equally weighted in sd units; override with argv[1]); product gen1_minus_rtk +0.343, n2008_3m 20, n2021_3m 492, median dz 2008 star +0.317, 2021 +0.124
 PDF data: 2008 n 20 range +0.09..+0.48; 2021 n 492 range +0.08..+0.21 (bins 0.02 m for 2021, 0.05 m for 2008, MINE)
