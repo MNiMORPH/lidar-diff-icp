@@ -1,0 +1,8 @@
+returns within 1 m: 9151 over 147 FIX points; intensity 14-bit units
+all floodplain points (147): ground returns (< 0.05 m) n 218 intensity median 3634 IQR 2573-4314 | sward peak (0.10-0.20 m) n 5650 median 4218 IQR 3347-4600 | canopy (> 0.40 m) n 1611 median 726; Mann-Whitney ground vs sward p 2.3e-10; returns above +0.40 m not drawn: 1611
+RS+ B (98): ground returns (< 0.05 m) n 143 intensity median 3046 IQR 2363-3880 | sward peak (0.10-0.20 m) n 3914 median 4343 IQR 3832-4674 | canopy (> 0.40 m) n 353 median 731; Mann-Whitney ground vs sward p 5e-30; returns above +0.40 m not drawn: 353
+per rover, ground vs sward-peak median intensity (single returns only, which carry the whole pulse energy):
+   CORS_Wickert     ground n    3 median   4103 | sward n   427 median   4189
+   RSplus_A         ground n   66 median   4398 | sward n   779 median   4106 | p 1e-05
+   RSplus_B         ground n   99 median   3466 | sward n  3696 median   4376 | p 6.9e-18
+wrote figures/rtk_2026-10-25_floodplain_pooled_1m_2021_intensity_hist.png
