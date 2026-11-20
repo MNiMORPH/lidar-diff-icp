@@ -3,8 +3,8 @@
 
 Reads the per-return tables written by rsplus_b_returns_2026-10-25.py (benchmark-tied frame), keeps the rows with
 radius_1m, pools the 100 points, and plots probability densities of return height minus the point's tied RTK
-elevation for both flights: "ground" returns (2021 vendor class 2; 2008 vendor classes 2 and 8, 8 being model
-key-points, also ground) as the heavy lines and all returns as the thin lines. Bins 0.01 m over -0.20 to +0.80 m (both MINE; the density is normalized over all returns, the clipped counts are in the log); a return that lies
+elevation for both flights, ALL returns with no ground-class cut (the log still tabulates the vendor ground classes, 2021
+class 2 and 2008 classes 2 and 8, for reference). Bins 0.01 m over -0.20 to +0.80 m (both MINE; the density is normalized over all returns, the clipped counts are in the log); a return that lies
 within 1 m of two points counts once per point. Writes the pooled offsets, the statistics and the figure.
   inputs   data/field/2026-10-25/returns/rsplus_b_returns_2021.csv.gz, rsplus_b_returns_2008.csv
   outputs  data/field/2026-10-25/returns/rsplus_b_pooled_1m.csv (point, epoch, classification, dz_m)
@@ -37,9 +37,9 @@ XLIM = (-0.20, 0.80)   # plotted range, MINE: the 2021 "all returns" tail reache
 bins = np.arange(XLIM[0], XLIM[1] + 0.005, 0.01)
 for k, v in sets.items(): say(f"   outside the plotted range {XLIM}: {k}: {int(((v < XLIM[0]) | (v > XLIM[1])).sum())} of {len(v)} returns (density normalized over all returns)")
 fig, ax = plt.subplots(figsize=(8, 4.6))
-style = {"2021 ground (class 2)": ("#0072b2", 1.8, "-"), "2021 all returns": ("#0072b2", 0.9, "--"), "2008 ground (classes 2, 8)": ("#d55e00", 1.8, "-"), "2008 all returns": ("#d55e00", 0.9, "--")}
-for k, v in sets.items():
-    c, lw, ls = style[k]; ax.hist(v, bins=bins, density=True, histtype="step", color=c, lw=lw, ls=ls, label=k)
+# all returns only, no ground-class cut (Andy, 2026-11-20: "eschew the ground-return class cutoff")
+for k, c in (("2021 all returns", "#0072b2"), ("2008 all returns", "#d55e00")):
+    ax.hist(sets[k], bins=bins, density=True, histtype="step", color=c, lw=1.6, label=k[:4] + " lidar, all returns")
 ax.axvline(0, color="0.4", lw=0.8, ls=":"); ax.set_xlim(XLIM)
 ax.set_xlabel("lidar return minus tied RTK ground (m)"); ax.set_ylabel("probability density (1/m)")
 ax.legend(frameon=False, fontsize=9); ax.spines[["top", "right"]].set_visible(False); fig.tight_layout()
@@ -48,8 +48,7 @@ png = "figures/rtk_2026-10-25_rsplusB_pooled_pdf_1m.png"; fig.savefig(png, dpi=i
 X2 = (-0.10, 0.40); b2 = np.arange(X2[0], X2[1] + 0.005, 0.01)
 fig, ax = plt.subplots(figsize=(8, 4.6))
 ax.hist(sets["2021 all returns"], bins=b2, density=True, histtype="stepfilled", color="#0072b2", alpha=0.18, lw=0)
-ax.hist(sets["2021 all returns"], bins=b2, density=True, histtype="step", color="#0072b2", lw=0.9, ls="--", label="2021 all returns")
-ax.hist(sets["2021 ground (class 2)"], bins=b2, density=True, histtype="step", color="#0072b2", lw=1.8, label="2021 ground (class 2)")
+ax.hist(sets["2021 all returns"], bins=b2, density=True, histtype="step", color="#0072b2", lw=1.6, label="2021 lidar, all returns")
 ax.axvline(0, color="0.4", lw=0.8, ls=":"); ax.set_xlim(X2)
 ax.set_xlabel("2021 lidar return minus tied RTK ground (m)"); ax.set_ylabel("probability density (1/m)")
 ax.legend(frameon=False, fontsize=9); ax.spines[["top", "right"]].set_visible(False); fig.tight_layout()
@@ -63,7 +62,7 @@ v_all = sets["2021 all returns"].to_numpy(); v_g = sets["2021 ground (class 2)"]
 edges = np.concatenate([np.arange(-0.12, 0.30, 0.01), 0.30 * 1.15 ** np.arange(0, 40)]); edges = edges[edges <= v_all.max() * 1.15]
 if edges[-1] < v_all.max(): edges = np.append(edges, edges[-1] * 1.15)
 fig, (a1, a2) = plt.subplots(1, 2, figsize=(12, 4.8))
-for v, lw, ls, lab in ((v_all, 1.0, "--", "2021 all returns"), (v_g, 1.8, "-", "2021 ground (class 2)")):
+for v, lw, ls, lab in ((v_all, 1.6, "-", "2021 lidar, all returns"),):
     c, _ = np.histogram(v, bins=edges); dens = c / (len(v) * np.diff(edges)); dens = np.where(dens > 0, dens, np.nan)
     a1.stairs(dens, edges, color="#0072b2", lw=lw, ls=ls, label=lab, baseline=None)
     a2.plot(np.sort(v), np.arange(1, len(v) + 1) / len(v), color="#0072b2", lw=lw, ls=ls, label=lab)
