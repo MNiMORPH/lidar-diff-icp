@@ -10,3 +10,7 @@
 Both show the southern, lot-end part of the field in late October 2026, a mixture of short green and tall dead cover;
 the 2021 lidar flew on 1 May, a different season.
 
+Cover at these points, confirmed by Andy (2026-11-20): nettle, grass, goldenrod. The low green layer at the pole tip
+and around the base is nettle (slender stinging nettle, Urtica gracilis, is the iNaturalist record within 1 km) with
+grass; the meter-tall dead stems are goldenrod. Whether the lodged tawny grass in the video frames is reed canary
+grass remains a hypothesis, not confirmed.
