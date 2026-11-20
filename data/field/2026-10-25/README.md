@@ -944,3 +944,58 @@ to a centimeter or two, and the only spatial pattern is where the trees are; the
 likely densest sward, is where the laser penetrated least. In November 2008 the standing dead canopy varied by place,
 lowest at the lot end and highest in the swale, and that variation is what the 2008 residual's structure and its
 correlation with today's greenness were tracking.
+
+## A lidar signature of vegetation type? The shape test and the literature (2026-11-20)
+
+Andy asked whether a full shape factor of the return-height distribution exists, whether it could be combined with
+the spectral data, and whether anyone has done this. Two agent-gathered, source-tagged literature notes answer the
+last two: `analysis/field_survey/lit/RETURN_SHAPE_VEGETATION_LIT_2026-11-20.md` and
+`analysis/field_survey/lit/LIDAR_SPECTRAL_FUSION_LIT_2026-11-20.md` (every paper tagged full text / abstract / cited-in,
+DOIs checked against Crossref where stated).
+
+**The shape test here** (`analysis/field_survey/floodplain_return_shape_2026-10-25.py`;
+`returns/floodplain_return_shape_points.csv`, log; `figures/rtk_2026-10-25_floodplain_return_shape.png`). Per point,
+the 2021 returns within 3 m below +0.50 m (median 487), binned at 1 cm on -0.05 to +0.45 m: quantiles, IQR, skew,
+kurtosis, entropy, ground and canopy shares, median intensity, single-return share, a maximum-likelihood Weibull (shape k,
+scale), and a principal-component analysis of the 147 densities (the cuts are mine). PC1 (40 % of the variance) is the
+peak's position, 0.12 against 0.17 m; PC2 (27 %) its width. Neither score separates the three location bins
+(Kruskal-Wallis p 0.64 for PC1; PC2 differs only through the south zone's canopy), and the semivariogram of the
+sub-canopy median is flat from 5 m. Across the five NAIP-2021 imagery types the metrics that differ are canopy share,
+single-return share and intensity, i.e. trees against grass; within the open field alone the Spearman correlations
+of April-2026 NDVI with the sward median, the ground share and intensity are -0.30, +0.30 and +0.24 on 88 points.
+The 147 points sample one ecology: 85 fall in one NAIP type and 85 in one Sentinel-2 four-date type, the large R1
+stand the site plan chose. The test asked whether one sward varies internally; it does not, beyond a few centimeters.
+
+**What the literature says.** A full shape factor exists for tall canopies (MacArthur-Horn canopy height profiles,
+Harding 2001, Lovell 2003; a Weibull fitted to them, Coops 2007; the GEDI/LVIS relative-height vector; foliage-height
+entropy; waveform echo width, Wagner 2006, Mallet & Bretar 2009; pseudo-waveforms from discrete returns, Muss 2011). For
+vegetation under 2 m the published practice collapses the distribution to one number: height = 2.7 x the standard
+deviation of all returns (Hopkinson et al. 2004, r^2 0.77, RMSE 0.15 m, floor ~0.19 m below which sward and bare
+ground are alike); the 95th percentile and a ground split at an inflection near 5 cm in senescent floodplain herbs
+(Straatsma & Middelkoop 2007, 12-75 pts/m^2); a ground fraction for density. Herbaceous and wetland typing from lidar
+alone has been done for emergent genera at 1 pt/m^2 (Zlinszky et al. 2012: reed, cattail, sedge, 82.5 % overall,
+from height, in-situ-calibrated reflectance, roughness and dropouts, each threshold with a physical reason) and for
+hay-meadow management with full waveform at 12.8 echoes/m^2 (Zlinszky 2014, 68-75 %; leaf-off echo width and the
+leaf-on-minus-leaf-off reflectance difference on top; mown meadow and asphalt both 2-5 cm of roughness). Lidar plus
+passive imagery is established for wetland habitats (Chust 2008, 88 %; Rapinel 2015, 86.5 %; Onojeghuo & Blackburn
+2011, a 3 m height mask) with the lidar term always height or microtopography. Nulls: no lidar paper on reed canary
+grass; no distribution analysis of a sward under 0.5 m at 2008 densities; no species or state fingerprint from the
+SHAPE of a discrete height distribution; no 1,064 nm comparison of green and standing-dead grass intensity.
+
+**Sensors and wavelength.** Both Elba epochs are single-channel 1,064 nm: the 2021 lift is a Leica TerrainMapper
+(repo flight log; brochure: 1,064 nm, 0.25 mrad, 14-bit intensity, up to 15 returns), the 2008 data an Optech ALTM
+Gemini and a Leica ALS50-II merged without a per-line flag, both 1,064 nm. The green-versus-dead contrast lives in
+shortwave-infrared water absorption, not at 1,064 nm, so there is no moisture channel and no within-lidar ratio;
+intensity is a relative, per-flight-line, scan-angle-conditioned covariate (Kashani 2015; Garroway 2011 found
+vegetation attenuation and scan angle, not soil state, governing range-normalized intensity over a 60 cm sward) and
+is not comparable between the 2008 8-bit AGC record and the 2021 14-bit one. Published ceiling for wet-grassland
+communities from a full-year Sentinel-2 stack: about 78 % for seven classes (Rapinel 2019).
+
+**Where this leaves the idea (assessment, not a result).** The combination as a whole, discrete return-height shape
+plus lidar intensity plus optical phenology for herbaceous type, is not in the literature, and its pieces each work
+somewhere. On this field the 2021 shape has nothing to offer because the survey sampled one sward at one date; the
+test that remains is across ecologies, which needs no RTK for the signature itself: shape, penetration share and
+within-line intensity measured against a lowest-return zero everywhere on the floodplain, the imagery-type maps as the
+strata, and the 147 RTK points as the check on the zero (5-10 cm above the soil in dense sward). The 2008 leaf-off
+level, 0.19 m at the lot end against 0.39 m in the swale, is the one measured contrast between places and has no
+published counterpart for any grass.
