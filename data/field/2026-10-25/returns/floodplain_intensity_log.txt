@@ -1,0 +1,52 @@
+Part 1: 281 point-swath rows from 99 points; intensity range in the tables 471-7403 (14-bit digitizer, values well under 16383); swaths [3040, 3041]
+   swath 3040: open-field points 88, |scan| 6-14 deg, intensity median 4563, fit intensity = 2950 +118.6 x |scan| (Spearman +0.28)
+   swath 3041: open-field points 75, |scan| 13-20 deg, intensity median 4307, fit intensity = 5544 -93.2 x |scan| (Spearman +0.09)
+medians by location bin:
+               intensity_med  intensity_norm  n_single
+loc_bin                                               
+open field          4455.136           1.084     480.0
+south zone          3844.510           0.875     305.0
+swale stretch       4401.276           1.089     485.0
+medians by NAIP-2021 imagery type:
+                  intensity_med  intensity_norm  canopy_share
+cls_naip_2021_k5                                             
+0.0                    3495.245           0.812         0.521
+1.0                    4423.929           0.989         0.000
+2.0                    4442.141           1.096         0.000
+3.0                    2194.671           0.594         0.000
+4.0                    3610.331           0.824         0.392
+Spearman with raw and normalized intensity, all 147 points | open field only:
+   q50              raw -0.05 norm -0.19 (n 147) | open field raw +0.13 norm -0.18 (n 88)
+   iqr              raw -0.56 norm -0.50 (n 147) | open field raw -0.56 norm -0.51 (n 88)
+   ground_share     raw -0.28 norm -0.13 (n 147) | open field raw -0.41 norm -0.15 (n 88)
+   canopy_share     raw -0.55 norm -0.60 (n 147) | open field raw -0.36 norm -0.42 (n 88)
+   metric_ndvi_apr  raw +0.32 norm +0.49 (n 147) | open field raw +0.14 norm +0.52 (n 88)
+   metric_ndvi_sum  raw +0.70 norm +0.69 (n 147) | open field raw +0.70 norm +0.56 (n 88)
+   metric_ndvi_oct  raw +0.21 norm -0.05 (n 147) | open field raw +0.22 norm -0.23 (n 88)
+   naip_2021        raw -0.01 norm -0.07 (n 147) | open field raw +0.28 norm +0.24 (n 88)
+   med08_3m_m       raw +0.33 norm +0.26 (n 147) | open field raw +0.10 norm -0.26 (n 88)
+wrote figures/rtk_2026-10-25_floodplain_intensity_points.png
+
+Part 2: 8086 floodplain cells at 10 m; 8076 with >= 20 single returns; returns per cell median 1461; single share median 0.40; cells in the lidar-covered grid 14343 of 14400
+   cells dominated (>= 90 %) by one swath: 5613; swath 3040-dominated 3711, 3041-dominated 1902
+   Spearman of cell mean single-return intensity with the optical layers over floodplain cells (all | 3040-dominated | 3041-dominated | all cells with single_share >= 0.9, i.e. no trees):
+   s2_2021-05-01_NDVI         +0.16 (n 8076) | +0.27 (n 3711) | -0.33 (n 1902) | +0.40 (n 1688)
+   s2_2021-05-01_NDRE         +0.17 (n 8076) | +0.26 (n 3711) | -0.27 (n 1902) | +0.38 (n 1688)
+   s2_2021-05-01_NDMI         +0.44 (n 8076) | +0.44 (n 3711) | +0.31 (n 1902) | +0.47 (n 1688)
+   s2_2021-08-14_NDVI         -0.38 (n 8076) | -0.40 (n 3711) | -0.14 (n 1902) | -0.11 (n 1688)
+   s2_2021-08-14_NDRE         -0.46 (n 8076) | -0.50 (n 3711) | -0.16 (n 1902) | -0.15 (n 1688)
+   s2_2021-08-14_NDMI         -0.21 (n 8076) | -0.27 (n 3711) | +0.12 (n 1902) | -0.10 (n 1688)
+   s2_2026-04-10_NDVI         -0.29 (n 8076) | -0.27 (n 3711) | -0.20 (n 1902) | +0.38 (n 1688)
+   s2_2026-04-10_NDRE         -0.43 (n 8076) | -0.41 (n 3711) | -0.27 (n 1902) | +0.32 (n 1688)
+   s2_2026-04-10_NDMI         +0.37 (n 8076) | +0.29 (n 3711) | +0.44 (n 1902) | +0.22 (n 1688)
+   s2_2026-10-17_NDVI         +0.63 (n 8076) | +0.59 (n 3711) | +0.63 (n 1902) | +0.68 (n 1688)
+   s2_2026-10-17_NDRE         +0.62 (n 8076) | +0.59 (n 3711) | +0.61 (n 1902) | +0.67 (n 1688)
+   s2_2026-10-17_NDMI         +0.61 (n 8076) | +0.57 (n 3711) | +0.56 (n 1902) | +0.60 (n 1688)
+   naip_2019-08_NDVI          -0.32 (n 8076) | -0.41 (n 3711) | -0.00 (n 1902) | +0.06 (n 1688)
+   naip_2021-08_NDVI          -0.30 (n 8076) | -0.35 (n 3711) | -0.03 (n 1902) | +0.17 (n 1688)
+   naip_2025-09_NDVI          +0.05 (n 8076) | -0.07 (n 3711) | +0.46 (n 1902) | +0.43 (n 1688)
+   nelike_p_ls_20081029       +0.52 (n 7651) | +0.63 (n 3690) | +0.36 (n 1648) | +0.51 (n 1662)
+   nelike_p_s2_20211018       +0.30 (n 7651) | +0.43 (n 3690) | -0.25 (n 1648) | +0.59 (n 1662)
+   nelike_p_s2_20251002       +0.64 (n 7651) | +0.66 (n 3690) | +0.44 (n 1648) | +0.63 (n 1662)
+   intensity by NE-like class (nelike_p_s2_20211018 >= 0.5 vs < 0.5, grass cells): NE-like median 4383 (n 742), other median 3844 (n 920)
+wrote figures/rtk_2026-10-25_floodplain_intensity_map.png
