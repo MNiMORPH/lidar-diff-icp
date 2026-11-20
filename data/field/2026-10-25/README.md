@@ -898,3 +898,49 @@ loop and let less of it through to the soil, and the tree line adds a canopy pop
 exclude at the first points of each line; the far RS+ A points, greener in autumn, are the one set with a real ground
 mode in 2021. The 2008 sets are 23-49 returns and say little beyond their levels: 0.19-0.20 m near the lot and on the
 CORS line against 0.31-0.38 m on the two loops.
+
+## Binning by place, not by rover: does the offset cluster in space? (2026-11-20)
+
+Andy: re-bin by general location to look for vegetation patterns, and first see whether the offset itself clusters
+by location so that the bins come from the data. `analysis/field_survey/floodplain_offset_clusters_2026-10-25.py`
+builds one row per floodplain FIX point (147, all three rovers; `returns/floodplain_offset_points.csv`) with the 2021
+sub-canopy median (returns within 1 m below +0.50 m), the ground share (returns within 1 m below +0.05 m), the canopy
+share (above +0.50 m), the 2008 median within 3 m, and the imagery indices; the three cuts are mine.
+
+**Semivariograms** (`figures/rtk_2026-10-25_floodplain_offset_variogram.png`). The 2021 sub-canopy median has no
+spatial structure: semivariance 0.0020 m^2 at 5 m separation against a variance of 0.0024 over all points, flat to
+200 m. Where the 2021 sward surface sits above the ground at one point says nothing about the next point 6 m away. The
+ground share is the same, noise. The 2008 median does have structure: 0.0086 m^2 at 5 m, rising to the variance of
+0.0159 by 60-80 m, i.e. patches of order 50 m.
+
+**Clustering** (Ward, each point linked to its 8 nearest neighbors so that clusters are contiguous; k = 2-7; the
+log has every table). On the 2021 features the only clusters are singletons: three points whose 1 m window is all
+ground returns, RS+ B 3 (vertical RMS 0.115 m, RTK 0.09-0.15 m above its neighbors), RS+ B 100 and RS+ A 13 (RTK
+0.07-0.16 m above its neighbors). Two of the three look like RTK points standing high, not bare ground; held. On the
+2008 median the clusters are places (`figures/rtk_2026-10-25_floodplain_offset_clusters_med08_k4.png`): the south
+zone at the lot and tree line (N < 4885455; 45 points, 2008 median 0.196 m, April-2026 NDVI 0.218), the open field
+(88 points, 0.348 m, NDVI 0.306), and a 14-point stretch of the RS+ B west leg along the dark swale in the imagery
+(N 4885496-4885579; 0.425 m; October NDVI 0.373 against 0.15 elsewhere, the one place still green in autumn), plus
+one CORS point under a tree. Adopted as the location bins, a proposal: south zone (the one CORS singleton merged by
+place), open field, swale stretch.
+
+**Densities by location bin** (`floodplain_pooled_pdf_2026-10-25.py`, all returns within 1 m, FIX points;
+`figures/rtk_2026-10-25_floodplain_pooled_1m_{2021,2008}_bins.png`, `_2021_bins_linear.png`, `_2008_bins_linear.png`):
+
+| bin | points | 2021 n | 2021 median | 2021 p10-p90 | NMAD | below +0.05 | above +0.30 | 2008 n | 2008 median | 2008 p10-p90 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| south zone (lot, tree line) | 45 | 3480 | +0.169 | +0.082 to +10.2 | 0.113 | 4.0 % | 33.6 % | 98 | +0.190 | +0.033 to +0.518 |
+| open field | 88 | 4909 | +0.144 | +0.094 to +1.34 | 0.042 | 1.6 % | 11.2 % | 196 | +0.312 | +0.177 to +0.534 |
+| swale stretch | 14 | 762 | +0.130 | +0.094 to +0.172 | 0.030 | 0.1 % | 0 | 30 | +0.392 | +0.275 to +0.584 |
+
+In 2021 the three bins peak within 2 cm of one another (0.11-0.14 m) and differ in their tails: the south zone has
+the ground shelf (4 % below +0.05 m) and the canopy; the swale stretch has the narrowest peak of all, 3 cm NMAD, with
+no return below +0.04 m and none above +0.20. In 2008 the order reverses and the differences are large: the south
+zone returns start at the ground (+0.01 m) and have a mode at 0.02-0.04 m, the open field starts at +0.07 m with
+its bulk at 0.2-0.5 m, and the swale stretch starts at +0.08 m with its bulk at 0.26-0.44 m.
+
+**Reading (hypothesis).** In May 2021 the sward top was the same height above the ground everywhere on this field,
+to a centimeter or two, and the only spatial pattern is where the trees are; the autumn-green swale, the wettest and
+likely densest sward, is where the laser penetrated least. In November 2008 the standing dead canopy varied by place,
+lowest at the lot end and highest in the swale, and that variation is what the 2008 residual's structure and its
+correlation with today's greenness were tracking.
