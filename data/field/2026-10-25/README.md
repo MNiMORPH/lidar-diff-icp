@@ -64,7 +64,7 @@ shifts, and the 2008 column's absolute level is the registration's, not a measur
 The student exports show two base positions. **B1 was not the class base**: a student's
 receiver was accidentally configured as a base and confused the radio link (Andy,
 2026-11-11), so the 15 points corrected from it between 13:20 and 13:30 CDT, T3a 1-6,
-T4a 1-8 and T1a 1, are dropped from the table; the compile log lists them. **B**
+T4a 1-8 and T1a 1, are kept out of every table and figure here and SEQUESTERED as exported in `sequestered/rtk_points_B1_false_base.csv` (Andy, 2026-11-20: hold them in case of use, away from standard use); B1's position was its own autonomous average, meters off, so they carry no tie; the compile log lists them. **B**
 (the field east of the road, lon -91.998351, lat 44.117216, h 191.032, from 14:40 on) is
 the class base; its position was the base's own average, so it carries an unknown offset
 that the ties below remove. Ten points whose export lost the base columns were assigned to
@@ -810,7 +810,7 @@ runs it; outputs and log in `bare_ground/`.
 between 13:20 and 13:28 (T4a 1-8, T3a 1-6, T1a 1) were corrected from B1, whose self-reported position is at the
 lot itself (E 579986.1, N 4885337.5; T4a 1-3 are 7.4-7.8 m from it). B1's position was its own autonomous average:
 in B1's frame the surveyed ground sits 2.58 m below the 2021 lidar, so these points have no absolute use and are
-dropped from the main table (as before). Internally they are consistent: the three lot-edge points and the four
+sequestered in `sequestered/rtk_points_B1_false_base.csv`, out of every table and figure. Internally they are consistent: the three lot-edge points and the four
 lower-bluff points (slope under 10 deg; both cuts mine) differ by +0.032 m against the 2021 grid. Where they stand:
 on NAIP 2021 (`bare_ground/lot_map.png`) T4a 1-3 sit at the grassy east edge of the gravel lot, with their raw
 positions uncertain by B1's horizontal error, i.e. meters.
