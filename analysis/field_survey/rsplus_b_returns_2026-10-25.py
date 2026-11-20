@@ -3,7 +3,7 @@
 as offsets from the tied RTK elevation of that point; and the PDF of the 3 m returns at one point.
 
 Inputs
-  data/field/2026-10-25/rtk_points_all_fitted.csv   tied RTK points; rows with group floodplain_RSplus_B
+  data/field/2026-10-25/rtk_points_all.csv          benchmark-tied RTK points (env RTK_TABLE overrides); group floodplain_RSplus_B
   data/before/4342-29-64.laz                        2008 MN DNR, ALL returns, vendor NAVD88 (GEOID03), raw frame
   data/after/valley/4342-29-64_3dep_full.laz        2021 3DEP, ALL returns (class 1, 2, 7)
   data/derived/4342-29-64/corrections.json          per-swath star-frame shifts ADDED to 2008 x, y, z by the
@@ -29,7 +29,10 @@ import numpy as np, pandas as pd, laspy
 ROOT = os.path.dirname(os.path.abspath(__file__)) + "/../.."
 os.chdir(ROOT)
 OUT = "data/field/2026-10-25/returns"; os.makedirs(OUT, exist_ok=True); os.makedirs("figures", exist_ok=True)
-RTK = "data/field/2026-10-25/rtk_points_all_fitted.csv"
+# Reference = the benchmark-tied table, NOT the "_fitted" one: the fitted table raises every B-based point by the
+# whole-set shift dZ +0.13 m (weighted_shift.json), the lidar's vegetated-surface response, which would put the
+# 2021 lidar at zero by construction. Used the fitted table by mistake on 2026-11-20; corrected the same day.
+RTK = os.environ.get("RTK_TABLE", "data/field/2026-10-25/rtk_points_all.csv")
 GEN1 = "data/before/4342-29-64.laz"; GEN2 = "data/after/valley/4342-29-64_3dep_full.laz"
 CORR = "data/derived/4342-29-64/corrections.json"
 RADII = (1.0, 3.0, 5.0); RMAX = max(RADII)
