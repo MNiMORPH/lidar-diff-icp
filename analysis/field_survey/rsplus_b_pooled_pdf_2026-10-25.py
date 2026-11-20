@@ -9,7 +9,7 @@ within 1 m of two points counts once per point. Writes the pooled offsets, the s
   inputs   data/field/2026-10-25/returns/rsplus_b_returns_2021.csv.gz, rsplus_b_returns_2008.csv
   outputs  data/field/2026-10-25/returns/rsplus_b_pooled_1m.csv (point, epoch, classification, dz_m)
            data/field/2026-10-25/returns/rsplus_b_pooled_1m_log.txt
-           figures/rtk_2026-10-25_rsplusB_pooled_pdf_1m.png (FIGDPI, default 200)
+           figures/rtk_2026-10-25_rsplusB_pooled_pdf_1m.png and _1m_2021.png (2021 alone) (FIGDPI, default 200)
 """
 import os
 import numpy as np, pandas as pd
@@ -44,4 +44,14 @@ ax.axvline(0, color="0.4", lw=0.8, ls=":"); ax.set_xlim(XLIM)
 ax.set_xlabel("lidar return minus tied RTK ground (m)"); ax.set_ylabel("probability density (1/m)")
 ax.legend(frameon=False, fontsize=9); ax.spines[["top", "right"]].set_visible(False); fig.tight_layout()
 png = "figures/rtk_2026-10-25_rsplusB_pooled_pdf_1m.png"; fig.savefig(png, dpi=int(os.environ.get("FIGDPI", 200))); say("wrote", png)
+# 2021 alone (Andy, 2026-11-20): same bins, range cut to -0.10..+0.40 m (MINE) so the peak fills the axis
+X2 = (-0.10, 0.40); b2 = np.arange(X2[0], X2[1] + 0.005, 0.01)
+fig, ax = plt.subplots(figsize=(8, 4.6))
+ax.hist(sets["2021 all returns"], bins=b2, density=True, histtype="stepfilled", color="#0072b2", alpha=0.18, lw=0)
+ax.hist(sets["2021 all returns"], bins=b2, density=True, histtype="step", color="#0072b2", lw=0.9, ls="--", label="2021 all returns")
+ax.hist(sets["2021 ground (class 2)"], bins=b2, density=True, histtype="step", color="#0072b2", lw=1.8, label="2021 ground (class 2)")
+ax.axvline(0, color="0.4", lw=0.8, ls=":"); ax.set_xlim(X2)
+ax.set_xlabel("2021 lidar return minus tied RTK ground (m)"); ax.set_ylabel("probability density (1/m)")
+ax.legend(frameon=False, fontsize=9); ax.spines[["top", "right"]].set_visible(False); fig.tight_layout()
+png2 = "figures/rtk_2026-10-25_rsplusB_pooled_pdf_1m_2021.png"; fig.savefig(png2, dpi=int(os.environ.get("FIGDPI", 200))); say("wrote", png2, f"(range {X2}; 2021 all returns outside it: {int(((sets['2021 all returns'] < X2[0]) | (sets['2021 all returns'] > X2[1])).sum())} of {len(sets['2021 all returns'])})")
 LOG.close()

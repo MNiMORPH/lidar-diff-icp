@@ -11,3 +11,4 @@ per-point counts within 1 m, median (min-max): 2021 all 54 (25-188) | 2008 all 2
    outside the plotted range (-0.2, 0.8): 2008 ground (classes 2, 8): 0 of 201 returns (density normalized over all returns)
    outside the plotted range (-0.2, 0.8): 2008 all returns: 1 of 222 returns (density normalized over all returns)
 wrote figures/rtk_2026-10-25_rsplusB_pooled_pdf_1m.png
+wrote figures/rtk_2026-10-25_rsplusB_pooled_pdf_1m_2021.png (range (-0.1, 0.4); 2021 all returns outside it: 354 of 5387)
