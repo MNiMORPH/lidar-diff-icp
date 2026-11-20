@@ -9,3 +9,11 @@
   grass and brown, finely branched dead forb stems through it.
 Both show the southern, lot-end part of the field in late October 2026, a mixture of short green and tall dead cover;
 the 2021 lidar flew on 1 May, a different season.
+
+- `2021-08-18_field_hayed_round_bales.jpg` (received 2026-11-20; EXIF DateTimeOriginal 2021:08:18 13:34:40, no GPS,
+  4032 x 2268; the location is Andy's to confirm, the bluff and tree line match the Whitewater field): the field freshly
+  cut and baled, round bales standing, a person walking the stubble. Bracketing the 2021 cut: Sentinel-2 on 14 August
+  2021 still read NDVI 0.60-0.64 at the survey points (the summer metric in `imagery/floodplain_points_covariates.csv`),
+  the NAIP image of 15 August 2021 reads the lowest NDVI of its scene at the same points, and this photo of 18 August
+  shows the bales; so the cut fell between 14 and 15 August 2021, three and a half months after the 1 May 2021 lidar.
+  The May 2021 sward was therefore a hay meadow in its first growth after the previous year's cut.
