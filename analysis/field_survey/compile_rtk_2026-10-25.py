@@ -148,6 +148,15 @@ lost = P.base == "none recorded"; P.loc[lost & (P.t_hhmm >= "14:30"), "base"] = 
 print(f"base assigned by time on {int(lost.sum())} points whose export had no base columns: {P.loc[lost, ['group', 'point', 't_hhmm', 'base']].to_dict('records')}")
 # DROP B1: a student's receiver acting as a base; everything that used its corrections goes
 b1 = P.base == "B1"; print(f"DROPPED {int(b1.sum())} points corrected from B1 (a student's receiver, not the class base): {P.loc[b1, ['group', 'point', 't_hhmm', 'status']].to_dict('records')}")
+# SEQUESTERED, not discarded (Andy, 2026-11-20: "hold the data just in case of possible use, but keep it away from
+# standard use"): the B1 rows go to sequestered/rtk_points_B1_false_base.csv as exported (lon, lat, ellipsoid height,
+# status, RMS, time, baseline), with B1's self-reported position alongside. B1's position was its own autonomous
+# average and is wrong by meters (the bare-ground check puts its frame 2.58 m below the 2021 lidar), so these rows
+# carry no tie and must not be joined to the main tables. Nothing downstream reads that folder.
+_SEQ = f"{os.path.dirname(OUT)}/sequestered"; os.makedirs(_SEQ, exist_ok=True)
+_q = P.loc[b1].copy(); _q["base_lon"], _q["base_lat"], _q["base_h_ell_m"] = B1["lon"], B1["lat"], B1["h"]
+_q["why_sequestered"] = "corrected from B1, a student's receiver running as a base 13:20-13:30 CDT; B1's position is its own autonomous average (meters off); no tie exists"
+_q.to_csv(f"{_SEQ}/rtk_points_B1_false_base.csv", index=False); print(f"SEQUESTERED: the {len(_q)} B1 rows written as exported to {_SEQ}/rtk_points_B1_false_base.csv (not tied, not for standard use)")
 P = P[~b1].reset_index(drop=True)
 # DR9925, NGS datasheet retrieved 2026-11-11 (raw/DR9925_NGS_datasheet_2026-11-11.txt): NAD 83(2011) 44 07 18.13863 N
 # 092 00 16.79318 W, ellipsoid 188.669 m (network accuracy 0.61 cm horizontal, 1.49 cm ellipsoid height, 95 %),
