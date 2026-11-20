@@ -1,0 +1,42 @@
+returns 4,259,295; cells 182400, with >= 8 returns 175538
+ground proxy (5 m lowest return) minus surveyed ground at the 147 floodplain FIX points: median +0.048 m, p10 -0.030, p90 +0.122; by rover CORS_Wickert +0.038, RSplus_A +0.059, RSplus_B +0.046
+k-means inertia by k (standardized features ground/low/tall/shrub/tree fractions, intensity, CV, log top height): k 3: 581246, k 4: 421948, k 5: 313983, k 6: 259310, k 7: 225879, k 8: 202305
+
+cluster table (k = 6; means of the band fractions, medians otherwise):
+         cells  ground  low_sward  tall_herb  shrub   tree  hmax_med  intensity     cv  n_med
+cluster                                                                                      
+0.0      14725   0.740      0.254      0.000  0.002  0.003      0.06   4391.067  0.082   15.0
+1.0      61495   0.038      0.950      0.010  0.001  0.000      0.14   4178.450  0.091   16.0
+2.0      11399   0.000      0.085      0.830  0.051  0.034      0.70   3191.800  0.147   17.0
+3.0      23871   0.042      0.641      0.021  0.080  0.216      6.80   2136.368  0.550   23.0
+4.0      21584   0.002      0.024      0.056  0.681  0.237     10.52   1392.843  0.451   25.0
+5.0      42464   0.012      0.132      0.062  0.174  0.620     13.84   1166.777  0.569   42.0
+
+per cluster, medians of the optical layers at 10 m (floodplain cells): 
+         naip21_ndvi  ndvi_apr26  ndvi_oct26  nelike21
+cluster                                               
+0.0           -0.051       0.197       0.560     0.997
+1.0           -0.046       0.190       0.521     0.952
+2.0            0.045       0.165       0.285     0.000
+3.0            0.098       0.189       0.497     0.666
+4.0            0.253       0.201       0.280     0.000
+5.0            0.137       0.198       0.460     0.117
+
+cluster share north (N >= 4885480) vs south of the split, floodplain cells (%):
+col_0    north  south
+cluster              
+0.0       15.3    5.3
+1.0       49.6   34.5
+2.0        6.9    7.4
+3.0       10.4   23.1
+4.0        2.6    7.1
+5.0       15.2   22.6
+
+clusters at the RTK points by rover:
+cluster       0.0  1.0  2.0  3.0  5.0
+group                                
+CORS_Wickert    3    9    0    3    2
+RSplus_A        6   11    0    5   10
+RSplus_B       25   62    2    7    2
+wrote data/field/2026-10-25/intensity/cell_profiles_1m.csv and cell_profiles_cluster.tif
+wrote figures/rtk_2026-10-25_floodplain_cell_profiles.png
