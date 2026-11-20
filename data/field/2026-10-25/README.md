@@ -999,3 +999,43 @@ within-line intensity measured against a lowest-return zero everywhere on the fl
 strata, and the 147 RTK points as the check on the zero (5-10 cm above the soil in dense sward). The 2008 leaf-off
 level, 0.19 m at the lot end against 0.39 m in the swale, is the one measured contrast between places and has no
 published counterpart for any grass.
+
+## Intensity fused in, pulses with several returns, and the two flights' seasons (2026-11-20)
+
+**Intensity at the points** (`analysis/field_survey/floodplain_intensity_fusion_2026-10-25.py`; `returns/floodplain_intensity_points.csv`,
+`_cells.csv`, log; `figures/rtk_2026-10-25_floodplain_intensity_points.png`, `_map.png`). The 2021 single returns within
+3 m below +0.50 m, per swath; the two swaths see the field at |scan| 6-14 and 13-20 deg; a per-swath linear fit of
+intensity on |scan angle| over the open-field points gives a normalized intensity (ratio to the fit; cuts mine). The
+digitizer is 14-bit; values here run 471-7403. Normalized intensity by location bin: open field 1.08, swale 1.09,
+south zone 0.88. Spearman with normalized intensity over the 147 points, and over the 88 open-field points: April-2026
+NDVI +0.49 and +0.52; summer-2021 NDVI +0.69 and +0.56; the width (IQR) of the return distribution -0.50 and -0.51;
+canopy share -0.60 and -0.42; the sward median -0.19 and -0.18; ground share -0.13 and -0.15. In the scatter against
+April NDVI the open-field points split into a bright arm (ratio 1.1-1.25 at NDVI 0.25 and 0.40) and a dark group
+(ratio 0.5-0.7 at NDVI 0.33-0.37); the dark group is the north end of the RS+ B loop along the dark strip in the
+imagery. Measurement only: brightness at 1,064 nm on 1 May 2021 rose with spring and summer greenness and fell where
+the return distribution was wide, and a separate dark population exists where the imagery is dark too.
+
+**Intensity across the floodplain.** The same cloud aggregated to the 10 m optical grid (8086 floodplain cells,
+8076 with >= 20 single returns; returns per cell median 1461; single-return share median 0.40). Spearman of the cell
+mean single-return intensity with the optical layers over the 1688 cells with single-return share >= 0.9 (no trees;
+cut mine): October-2026 NDVI +0.68, NDRE +0.67, NDMI +0.60; the NE-like (reed-canary-like) probabilities +0.51 (2008
+Landsat), +0.59 (2021 Sentinel-2), +0.63 (2025); May-2021 NDVI (the flight date) +0.40; April-2026 NDVI +0.38;
+August-2021 NDVI -0.11. NE-like grass cells have median intensity 4383 against 3844 for the other grass cells. The
+sign of some correlations flips between the swath-3040-dominated and swath-3041-dominated cells (May-2021 NDVI +0.27
+against -0.33), so per-swath, scan-angle-conditioned treatment is required before any use; the grass-only column is
+the cleanest.
+
+**Several returns from one pulse** (`analysis/field_survey/floodplain_returns_multiplicity_2026-10-25.py`; pulses
+identified in the raw cloud by swath and full-precision GPS time, 0.7 us steps; the per-return CSVs round the time
+to 0.1 ms and cannot do this). Over the 102 sward points, 98.0 % of returns are single and 1.8 % of pulses have more
+than one return; over the 45 tree-edge points, 30 % single and 61 % of pulses multiple. In the 766 fully seen
+multi-return sward pulses the gap between consecutive returns is never under 0.63 m (p05 1.16 m, median 2.07 m); at
+the tree edge the smallest gap is 0.11 m and 67 of 16,586 pulses have a gap under 0.5 m. Of the 2889 sward returns
+within 5 cm of the ground, 99 % are single returns; last-of-several returns sit a median +0.141 m up and reach the
+ground 2.6 % of the time. Pulse density over the sward 17.3 per m^2, returns 17.3 per m^2.
+
+**The two seasons against reed canary grass.** Floodplain-median Sentinel-2 NDVI: 0.53 on 1 May 2021 (the 2021
+flight), 0.85 on 14 August 2021, 0.19 on 10 April 2026, 0.38 on 17 October 2026; Landsat in autumn 2008: 0.49 on 21
+October, 0.42 on 29 October, 0.22 on 22 November (the 2008 flight was in November; the day for swaths 137-138 is still
+open). The phenology notes (`analysis/rcg/PHENOLOGY_LITERATURE_2026-11-18.md`) record reed canary grass as one of the
+first grasses to sprout in spring, flowering May to mid-June, lodging in mid-summer, and staying green late into fall.
