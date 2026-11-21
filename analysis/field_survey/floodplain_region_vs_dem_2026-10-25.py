@@ -77,4 +77,16 @@ ax.hist(Q.dz_m, bins=e2, density=True, histtype="step", color="#0072b2", lw=1.6,
 ax.axvline(0, color="0.4", lw=0.8, ls=":"); ax.set_xlim(-0.30 + off, 0.40 + off); ax.set_xlabel("height above the surveyed ground (m)"); ax.set_ylabel("probability density (1/m)"); ax.legend(frameon=False, fontsize=8); ax.spines[["top", "right"]].set_visible(False)
 sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap); sm.set_array([]); fig.colorbar(sm, ax=fig.axes[1], shrink=0.7, label="median intensity in the bar")
 fig.tight_layout(); fig.savefig("figures/rtk_2026-10-25_floodplain_region_vs_dem.png", dpi=int(os.environ.get("FIGDPI", 160))); say("wrote figures/rtk_2026-10-25_floodplain_region_vs_dem.png")
+
+# log-density version (Andy, 2026-11-21): wider range so the canopy tail and the shelf both show
+eL = np.arange(-0.50, 1.00 + 0.005, 0.01); mL = 0.5 * (eL[1:] + eL[:-1]); hL = np.histogram(R.dz, bins=eL)[0] / (len(R) * 0.01); bL = np.digitize(R.dz, eL) - 1
+medL = np.array([R.inten[bL == k].median() if (bL == k).sum() >= 20 else np.nan for k in range(len(mL))])
+fig, axs = plt.subplots(1, 2, figsize=(15, 5.2))
+ax = axs[0]; ax.bar(mL, np.where(hL > 0, hL, np.nan), width=0.01, color=[cmap(norm(m)) if np.isfinite(m) else "0.85" for m in medL], edgecolor="none"); ax.set_yscale("log"); ax.axvline(0, color="0.4", lw=0.8, ls=":")
+ax.set_xlim(-0.50, 1.00); ax.set_xlabel("2021 return minus official USGS 1 m DEM (m)"); ax.set_ylabel("probability density (1/m), log"); ax.set_title(f"all returns in the region (n {len(R):,}); {100 * ((R.dz < -0.5) | (R.dz > 1.0)).mean():.2f} % outside the axis", fontsize=10); ax.spines[["top", "right"]].set_visible(False)
+ax = axs[1]; e3 = np.arange(-0.50 + off, 1.00 + off + 0.005, 0.01)
+ax.hist(R.dz + off, bins=e3, density=True, histtype="step", color="#d55e00", lw=1.6, label=f"region returns minus DEM, shifted +{off:.3f} m")
+ax.hist(Q.dz_m, bins=e3, density=True, histtype="step", color="#0072b2", lw=1.6, label=f"returns within 1 m of the RTK points, minus RTK (n {len(Q)})")
+ax.set_yscale("log"); ax.axvline(0, color="0.4", lw=0.8, ls=":"); ax.set_xlim(-0.50 + off, 1.00 + off); ax.set_xlabel("height above the surveyed ground (m)"); ax.set_ylabel("probability density (1/m), log"); ax.legend(frameon=False, fontsize=8); ax.spines[["top", "right"]].set_visible(False)
+fig.colorbar(sm, ax=axs[0], shrink=0.7, label="median intensity in the bar"); fig.tight_layout(); fig.savefig("figures/rtk_2026-10-25_floodplain_region_vs_dem_log.png", dpi=int(os.environ.get("FIGDPI", 160))); say("wrote figures/rtk_2026-10-25_floodplain_region_vs_dem_log.png")
 LOG.close()
