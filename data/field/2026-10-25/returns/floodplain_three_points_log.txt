@@ -1,0 +1,34 @@
+          point      role      t status  rms_v    rtk_z  n1m  med_dz_1m  p10_dz_1m  p90_dz_1m  med_int_1m  med_dz_3m  n08_3m  med_dz08_3m  min_dz08_3m        cell_cluster  cell_int  cell_ground_proxy_minus_rtk  ndvi_apr26  naip21  gen2_product  slope
+0    RSplus_B 3   suspect  15:09    FIX  0.115  218.270   73      0.040     -0.010      7.792      2181.0      0.070      17        0.293        0.083  sward under crowns  1912.792                       -0.110       0.196  -0.155         0.040  0.528
+1    RSplus_B 2  neighbor  15:09    FIX  0.011  218.177   88      0.143      0.120     10.123      1527.5      0.143      16        0.406        0.176  sward under crowns  2297.593                        0.053       0.213  -0.164         0.128  0.362
+2  RSplus_B 100   suspect  15:51    FIX  0.017  218.273   53      0.017     -0.013      0.065      3158.0      0.087      15       -0.010       -0.150           low sward  2897.833                       -0.193       0.215   0.079        -0.015  2.606
+3   RSplus_B 98  neighbor  15:50    FIX  0.017  218.268   81      0.192      0.142      3.392      2997.0      0.192      21        0.325        0.095  sward under crowns  3150.652                        0.042       0.198   0.023         0.134  0.764
+4   RSplus_A 13   suspect  14:47    FIX  0.049  217.937   53      0.023     -0.007      0.033      4545.0      0.003      19        0.276        0.046           low sward  4505.500                       -0.077       0.231  -0.066        -0.003  0.462
+5   RSplus_A 12  neighbor  14:46    FIX  0.038  217.781   52      0.174      0.159      0.199      4532.5      0.179      21        0.422        0.362        smooth sward  4479.263                        0.119       0.286  -0.051         0.172  0.436
+
+RSplus_B around point 3:
+ point t_hhmm status  rms_v  navd88_tied_m  gen2_minus_rtk_m  gen1_minus_rtk_m
+     1  15:09    FIX  0.010        218.237             0.136             0.229
+     2  15:09    FIX  0.011        218.177             0.128             0.364
+     3  15:09    FIX  0.115        218.270             0.040             0.196
+     4  15:10    FIX  0.011        218.120             0.161             0.240
+     5  15:10    FIX  0.010        218.110             0.125             0.361
+     6  15:11    FIX  0.010        218.018             0.156             0.488
+
+RSplus_B around point 100:
+ point t_hhmm status  rms_v  navd88_tied_m  gen2_minus_rtk_m  gen1_minus_rtk_m
+    97  15:50    FIX  0.023        218.187             0.185             0.215
+    98  15:50    FIX  0.017        218.268             0.134             0.293
+    99  15:51  FLOAT  0.129        218.120             0.268             0.327
+   100  15:51    FIX  0.017        218.273            -0.015             0.019
+
+RSplus_A around point 13:
+ point t_hhmm status  rms_v  navd88_tied_m  gen2_minus_rtk_m  gen1_minus_rtk_m
+    10  14:45    FIX  0.010        218.138             0.019             0.273
+    11  14:45    FIX  0.013        217.868             0.190             0.512
+    12  14:46    FIX  0.038        217.781             0.172             0.465
+    13  14:47    FIX  0.049        217.937            -0.003             0.275
+    14  14:48  FLOAT  0.088        224.607            -6.741            -6.552
+    15  14:49  FLOAT  0.241        224.724            -6.923            -6.682
+    16  14:49 SINGLE  4.417        215.251             2.472             2.880
+wrote figures/rtk_2026-10-25_floodplain_three_points.png
