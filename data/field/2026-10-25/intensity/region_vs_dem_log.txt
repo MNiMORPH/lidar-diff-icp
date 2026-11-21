@@ -8,3 +8,4 @@ RTK-referenced set: 4631 returns within 1 m of the FIX points inside the region;
 translation test: region returns minus DEM, shifted by +0.130: median +0.134 vs RTK set +0.135; p05 +0.096 vs +0.076; p95 +0.188 vs +0.199; shelf share (region below -0.08 vs RTK set below +0.05): 1.27 % vs 1.81 %
 per-cell median of return minus DEM: median +0.004, p10 -0.008, p90 +0.018 over 59706 cells
 wrote figures/rtk_2026-10-25_floodplain_region_vs_dem.png
+wrote figures/rtk_2026-10-25_floodplain_region_vs_dem_log.png
