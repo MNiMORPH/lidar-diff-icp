@@ -1,0 +1,10 @@
+set                         n   peak  knee (max curvature of log density)  mirror-excess mode  mirror-excess median excess share RTK DEM-soil
+crown edge 0-3 m       492208 +0.005                               -0.330              -0.010                -0.010        5.56%       -0.120 | tail plateau  7.6 decades/m (e-folding 5.7 cm), handover at -0.100 m below the peak
+     slope (decades/m) at -0.04/-0.06/-0.08/-0.10/-0.12/-0.14/-0.16/-0.20:  28.1  21.6  14.4   9.1   6.5   6.2   7.2   7.2
+near trees 3-10 m      342084 +0.005                               -0.310              -0.010                -0.010        4.05%       -0.145 | tail plateau  7.4 decades/m (e-folding 5.8 cm), handover at -0.120 m below the peak
+     slope (decades/m) at -0.04/-0.06/-0.08/-0.10/-0.12/-0.14/-0.16/-0.20:  30.2  20.1  13.0  10.9   8.2   7.9   5.7   6.3
+open > 10 m            395741 +0.005                               -0.230              -0.010                -0.010        4.55%       -0.121 | tail plateau 14.8 decades/m (e-folding 2.9 cm), handover at -0.080 m below the peak
+     slope (decades/m) at -0.04/-0.06/-0.08/-0.10/-0.12/-0.14/-0.16/-0.20:  32.1  21.6  16.5  13.8  12.8  15.0  14.6  14.8
+sward region           842450 +0.005                               -0.050              -0.010                -0.010        5.58%       -0.130 | tail plateau  7.5 decades/m (e-folding 5.8 cm), handover at -0.120 m below the peak
+     slope (decades/m) at -0.04/-0.06/-0.08/-0.10/-0.12/-0.14/-0.16/-0.20:  29.6  21.0  14.7  11.1   9.3   8.6   7.8   7.1
+wrote figures/rtk_2026-10-25_floodplain_shoulder.png (dashed in the slope panel: the RTK soil depth of each band, for the score only)
