@@ -1039,3 +1039,50 @@ flight), 0.85 on 14 August 2021, 0.19 on 10 April 2026, 0.38 on 17 October 2026;
 October, 0.42 on 29 October, 0.22 on 22 November (the 2008 flight was in November; the day for swaths 137-138 is still
 open). The phenology notes (`analysis/rcg/PHENOLOGY_LITERATURE_2026-11-18.md`) record reed canary grass as one of the
 first grasses to sprout in spring, flowering May to mid-June, lodging in mid-summer, and staying green late into fall.
+
+## The shape of the return distribution: theory, a hard-surface test, and the shoulder (2026-11-21)
+
+**What the literature gives** (`analysis/field_survey/lit/RETURN_SHAPE_THEORY_LIT_2026-11-21.md`, agent-gathered, source-tagged).
+For one surface the echo is the laser pulse convolved with the footprint's height distribution (Gardner 1982, 1992):
+a Gaussian core whose width adds pulse length, footprint slope and roughness in quadrature; measured planar residuals
+on flat ground run 2-5 cm (Davenport 2004, van der Sande 2010). Range walk, the dependence of the detected range on
+return amplitude, is 1-20 cm one-sided for a fixed-threshold detector over a sward's amplitude range (Thiel & Wehr
+2004) and near zero for a constant-fraction or peak detector; the TerrainMapper's detection principle is not
+documented. Two surfaces closer than about 0.85 pulse widths give ONE maximum whose position is the energy-weighted
+mean of the two, z = -d (1 - f) for a soil share f of the returned energy (Hofton 2000; the agent's own numerical
+check, which reproduces the vendor's 0.5 m separation); so for a 13 cm sward the stacked height distribution is the
+distribution of the soil's energy share stretched over 13 cm, a shoulder, with a soil mode only where whole
+footprints meet bare ground. Every published vegetation forward model, Beer-Lambert canopy profiles, MacArthur-Horn,
+the geometric-optical models, Weibull and mixture fits, is a sum of surface reflections convolved with the pulse for
+layers thicker than the pulse; none treats a layer thinner than it, none predicts a tail below the soil, no paper
+prints a short-vegetation return histogram on a log axis, and no paper fits a named family to single-surface ranging
+error (Hohle & Hohle 2009 report DEM errors as peaked and heavy-tailed without a family).
+
+**Our own hard-surface test** (`analysis/field_survey/floodplain_flat_surface_shape_2026-10-25.py`; log in
+`intensity/`). Returns minus a least-squares plane per 5 m window: on the sward region (597,029 returns) sd 2.6 cm,
+NMAD 2.2 cm, excess kurtosis 3.3, log-density slope constant at 27 decades/m from 3 to 8 cm on both sides, a Laplace
+favored over a Gaussian by 0.028 log-likelihood per return, and no dependence of the residual on intensity (-2 to
++1 mm across the deciles). The exponential flanks are in the point cloud, not the DEM, and are not range walk. Split
+by intensity decile, every class is itself exponential-flanked (kurtosis 2.1-5.8, Laplace favored) with sd 2.4-2.9 cm,
+so the flanks are not a mixture of Gaussians of differing width either. The road corridor gives only 1,927 returns on
+a crowned surface: sd 2.4 cm, Gaussian-like, with a +0.31 rank correlation of residual with intensity (2.6 cm across
+the range) that is confounded with position on the crown; the project's earlier infield measurement, 1.1 cm, remains
+the sensor's bare-surface width.
+
+**Modeling the shoulder** (`floodplain_mixture_fit_2026-10-25.py`, `floodplain_soil_component_2026-10-25.py`,
+`floodplain_shoulder_2026-10-25.py`). Free Gaussian mixtures put their second component on the core's exponential
+flanks in every set. Two things work: (1) the slope of the log density hands over from the core's 30 decades/m to a
+tail plateau of 7.5 decades/m (e-folding 5.8 cm near the trees, 2.9 cm in the open sward) at 0.10-0.12 m below the
+mapped surface, against RTK soil at 0.12-0.145 m; (2) a core fitted to the soil-free upper flank (+1 to +6 cm) as an
+exponential, reflected and subtracted, leaves a sub-surface hump whose median lies at -0.13 (sward region), -0.16
+(crown edge), -0.14 (near trees) and -0.12 m (open) against RTK -0.130, -0.120, -0.145, -0.121: the sward depth from
+the point cloud alone to about 3 cm, scored against the survey afterward. Intensity classes do not isolate the soil in
+the stacked record (every class has its mode on the peak). The 5 cm cut, the fit windows and the bands are mine.
+
+**Reading (hypothesis; Andy's framing, 2026-11-21).** Two quantities govern the sward's record: the mean free path of
+the beam in the sward, which with the leaf-area profile sets how the returned energy is shared between leaf and soil
+along each pulse, and the footprint-to-footprint variation of that share, clumping, which spreads the single returns
+into the exponential flanks and the bridge down to the soil; the soil's lower reflectance at 1,064 nm (its returns
+run 2300-3700 against the sward's 4350) biases every merged return upward. A forward model with those four
+ingredients, mean free path, profile shape, clumping distribution and reflectance ratio, against the measured height
+density and intensity-against-height curve is the next step, with the RTK soil depth as its check.
