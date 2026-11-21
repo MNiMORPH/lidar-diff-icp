@@ -1,0 +1,28 @@
+1. core fitted on the upper flank (+0.01..+0.06 m above the peak) as exp(a - |h|/b), reflected, subtracted:
+set                    peak core e-fold b residual below the peak: share    mode  median         p25-p75 RTK soil
+sward region         +0.005        0.0168                          6.67%  -0.010  -0.020  -0.070  -0.010   -0.130 | residual below -0.05: share 1.03 %, mode -0.100, median -0.130, p25 -0.180, p75 -0.110
+   sward region: height by intensity class (n, mode, median, p10, share below -0.08):
+      sward region           0-2500  n   35808 mode +0.005 median +0.010 p10 -0.023 below -0.08:  2.03 %
+      sward region        2500-3000  n   37061 mode +0.005 median +0.008 p10 -0.027 below -0.08:  3.15 %
+      sward region        3000-3500  n   61447 mode +0.005 median +0.007 p10 -0.034 below -0.08:  3.88 %
+      sward region        3500-4000  n  146125 mode +0.005 median +0.005 p10 -0.027 below -0.08:  2.07 %
+      sward region        4000-9000  n  562009 mode +0.005 median +0.003 p10 -0.019 below -0.08:  0.60 %
+crown edge 0-3 m     +0.005        0.0211                          6.60%  -0.010  -0.020  -0.030  -0.020   -0.120 | residual below -0.05: share 0.93 %, mode -0.120, median -0.160, p25 -0.200, p75 -0.140
+      crown edge 0-3 m       0-2500  n  107524 mode +0.005 median +0.024 p10 -0.027 below -0.08:  2.95 %
+      crown edge 0-3 m    2500-3000  n   40913 mode +0.005 median +0.009 p10 -0.028 below -0.08:  2.79 %
+      crown edge 0-3 m    3000-3500  n   54840 mode +0.005 median +0.007 p10 -0.029 below -0.08:  2.71 %
+      crown edge 0-3 m    3500-4000  n   91597 mode +0.005 median +0.004 p10 -0.025 below -0.08:  1.53 %
+      crown edge 0-3 m    4000-9000  n  197334 mode +0.005 median +0.003 p10 -0.021 below -0.08:  0.53 %
+near trees 3-10 m    +0.005        0.0170                          4.98%  -0.010  -0.020  -0.080  -0.020   -0.145 | residual below -0.05: share 1.14 %, mode -0.090, median -0.140, p25 -0.170, p75 -0.110
+      near trees 3-10 m      0-2500  n   53362 mode +0.005 median +0.008 p10 -0.016 below -0.08:  0.34 %
+      near trees 3-10 m   2500-3000  n   11505 mode +0.005 median +0.008 p10 -0.026 below -0.08:  2.60 %
+      near trees 3-10 m   3000-3500  n   20048 mode +0.005 median +0.008 p10 -0.043 below -0.08:  4.90 %
+      near trees 3-10 m   3500-4000  n   46514 mode +0.005 median +0.005 p10 -0.034 below -0.08:  3.29 %
+      near trees 3-10 m   4000-9000  n  210655 mode +0.005 median +0.003 p10 -0.020 below -0.08:  0.85 %
+open > 10 m          +0.005        0.0154                          4.28%  -0.010  -0.020  -0.020  -0.010   -0.121 | residual below -0.05: share 0.41 %, mode -0.100, median -0.120, p25 -0.140, p75 -0.100
+      open > 10 m            0-2500  n   34257 mode +0.005 median +0.005 p10 -0.019 below -0.08:  0.28 %
+      open > 10 m         2500-3000  n   13174 mode +0.005 median +0.006 p10 -0.022 below -0.08:  0.45 %
+      open > 10 m         3000-3500  n   16998 mode +0.005 median +0.007 p10 -0.024 below -0.08:  1.88 %
+      open > 10 m         3500-4000  n   53076 mode +0.005 median +0.005 p10 -0.022 below -0.08:  1.26 %
+      open > 10 m         4000-9000  n  278235 mode +0.005 median +0.004 p10 -0.016 below -0.08:  0.41 %
+wrote figures/rtk_2026-10-25_floodplain_soil_component.png (dotted: RTK soil, for the score only)
