@@ -1,0 +1,10 @@
+seeds: 104 of 130 RS+ A/B FIX point cells classed low or smooth sward; intensity window 2109-4685, CV below 0.235 (5th/95th percentiles of the seeds)
+candidate cells 73279; connected components 814; chosen component holds 89 seeds, 59706 cells = 5.97 ha; its extent E 579780-580159, N 4885281-4885760
+region: mean intensity median 4314, CV median 0.083; structure classes inside: {0: 10783, 1: 40090, 2: 5389, 3: 495, 4: 932, 5: 11} (0 smooth sward, 1 low sward, 2 tall herb, 3 under crowns, 4 shrub, 5 tree)
+
+returns in the region: 842,450 over 59,706 cells (14.1 per cell); single-return share 96.6 %
+return minus official DEM: median +0.004, p05 -0.034, p10 -0.021, p90 +0.037, p95 +0.058, NMAD 0.019; share below -0.08 m (the shelf, 0.13 - 0.05) 1.27 %, below -0.11 0.71 %, above +0.20 1.06 %
+RTK-referenced set: 4631 returns within 1 m of the FIX points inside the region; minus RTK median +0.135, p05 +0.076, p95 +0.199; DEM minus RTK at the RS+ A/B points median +0.130
+translation test: region returns minus DEM, shifted by +0.130: median +0.134 vs RTK set +0.135; p05 +0.096 vs +0.076; p95 +0.188 vs +0.199; shelf share (region below -0.08 vs RTK set below +0.05): 1.27 % vs 1.81 %
+per-cell median of return minus DEM: median +0.004, p10 -0.008, p90 +0.018 over 59706 cells
+wrote figures/rtk_2026-10-25_floodplain_region_vs_dem.png
