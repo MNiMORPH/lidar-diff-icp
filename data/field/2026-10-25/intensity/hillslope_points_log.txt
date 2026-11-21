@@ -1,0 +1,7 @@
+hillslope FIX points: 39 ({'hillslope_T4a': 21, 'hillslope_RS3': 18}); DEM slope at the points median 31.2 deg; official DEM minus RTK (vertical) median +0.074, slope-normal median +0.060
+within 1 m, both teams: n 3,838; within +-0.05 m 15.7 %, below -0.05 6.2 %, 0.05-0.5 m 25.4 %, 0.5-2 m 5.7 %, above 2 m 47.0 %; near-ground median +0.057, NMAD 0.085; intensity: ground 1596, understory 1615, canopy 676; single 14.0 %
+within 3 m, both teams: n 39,356; within +-0.05 m 12.7 %, below -0.05 8.1 %, 0.05-0.5 m 20.5 %, 0.5-2 m 8.0 %, above 2 m 50.7 %; near-ground median +0.050, NMAD 0.110; intensity: ground 1525, understory 1543, canopy 703; single 11.7 %
+within 1 m, hillslope_RS3: n 1,710; within +-0.05 m 15.8 %, below -0.05 3.0 %, 0.05-0.5 m 33.3 %, 0.5-2 m 9.5 %, above 2 m 38.4 %; near-ground median +0.079, NMAD 0.079; intensity: ground 1640, understory 1598, canopy 627; single 16.1 %
+within 1 m, hillslope_T4a: n 2,128; within +-0.05 m 15.6 %, below -0.05 8.8 %, 0.05-0.5 m 19.1 %, 0.5-2 m 2.6 %, above 2 m 53.9 %; near-ground median +0.035, NMAD 0.088; intensity: ground 1567, understory 1642, canopy 714; single 12.3 %
+per point (1 m): returns median 94 (13-180); ground share median 0.11, p10 0.00, p90 0.44; points with no return within 5 cm of the ground: 10 of 39; near-ground median offset over points +0.055 m
+wrote figures/rtk_2026-10-25_hillslope_points_returns.png
