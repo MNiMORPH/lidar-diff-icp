@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """The forested hillslope: histogram of 2021 return height and brightness, slope-normal (Andy, 2026-11-21).
-Area: the bluff west of the road at the hillslope traverses, E 579620-579900, N 4885260-4885540 (MINE), cells of the
-official USGS 1 m DEM (tiles x57y489/x58y489, fetched 2026-11-21 into dem3dep/usgs_1m_dem_bluff.tif) with slope >= 10 deg
+Area: the bluff west of the road at the hillslope traverses, E 579720-579950, N 4885330-4885670 (MINE; widened so that every hillslope RTK point lies inside with a 20 m margin), cells of the
+official USGS 1 m DEM (tiles x57y489/x58y489, fetched 2026-11-21 into dem3dep/usgs_1m_dem_bluff_wide.tif) with slope >= 10 deg
 (MINE) and classed tree by the earlier rule where the 1 m grids exist; here simply slope >= 10 deg west of the road line.
 Height of each return = (z - DEM at the return's own x, y by bilinear interpolation) x cos(slope at x, y): the distance
 perpendicular to the local DEM surface, so that a return low in a sloping cell is not counted as low. Slope and aspect
@@ -23,8 +23,8 @@ ROOT = os.path.dirname(os.path.abspath(__file__)) + "/../.."; os.chdir(ROOT)
 OUT = "data/field/2026-10-25/intensity"; LOG = open(f"{OUT}/hillslope_returns_log.txt", "w")
 def say(*a):
     s = " ".join(str(x) for x in a); print(s); LOG.write(s + "\n")
-E0, E1, N0, N1 = 579620.0, 579900.0, 4885260.0, 4885540.0; RES = 1.0; nx, ny = int(E1 - E0), int(N1 - N0)
-DEMF = "data/field/2026-10-25/dem3dep/usgs_1m_dem_bluff.tif"
+E0, E1, N0, N1 = 579720.0, 579950.0, 4885330.0, 4885670.0; RES = 1.0; nx, ny = int(E1 - E0), int(N1 - N0)   # widened 2026-11-21: the first window (E 579620-579900, N 4885260-4885540) left ten hillslope points outside
+DEMF = "data/field/2026-10-25/dem3dep/usgs_1m_dem_bluff_wide.tif"
 if not os.path.exists(DEMF):
     urls = ["https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/1m/Projects/MN_SE_Driftless_2021_B21/TIFF/USGS_1M_15_x57y489_MN_SE_Driftless_2021_B21.tif"]
     srcs = []

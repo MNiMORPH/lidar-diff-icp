@@ -1,16 +1,16 @@
-bluff cells: 73392 of 78400; slope median 27.2 deg, p10 18.2, p90 34.7
-returns on the bluff: 2,917,708; single-return share 9.4 %; vendor classes {1: 2450087, 2: 467482, 7: 139}
-slope-normal height: median +2.816, share within +-0.05 m 32.7 %, below -0.05 1.93 %, 0.05-0.5 m 5.1 %, 0.5-2 m 6.3 %, above 2 m 54.0 %
-near-ground returns (|h| < 0.5 m): 1,158,833; peak NMAD about the median 0.032 m; vertical (not slope-normal) NMAD for comparison 0.036 m
-intensity medians: ground peak |h| < 0.05: 1526; 0.05-0.5 m: 1269; 0.5-2 m: 806; canopy > 2 m: 696; below -0.05: 1067
-ground-peak returns by return type: single 21 %, last-of-several 79 %
+bluff cells: 58466 of 78200; slope median 26.8 deg, p10 17.3, p90 35.4
+returns on the bluff: 2,095,673; single-return share 13.0 %; vendor classes {1: 1749044, 2: 346325, 7: 304}
+slope-normal height: median +2.396, share within +-0.05 m 32.5 %, below -0.05 2.15 %, 0.05-0.5 m 5.9 %, 0.5-2 m 7.4 %, above 2 m 52.0 %
+near-ground returns (|h| < 0.5 m): 850,716; peak NMAD about the median 0.034 m; vertical (not slope-normal) NMAD for comparison 0.038 m
+intensity medians: ground peak |h| < 0.05: 1594; 0.05-0.5 m: 1298; 0.5-2 m: 836; canopy > 2 m: 727; below -0.05: 1153
+ground-peak returns by return type: single 28 %, last-of-several 72 %
 
 check of the slope-normal referencing: near-ground peak width (NMAD of |h| < 0.5 m returns) by slope class, slope-normal vs vertical:
-   slope 10-20 deg: n  212843  slope-normal NMAD 0.027 m, median +0.005  |  vertical NMAD 0.028 m, median +0.005
-   slope 20-30 deg: n  585173  slope-normal NMAD 0.030 m, median +0.004  |  vertical NMAD 0.033 m, median +0.004
-   slope 30-60 deg: n  359658  slope-normal NMAD 0.038 m, median +0.006  |  vertical NMAD 0.046 m, median +0.007
+   slope 10-20 deg: n  162389  slope-normal NMAD 0.030 m, median +0.006  |  vertical NMAD 0.031 m, median +0.006
+   slope 20-30 deg: n  391771  slope-normal NMAD 0.032 m, median +0.007  |  vertical NMAD 0.036 m, median +0.008
+   slope 30-60 deg: n  292784  slope-normal NMAD 0.039 m, median +0.005  |  vertical NMAD 0.046 m, median +0.006
 
-hillslope RTK FIX points in the area: 29; official DEM minus RTK, vertical: median +0.055 NMAD 0.105; slope-normal: median +0.046 NMAD 0.088; by group hillslope_RS3 +0.050 (n 11), hillslope_T4a +0.024 (n 18)
+hillslope RTK FIX points in the area: 39; official DEM minus RTK, vertical: median +0.058 NMAD 0.120; slope-normal: median +0.052 NMAD 0.103; by group hillslope_RS3 +0.084 (n 18), hillslope_T4a +0.037 (n 21)
 wrote figures/rtk_2026-10-25_hillslope_returns.png
-canopy: returns above 2 m 54.0 %; their height median 7.5 m, p90 13.7, p99 17.5, max 29.0 m
+canopy: returns above 2 m 52.0 %; their height median 8.1 m, p90 16.8, p99 27.9, max 35.0 m
 wrote figures/rtk_2026-10-25_hillslope_returns_canopy.png

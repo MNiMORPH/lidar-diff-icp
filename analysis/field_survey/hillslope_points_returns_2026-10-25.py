@@ -2,7 +2,7 @@
 """The hillslope RTK points: 2021 returns within 1 m (and 3 m) of each FIX point of the two RS3 traverses, as the
 slope-normal distance from the surveyed ground (Andy, 2026-11-21: the bluff counterpart of the floodplain's 1 m stacks).
 Reference per point: a plane through the tied RTK point with the official 1 m DEM's local gradient (dem3dep/
-usgs_1m_dem_bluff.tif, central differences); height = (z - plane(x, y)) x cos(slope). Pooled over the points, drawn
+usgs_1m_dem_bluff_wide.tif, central differences); height = (z - plane(x, y)) x cos(slope). Pooled over the points, drawn
 as the bluff-wide figure was: symmetric-log height axis ground to canopy top with intensity-colored bars, a
 near-ground zoom with the DEM-referenced bluff curve, and the two teams separately. Log: shares by height band,
 intensity by band, per-point ground share, DEM minus RTK.
@@ -17,10 +17,11 @@ ROOT = os.path.dirname(os.path.abspath(__file__)) + "/../.."; os.chdir(ROOT)
 OUT = "data/field/2026-10-25/intensity"; LOG = open(f"{OUT}/hillslope_points_log.txt", "w")
 def say(*a):
     s = " ".join(str(x) for x in a); print(s); LOG.write(s + "\n")
-with rasterio.open("data/field/2026-10-25/dem3dep/usgs_1m_dem_bluff.tif") as r: DEM = r.read(1).astype(float); DEM[DEM == r.nodata] = np.nan; tr = r.transform; E0, N1 = tr.c, tr.f
+with rasterio.open("data/field/2026-10-25/dem3dep/usgs_1m_dem_bluff_wide.tif") as r: DEM = r.read(1).astype(float); DEM[DEM == r.nodata] = np.nan; tr = r.transform; E0, N1 = tr.c, tr.f
 gy, gx = np.gradient(DEM, 1.0); gy = -gy
 def at(a, x, y): return map_coordinates(a, [((N1 - y) - 0.5), ((x - E0) - 0.5)], order=1, mode="nearest")
 P = pd.read_csv("data/field/2026-10-25/rtk_points_all.csv"); H = P[P.group.str.startswith("hillslope") & (P.status == "FIX")].copy()
+assert (H.easting_tied.between(E0 + 2, E0 + DEM.shape[1] - 2) & H.northing_tied.between(N1 - DEM.shape[0] + 2, N1 - 2)).all(), "a hillslope point lies outside the DEM window"
 H["gx"] = at(gx, H.easting_tied.values, H.northing_tied.values); H["gy"] = at(gy, H.easting_tied.values, H.northing_tied.values); H["slope"] = np.degrees(np.arctan(np.hypot(H.gx, H.gy))); H["dem"] = at(DEM, H.easting_tied.values, H.northing_tied.values)
 say(f"hillslope FIX points: {len(H)} ({H.group.value_counts().to_dict()}); DEM slope at the points median {H.slope.median():.1f} deg; official DEM minus RTK (vertical) median {(H.dem - H.navd88_tied_m).median():+.3f}, slope-normal median {((H.dem - H.navd88_tied_m) * np.cos(np.radians(H.slope))).median():+.3f}")
 bbox = (H.easting_tied.min() - 4, H.easting_tied.max() + 4, H.northing_tied.min() - 4, H.northing_tied.max() + 4); parts = []
