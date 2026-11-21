@@ -436,7 +436,7 @@ help: T3a 2 / T4a 5 (8.2 m, 8-11 deg, T4a 5 tilt 4.3 deg) gives T4a -56 mm raw a
 the shift, T3a 3 / T4a 6 (7.3 m, 23 deg) +32 / +42, T3a 4 / T4a 8 (3.5 m but 1.3 m of relief at
 20 deg) +224 / +185; the raw-to-shifted spread is the terrain correction's uncertainty. Lidar minus RTK at
 these B1 points is +1.8 to +2.7 m, B1's own height error, the same for both rovers. What would settle the pair:
-whether T4a's unit had tilt compensation on (ask T4b or T4a; the Flow project on that unit records it).
+whether T4a's unit had tilt compensation on (ask T4b or T4a; the Flow project on that unit records it). **Settled 2026-11-21: T4a confirmed to Andy that tilt compensation was on.** With that, the error budget's compensation-off branch (`rtk_error_budget_log.txt`) is ruled out, and the 8.5-10 cm scatter of the hillslope points against the lidar floor, against a propagated 3 cm, is left to pole footing on litter, roots and rock, multipath under canopy that the receiver's formal RMS does not see, and the floor's own texture within the comparison window.
 
 **Test: what if the RS3 exports were NOT tilt-compensated (Andy, 2026-11-17)?**
 `analysis/field_survey/tilt_uncompensated_test_2026-10-25.py`, log `tilt_uncompensated_test_log.txt`. The
