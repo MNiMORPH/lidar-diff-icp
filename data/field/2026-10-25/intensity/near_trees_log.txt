@@ -1,0 +1,12 @@
+cells per band (floodplain, non-tree): crown edge, 0-3 m from a tree cell: 30403 (north 12259, south 18144), near trees, 3-10 m: 23479 (north 14759, south 8720), open, > 10 m: 30243 (north 28296, south 1947)
+set                                               n  median     p05     p95 shelf<-0.08  0.2-1 m   >1 m  single int peak int shelf int herb
+crown edge, 0-3 m from a tree cell           492208  +0.006  -0.039  +0.291       1.68%    1.89%  3.89%   73.9%     3968      2926     1989
+crown edge, 0-3 m from a tree cell | north   163430  +0.004  -0.042  +0.168       2.48%    1.37%  3.18%   74.3%     4001      3142     2123
+crown edge, 0-3 m from a tree cell | south   328778  +0.007  -0.037  +0.495       1.28%    2.15%  4.24%   73.7%     3953      2601     1959
+near trees, 3-10 m                           342084  +0.005  -0.035  +0.055       1.40%    0.39%  0.19%   98.9%     4284      3814     3377
+near trees, 3-10 m | north                   190057  +0.004  -0.032  +0.048       1.01%    0.12%  0.12%   99.1%     4350      3636     3038
+near trees, 3-10 m | south                   152027  +0.005  -0.038  +0.067       1.88%    0.72%  0.28%   98.6%     4211      3958     3451
+open, > 10 m                                 395741  +0.004  -0.027  +0.043       0.58%    0.03%  0.05%   99.8%     4350      4006     3666
+open, > 10 m | north                         361824  +0.005  -0.026  +0.042       0.48%    0.02%  0.00%   99.9%     4363      3976     3650
+open, > 10 m | south                          33917  +0.004  -0.037  +0.056       1.62%    0.19%  0.52%   99.5%     4161      4102     3697
+wrote figures/rtk_2026-10-25_floodplain_near_trees.png
