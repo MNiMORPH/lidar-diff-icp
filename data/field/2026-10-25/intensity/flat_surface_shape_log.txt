@@ -1,0 +1,13 @@
+road cells: 164; intensity median 1873
+
+road (hard, flat): 1,927 detrended returns; sd 0.0239 m, NMAD 0.0216, excess kurtosis 1.97; single-return share 99.9 %; log-likelihood Laplace minus Gaussian per return -0.006 (positive favors exponential flanks)
+   log10-density slope (decades/m) at |res| = 1/2/3/4/6/8 cm, lower side:    1.8   27.9   26.4   41.9    nan    nan | upper side:   -8.2  -23.9  -31.7  -20.1   12.3   17.6
+   (a Gaussian's slope grows linearly with |res|: at sigma, 2 sigma, 3 sigma it is 0.43/sigma, 0.87/sigma, 1.30/sigma; an exponential's is constant)
+   single returns, residual median by intensity decile: 1474: -13 mm; 1588: -9 mm; 1666: -9 mm; 1734: -5 mm; 1798: -8 mm; 1861: -5 mm; 1928: -0 mm; 2007: +2 mm; 2127: +9 mm; 2364: +13 mm | Spearman(res, intensity) +0.314
+
+sward region: 597,029 detrended returns; sd 0.0257 m, NMAD 0.0215, excess kurtosis 3.31; single-return share 97.9 %; log-likelihood Laplace minus Gaussian per return +0.028 (positive favors exponential flanks)
+   log10-density slope (decades/m) at |res| = 1/2/3/4/6/8 cm, lower side:   12.0   21.7   27.1   26.9   27.8   24.7 | upper side:  -12.9  -21.1  -26.2  -28.3  -28.7  -24.9
+   (a Gaussian's slope grows linearly with |res|: at sigma, 2 sigma, 3 sigma it is 0.43/sigma, 0.87/sigma, 1.30/sigma; an exponential's is constant)
+   single returns, residual median by intensity decile: 2858: -2 mm; 3711: +1 mm; 3978: +1 mm; 4144: +1 mm; 4276: +1 mm; 4396: +0 mm; 4516: -0 mm; 4647: -1 mm; 4810: -1 mm; 5087: -2 mm | Spearman(res, intensity) -0.022
+
+wrote figures/rtk_2026-10-25_floodplain_flat_surface_shape.png
