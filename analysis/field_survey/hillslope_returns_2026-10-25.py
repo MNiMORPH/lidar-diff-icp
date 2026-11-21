@@ -86,4 +86,16 @@ ax.set_yscale("log"); ax.axvline(0, color="0.4", lw=0.8, ls=":"); ax.set_xlim(-0
 sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap); sm.set_array([]); fig.colorbar(sm, ax=axs[:2], shrink=0.8, label="median intensity in the bar")
 for a in axs: a.spines[["top", "right"]].set_visible(False)
 fig.savefig("figures/rtk_2026-10-25_hillslope_returns.png", dpi=int(os.environ.get("FIGDPI", 160)), bbox_inches="tight"); say("wrote figures/rtk_2026-10-25_hillslope_returns.png")
+
+# full-height version (Andy, 2026-11-21): symlog height axis through the canopy top, more room for the log part, plus a linear canopy profile
+say(f"canopy: returns above 2 m {100 * (R.h >= 2).mean():.1f} %; their height median {R.h[R.h >= 2].median():.1f} m, p90 {R.h[R.h >= 2].quantile(.9):.1f}, p99 {R.h[R.h >= 2].quantile(.99):.1f}, max {R.h.max():.1f} m")
+fig, axs = plt.subplots(1, 2, figsize=(19, 5.5), gridspec_kw=dict(width_ratios=[1.4, 1]))
+ax = axs[0]; ax.bar(mids, np.where(dens > 0, dens, np.nan), width=np.diff(edges), color=[cmap(norm(m)) if np.isfinite(m) else "0.85" for m in med], edgecolor="none", align="center")
+ax.set_xscale("symlog", linthresh=0.3, linscale=1.0); ax.set_yscale("log"); ax.set_xlim(-0.6, edges[-1]); ax.set_xticks([-0.5, -0.2, 0, 0.2, 0.5, 1, 2, 5, 10, 20, 30]); ax.set_xticklabels(["-0.5", "-0.2", "0", "0.2", "0.5", "1", "2", "5", "10", "20", "30"])
+ax.axvline(0, color="0.4", lw=0.8, ls=":"); ax.set_xlabel("2021 return, slope-normal distance from the official DEM (m); symmetric-log axis, linear within 0.3 m of zero"); ax.set_ylabel("density (1/m), log"); ax.set_title(f"forested bluff, ground to canopy top (n {len(R):,})", fontsize=10)
+ax = axs[1]; eL = np.arange(0, 32.5, 0.5); mL = 0.5 * (eL[1:] + eL[:-1]); cL = np.histogram(R.h, bins=eL)[0]; dL = cL / (len(R) * 0.5); bL = np.digitize(R.h, eL) - 1; mdL = np.array([R.inten[bL == k].median() if (bL == k).sum() >= 20 else np.nan for k in range(len(mL))])
+ax.barh(mL, dL, height=0.5, color=[cmap(norm(m)) if np.isfinite(m) else "0.85" for m in mdL], edgecolor="none"); ax.set_xscale("log"); ax.set_ylim(0, 32); ax.set_xlabel("density (1/m), log"); ax.set_ylabel("slope-normal height above the DEM (m), linear, 0.5 m bins"); ax.set_title("the same record as a vertical profile", fontsize=10)
+sm = plt.cm.ScalarMappable(norm=norm, cmap=cmap); sm.set_array([]); fig.colorbar(sm, ax=axs, shrink=0.8, label="median intensity in the bar")
+for a in axs: a.spines[["top", "right"]].set_visible(False)
+fig.savefig("figures/rtk_2026-10-25_hillslope_returns_canopy.png", dpi=int(os.environ.get("FIGDPI", 160)), bbox_inches="tight"); say("wrote figures/rtk_2026-10-25_hillslope_returns_canopy.png")
 LOG.close()

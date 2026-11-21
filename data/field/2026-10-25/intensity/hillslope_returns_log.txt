@@ -12,3 +12,5 @@ check of the slope-normal referencing: near-ground peak width (NMAD of |h| < 0.5
 
 hillslope RTK FIX points in the area: 29; official DEM minus RTK, vertical: median +0.055 NMAD 0.105; slope-normal: median +0.046 NMAD 0.088; by group hillslope_RS3 +0.050 (n 11), hillslope_T4a +0.024 (n 18)
 wrote figures/rtk_2026-10-25_hillslope_returns.png
+canopy: returns above 2 m 54.0 %; their height median 7.5 m, p90 13.7, p99 17.5, max 29.0 m
+wrote figures/rtk_2026-10-25_hillslope_returns_canopy.png
