@@ -1,0 +1,13 @@
+lidar floor within 1 m minus RTK (slope-normal): n 38, median +0.057 m (95 % +0.035..+0.093), mean +0.053, NMAD 0.085; lidar above RTK at 29 of 38 points, sign test p 0.00166, Wilcoxon p 0.000534
+   first RS3 traverse (T3): n 17, median +0.088 (95 % +0.036..+0.131), above at 16 of 17, sign p 0.000275
+   second RS3 traverse (T4): n 21, median +0.039 (95 % -0.017..+0.076), above at 13 of 21, sign p 0.383
+   without the two largest |offsets|: median +0.055 (95 % +0.034..+0.088)
+official 1 m DEM minus RTK (slope-normal): n 39, median +0.052 m (95 % +0.035..+0.105), mean +0.083, NMAD 0.103; lidar above RTK at 29 of 39 points, sign test p 0.00338, Wilcoxon p 0.000667
+   first RS3 traverse (T3): n 18, median +0.084 (95 % +0.044..+0.132), above at 16 of 18, sign p 0.00131
+   second RS3 traverse (T4): n 21, median +0.036 (95 % -0.026..+0.070), above at 13 of 21, sign p 0.383
+   without the two largest |offsets|: median +0.050 (95 % +0.021..+0.093)
+Spearman of DEM minus RTK with: slope -0.26, canopy_share +0.08, ground_share -0.64, rms_v +0.07, tilt -0.09
+points with no 1 m return within 5 cm of the RTK: 15 of 39; their DEM minus RTK median +0.127; points with ground share > 0.2: 16, median +0.028
+
+outliers (see the per-point table in hillslope_discrepant_log.txt): RS3 10 at 14:49, RTK 1.42 m below the DEM floor with no 1 m return lower than +1.12 m and a clean receiver record (26 samples, PDOP 1.9, 27 satellites, RMS 0.019), neighbors 9 and 11 at +0.05 and +0.05: a position displaced ~2.8 m along a 28 deg slope, or a cavity the laser never entered; RS3 24 at 15:12, RTK 0.21 m above the floor, recorded on GPS+GLONASS only (Galileo 0, BeiDou 0) with the base columns lost; T4a 23 at 15:13, RTK 0.18 m above the floor, full constellation, PDOP 1.4, the pole base on a rock, log or root being the plain reading.
+wrote figures/rtk_2026-10-25_hillslope_rtk_vs_floor.png

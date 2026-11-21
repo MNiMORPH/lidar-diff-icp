@@ -1086,3 +1086,32 @@ into the exponential flanks and the bridge down to the soil; the soil's lower re
 run 2300-3700 against the sward's 4350) biases every merged return upward. A forward model with those four
 ingredients, mean free path, profile shape, clumping distribution and reflectance ratio, against the measured height
 density and intensity-against-height curve is the next step, with the RTK soil depth as its check.
+
+## Is the surveyed ground on the bluff below the 2021 lidar floor? (2026-11-21)
+
+Andy's hypothesis, from the students' practice (pole tips at the land surface, a professional surveyor on the upper
+team, tilt compensation confirmed on) and the error budget (3 cm propagated against 8.5-10 cm observed): the RTK ground
+on the bluff is genuinely lower than the 2021 lidar floor. Test (`analysis/field_survey/hillslope_rtk_vs_floor_test_2026-10-25.py`,
+log in `intensity/`), slope-normal, 39 FIX points: official DEM minus RTK median +0.052 m (bootstrap 95 % +0.035 to
++0.105), lidar above the survey at 29 of 39 points (sign test p 0.003, Wilcoxon p 0.0007); the lidar floor within 1 m
+minus RTK median +0.057 (+0.035 to +0.093), 29 of 38. By traverse: the first RS3 traverse +0.084 (95 % +0.044 to
++0.132), above at 16 of 18 points (p 0.001); the second +0.036 (-0.026 to +0.070), above at 13 of 21 (p 0.38). So the
+answer is yes for the survey as a whole and clearly for the first traverse, with the second traverse's offset not
+distinguishable from zero on its own. The offset is largest where the lidar has no return at the pole tip's level:
+Spearman with the share of 1 m returns within 5 cm of the RTK is -0.64; the 15 points with no such return have a
+median offset of +0.13 m, the points with a share above 0.2 a median of -0.01. Slope, canopy share, formal RMS and tilt
+do not correlate with it (|rho| <= 0.26).
+
+**The outliers.** RS3 10 (14:49): RTK 1.42 m below the DEM floor; no return within 1 m lower than +1.12 m above it; a
+clean receiver record (26 samples over 5 s, PDOP 1.9, 27 satellites, RMS 0.019, tilt 2.4 deg); neighbors 9 and 11 at
++0.05. On a 28 deg slope 1.4 m of height is 2.8 m along the fall line: a position displaced by that much, or a cavity
+the laser never entered. RS3 24 (15:12): RTK 0.21 m ABOVE the floor; recorded on GPS and GLONASS only (Galileo and
+BeiDou 0) with the base columns lost from the export, a degraded solution. T4a 23 (15:13): RTK 0.18 m above the floor
+with a full constellation and PDOP 1.4; the plain reading is the pole base on a rock, a log or a root. The two
+RTK-above-lidar points are therefore one receiver-quality case and one footing case; the point 1.4 m below is unresolved.
+
+**Reading (hypothesis).** On 25 October the pole tips went through the fresh leaf fall to the firm ground; on 1 May 2021
+the laser's floor under the leafing canopy was the compacted duff, moss and low herb surface, and most of the pulses
+that reached it had already split in the crowns. A 5-9 cm layer between those two surfaces, thicker where the floor is
+rougher, is the measurement; it is the forest-floor counterpart of the meadow's 13 cm sward, smaller because the duff
+is thin and the laser sees more of it. The 5 cm between the traverses remains unexplained.
