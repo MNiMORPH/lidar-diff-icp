@@ -1115,3 +1115,23 @@ the laser's floor under the leafing canopy was the compacted duff, moss and low 
 that reached it had already split in the crowns. A 5-9 cm layer between those two surfaces, thicker where the floor is
 rougher, is the measurement; it is the forest-floor counterpart of the meadow's 13 cm sward, smaller because the duff
 is thin and the laser sees more of it. The 5 cm between the traverses remains unexplained.
+
+**Geomorphic drivers or duff? (2026-11-21).** With RS3 10, RS3 24 and T4a 23 set aside (Andy's call: a displaced
+position, a degraded fix and a footing, from the less experienced team), 36 points remain, offset median +0.052 m
+(IQR +0.019 to +0.122). Against covariates from a wider official 1 m DEM window (`dem3dep/usgs_1m_dem_bluff_geomorph.tif`,
+E 579500-580050, N 4885200-4885900; `analysis/field_survey/hillslope_offset_geomorph_2026-10-25.py`): Spearman with
+D8 upslope area +0.33 (permutation p 0.05), with the wetness index +0.42 (p 0.01), with profile curvature at 5 m +0.34
+(p 0.04), with slope -0.29 (p 0.09), with the Laplacian at 2.5 and 5 m -0.02 and -0.06 (no signal), with plan curvature
+-0.02. An OLS on standardized slope, Laplacian and log area explains R^2 0.20: +0.025 m per sd of log area (bootstrap
+95 % +0.008 to +0.051), -0.022 per sd of slope (-0.064 to -0.008), Laplacian -0.010 (-0.038 to +0.015). So there is a
+modest tendency for the offset to be larger where more area drains through the point and where the slope is gentler,
+and none for the curvature that soil creep would act on. Ten covariates were tried on 36 points, so p near 0.05 is not
+strong evidence on its own; the wetness-index correlation at p 0.01 is the firmest.
+
+**Reading (hypothesis).** Both candidates predict the sign found: overland flow lowers the ground most in convergent,
+gentler spots, and litter and duff also accumulate most in convergent, gentler spots, so the covariates do not
+separate them. The magnitude does: a 5 cm median lowering over 5.5 years across a whole forested bluff is a mm/yr
+scale of erosion an order of magnitude above what such slopes sustain, while a 5 cm duff and herb layer in May above the
+October firm ground is ordinary; a few centimeters more in the hollows could be either thicker litter or rilling. Soil
+creep is excluded as a cause of these offsets by the absence of any curvature signal and by its mm/yr velocities. The
+discriminating measurement is a duff-thickness probe at the 36 points on the next visit, with a re-occupation of each.

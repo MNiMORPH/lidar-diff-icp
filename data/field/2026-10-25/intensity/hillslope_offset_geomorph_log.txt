@@ -1,0 +1,19 @@
+36 points after excluding RS3 10, RS3 24, T4a 23; offset (DEM minus RTK, slope-normal) median +0.052, IQR +0.019..+0.122
+covariates at the points, median (p10-p90): slope_dem 31.7 (26.3-35.3); lap_2.5m -0.00623 (-0.0239-0.0129); lap_5m -0.0079 (-0.0175-0.00774); prof_5m -0.000602 (-0.00272-0.00263); plan_5m 0.0107 (-0.00276-0.0248); acc_m2 21.9 (5.58-65); twi 3.5 (1.87-4.63)
+
+Spearman rank correlation of the offset with each covariate (permutation p, 20,000 draws), all 36 | first traverse (16) | second (20):
+   slope_dem      all -0.29 (p 0.09)  first -0.12 (p 0.66)  second -0.45 (p 0.05)
+   lap_2.5m       all -0.02 (p 0.89)  first +0.12 (p 0.66)  second -0.16 (p 0.50)
+   lap_5m         all -0.06 (p 0.72)  first -0.02 (p 0.94)  second -0.18 (p 0.44)
+   prof_5m        all +0.34 (p 0.04)  first +0.28 (p 0.29)  second +0.50 (p 0.02)
+   plan_5m        all -0.02 (p 0.89)  first -0.01 (p 0.98)  second +0.09 (p 0.69)
+   log_acc        all +0.33 (p 0.05)  first +0.47 (p 0.06)  second +0.09 (p 0.71)
+   twi            all +0.42 (p 0.01)  first +0.42 (p 0.10)  second +0.26 (p 0.26)
+   canopy_share   all +0.05 (p 0.75)  first +0.35 (p 0.18)  second -0.02 (p 0.95)
+   ground_share   all -0.76 (p 0.00)  first -0.91 (p 0.00)  second -0.65 (p 0.00)
+   inten_near     all +0.18 (p 0.28)  first -0.17 (p 0.54)  second +0.32 (p 0.16)
+
+OLS offset ~ slope + Laplacian(5 m) + log area (standardized), n 36: R^2 0.20; coefficients (m per sd) with bootstrap 95 %: slope -0.022 (-0.064..-0.008), Laplacian -0.010 (-0.038..+0.015), log area +0.025 (+0.008..+0.051)
+sign conventions: Laplacian > 0 concave (hollow, creep deposition expected), < 0 convex (nose, creep erosion); larger log area = more convergent, overland-flow erosion expected to lower the ground, i.e. a POSITIVE offset if erosion since 2021
+expected magnitudes for reference (hypotheses, not measured here): soil creep surface velocities of mm/yr give vertical change over 5.5 years far below 1 cm except at sharp curvature; overland-flow rilling can remove cm in a few events in convergent hollows
+wrote figures/rtk_2026-10-25_hillslope_offset_geomorph.png
