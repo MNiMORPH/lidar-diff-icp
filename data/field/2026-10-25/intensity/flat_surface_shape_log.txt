@@ -11,3 +11,16 @@ sward region: 597,029 detrended returns; sd 0.0257 m, NMAD 0.0215, excess kurtos
    single returns, residual median by intensity decile: 2858: -2 mm; 3711: +1 mm; 3978: +1 mm; 4144: +1 mm; 4276: +1 mm; 4396: +0 mm; 4516: -0 mm; 4647: -1 mm; 4810: -1 mm; 5087: -2 mm | Spearman(res, intensity) -0.022
 
 wrote figures/rtk_2026-10-25_floodplain_flat_surface_shape.png
+
+sward region, single returns, by intensity decile: n, sd, NMAD, excess kurtosis, Laplace minus Gaussian log-likelihood per return (negative = Gaussian fits better):
+   decile  1 intensity   964- 3438: n  58403  sd  2.87 cm  NMAD  2.32  kurtosis +4.93  Laplace-Gaussian +0.049
+   decile  2 intensity  3438- 3868: n  58375  sd  2.86 cm  NMAD  2.40  kurtosis +2.71  Laplace-Gaussian +0.025
+   decile  3 intensity  3868- 4068: n  58328  sd  2.62 cm  NMAD  2.21  kurtosis +2.53  Laplace-Gaussian +0.021
+   decile  4 intensity  4068- 4213: n  58586  sd  2.53 cm  NMAD  2.13  kurtosis +2.49  Laplace-Gaussian +0.022
+   decile  5 intensity  4213- 4338: n  58586  sd  2.49 cm  NMAD  2.12  kurtosis +2.24  Laplace-Gaussian +0.017
+   decile  6 intensity  4338- 4456: n  58475  sd  2.46 cm  NMAD  2.08  kurtosis +2.22  Laplace-Gaussian +0.020
+   decile  7 intensity  4456- 4579: n  58256  sd  2.41 cm  NMAD  2.06  kurtosis +2.07  Laplace-Gaussian +0.016
+   decile  8 intensity  4579- 4723: n  58746  sd  2.41 cm  NMAD  2.06  kurtosis +2.52  Laplace-Gaussian +0.020
+   decile  9 intensity  4723- 4921: n  58422  sd  2.39 cm  NMAD  2.04  kurtosis +2.09  Laplace-Gaussian +0.016
+   decile 10 intensity  4921- 8391: n  58527  sd  2.52 cm  NMAD  2.05  kurtosis +5.79  Laplace-Gaussian +0.048
+   all single returns pooled: n 584704 sd 2.56 cm kurtosis +3.20 Laplace-Gaussian +0.028

@@ -67,4 +67,12 @@ axs[1].set_xlim(-0.12, 0.12); axs[1].set_ylim(-60, 60); axs[1].set_xlabel("retur
 axs[2].set_xlabel("intensity (decile medians, single returns)"); axs[2].set_ylabel("median residual (mm)"); axs[2].legend(frameon=False, fontsize=8)
 for a in axs: a.spines[["top", "right"]].set_visible(False)
 fig.tight_layout(); fig.savefig("figures/rtk_2026-10-25_floodplain_flat_surface_shape.png", dpi=int(os.environ.get("FIGDPI", 150))); say("\nwrote figures/rtk_2026-10-25_floodplain_flat_surface_shape.png")
+
+# scale-mixture test (theory note, 2026-11-21): is each intensity class Gaussian with its own width while the pool has exponential flanks?
+d = sets["sward region"]; q = d[d.nr == 1]; bins = np.percentile(q.inten, np.linspace(0, 100, 11)); lab = np.digitize(q.inten, bins[1:-1])
+say("\nsward region, single returns, by intensity decile: n, sd, NMAD, excess kurtosis, Laplace minus Gaussian log-likelihood per return (negative = Gaussian fits better):")
+for k in range(10):
+    v = q.res[lab == k].to_numpy(); v = v - np.median(v); sd = v.std(); b = np.mean(np.abs(v))
+    say(f"   decile {k + 1:2d} intensity {bins[k]:5.0f}-{bins[k + 1]:5.0f}: n {len(v):6d}  sd {100 * sd:5.2f} cm  NMAD {100 * 1.4826 * np.median(np.abs(v)):5.2f}  kurtosis {stats.kurtosis(v):+5.2f}  Laplace-Gaussian {(stats.laplace.logpdf(v, 0, b).sum() - stats.norm.logpdf(v, 0, sd).sum()) / len(v):+.3f}")
+v = q.res.to_numpy() - np.median(q.res); say(f"   all single returns pooled: n {len(v)} sd {100 * v.std():.2f} cm kurtosis {stats.kurtosis(v):+.2f} Laplace-Gaussian {(stats.laplace.logpdf(v, 0, np.mean(np.abs(v))).sum() - stats.norm.logpdf(v, 0, v.std()).sum()) / len(v):+.3f}")
 LOG.close()
